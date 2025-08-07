@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: alkema-postgres
+    environment:
+      POSTGRES_USER: alkema_user
+      POSTGRES_PASSWORD: alkema_pass
+      POSTGRES_DB: alkema_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alkema_user -d alkema_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  legacy-generator:
+    image: nginx:1.29.0
+    container_name: legacy-generator
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Universal-LPC-Spritesheet-Character-Generator:/usr/share/nginx/html:ro
+
+  api-character-sprite-generator:
+    build: ./API-Character-Sprite-Generator
+    container_name: api-character-sprite-generator
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./API-Character-Sprite-Generator:/app
+      - ./Universal-LPC-Spritesheet-Character-Generator:/generator:ro
+    environment:
+      DATABASE_URL: postgresql://alkema_user:alkema_pass@postgres:5432/alkema_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; exit(0 if requests.get('http://localhost:8000/health').status_code == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres_data:

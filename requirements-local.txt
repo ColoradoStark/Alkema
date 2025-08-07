@@ -1,0 +1,16 @@
+# Requirements for local testing and development
+# These are for running test scripts and utilities outside of Docker
+
+# HTTP client for testing API
+requests==2.31.0
+
+# Database tools if you want to inspect data locally
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.31
+
+# Image processing if you want to work with sprites locally
+pillow==10.4.0
+
+# Utility libraries
+python-dotenv==1.0.1
+colorama==0.4.6  # For colored terminal output on Windows
