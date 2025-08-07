@@ -26,9 +26,9 @@ build/
 Thumbs.db
 
 # Testing
-*.png
 test_*.png
 character_*.png
+!Universal-LPC-Spritesheet-Character-Generator/readme-images/*.png
 
 # Environment
 .env
