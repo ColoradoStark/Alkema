@@ -56,8 +56,8 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         });
         
         // Define layer URLs in order (bottom to top)
-        // Use tunic for female (better coverage), vest for male
-        const shirtType = bodyType === 'female' ? 'tunic' : 'vest';
+        // Use shirt_type from character data if available, otherwise default based on gender
+        const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
         
         console.log(`Using ${shirtType} for ${bodyType} character`);
         

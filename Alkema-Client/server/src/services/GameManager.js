@@ -1,18 +1,21 @@
+import { AssetManager } from './AssetManager.js';
+
 export class GameManager {
     constructor(io) {
         this.io = io;
         this.players = new Map();
         this.rooms = new Map();
+        this.assetManager = new AssetManager();
     }
 
-    handlePlayerConnection(socket) {
+    async handlePlayerConnection(socket) {
         console.log('GameManager: Player connected', socket.id);
         
         // Create player immediately
         const player = {
             id: socket.id,
             socket: socket,
-            character: this.createDefaultCharacter(socket.id),
+            character: await this.createDefaultCharacter(socket.id),
             position: { x: 512, y: 384 },
             room: 'spawn'
         };
@@ -115,42 +118,20 @@ export class GameManager {
         }
     }
 
-    createDefaultCharacter(playerId) {
-        // Use validated parameters that exist in the LPC assets
-        const bodyTypes = ['male', 'female'];
-        const skinColors = ['light', 'amber', 'olive', 'brown', 'black'];
-        
-        // Different hair styles based on gender - using only verified working styles
-        const maleHairStyles = ['plain', 'bedhead', 'buzzcut', 'cowlick', 'messy', 'spiked', 'wavy'];
-        // Female styles - using ones we know exist
-        const femaleHairStyles = ['plain', 'loose', 'ponytail', 'princess', 'shoulderl', 'pixie', 'wavy', 'bob', 'long'];
-        
-        // Hair colors that actually exist in the files
-        const simpleHairColors = ['black', 'blonde', 'brown', 'red', 'gray', 'white'];
-        const shirtColors = ['red', 'blue', 'green', 'brown', 'black', 'white', 'purple', 'navy', 'gray'];
-        const pantsColors = ['brown', 'black', 'blue', 'gray', 'tan'];
-        
-        // Random selection for variety
-        const bodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
-        const skinColor = skinColors[Math.floor(Math.random() * skinColors.length)];
-        
-        // Select hair style based on gender
-        const availableHairStyles = bodyType === 'female' ? femaleHairStyles : maleHairStyles;
-        const hairStyle = availableHairStyles[Math.floor(Math.random() * availableHairStyles.length)];
-        const hairColor = simpleHairColors[Math.floor(Math.random() * simpleHairColors.length)];
-        
-        const shirtColor = shirtColors[Math.floor(Math.random() * shirtColors.length)];
-        const pantsColor = pantsColors[Math.floor(Math.random() * pantsColors.length)];
+    async createDefaultCharacter(playerId) {
+        // Use AssetManager to get a valid random character
+        const charData = await this.assetManager.getRandomCharacter();
         
         return {
             id: playerId,
             name: `Player_${playerId.substring(0, 6)}`,
-            body_type: bodyType,
-            skin_color: skinColor,
-            hair_style: hairStyle,
-            hair_color: hairColor,
-            shirt_color: shirtColor,
-            pants_color: pantsColor,
+            body_type: charData.body_type,
+            skin_color: charData.skin_color,
+            hair_style: charData.hair_style,
+            hair_color: charData.hair_color,
+            shirt_type: charData.shirt_type,  // Note: using shirt_type now
+            shirt_color: charData.shirt_color,
+            pants_color: charData.pants_color,
             equipment: {},
             animations: {
                 available: ['idle', 'walk', 'attack', 'hurt'],

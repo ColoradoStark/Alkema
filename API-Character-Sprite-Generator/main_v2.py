@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from models import create_session, init_database
 from sprite_generator import SpriteGenerator
+from assets_endpoint import get_safe_random_assets
 import os
 
 app = FastAPI(title="Alkema Character API", version="2.0.0")
@@ -114,6 +115,18 @@ async def get_available_options(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching options: {str(e)}")
+
+@app.get("/available-assets")
+async def get_available_assets():
+    """
+    Get the curated list of available assets that are known to work.
+    Returns safe combinations for character generation.
+    """
+    try:
+        assets = get_safe_random_assets()
+        return JSONResponse(content=assets)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching assets: {str(e)}")
 
 @app.get("/body-types")
 async def get_body_types(db: Session = Depends(get_db)):
