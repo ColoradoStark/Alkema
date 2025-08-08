@@ -35,9 +35,12 @@ echo.
 echo ========================================
 echo Services are starting!
 echo ========================================
+echo Game Client: http://localhost:3000
+echo Game Server: http://localhost:3001
 echo API: http://localhost:8000
 echo API Docs: http://localhost:8000/docs
 echo Legacy Generator: http://localhost:8080
+echo MongoDB: localhost:27017
 echo ========================================
 echo.
 echo Waiting for API to be ready...
