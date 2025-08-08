@@ -1,0 +1,22 @@
+@font-face {
+    font-family: 'Alagard';
+    src: url('/assets/fonts/alagard.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #1a1a2e;
+    font-family: 'Alagard', monospace;
+}
+
+#game-container {
+    border: 2px solid #16213e;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}

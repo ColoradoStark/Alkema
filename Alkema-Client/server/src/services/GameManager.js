@@ -119,16 +119,26 @@ export class GameManager {
         // Use validated parameters that exist in the LPC assets
         const bodyTypes = ['male', 'female'];
         const skinColors = ['light', 'amber', 'olive', 'brown', 'black'];
-        const hairStyles = ['plain', 'bedhead', 'buzzcut', 'cowlick', 'messy', 'spiked', 'wavy'];
-        const hairColors = ['black', 'blonde', 'brown', 'red', 'grey', 'white'];
-        const shirtColors = ['red', 'blue', 'green', 'brown', 'black', 'white', 'purple'];
-        const pantsColors = ['brown', 'black', 'blue', 'grey', 'tan'];
+        
+        // Different hair styles based on gender - using only verified working styles
+        const maleHairStyles = ['plain', 'bedhead', 'buzzcut', 'cowlick', 'messy', 'spiked', 'wavy'];
+        // Female styles - using ones we know exist
+        const femaleHairStyles = ['plain', 'loose', 'ponytail', 'princess', 'shoulderl', 'pixie', 'wavy', 'bob', 'long'];
+        
+        // Hair colors that actually exist in the files
+        const simpleHairColors = ['black', 'blonde', 'brown', 'red', 'gray', 'white'];
+        const shirtColors = ['red', 'blue', 'green', 'brown', 'black', 'white', 'purple', 'navy', 'gray'];
+        const pantsColors = ['brown', 'black', 'blue', 'gray', 'tan'];
         
         // Random selection for variety
         const bodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
         const skinColor = skinColors[Math.floor(Math.random() * skinColors.length)];
-        const hairStyle = hairStyles[Math.floor(Math.random() * hairStyles.length)];
-        const hairColor = hairColors[Math.floor(Math.random() * hairColors.length)];
+        
+        // Select hair style based on gender
+        const availableHairStyles = bodyType === 'female' ? femaleHairStyles : maleHairStyles;
+        const hairStyle = availableHairStyles[Math.floor(Math.random() * availableHairStyles.length)];
+        const hairColor = simpleHairColors[Math.floor(Math.random() * simpleHairColors.length)];
+        
         const shirtColor = shirtColors[Math.floor(Math.random() * shirtColors.length)];
         const pantsColor = pantsColors[Math.floor(Math.random() * pantsColors.length)];
         

@@ -15,7 +15,8 @@ export class BootScene extends Scene {
         this.game.registry.set('networkManager', new NetworkManager());
         
         this.add.text(512, 384, 'Connecting to server...', {
-            fontSize: '24px',
+            fontFamily: 'Alagard',
+            fontSize: '28px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
@@ -25,7 +26,8 @@ export class BootScene extends Scene {
         }).catch(error => {
             console.error('Failed to connect:', error);
             this.add.text(512, 420, 'Connection failed. Please refresh.', {
-                fontSize: '18px',
+                fontFamily: 'Alagard',
+                fontSize: '20px',
                 color: '#ff6666'
             }).setOrigin(0.5);
         });

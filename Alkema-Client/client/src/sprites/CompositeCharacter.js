@@ -31,21 +31,48 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         const bodyType = this.characterData.body_type || 'male';
         const skinColor = this.characterData.skin_color || 'light';
         const hairStyle = this.characterData.hair_style || 'plain';
-        const hairColor = this.characterData.hair_color || 'brown';
+        let hairColor = this.characterData.hair_color || 'brown';
         const shirtColor = this.characterData.shirt_color || 'blue';
         const pantsColor = this.characterData.pants_color || 'brown';
         
+        // Map hair colors to actual file names - many styles use different color naming
+        const hairColorMap = {
+            'brown': 'dark_brown',
+            'blonde': 'blonde',
+            'black': 'black',
+            'red': 'red',
+            'gray': 'gray',
+            'grey': 'gray',
+            'white': 'white'
+        };
+        
+        // Apply color mapping for styles that need it
+        const mappedHairColor = hairColorMap[hairColor] || hairColor;
+        
         console.log('Loading character layers for:', this.characterData.id, {
-            bodyType, skinColor, hairStyle, hairColor, shirtColor, pantsColor
+            bodyType, skinColor, hairStyle, 
+            hairColor: `${hairColor} -> ${mappedHairColor}`, 
+            shirtColor, pantsColor
         });
         
         // Define layer URLs in order (bottom to top)
+        // Use tunic for female (better coverage), vest for male
+        const shirtType = bodyType === 'female' ? 'tunic' : 'vest';
+        
+        console.log(`Using ${shirtType} for ${bodyType} character`);
+        
+        // Handle special hair styles that have bg/fg structure
+        let hairPath = 'walk';
+        if (hairStyle === 'ponytail') {
+            hairPath = 'bg/walk';
+        }
+        
         const layerConfigs = [
             { name: 'body', url: `http://localhost:8080/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
             { name: 'pants', url: `http://localhost:8080/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
-            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/vest/${bodyType}/walk/${shirtColor}.png`, optional: true },
+            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: false }, // Made required for debugging
             { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` },
-            { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/walk/${hairColor}.png`, optional: true }
+            { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/${hairPath}/${mappedHairColor}.png`, optional: true }
         ];
         
         // Load each layer
@@ -73,6 +100,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             img.crossOrigin = 'anonymous';
             
             img.onload = () => {
+                console.log(`Successfully loaded ${layerName} from ${url} (${img.width}x${img.height})`);
                 this.scene.textures.addSpriteSheet(layerKey, img, {
                     frameWidth: 64,
                     frameHeight: 64
@@ -83,9 +111,11 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             
             img.onerror = () => {
                 if (!optional) {
-                    console.warn(`Failed to load required layer ${layerName} from ${url}`);
+                    console.error(`Failed to load required layer ${layerName} from ${url}`);
+                    // For debugging - log the full path
+                    console.error(`Check if file exists at path: ${url}`);
                 } else {
-                    console.log(`Optional layer ${layerName} not found at ${url}, skipping`);
+                    console.warn(`Optional layer ${layerName} not found at ${url}, skipping`);
                 }
                 resolve();
             };
@@ -103,6 +133,8 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         
         // Store reference
         this.layers[layerName] = sprite;
+        
+        console.log(`Added ${layerName} layer with texture ${textureKey}`);
     }
     
     createAnimations() {

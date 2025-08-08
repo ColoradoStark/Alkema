@@ -15,12 +15,14 @@ export class PreloadScene extends Scene {
         progressBox.fillRect(width/2 - 160, height/2 - 25, 320, 50);
 
         const loadingText = this.add.text(width/2, height/2 - 50, 'Loading...', {
-            fontSize: '20px',
+            fontFamily: 'Alagard',
+            fontSize: '24px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
         const percentText = this.add.text(width/2, height/2, '0%', {
-            fontSize: '18px',
+            fontFamily: 'Alagard',
+            fontSize: '20px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
@@ -42,7 +44,7 @@ export class PreloadScene extends Scene {
     }
 
     loadAssets() {
-        
+        // Font is loaded via CSS, no need to load here
     }
 
     create() {

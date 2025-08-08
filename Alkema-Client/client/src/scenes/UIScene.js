@@ -14,7 +14,8 @@ export class UIScene extends Scene {
         const padding = 10;
         
         this.characterInfo = this.add.text(padding, padding, 'Character: Loading...', {
-            fontSize: '14px',
+            fontFamily: 'Alagard',
+            fontSize: '16px',
             color: '#ffffff',
             backgroundColor: '#000000aa',
             padding: { x: 8, y: 4 }
@@ -25,7 +26,8 @@ export class UIScene extends Scene {
             padding, 
             'Connected', 
             {
-                fontSize: '12px',
+                fontFamily: 'Alagard',
+                fontSize: '14px',
                 color: '#00ff00',
                 backgroundColor: '#000000aa',
                 padding: { x: 8, y: 4 }
@@ -37,7 +39,8 @@ export class UIScene extends Scene {
             40,
             'Players: 0',
             {
-                fontSize: '12px',
+                fontFamily: 'Alagard',
+                fontSize: '14px',
                 color: '#ffffff',
                 backgroundColor: '#000000aa',
                 padding: { x: 8, y: 4 }
@@ -49,7 +52,8 @@ export class UIScene extends Scene {
             this.cameras.main.height - padding,
             'X: 0, Y: 0',
             {
-                fontSize: '12px',
+                fontFamily: 'Alagard',
+                fontSize: '14px',
                 color: '#ffffff',
                 backgroundColor: '#000000aa',
                 padding: { x: 8, y: 4 }

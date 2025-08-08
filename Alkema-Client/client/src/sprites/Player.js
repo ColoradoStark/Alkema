@@ -25,7 +25,8 @@ export class Player {
         
         // Add name text as a child of the sprite container
         this.nameText = scene.add.text(0, -40, characterData?.name || 'Player', {
-            fontSize: '12px',
+            fontFamily: 'Alagard',
+            fontSize: '14px',
             color: '#ffffff',
             backgroundColor: '#000000aa',
             padding: { x: 4, y: 2 }
