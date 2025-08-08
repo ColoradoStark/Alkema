@@ -176,10 +176,15 @@ export class AssetManager {
             'shirt'
         );
         
-        const pantsColor = this._randomChoice(typeAssets.pants_colors || ['brown']);
+        // Get pants color that also contrasts with skin
+        const pantsColor = this._getContrastingColor(
+            skinColor,
+            typeAssets.pants_colors || ['brown', 'black', 'blue', 'gray', 'tan'],
+            'pants'
+        );
         
         console.log(`AssetManager: Generated ${bodyType} character:`, {
-            hairStyle, hairColor, shirtType, shirtColor, pantsColor
+            skinColor, hairStyle, hairColor, shirtType, shirtColor, pantsColor
         });
         
         return {
@@ -209,27 +214,32 @@ export class AssetManager {
     _getContrastingColor(skinColor, availableColors, itemType) {
         // Define which colors are too similar to each skin tone
         // Note: Available hair colors are: blonde, dark_brown, black, gray, white, red
-        // Being more conservative - only exclude colors that really blend in
+        // Being VERY conservative - exclude any colors that might not provide clear contrast
         const conflictMap = {
             'light': {
-                hair: ['white'], // Only pure white really blends with light skin
-                shirt: ['white', 'pink'] // These can blend with light skin
+                hair: ['white', 'blonde'], // Light colors can blend with light skin
+                shirt: ['white', 'pink', 'tan', 'gray', 'red', 'brown'], // Light/warm colors can blend
+                pants: ['tan', 'gray'] // Light neutrals can blend
             },
             'amber': {
                 hair: [], // All hair colors contrast well with amber
-                shirt: ['tan', 'brown'] // These can blend with amber skin
+                shirt: ['tan', 'brown', 'gray', 'red'], // Warm/neutral colors blend with amber
+                pants: ['tan', 'brown'] // Warm colors can blend
             },
             'olive': {
                 hair: [], // All hair colors contrast well with olive  
-                shirt: ['green', 'olive'] // These can blend with olive skin
+                shirt: ['green', 'olive', 'gray', 'brown'], // Earth tones blend with olive
+                pants: ['gray', 'green'] // Neutral/earth tones can blend
             },
             'brown': {
                 hair: [], // All hair colors actually contrast OK with brown skin
-                shirt: ['brown'] // Only brown shirts really blend
+                shirt: ['brown', 'tan', 'gray', 'red'], // Browns and warm colors blend
+                pants: ['brown', 'tan'] // Brown tones can blend
             },
             'black': {
                 hair: ['black'], // Only pure black blends
-                shirt: ['black', 'gray'] // These can blend with black skin
+                shirt: ['black', 'gray', 'white', 'purple'], // Dark colors and some light colors
+                pants: ['black', 'gray'] // Dark colors can blend
             }
         };
         
@@ -258,14 +268,25 @@ export class AssetManager {
                     'black': ['blonde', 'gray', 'white', 'red']
                 };
                 safeColors = defaults[skinColor] || ['black'];
-            } else {
-                // Default contrasting shirt colors for each skin tone
+            } else if (itemType === 'pants') {
+                // Default contrasting pants colors for each skin tone
                 const defaults = {
-                    'light': ['blue', 'green', 'red', 'black', 'purple', 'navy'],
-                    'amber': ['blue', 'green', 'black', 'purple', 'navy', 'white'],
-                    'olive': ['blue', 'red', 'black', 'purple', 'white', 'pink'],
-                    'brown': ['blue', 'green', 'red', 'white', 'purple', 'pink'],
-                    'black': ['blue', 'green', 'red', 'white', 'purple', 'pink', 'yellow']
+                    'light': ['black', 'blue', 'brown'],  // Dark colors contrast well
+                    'amber': ['black', 'blue', 'gray'],   // Cool colors contrast
+                    'olive': ['black', 'blue', 'brown'],  // Dark colors work
+                    'brown': ['black', 'blue', 'gray'],   // Cool/dark colors
+                    'black': ['blue', 'tan', 'brown']     // Medium/light colors
+                };
+                safeColors = defaults[skinColor] || ['black'];
+            } else {
+                // Default contrasting shirt colors for each skin tone  
+                // Using only high-contrast colors that work well
+                const defaults = {
+                    'light': ['blue', 'green', 'black', 'purple'],  // Removed red
+                    'amber': ['blue', 'green', 'black', 'purple'],   // Removed red
+                    'olive': ['blue', 'red', 'black', 'purple', 'pink'],
+                    'brown': ['blue', 'green', 'purple', 'pink', 'black'],  // Removed red
+                    'black': ['blue', 'green', 'red', 'teal', 'pink']
                 };
                 safeColors = defaults[skinColor] || ['blue'];
             }

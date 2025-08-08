@@ -1,4 +1,5 @@
 import { AssetManager } from './AssetManager.js';
+import { nameGenerator } from './NameGenerator.js';
 
 export class GameManager {
     constructor(io) {
@@ -6,6 +7,7 @@ export class GameManager {
         this.players = new Map();
         this.rooms = new Map();
         this.assetManager = new AssetManager();
+        this.usedNames = new Set(); // Track used names to avoid duplicates
     }
 
     async handlePlayerConnection(socket) {
@@ -112,6 +114,10 @@ export class GameManager {
     handlePlayerDisconnection(playerId) {
         const player = this.players.get(playerId);
         if (player) {
+            // Free up the name for reuse
+            if (player.character && player.character.name) {
+                this.usedNames.delete(player.character.name);
+            }
             this.io.to(player.room).emit('player-left', playerId);
             this.players.delete(playerId);
             this.updatePlayerCount(player.room);
@@ -122,9 +128,24 @@ export class GameManager {
         // Use AssetManager to get a valid random character
         const charData = await this.assetManager.getRandomCharacter();
         
+        // Generate a unique name (passing skin color and body type for appropriate name generation)
+        let characterName;
+        let attempts = 0;
+        do {
+            characterName = nameGenerator.generateFullName(charData.skin_color, charData.body_type);
+            attempts++;
+            // If we've tried too many times, add a number suffix
+            if (attempts > 50) {
+                characterName = `${characterName} ${Math.floor(Math.random() * 100)}`;
+            }
+        } while (this.usedNames.has(characterName) && attempts < 100);
+        
+        this.usedNames.add(characterName);
+        console.log(`GameManager: Generated character name: ${characterName} (${charData.body_type}, skin: ${charData.skin_color})`);
+        
         return {
             id: playerId,
-            name: `Player_${playerId.substring(0, 6)}`,
+            name: characterName,
             body_type: charData.body_type,
             skin_color: charData.skin_color,
             hair_style: charData.hair_style,
