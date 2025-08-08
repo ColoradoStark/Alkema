@@ -119,18 +119,28 @@ export class GameManager {
         // Use validated parameters that exist in the LPC assets
         const bodyTypes = ['male', 'female'];
         const skinColors = ['light', 'amber', 'olive', 'brown', 'black'];
+        const hairStyles = ['plain', 'bedhead', 'buzzcut', 'cowlick', 'messy', 'spiked', 'wavy'];
+        const hairColors = ['black', 'blonde', 'brown', 'red', 'grey', 'white'];
+        const shirtColors = ['red', 'blue', 'green', 'brown', 'black', 'white', 'purple'];
+        const pantsColors = ['brown', 'black', 'blue', 'grey', 'tan'];
         
-        // Fixed selection for debugging
-        const bodyType = 'male';
-        const skinColor = 'light';
+        // Random selection for variety
+        const bodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
+        const skinColor = skinColors[Math.floor(Math.random() * skinColors.length)];
+        const hairStyle = hairStyles[Math.floor(Math.random() * hairStyles.length)];
+        const hairColor = hairColors[Math.floor(Math.random() * hairColors.length)];
+        const shirtColor = shirtColors[Math.floor(Math.random() * shirtColors.length)];
+        const pantsColor = pantsColors[Math.floor(Math.random() * pantsColors.length)];
         
         return {
             id: playerId,
             name: `Player_${playerId.substring(0, 6)}`,
             body_type: bodyType,
             skin_color: skinColor,
-            hair_style: 'plain',
-            hair_color: 'brown',
+            hair_style: hairStyle,
+            hair_color: hairColor,
+            shirt_color: shirtColor,
+            pants_color: pantsColor,
             equipment: {},
             animations: {
                 available: ['idle', 'walk', 'attack', 'hurt'],

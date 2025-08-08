@@ -14,33 +14,51 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         // Set physics body size
         this.body.setSize(32, 48);
         
-        // Start visible
-        this.setVisible(true);
+        // Keep container visible for physics, but alpha 0 until loaded
+        this.setAlpha(0);
         
         // Load character layers
-        this.loadCharacterLayers();
+        this.loadCharacterLayers().then(() => {
+            console.log('Character sprites loaded for:', this.characterData.id);
+            this.setAlpha(1);
+        }).catch(err => {
+            console.error('Failed to load character sprites:', err);
+            this.setAlpha(1); // Show anyway
+        });
     }
     
     async loadCharacterLayers() {
         const bodyType = this.characterData.body_type || 'male';
         const skinColor = this.characterData.skin_color || 'light';
+        const hairStyle = this.characterData.hair_style || 'plain';
+        const hairColor = this.characterData.hair_color || 'brown';
+        const shirtColor = this.characterData.shirt_color || 'blue';
+        const pantsColor = this.characterData.pants_color || 'brown';
+        
+        console.log('Loading character layers for:', this.characterData.id, {
+            bodyType, skinColor, hairStyle, hairColor, shirtColor, pantsColor
+        });
         
         // Define layer URLs in order (bottom to top)
         const layerConfigs = [
             { name: 'body', url: `http://localhost:8080/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
-            { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` }
+            { name: 'pants', url: `http://localhost:8080/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
+            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/longsleeve/longsleeves_cuffed/${bodyType}/walk/${shirtColor}.png`, optional: true },
+            { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` },
+            { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/walk/${hairColor}.png`, optional: true }
         ];
         
         // Load each layer
         for (const config of layerConfigs) {
-            await this.loadLayer(config.name, config.url);
+            await this.loadLayer(config.name, config.url, config.optional);
         }
         
         this.createAnimations();
         this.playAnimation('idle', 'down');
+        console.log('Character layers loaded:', Object.keys(this.layers));
     }
     
-    async loadLayer(layerName, url) {
+    async loadLayer(layerName, url, optional = false) {
         const layerKey = `${this.characterData.id}_${layerName}`;
         
         // Check if already loaded
@@ -64,7 +82,11 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             };
             
             img.onerror = () => {
-                console.warn(`Failed to load ${layerName}`);
+                if (!optional) {
+                    console.warn(`Failed to load required layer ${layerName} from ${url}`);
+                } else {
+                    console.log(`Optional layer ${layerName} not found at ${url}, skipping`);
+                }
                 resolve();
             };
             

@@ -26,6 +26,26 @@ export class GameScene extends Scene {
         this.setupNetworkHandlers();
         this.setupInput();
         
+        // Process any data that arrived before scene was ready
+        if (this.networkManager.selfData) {
+            console.log('GameScene: Processing stored self-data');
+            const data = this.networkManager.selfData;
+            data.isLocal = true;
+            this.localPlayer = this.addPlayer(data);
+            
+            if (this.localPlayer && this.localPlayer.sprite) {
+                this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
+                this.cameras.main.setZoom(1);
+            }
+        }
+        
+        if (this.networkManager.currentPlayers) {
+            console.log('GameScene: Processing stored current-players');
+            Object.values(this.networkManager.currentPlayers).forEach(player => {
+                this.addPlayer(player);
+            });
+        }
+        
         console.log('GameScene: Setup complete');
     }
 
@@ -48,11 +68,31 @@ export class GameScene extends Scene {
     }
 
     setupNetworkHandlers() {
+        this.networkManager.on('self-data', (data) => {
+            console.log('GameScene: Received self-data:', data);
+            data.isLocal = true;
+            this.localPlayer = this.addPlayer(data);
+            
+            if (this.localPlayer && this.localPlayer.sprite) {
+                this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
+                this.cameras.main.setZoom(1);
+            }
+        });
+
+        this.networkManager.on('current-players', (players) => {
+            console.log('GameScene: Received current-players:', players);
+            Object.values(players).forEach(player => {
+                this.addPlayer(player);
+            });
+        });
+
         this.networkManager.on('player-joined', (data) => {
+            console.log('GameScene: Player joined:', data.id);
             this.addPlayer(data);
         });
 
         this.networkManager.on('player-left', (playerId) => {
+            console.log('GameScene: Player left:', playerId);
             this.removePlayer(playerId);
         });
 
@@ -62,23 +102,6 @@ export class GameScene extends Scene {
 
         this.networkManager.on('player-updated', (data) => {
             this.updatePlayerAppearance(data.id, data.character);
-        });
-
-        this.networkManager.on('current-players', (players) => {
-            Object.values(players).forEach(player => {
-                this.addPlayer(player);
-            });
-        });
-
-        this.networkManager.on('self-data', (data) => {
-            console.log('Received self-data:', data);
-            data.isLocal = true;
-            this.localPlayer = this.addPlayer(data);
-            
-            if (this.localPlayer && this.localPlayer.sprite) {
-                this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
-                this.cameras.main.setZoom(1);
-            }
         });
     }
 

@@ -5,6 +5,8 @@ export class NetworkManager {
         this.socket = null;
         this.connected = false;
         this.listeners = new Map();
+        this.selfData = null;
+        this.currentPlayers = null;
     }
 
     connect() {
@@ -63,6 +65,14 @@ export class NetworkManager {
                 if (event === 'self-data' || event === 'current-players') {
                     console.log(`NetworkManager: Received ${event}`, data);
                 }
+                
+                // Store initial data for later
+                if (event === 'self-data') {
+                    this.selfData = data;
+                } else if (event === 'current-players') {
+                    this.currentPlayers = data;
+                }
+                
                 this.emit(event, data);
             });
         });
