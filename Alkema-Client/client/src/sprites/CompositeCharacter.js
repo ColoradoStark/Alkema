@@ -43,7 +43,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         const layerConfigs = [
             { name: 'body', url: `http://localhost:8080/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
             { name: 'pants', url: `http://localhost:8080/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
-            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/longsleeve/longsleeves_cuffed/${bodyType}/walk/${shirtColor}.png`, optional: true },
+            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/vest/${bodyType}/walk/${shirtColor}.png`, optional: true },
             { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` },
             { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/walk/${hairColor}.png`, optional: true }
         ];

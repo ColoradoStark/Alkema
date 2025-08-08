@@ -28,8 +28,8 @@ export class GameScene extends Scene {
         
         // Process any data that arrived before scene was ready
         if (this.networkManager.selfData) {
-            console.log('GameScene: Processing stored self-data');
-            const data = this.networkManager.selfData;
+            console.log('GameScene: Processing stored self-data:', this.networkManager.selfData);
+            const data = {...this.networkManager.selfData};
             data.isLocal = true;
             this.localPlayer = this.addPlayer(data);
             
@@ -37,13 +37,23 @@ export class GameScene extends Scene {
                 this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
                 this.cameras.main.setZoom(1);
             }
+            
+            // Clear stored data after processing
+            this.networkManager.selfData = null;
+        } else {
+            console.log('GameScene: No stored self-data yet');
         }
         
         if (this.networkManager.currentPlayers) {
-            console.log('GameScene: Processing stored current-players');
+            console.log('GameScene: Processing stored current-players:', this.networkManager.currentPlayers);
             Object.values(this.networkManager.currentPlayers).forEach(player => {
                 this.addPlayer(player);
             });
+            
+            // Clear stored data after processing
+            this.networkManager.currentPlayers = null;
+        } else {
+            console.log('GameScene: No stored current-players yet');
         }
         
         console.log('GameScene: Setup complete');
@@ -69,20 +79,24 @@ export class GameScene extends Scene {
 
     setupNetworkHandlers() {
         this.networkManager.on('self-data', (data) => {
-            console.log('GameScene: Received self-data:', data);
-            data.isLocal = true;
-            this.localPlayer = this.addPlayer(data);
-            
-            if (this.localPlayer && this.localPlayer.sprite) {
-                this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
-                this.cameras.main.setZoom(1);
+            if (!this.localPlayer) {
+                console.log('GameScene: Received self-data:', data);
+                data.isLocal = true;
+                this.localPlayer = this.addPlayer(data);
+                
+                if (this.localPlayer && this.localPlayer.sprite) {
+                    this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
+                    this.cameras.main.setZoom(1);
+                }
             }
         });
 
         this.networkManager.on('current-players', (players) => {
             console.log('GameScene: Received current-players:', players);
             Object.values(players).forEach(player => {
-                this.addPlayer(player);
+                if (!this.players.has(player.id)) {
+                    this.addPlayer(player);
+                }
             });
         });
 
