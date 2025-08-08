@@ -153,13 +153,23 @@ export class AssetManager {
         // Select random elements from each category
         const skinColor = this._randomChoice(typeAssets.skin_colors || ['light']);
         
+        // Get hair color that contrasts with skin
         const hairData = this._randomChoice(typeAssets.hair_styles || []);
         const hairStyle = hairData.name || 'plain';
-        const hairColor = this._randomChoice(hairData.variants || ['brown']);
+        const hairColor = this._getContrastingColor(
+            skinColor, 
+            hairData.variants || ['brown'],
+            'hair'
+        );
         
+        // Get shirt color that contrasts with skin
         const shirtData = this._randomChoice(typeAssets.shirt_types || []);
         const shirtType = shirtData.name || (bodyType === 'female' ? 'tunic' : 'vest');
-        const shirtColor = this._randomChoice(shirtData.variants || ['blue']);
+        const shirtColor = this._getContrastingColor(
+            skinColor,
+            shirtData.variants || ['blue'],
+            'shirt'
+        );
         
         const pantsColor = this._randomChoice(typeAssets.pants_colors || ['brown']);
         
@@ -189,6 +199,81 @@ export class AssetManager {
             shirt_color: 'blue',
             pants_color: 'brown'
         };
+    }
+    
+    _getContrastingColor(skinColor, availableColors, itemType) {
+        // Define which colors are too similar to each skin tone
+        const conflictMap = {
+            'light': {
+                hair: ['white', 'gray', 'blonde'], // Too similar to light skin
+                shirt: ['white', 'tan', 'pink', 'rose'] // Too similar to light skin
+            },
+            'amber': {
+                hair: ['blonde', 'red'], // Too similar to amber skin
+                shirt: ['tan', 'brown', 'orange', 'yellow'] // Too similar to amber skin
+            },
+            'olive': {
+                hair: ['brown', 'dark_brown'], // Too similar to olive skin
+                shirt: ['green', 'forest', 'olive', 'tan'] // Too similar to olive skin
+            },
+            'brown': {
+                hair: ['brown', 'dark_brown'], // Too similar to brown skin
+                shirt: ['brown', 'tan', 'leather', 'walnut'] // Too similar to brown skin
+            },
+            'black': {
+                hair: ['black', 'dark_brown'], // Too similar to black skin
+                shirt: ['black', 'charcoal', 'slate', 'gray'] // Too similar to black skin
+            }
+        };
+        
+        // Get conflicts for this skin color and item type
+        const conflicts = conflictMap[skinColor]?.[itemType] || [];
+        
+        // Filter out conflicting colors
+        let safeColors = availableColors.filter(color => {
+            // Check if this color conflicts with skin
+            const colorName = color.toLowerCase().replace('_', ' ');
+            return !conflicts.some(conflict => 
+                colorName.includes(conflict) || conflict.includes(colorName)
+            );
+        });
+        
+        // If no safe colors remain, use defaults that always contrast
+        if (safeColors.length === 0) {
+            console.log(`AssetManager: No contrasting ${itemType} colors for ${skinColor} skin, using defaults`);
+            if (itemType === 'hair') {
+                // Default contrasting hair colors for each skin tone
+                const defaults = {
+                    'light': ['black', 'dark_brown', 'red'],
+                    'amber': ['black', 'dark_brown', 'white'],
+                    'olive': ['black', 'blonde', 'red', 'white'],
+                    'brown': ['black', 'blonde', 'gray', 'white'],
+                    'black': ['blonde', 'gray', 'white', 'red']
+                };
+                safeColors = defaults[skinColor] || ['black'];
+            } else {
+                // Default contrasting shirt colors for each skin tone
+                const defaults = {
+                    'light': ['blue', 'green', 'red', 'black', 'purple', 'navy'],
+                    'amber': ['blue', 'green', 'black', 'purple', 'navy', 'white'],
+                    'olive': ['blue', 'red', 'black', 'purple', 'white', 'pink'],
+                    'brown': ['blue', 'green', 'red', 'white', 'purple', 'pink'],
+                    'black': ['blue', 'green', 'red', 'white', 'purple', 'pink', 'yellow']
+                };
+                safeColors = defaults[skinColor] || ['blue'];
+            }
+            
+            // Find first available default color
+            const available = safeColors.find(c => 
+                availableColors.some(ac => ac.toLowerCase() === c.toLowerCase())
+            );
+            if (available) {
+                return available;
+            }
+        }
+        
+        // Return random choice from safe colors
+        return this._randomChoice(safeColors);
     }
     
     _randomChoice(array) {
