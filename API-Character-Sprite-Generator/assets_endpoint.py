@@ -85,8 +85,7 @@ def get_safe_random_assets():
                 {'name': 'parted', 'variants': ['blonde', 'dark_brown', 'black', 'gray', 'white', 'red']}
             ],
             'shirt_types': [
-                {'name': 'vest', 'variants': ['brown', 'blue', 'green', 'red', 'black', 'white', 'purple', 'gray']},
-                {'name': 'longsleeve', 'variants': ['brown', 'blue', 'green', 'red', 'black', 'white', 'gray']}
+                {'name': 'vest', 'variants': ['brown', 'blue', 'green', 'red', 'black', 'white', 'purple', 'gray']}
             ],
             'skin_colors': ['light', 'amber', 'olive', 'brown', 'black'],
             'pants_colors': ['brown', 'black', 'blue', 'gray', 'tan']
@@ -103,8 +102,7 @@ def get_safe_random_assets():
                 {'name': 'shoulderl', 'variants': ['blonde', 'dark_brown', 'black', 'gray', 'white', 'red']}
             ],
             'shirt_types': [
-                {'name': 'tunic', 'variants': ['brown', 'blue', 'green', 'red', 'black', 'white', 'purple', 'pink', 'teal']},
-                {'name': 'longsleeve', 'variants': ['brown', 'blue', 'green', 'red', 'black', 'white', 'pink']}
+                {'name': 'tunic', 'variants': ['brown', 'blue', 'green', 'red', 'black', 'white', 'purple', 'pink', 'teal']}
             ],
             'skin_colors': ['light', 'amber', 'olive', 'brown', 'black'],
             'pants_colors': ['brown', 'black', 'blue', 'gray', 'tan']

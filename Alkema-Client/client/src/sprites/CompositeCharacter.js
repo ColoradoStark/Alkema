@@ -49,31 +49,53 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         // Apply color mapping for styles that need it
         const mappedHairColor = hairColorMap[hairColor] || hairColor;
         
-        console.log('Loading character layers for:', this.characterData.id, {
-            bodyType, skinColor, hairStyle, 
-            hairColor: `${hairColor} -> ${mappedHairColor}`, 
-            shirtColor, pantsColor
-        });
-        
         // Define layer URLs in order (bottom to top)
         // Use shirt_type from character data if available, otherwise default based on gender
         const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
         
-        console.log(`Using ${shirtType} for ${bodyType} character`);
+        console.log('Loading character layers for:', this.characterData.id, {
+            bodyType, skinColor, hairStyle, 
+            hairColor: `${hairColor} -> ${mappedHairColor}`, 
+            shirtType, shirtColor, pantsColor
+        });
         
-        // Handle special hair styles that have bg/fg structure
-        let hairPath = 'walk';
-        if (hairStyle === 'ponytail') {
-            hairPath = 'bg/walk';
+        // Extra logging for female characters to debug baldness
+        if (bodyType === 'female') {
+            console.log(`FEMALE CHARACTER DEBUG: hairStyle='${hairStyle}', hairColor='${hairColor}', mapped='${mappedHairColor}'`);
         }
         
+        console.log(`Character ${this.characterData.id} hair style: ${hairStyle}`);
+        
+        console.log(`Using ${shirtType} for ${bodyType} character`);
+        
+        // Base layer configs
         const layerConfigs = [
             { name: 'body', url: `http://localhost:8080/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
             { name: 'pants', url: `http://localhost:8080/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
             { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: false }, // Made required for debugging
-            { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` },
-            { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/${hairPath}/${mappedHairColor}.png`, optional: true }
+            { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` }
         ];
+        
+        // Handle special hair styles that have bg/fg structure
+        // These hairstyles need both background and foreground layers
+        const twoLayerHairStyles = ['ponytail', 'ponytail2', 'princess', 'shoulderl', 'shoulderr', 'pigtails'];
+        
+        if (twoLayerHairStyles.includes(hairStyle)) {
+            // These styles have background (behind head) and foreground (the actual detail)
+            // Note: fg layer doesn't have color variants - it's just the shape overlay
+            layerConfigs.push(
+                { name: 'hair_bg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`, optional: true },
+                { name: 'hair_fg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/fg/walk.png`, optional: true }
+            );
+            console.log(`Loading two-layer hair style: ${hairStyle} with color ${mappedHairColor}`);
+            console.log(`BG URL: http://localhost:8080/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`);
+            console.log(`FG URL: http://localhost:8080/spritesheets/hair/${hairStyle}/adult/fg/walk.png`);
+        } else {
+            // Regular hair styles just have one layer
+            layerConfigs.push(
+                { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/walk/${mappedHairColor}.png`, optional: true }
+            );
+        }
         
         // Load each layer
         for (const config of layerConfigs) {
@@ -106,16 +128,18 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                     frameHeight: 64
                 });
                 this.addLayerSprite(layerName, layerKey);
+                console.log(`Loaded and added ${layerName} for ${this.characterData.id}`);
                 resolve();
             };
             
             img.onerror = () => {
                 if (!optional) {
-                    console.error(`Failed to load required layer ${layerName} from ${url}`);
+                    console.error(`CRITICAL: Failed to load required layer ${layerName} from ${url}`);
                     // For debugging - log the full path
                     console.error(`Check if file exists at path: ${url}`);
+                    console.error(`Character data:`, this.characterData);
                 } else {
-                    console.warn(`Optional layer ${layerName} not found at ${url}, skipping`);
+                    console.warn(`WARNING: Hair/clothing layer ${layerName} not found at ${url} - character may appear bald/naked`);
                 }
                 resolve();
             };

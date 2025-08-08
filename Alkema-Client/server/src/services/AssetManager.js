@@ -153,8 +153,13 @@ export class AssetManager {
         // Select random elements from each category
         const skinColor = this._randomChoice(typeAssets.skin_colors || ['light']);
         
-        // Get hair color that contrasts with skin
-        const hairData = this._randomChoice(typeAssets.hair_styles || []);
+        // Get hair style - for females, prefer longer styles
+        let hairData;
+        if (bodyType === 'female' && typeAssets.hair_styles) {
+            hairData = this._getWeightedFemaleHairStyle(typeAssets.hair_styles);
+        } else {
+            hairData = this._randomChoice(typeAssets.hair_styles || []);
+        }
         const hairStyle = hairData.name || 'plain';
         const hairColor = this._getContrastingColor(
             skinColor, 
@@ -203,26 +208,28 @@ export class AssetManager {
     
     _getContrastingColor(skinColor, availableColors, itemType) {
         // Define which colors are too similar to each skin tone
+        // Note: Available hair colors are: blonde, dark_brown, black, gray, white, red
+        // Being more conservative - only exclude colors that really blend in
         const conflictMap = {
             'light': {
-                hair: ['white', 'gray', 'blonde'], // Too similar to light skin
-                shirt: ['white', 'tan', 'pink', 'rose'] // Too similar to light skin
+                hair: ['white'], // Only pure white really blends with light skin
+                shirt: ['white', 'pink'] // These can blend with light skin
             },
             'amber': {
-                hair: ['blonde', 'red'], // Too similar to amber skin
-                shirt: ['tan', 'brown', 'orange', 'yellow'] // Too similar to amber skin
+                hair: [], // All hair colors contrast well with amber
+                shirt: ['tan', 'brown'] // These can blend with amber skin
             },
             'olive': {
-                hair: ['brown', 'dark_brown'], // Too similar to olive skin
-                shirt: ['green', 'forest', 'olive', 'tan'] // Too similar to olive skin
+                hair: [], // All hair colors contrast well with olive  
+                shirt: ['green', 'olive'] // These can blend with olive skin
             },
             'brown': {
-                hair: ['brown', 'dark_brown'], // Too similar to brown skin
-                shirt: ['brown', 'tan', 'leather', 'walnut'] // Too similar to brown skin
+                hair: [], // All hair colors actually contrast OK with brown skin
+                shirt: ['brown'] // Only brown shirts really blend
             },
             'black': {
-                hair: ['black', 'dark_brown'], // Too similar to black skin
-                shirt: ['black', 'charcoal', 'slate', 'gray'] // Too similar to black skin
+                hair: ['black'], // Only pure black blends
+                shirt: ['black', 'gray'] // These can blend with black skin
             }
         };
         
@@ -273,7 +280,29 @@ export class AssetManager {
         }
         
         // Return random choice from safe colors
-        return this._randomChoice(safeColors);
+        const chosen = this._randomChoice(safeColors);
+        console.log(`AssetManager: Chose ${itemType} color '${chosen}' for ${skinColor} skin (avoided: ${conflicts.join(', ') || 'none'})`);
+        return chosen;
+    }
+    
+    _getWeightedFemaleHairStyle(hairStyles) {
+        // Define short and long hair styles
+        const shortStyles = ['pixie', 'bob', 'plain'];
+        const longStyles = ['loose', 'ponytail', 'princess', 'long', 'shoulderl'];
+        
+        // Separate styles into short and long
+        const shortOptions = hairStyles.filter(h => shortStyles.includes(h.name));
+        const longOptions = hairStyles.filter(h => longStyles.includes(h.name));
+        
+        // 85% chance for long hair, 15% for short
+        if (Math.random() < 0.85 && longOptions.length > 0) {
+            return this._randomChoice(longOptions);
+        } else if (shortOptions.length > 0) {
+            return this._randomChoice(shortOptions);
+        } else {
+            // Fallback to any available style
+            return this._randomChoice(hairStyles);
+        }
     }
     
     _randomChoice(array) {
