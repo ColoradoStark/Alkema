@@ -38,6 +38,8 @@ export class GameScene extends Scene {
                 this.cameras.main.setZoom(1);
             }
             
+            this.updatePlayerCount();
+            
             // Clear stored data after processing
             this.networkManager.selfData = null;
         } else {
@@ -49,6 +51,8 @@ export class GameScene extends Scene {
             Object.values(this.networkManager.currentPlayers).forEach(player => {
                 this.addPlayer(player);
             });
+            
+            this.updatePlayerCount();
             
             // Clear stored data after processing
             this.networkManager.currentPlayers = null;
@@ -88,6 +92,7 @@ export class GameScene extends Scene {
                     this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
                     this.cameras.main.setZoom(1);
                 }
+                this.updatePlayerCount();
             }
         });
 
@@ -98,16 +103,21 @@ export class GameScene extends Scene {
                     this.addPlayer(player);
                 }
             });
+            // After adding all existing players, update the count
+            // This will include both the local player and all existing players
+            this.updatePlayerCount();
         });
 
         this.networkManager.on('player-joined', (data) => {
             console.log('GameScene: Player joined:', data.id);
             this.addPlayer(data);
+            this.updatePlayerCount();
         });
 
         this.networkManager.on('player-left', (playerId) => {
             console.log('GameScene: Player left:', playerId);
             this.removePlayer(playerId);
+            this.updatePlayerCount();
         });
 
         this.networkManager.on('player-moved', (data) => {
@@ -163,6 +173,21 @@ export class GameScene extends Scene {
         const player = this.players.get(playerId);
         if (player) {
             player.updateAppearance(characterData);
+        }
+    }
+
+    updatePlayerCount() {
+        const count = this.players.size;
+        console.log('GameScene: Player count is now:', count, 'Players in map:', Array.from(this.players.keys()));
+        
+        // Get UIScene and update it directly
+        const uiScene = this.scene.get('UIScene');
+        if (uiScene && uiScene.playerCount) {
+            uiScene.playerCount.setText(`Players: ${count}`);
+        } else {
+            // If UIScene isn't ready yet, try again in a moment
+            console.log('GameScene: UIScene not ready, scheduling retry');
+            this.time.delayedCall(100, () => this.updatePlayerCount());
         }
     }
 

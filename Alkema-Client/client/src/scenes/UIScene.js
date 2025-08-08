@@ -24,11 +24,11 @@ export class UIScene extends Scene {
         this.connectionStatus = this.add.text(
             this.cameras.main.width - padding, 
             padding, 
-            'Connected', 
+            'Connecting...', 
             {
                 fontFamily: 'Alagard',
                 fontSize: '14px',
-                color: '#00ff00',
+                color: '#ffff00',
                 backgroundColor: '#000000aa',
                 padding: { x: 8, y: 4 }
             }
@@ -64,20 +64,32 @@ export class UIScene extends Scene {
     setupEventHandlers() {
         const networkManager = this.game.registry.get('networkManager');
         
+        if (!networkManager) {
+            console.error('UIScene: NetworkManager not found!');
+            return;
+        }
+        
+        // Check if already connected
+        if (networkManager.connected) {
+            console.log('UIScene: Already connected, updating status');
+            this.connectionStatus.setText('Connected');
+            this.connectionStatus.setColor('#00ff00');
+        }
+        
         networkManager.on('self-data', (data) => {
+            console.log('UIScene: Received self-data');
             this.updateCharacterInfo(data.character);
         });
 
-        networkManager.on('player-count', (count) => {
-            this.playerCount.setText(`Players: ${count}`);
-        });
-
         networkManager.on('disconnected', () => {
+            console.log('UIScene: Disconnected');
             this.connectionStatus.setText('Disconnected');
             this.connectionStatus.setColor('#ff0000');
+            this.playerCount.setText('Players: 0');
         });
 
         networkManager.on('connected', () => {
+            console.log('UIScene: Connected');
             this.connectionStatus.setText('Connected');
             this.connectionStatus.setColor('#00ff00');
         });
@@ -87,7 +99,7 @@ export class UIScene extends Scene {
             delay: 100,
             loop: true,
             callback: () => {
-                if (gameScene.localPlayer) {
+                if (gameScene.localPlayer && gameScene.localPlayer.sprite) {
                     const x = Math.round(gameScene.localPlayer.sprite.x);
                     const y = Math.round(gameScene.localPlayer.sprite.y);
                     this.coordinates.setText(`X: ${x}, Y: ${y}`);

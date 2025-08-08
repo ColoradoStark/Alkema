@@ -56,6 +56,12 @@ export class PreloadScene extends Scene {
             console.log('PreloadScene: Starting GameScene and UIScene');
             this.scene.start('GameScene');
             this.scene.start('UIScene');
+            
+            // Re-emit connected event for UIScene
+            if (networkManager && networkManager.connected) {
+                console.log('PreloadScene: Re-emitting connected event for UIScene');
+                networkManager.emit('connected', {});
+            }
         });
     }
 }

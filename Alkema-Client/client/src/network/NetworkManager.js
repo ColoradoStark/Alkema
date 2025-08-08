@@ -34,7 +34,7 @@ export class NetworkManager {
             this.socket.on('disconnect', () => {
                 console.log('Disconnected from server');
                 this.connected = false;
-                this.emit('disconnected');
+                this.emit('disconnected', {});
             });
 
             this.socket.on('connect_error', (error) => {
@@ -62,7 +62,7 @@ export class NetworkManager {
         events.forEach(event => {
             this.socket.on(event, (data) => {
                 // Only log important events
-                if (event === 'self-data' || event === 'current-players') {
+                if (event === 'self-data' || event === 'current-players' || event === 'player-count') {
                     console.log(`NetworkManager: Received ${event}`, data);
                 }
                 
@@ -79,12 +79,14 @@ export class NetworkManager {
     }
 
     emit(event, data) {
+        // Send to server if it's a player or game event
         if (event.startsWith('player-') || event.startsWith('game-')) {
             if (this.socket && this.connected) {
                 this.socket.emit(event, data);
             }
         }
         
+        // Always emit to local listeners
         const callbacks = this.listeners.get(event);
         if (callbacks) {
             callbacks.forEach(callback => callback(data));
