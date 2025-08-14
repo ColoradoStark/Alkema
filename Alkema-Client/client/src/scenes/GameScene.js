@@ -1,6 +1,5 @@
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
-import { SpriteManager } from '../sprites/SpriteManager.js';
 
 export class GameScene extends Scene {
     constructor() {
@@ -15,8 +14,6 @@ export class GameScene extends Scene {
         if (!this.networkManager) {
             return;
         }
-        
-        this.spriteManager = new SpriteManager(this);
         
         this.cameras.main.setBackgroundColor('#3a3a3a');
         
