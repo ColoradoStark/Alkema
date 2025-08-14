@@ -40,8 +40,8 @@ export class GameScene extends Scene {
             
             this.updatePlayerCount();
             
-            // Clear stored data after processing
-            this.networkManager.selfData = null;
+            // Don't clear stored data yet - UIScene may need it
+            // this.networkManager.selfData = null;
         } else {
             console.log('GameScene: No stored self-data yet');
         }
@@ -54,8 +54,8 @@ export class GameScene extends Scene {
             
             this.updatePlayerCount();
             
-            // Clear stored data after processing
-            this.networkManager.currentPlayers = null;
+            // Don't clear stored data yet
+            // this.networkManager.currentPlayers = null;
         } else {
             console.log('GameScene: No stored current-players yet');
         }

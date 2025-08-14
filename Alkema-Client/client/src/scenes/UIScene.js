@@ -76,6 +76,23 @@ export class UIScene extends Scene {
             this.connectionStatus.setColor('#00ff00');
         }
         
+        // Check if self-data was already received and stored
+        console.log('UIScene: Checking for stored self-data...');
+        console.log('UIScene: networkManager.selfData =', networkManager.selfData);
+        if (networkManager.selfData) {
+            console.log('UIScene: Found stored self-data, updating character info');
+            console.log('UIScene: selfData.character =', networkManager.selfData.character);
+            this.updateCharacterInfo(networkManager.selfData.character);
+            
+            // Clear the stored data after using it
+            this.time.delayedCall(100, () => {
+                networkManager.selfData = null;
+                networkManager.currentPlayers = null;
+            });
+        } else {
+            console.log('UIScene: No stored self-data found yet');
+        }
+        
         networkManager.on('self-data', (data) => {
             console.log('UIScene: Received self-data');
             this.updateCharacterInfo(data.character);
@@ -109,10 +126,14 @@ export class UIScene extends Scene {
     }
 
     updateCharacterInfo(character) {
+        console.log('UIScene: updateCharacterInfo called with:', character);
         if (character) {
             const info = `Character: ${character.name || 'Unnamed'}\n` +
                         `Type: ${character.body_type || 'Unknown'}`;
+            console.log('UIScene: Setting character info text to:', info);
             this.characterInfo.setText(info);
+        } else {
+            console.log('UIScene: No character data provided to updateCharacterInfo');
         }
     }
 }

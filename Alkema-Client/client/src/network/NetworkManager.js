@@ -68,6 +68,7 @@ export class NetworkManager {
                 
                 // Store initial data for later
                 if (event === 'self-data') {
+                    console.log('NetworkManager: Storing self-data for later use:', data);
                     this.selfData = data;
                 } else if (event === 'current-players') {
                     this.currentPlayers = data;
