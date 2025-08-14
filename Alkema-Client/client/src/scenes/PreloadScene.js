@@ -48,18 +48,15 @@ export class PreloadScene extends Scene {
     }
 
     create() {
-        console.log('PreloadScene: Waiting for initial data...');
         const networkManager = this.game.registry.get('networkManager');
         
         // Wait a bit for initial data to arrive
         this.time.delayedCall(100, () => {
-            console.log('PreloadScene: Starting GameScene and UIScene');
             this.scene.start('GameScene');
             this.scene.start('UIScene');
             
             // Re-emit connected event for UIScene
             if (networkManager && networkManager.connected) {
-                console.log('PreloadScene: Re-emitting connected event for UIScene');
                 networkManager.emit('connected', {});
             }
         });

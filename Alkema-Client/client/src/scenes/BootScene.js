@@ -11,7 +11,6 @@ export class BootScene extends Scene {
     }
 
     create() {
-        console.log('BootScene: Starting');
         this.game.registry.set('networkManager', new NetworkManager());
         
         this.add.text(512, 384, 'Connecting to server...', {
@@ -21,10 +20,8 @@ export class BootScene extends Scene {
         }).setOrigin(0.5);
 
         this.game.registry.get('networkManager').connect().then(() => {
-            console.log('BootScene: Connected, starting PreloadScene');
             this.scene.start('PreloadScene');
         }).catch(error => {
-            console.error('Failed to connect:', error);
             this.add.text(512, 420, 'Connection failed. Please refresh.', {
                 fontFamily: 'Alagard',
                 fontSize: '20px',

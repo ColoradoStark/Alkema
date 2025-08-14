@@ -19,10 +19,8 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         
         // Load character layers
         this.loadCharacterLayers().then(() => {
-            console.log('Character sprites loaded for:', this.characterData.id);
             this.setAlpha(1);
         }).catch(err => {
-            console.error('Failed to load character sprites:', err);
             this.setAlpha(1); // Show anyway
         });
     }
@@ -53,20 +51,6 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         // Use shirt_type from character data if available, otherwise default based on gender
         const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
         
-        console.log('Loading character layers for:', this.characterData.id, {
-            bodyType, skinColor, hairStyle, 
-            hairColor: `${hairColor} -> ${mappedHairColor}`, 
-            shirtType, shirtColor, pantsColor
-        });
-        
-        // Extra logging for female characters to debug baldness
-        if (bodyType === 'female') {
-            console.log(`FEMALE CHARACTER DEBUG: hairStyle='${hairStyle}', hairColor='${hairColor}', mapped='${mappedHairColor}'`);
-        }
-        
-        console.log(`Character ${this.characterData.id} hair style: ${hairStyle}`);
-        
-        console.log(`Using ${shirtType} for ${bodyType} character`);
         
         // Base layer configs
         const layerConfigs = [
@@ -87,9 +71,6 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                 { name: 'hair_bg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`, optional: true },
                 { name: 'hair_fg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/fg/walk.png`, optional: true }
             );
-            console.log(`Loading two-layer hair style: ${hairStyle} with color ${mappedHairColor}`);
-            console.log(`BG URL: http://localhost:8080/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`);
-            console.log(`FG URL: http://localhost:8080/spritesheets/hair/${hairStyle}/adult/fg/walk.png`);
         } else {
             // Regular hair styles just have one layer
             layerConfigs.push(
@@ -104,7 +85,6 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         
         this.createAnimations();
         this.playAnimation('idle', 'down');
-        console.log('Character layers loaded:', Object.keys(this.layers));
     }
     
     async loadLayer(layerName, url, optional = false) {
@@ -122,25 +102,16 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             img.crossOrigin = 'anonymous';
             
             img.onload = () => {
-                console.log(`Successfully loaded ${layerName} from ${url} (${img.width}x${img.height})`);
                 this.scene.textures.addSpriteSheet(layerKey, img, {
                     frameWidth: 64,
                     frameHeight: 64
                 });
                 this.addLayerSprite(layerName, layerKey);
-                console.log(`Loaded and added ${layerName} for ${this.characterData.id}`);
                 resolve();
             };
             
             img.onerror = () => {
-                if (!optional) {
-                    console.error(`CRITICAL: Failed to load required layer ${layerName} from ${url}`);
-                    // For debugging - log the full path
-                    console.error(`Check if file exists at path: ${url}`);
-                    console.error(`Character data:`, this.characterData);
-                } else {
-                    console.warn(`WARNING: Hair/clothing layer ${layerName} not found at ${url} - character may appear bald/naked`);
-                }
+                // Silently handle missing optional layers
                 resolve();
             };
             
@@ -158,7 +129,6 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         // Store reference
         this.layers[layerName] = sprite;
         
-        console.log(`Added ${layerName} layer with texture ${textureKey}`);
     }
     
     createAnimations() {

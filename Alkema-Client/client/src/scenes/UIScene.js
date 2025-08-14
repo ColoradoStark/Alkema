@@ -65,23 +65,17 @@ export class UIScene extends Scene {
         const networkManager = this.game.registry.get('networkManager');
         
         if (!networkManager) {
-            console.error('UIScene: NetworkManager not found!');
             return;
         }
         
         // Check if already connected
         if (networkManager.connected) {
-            console.log('UIScene: Already connected, updating status');
             this.connectionStatus.setText('Connected');
             this.connectionStatus.setColor('#00ff00');
         }
         
         // Check if self-data was already received and stored
-        console.log('UIScene: Checking for stored self-data...');
-        console.log('UIScene: networkManager.selfData =', networkManager.selfData);
         if (networkManager.selfData) {
-            console.log('UIScene: Found stored self-data, updating character info');
-            console.log('UIScene: selfData.character =', networkManager.selfData.character);
             this.updateCharacterInfo(networkManager.selfData.character);
             
             // Clear the stored data after using it
@@ -89,24 +83,19 @@ export class UIScene extends Scene {
                 networkManager.selfData = null;
                 networkManager.currentPlayers = null;
             });
-        } else {
-            console.log('UIScene: No stored self-data found yet');
         }
         
         networkManager.on('self-data', (data) => {
-            console.log('UIScene: Received self-data');
             this.updateCharacterInfo(data.character);
         });
 
         networkManager.on('disconnected', () => {
-            console.log('UIScene: Disconnected');
             this.connectionStatus.setText('Disconnected');
             this.connectionStatus.setColor('#ff0000');
             this.playerCount.setText('Players: 0');
         });
 
         networkManager.on('connected', () => {
-            console.log('UIScene: Connected');
             this.connectionStatus.setText('Connected');
             this.connectionStatus.setColor('#00ff00');
         });
@@ -126,14 +115,10 @@ export class UIScene extends Scene {
     }
 
     updateCharacterInfo(character) {
-        console.log('UIScene: updateCharacterInfo called with:', character);
         if (character) {
             const info = `Character: ${character.name || 'Unnamed'}\n` +
                         `Type: ${character.body_type || 'Unknown'}`;
-            console.log('UIScene: Setting character info text to:', info);
             this.characterInfo.setText(info);
-        } else {
-            console.log('UIScene: No character data provided to updateCharacterInfo');
         }
     }
 }

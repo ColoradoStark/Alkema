@@ -7,7 +7,6 @@ export class Player {
         this.isLocal = isLocal;
         this.characterData = characterData;
         
-        console.log('Creating player sprite at:', x, y, 'for player:', id, 'isLocal:', isLocal);
         this.sprite = new CompositeCharacter(scene, x, y, characterData);
         
         // Set depth based on whether local or remote
@@ -39,7 +38,6 @@ export class Player {
     setVelocity(vx, vy) {
         if (this.isLocal) {
             if (!this.sprite.body) {
-                console.warn('No physics body for local player!');
                 return;
             }
             this.sprite.body.setVelocity(vx, vy);

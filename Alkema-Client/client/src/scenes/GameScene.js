@@ -10,11 +10,9 @@ export class GameScene extends Scene {
     }
 
     create() {
-        console.log('GameScene: Creating');
         this.networkManager = this.game.registry.get('networkManager');
         
         if (!this.networkManager) {
-            console.error('GameScene: NetworkManager not found!');
             return;
         }
         
@@ -28,7 +26,6 @@ export class GameScene extends Scene {
         
         // Process any data that arrived before scene was ready
         if (this.networkManager.selfData) {
-            console.log('GameScene: Processing stored self-data:', this.networkManager.selfData);
             const data = {...this.networkManager.selfData};
             data.isLocal = true;
             this.localPlayer = this.addPlayer(data);
@@ -39,28 +36,15 @@ export class GameScene extends Scene {
             }
             
             this.updatePlayerCount();
-            
-            // Don't clear stored data yet - UIScene may need it
-            // this.networkManager.selfData = null;
-        } else {
-            console.log('GameScene: No stored self-data yet');
         }
         
         if (this.networkManager.currentPlayers) {
-            console.log('GameScene: Processing stored current-players:', this.networkManager.currentPlayers);
             Object.values(this.networkManager.currentPlayers).forEach(player => {
                 this.addPlayer(player);
             });
             
             this.updatePlayerCount();
-            
-            // Don't clear stored data yet
-            // this.networkManager.currentPlayers = null;
-        } else {
-            console.log('GameScene: No stored current-players yet');
         }
-        
-        console.log('GameScene: Setup complete');
     }
 
     createWorld() {
@@ -84,7 +68,6 @@ export class GameScene extends Scene {
     setupNetworkHandlers() {
         this.networkManager.on('self-data', (data) => {
             if (!this.localPlayer) {
-                console.log('GameScene: Received self-data:', data);
                 data.isLocal = true;
                 this.localPlayer = this.addPlayer(data);
                 
@@ -97,25 +80,20 @@ export class GameScene extends Scene {
         });
 
         this.networkManager.on('current-players', (players) => {
-            console.log('GameScene: Received current-players:', players);
             Object.values(players).forEach(player => {
                 if (!this.players.has(player.id)) {
                     this.addPlayer(player);
                 }
             });
-            // After adding all existing players, update the count
-            // This will include both the local player and all existing players
             this.updatePlayerCount();
         });
 
         this.networkManager.on('player-joined', (data) => {
-            console.log('GameScene: Player joined:', data.id);
             this.addPlayer(data);
             this.updatePlayerCount();
         });
 
         this.networkManager.on('player-left', (playerId) => {
-            console.log('GameScene: Player left:', playerId);
             this.removePlayer(playerId);
             this.updatePlayerCount();
         });
@@ -138,8 +116,6 @@ export class GameScene extends Scene {
         if (this.players.has(playerData.id)) {
             return this.players.get(playerData.id);
         }
-
-        console.log('Adding player:', playerData.id, playerData.isLocal ? '(local)' : '(remote)');
 
         const player = new Player(
             this,
@@ -178,7 +154,6 @@ export class GameScene extends Scene {
 
     updatePlayerCount() {
         const count = this.players.size;
-        console.log('GameScene: Player count is now:', count, 'Players in map:', Array.from(this.players.keys()));
         
         // Get UIScene and update it directly
         const uiScene = this.scene.get('UIScene');
@@ -186,7 +161,6 @@ export class GameScene extends Scene {
             uiScene.playerCount.setText(`Players: ${count}`);
         } else {
             // If UIScene isn't ready yet, try again in a moment
-            console.log('GameScene: UIScene not ready, scheduling retry');
             this.time.delayedCall(100, () => this.updatePlayerCount());
         }
     }

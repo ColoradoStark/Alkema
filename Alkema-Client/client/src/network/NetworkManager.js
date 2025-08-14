@@ -25,20 +25,17 @@ export class NetworkManager {
             });
 
             this.socket.on('connect', () => {
-                console.log('Connected to server');
                 this.connected = true;
                 this.emit('connected');
                 resolve();
             });
 
             this.socket.on('disconnect', () => {
-                console.log('Disconnected from server');
                 this.connected = false;
                 this.emit('disconnected', {});
             });
 
             this.socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
                 reject(error);
             });
 
@@ -61,14 +58,8 @@ export class NetworkManager {
 
         events.forEach(event => {
             this.socket.on(event, (data) => {
-                // Only log important events
-                if (event === 'self-data' || event === 'current-players' || event === 'player-count') {
-                    console.log(`NetworkManager: Received ${event}`, data);
-                }
-                
                 // Store initial data for later
                 if (event === 'self-data') {
-                    console.log('NetworkManager: Storing self-data for later use:', data);
                     this.selfData = data;
                 } else if (event === 'current-players') {
                     this.currentPlayers = data;
