@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import Response, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
@@ -8,7 +10,47 @@ from sprite_generator import SpriteGenerator
 from assets_endpoint import get_safe_random_assets
 import os
 
-app = FastAPI(title="Alkema Character API", version="2.0.0")
+# MongoDB imports
+from mongodb_models import MongoDBConnection
+from game_endpoints import router as game_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle - connect/disconnect databases."""
+    # Startup
+    print("Starting up...")
+    
+    # Initialize PostgreSQL for sprite data
+    try:
+        init_database()
+        print("PostgreSQL database tables verified")
+    except Exception as e:
+        print(f"PostgreSQL initialization note: {e}")
+    
+    # Connect to MongoDB for game data
+    await MongoDBConnection.connect()
+    
+    yield
+    
+    # Shutdown
+    print("Shutting down...")
+    await MongoDBConnection.disconnect()
+
+
+app = FastAPI(title="Alkema Character API", version="3.0.0", lifespan=lifespan)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include game endpoints router
+app.include_router(game_router)
 
 def get_db():
     """Dependency to get database session."""
@@ -18,30 +60,35 @@ def get_db():
     finally:
         db.close()
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup."""
-    try:
-        init_database()
-        print("Database tables verified")
-    except Exception as e:
-        print(f"Database initialization note: {e}")
-
 @app.get("/")
 async def root():
     return {
-        "message": "Alkema Character API v2",
+        "message": "Alkema Character API v3",
         "endpoints": {
-            "generate": "/generate-sprite",
-            "available": "/available-options",
-            "body_types": "/body-types",
+            "sprite_generation": {
+                "generate": "/generate-sprite",
+                "available": "/available-options",
+                "body_types": "/body-types",
+                "assets": "/available-assets"
+            },
+            "game_data": {
+                "players": "/game/players/*",
+                "characters": "/game/characters/*",
+                "sessions": "/game/sessions/*",
+                "admin": "/game/admin/*"
+            },
             "health": "/health"
         }
     }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "database": "connected"}
+    mongodb_status = "connected" if MongoDBConnection.client else "disconnected"
+    return {
+        "status": "healthy", 
+        "postgresql": "connected",
+        "mongodb": mongodb_status
+    }
 
 class SpriteRequest(BaseModel):
     body_type: str

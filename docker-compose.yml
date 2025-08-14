@@ -35,8 +35,11 @@ services:
       - ./Universal-LPC-Spritesheet-Character-Generator:/generator:ro
     environment:
       DATABASE_URL: postgresql://alkema_user:alkema_pass@postgres:5432/alkema_db
+      MONGODB_URI: mongodb://admin:adminpassword@mongodb:27017/alkema?authSource=admin
     depends_on:
       postgres:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; exit(0 if requests.get('http://localhost:8000/health').status_code == 200 else 1)"]
@@ -73,6 +76,7 @@ services:
       PORT: 3001
       MONGODB_URI: mongodb://admin:adminpassword@mongodb:27017/alkema?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this}
+      API_URL: http://api-character-sprite-generator:8000
       API_BASE_URL: http://api-character-sprite-generator:8000
     depends_on:
       - mongodb
