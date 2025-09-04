@@ -15,7 +15,9 @@ export class GameScene extends Scene {
             return;
         }
         
+        // Set camera to only show the game area (excluding UI bars)
         this.cameras.main.setBackgroundColor('#3a3a3a');
+        this.cameras.main.setViewport(0, 32, 352, 448);  // x, y, width, height
         
         this.createWorld();
         this.setupNetworkHandlers();
@@ -105,8 +107,43 @@ export class GameScene extends Scene {
     }
 
     setupInput() {
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+        // Input now handled by UIScene
+        // Keeping this method for compatibility
+    }
+    
+    update(time, delta) {
+        // Update all players
+        this.players.forEach(player => {
+            player.update(delta);
+        });
+    }
+
+    handlePlayerMovement(dx, dy) {
+        if (!this.localPlayer) return;
+        
+        const speed = 100;
+        const vx = dx * speed;
+        const vy = dy * speed;
+        
+        // Use the Player's setVelocity method which handles animations
+        this.localPlayer.setVelocity(vx, vy);
+        
+        // Send movement to server
+        if (this.networkManager && this.networkManager.socket && this.networkManager.socket.connected) {
+            this.networkManager.socket.emit('player-move', {
+                x: this.localPlayer.sprite.x,
+                y: this.localPlayer.sprite.y,
+                direction: this.getDirection(dx, dy)
+            });
+        }
+    }
+    
+    getDirection(dx, dy) {
+        if (dy < 0) return 'up';
+        if (dy > 0) return 'down';
+        if (dx < 0) return 'left';
+        if (dx > 0) return 'right';
+        return 'idle';
     }
 
     addPlayer(playerData) {

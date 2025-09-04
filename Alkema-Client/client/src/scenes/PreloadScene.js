@@ -44,7 +44,11 @@ export class PreloadScene extends Scene {
     }
 
     loadAssets() {
-        // Font is loaded via CSS, no need to load here
+        // Load UI atlas with JSON configuration
+        this.load.atlas('ui-atlas', '/assets/ui/ui_big_pieces.png', '/assets/ui/ui_big_pieces.json');
+        
+        // Also load as image for nine-slice panels
+        this.load.image('ui-sheet', '/assets/ui/ui_big_pieces.png');
     }
 
     create() {
