@@ -32,23 +32,47 @@ export class PreloadScene extends Scene {
             progressBar.fillStyle(0xffffff, 1);
             progressBar.fillRect(width/2 - 150, height/2 - 15, 300 * value, 30);
         });
+        
+        this.load.on('filefailed', (file) => {
+            console.error('Failed to load file:', file.key, file.src);
+        });
 
         this.load.on('complete', () => {
             progressBar.destroy();
             progressBox.destroy();
             loadingText.destroy();
             percentText.destroy();
+            
+            // Debug: Check if icons loaded
+            console.log('Icon textures loaded:');
+            console.log('icon-sword:', this.textures.exists('icon-sword'));
+            console.log('icon-scroll:', this.textures.exists('icon-scroll'));
         });
 
         this.loadAssets();
     }
 
     loadAssets() {
+        // Load UI as spritesheet for easy access
+        this.load.spritesheet('ui-arrows', '/ui/ui_big_pieces.png', {
+            frameWidth: 24,
+            frameHeight: 24,
+            startFrame: 0,
+            endFrame: 1000
+        });
+        
         // Load UI atlas with JSON configuration
-        this.load.atlas('ui-atlas', '/assets/ui/ui_big_pieces.png', '/assets/ui/ui_big_pieces.json');
+        this.load.atlas('ui-atlas', '/ui/ui_big_pieces.png', '/ui/ui_big_pieces.json');
         
         // Also load as image for nine-slice panels
-        this.load.image('ui-sheet', '/assets/ui/ui_big_pieces.png');
+        this.load.image('ui-sheet', '/ui/ui_big_pieces.png');
+        
+        // Load icon images
+        this.load.image('icon-sword', '/ui/long_sword_1_old.png');
+        this.load.image('icon-scroll', '/ui/scroll_old.png');
+        
+        // Load placeholder map background
+        this.load.image('placeholder-map', '/ui/PlaceHolder_Map.png');
     }
 
     create() {

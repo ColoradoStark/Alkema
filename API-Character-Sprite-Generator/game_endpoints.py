@@ -368,29 +368,3 @@ async def get_game_stats(db=Depends(get_database)):
     }
 
 
-@router.get("/admin/active-players")
-async def get_active_players(db=Depends(get_database)):
-    """Get list of currently active players."""
-    from datetime import timedelta
-    cutoff_time = datetime.utcnow() - timedelta(minutes=5)
-    
-    cursor = db.sessions.find({
-        "last_activity": {"$gte": cutoff_time}
-    })
-    
-    active_players = []
-    async for session_data in cursor:
-        session = GameSession(**session_data)
-        active_players.append({
-            "socket_id": session.socket_id,
-            "is_guest": session.is_guest,
-            "character_name": session.character_data.get("name") if session.character_data else "Unknown",
-            "room": session.room,
-            "connected_at": session.connected_at,
-            "last_activity": session.last_activity
-        })
-    
-    return {
-        "count": len(active_players),
-        "players": active_players
-    }

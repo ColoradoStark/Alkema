@@ -47,18 +47,33 @@ export class GameScene extends Scene {
     }
 
     createWorld() {
+        // Add the placeholder map as background
+        const mapBackground = this.add.image(0, 0, 'placeholder-map');
+        mapBackground.setOrigin(0, 0);
+        mapBackground.setDepth(-10); // Ensure it's behind everything
+        
+        // Set world bounds to match the map size (4096x4096)
+        this.physics.world.setBounds(0, 0, 4096, 4096);
+        
+        // Set camera bounds to the map size so players can explore
+        this.cameras.main.setBounds(0, 0, 4096, 4096);
+        
+        // Optional: Add a subtle grid overlay for debugging (remove later if not needed)
         const gridSize = 32;
         const graphics = this.add.graphics();
-        graphics.lineStyle(1, 0x444444, 0.3);
+        graphics.lineStyle(1, 0xffffff, 0.05); // Very subtle white lines
+        graphics.setDepth(-5);
         
-        for (let x = 0; x <= 1024; x += gridSize) {
+        // Only draw grid for a smaller area to avoid performance issues
+        const gridArea = 1024; // Just draw grid in starting area
+        for (let x = 0; x <= gridArea; x += gridSize) {
             graphics.moveTo(x, 0);
-            graphics.lineTo(x, 768);
+            graphics.lineTo(x, gridArea);
         }
         
-        for (let y = 0; y <= 768; y += gridSize) {
+        for (let y = 0; y <= gridArea; y += gridSize) {
             graphics.moveTo(0, y);
-            graphics.lineTo(1024, y);
+            graphics.lineTo(gridArea, y);
         }
         
         graphics.strokePath();
@@ -153,8 +168,8 @@ export class GameScene extends Scene {
 
         const player = new Player(
             this,
-            playerData.x || 512,
-            playerData.y || 384,
+            playerData.x || 2048,  // Start in center of 4096x4096 map
+            playerData.y || 2048,
             playerData.id,
             playerData.character,
             playerData.isLocal || false

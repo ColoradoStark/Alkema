@@ -53,6 +53,18 @@ const characterSchema = new mongoose.Schema({
         ref: 'Player',
         required: true
     },
+    race: {
+        type: String,
+        enum: ['Human', 'Elf', 'Dwarf'],
+        default: 'Human',
+        required: true
+    },
+    characterClass: {
+        type: String,
+        enum: ['Fighter', 'Rogue', 'Cleric', 'Mage'],
+        default: 'Fighter',
+        required: true
+    },
     level: {
         type: Number,
         default: 1
@@ -60,6 +72,51 @@ const characterSchema = new mongoose.Schema({
     experience: {
         type: Number,
         default: 0
+    },
+    attributes: {
+        strength: {
+            type: Number,
+            min: 3,
+            max: 125,
+            default: 10
+        },
+        dexterity: {
+            type: Number,
+            min: 3,
+            max: 125,
+            default: 10
+        },
+        intelligence: {
+            type: Number,
+            min: 3,
+            max: 125,
+            default: 10
+        },
+        vitality: {
+            type: Number,
+            min: 3,
+            max: 125,
+            default: 10
+        },
+        endurance: {
+            type: Number,
+            min: 3,
+            max: 125,
+            default: 10
+        },
+        charisma: {
+            type: Number,
+            min: 3,
+            max: 125,
+            default: 10
+        }
+    },
+    combatStats: {
+        hitPoints: { type: Number, default: 100 },
+        maxHitPoints: { type: Number, default: 100 },
+        armorClass: { type: Number, default: 10 },
+        stamina: { type: Number, default: 100 },
+        maxStamina: { type: Number, default: 100 }
     },
     stats: {
         health: { type: Number, default: 100 },
@@ -91,9 +148,19 @@ characterSchema.methods.getPublicData = function() {
     return {
         id: this._id,
         name: this.name,
+        race: this.race,
+        characterClass: this.characterClass,
         level: this.level,
         position: this.position,
         metadata: this.metadata,
+        attributes: this.attributes,
+        combatStats: {
+            hitPoints: this.combatStats.hitPoints,
+            maxHitPoints: this.combatStats.maxHitPoints,
+            armorClass: this.combatStats.armorClass,
+            stamina: this.combatStats.stamina,
+            maxStamina: this.combatStats.maxStamina
+        },
         stats: {
             health: this.stats.health,
             maxHealth: this.stats.maxHealth

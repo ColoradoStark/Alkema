@@ -5,7 +5,7 @@ export class UIScene extends Scene {
         super({ key: 'UIScene' });
         this.isMobile = false;
         this.controlsVisible = true;
-        this.activeTab = 'inventory';
+        this.activeTab = 'map';
         this.movementKeys = {};
     }
 
@@ -35,40 +35,40 @@ export class UIScene extends Scene {
         topBg.strokeRoundedRect(4, 4, 344, 24, 4);
         this.topBarContainer.add(topBg);
         
-        // Character info
-        this.characterInfo = this.add.text(10, 8, 'Lv.1 Hero', {
+        // Connection status orb (moved left to make room)
+        this.connectionOrb = this.add.circle(300, 16, 5, 0xffff00);
+        this.topBarContainer.add(this.connectionOrb);
+        
+        // Player count next to connection orb - larger and more readable
+        this.playerCountText = this.add.text(310, 16, '0', {
             fontFamily: 'Alagard',
             fontSize: '14px',
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 1
-        });
-        this.topBarContainer.add(this.characterInfo);
+        }).setOrigin(0, 0.5);
+        this.topBarContainer.add(this.playerCountText);
         
-        // Connection status
-        this.connectionOrb = this.add.circle(338, 16, 5, 0xffff00);
-        this.topBarContainer.add(this.connectionOrb);
-        
-        // Health bar
+        // Health bar - moved to the left since no name
         const hpBg = this.add.graphics();
         hpBg.fillStyle(0x4a0000, 1);
-        hpBg.fillRoundedRect(90, 12, 80, 8, 2);
+        hpBg.fillRoundedRect(20, 12, 100, 8, 2);
         this.topBarContainer.add(hpBg);
         
         this.hpBar = this.add.graphics();
         this.hpBar.fillStyle(0xff3333, 1);
-        this.hpBar.fillRoundedRect(90, 12, 80, 8, 2);
+        this.hpBar.fillRoundedRect(20, 12, 100, 8, 2);
         this.topBarContainer.add(this.hpBar);
         
         // Mana bar
         const mpBg = this.add.graphics();
         mpBg.fillStyle(0x00004a, 1);
-        mpBg.fillRoundedRect(180, 12, 60, 8, 2);
+        mpBg.fillRoundedRect(130, 12, 80, 8, 2);
         this.topBarContainer.add(mpBg);
         
         this.mpBar = this.add.graphics();
         this.mpBar.fillStyle(0x3366ff, 1);
-        this.mpBar.fillRoundedRect(180, 12, 60, 8, 2);
+        this.mpBar.fillRoundedRect(130, 12, 80, 8, 2);
         this.topBarContainer.add(this.mpBar);
     }
 
@@ -93,8 +93,8 @@ export class UIScene extends Scene {
 
     createDPad() {
         const dpadX = 64;
-        const dpadY = 48;
-        const btnSize = 30;
+        const dpadY = 56;  // Moved down from 48
+        const btnSpacing = 32;
         
         // D-pad background circle
         const dpadBg = this.add.graphics();
@@ -104,163 +104,212 @@ export class UIScene extends Scene {
         dpadBg.strokeCircle(dpadX, dpadY, 45);
         this.bottomControlsContainer.add(dpadBg);
         
-        // D-pad buttons
-        const upBtn = this.createDPadButton(dpadX, dpadY - btnSize, btnSize, btnSize, '↑', () => {
-            this.movementKeys.up = true;
-        }, () => {
-            this.movementKeys.up = false;
-        });
+        // Create custom arrow graphics since sprites aren't loading
+        this.createArrowButton(dpadX, dpadY - btnSpacing, 'up');
+        this.createArrowButton(dpadX, dpadY + btnSpacing, 'down');
+        this.createArrowButton(dpadX - btnSpacing, dpadY, 'left');
+        this.createArrowButton(dpadX + btnSpacing, dpadY, 'right');
         
-        const downBtn = this.createDPadButton(dpadX, dpadY + btnSize, btnSize, btnSize, '↓', () => {
-            this.movementKeys.down = true;
-        }, () => {
-            this.movementKeys.down = false;
-        });
-        
-        const leftBtn = this.createDPadButton(dpadX - btnSize, dpadY, btnSize, btnSize, '←', () => {
-            this.movementKeys.left = true;
-        }, () => {
-            this.movementKeys.left = false;
-        });
-        
-        const rightBtn = this.createDPadButton(dpadX + btnSize, dpadY, btnSize, btnSize, '→', () => {
-            this.movementKeys.right = true;
-        }, () => {
-            this.movementKeys.right = false;
-        });
-        
-        // Center dot
+        // Center decoration
         const center = this.add.circle(dpadX, dpadY, 8, 0x4a4a5e, 0.8);
         this.bottomControlsContainer.add(center);
     }
-
-    createDPadButton(x, y, width, height, label, onDown, onUp) {
+    
+    createArrowButton(x, y, direction) {
         const container = this.add.container(x, y);
         
         // Button background
         const bg = this.add.graphics();
-        bg.fillStyle(0x3a3a4e, 0.8);
-        bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
+        bg.fillStyle(0x3a3a4e, 0.9);
+        bg.fillRoundedRect(-15, -15, 30, 30, 5);
         bg.lineStyle(1, 0x5a5a6e, 1);
-        bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
+        bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+        
+        // Draw arrow
+        const arrow = this.add.graphics();
+        arrow.lineStyle(3, 0xffffff, 1);
+        arrow.fillStyle(0xffffff, 1);
+        
+        switch(direction) {
+            case 'up':
+                arrow.moveTo(0, -8);
+                arrow.lineTo(-6, 2);
+                arrow.lineTo(-2, 2);
+                arrow.lineTo(-2, 8);
+                arrow.lineTo(2, 8);
+                arrow.lineTo(2, 2);
+                arrow.lineTo(6, 2);
+                arrow.closePath();
+                arrow.fillPath();
+                break;
+            case 'down':
+                arrow.moveTo(0, 8);
+                arrow.lineTo(-6, -2);
+                arrow.lineTo(-2, -2);
+                arrow.lineTo(-2, -8);
+                arrow.lineTo(2, -8);
+                arrow.lineTo(2, -2);
+                arrow.lineTo(6, -2);
+                arrow.closePath();
+                arrow.fillPath();
+                break;
+            case 'left':
+                arrow.moveTo(-8, 0);
+                arrow.lineTo(2, -6);
+                arrow.lineTo(2, -2);
+                arrow.lineTo(8, -2);
+                arrow.lineTo(8, 2);
+                arrow.lineTo(2, 2);
+                arrow.lineTo(2, 6);
+                arrow.closePath();
+                arrow.fillPath();
+                break;
+            case 'right':
+                arrow.moveTo(8, 0);
+                arrow.lineTo(-2, -6);
+                arrow.lineTo(-2, -2);
+                arrow.lineTo(-8, -2);
+                arrow.lineTo(-8, 2);
+                arrow.lineTo(-2, 2);
+                arrow.lineTo(-2, 6);
+                arrow.closePath();
+                arrow.fillPath();
+                break;
+        }
         
         // Make interactive
-        const hitArea = this.add.rectangle(0, 0, width, height, 0x000000, 0);
+        const hitArea = this.add.rectangle(0, 0, 30, 30, 0x000000, 0);
         hitArea.setInteractive();
         
-        const text = this.add.text(0, 0, label, {
-            fontFamily: 'Arial',
-            fontSize: '18px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
+        container.add([bg, arrow, hitArea]);
         
-        container.add([bg, hitArea, text]);
+        hitArea.on('pointerdown', () => {
+            bg.clear();
+            bg.fillStyle(0x5a5a6e, 1);
+            bg.fillRoundedRect(-15, -15, 30, 30, 5);
+            bg.lineStyle(1, 0x7a7a8e, 1);
+            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            this.movementKeys[direction] = true;
+        });
         
-        if (onDown) {
-            hitArea.on('pointerdown', () => {
-                bg.clear();
-                bg.fillStyle(0x5a5a6e, 1);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
-                onDown();
-            });
-        }
+        hitArea.on('pointerup', () => {
+            bg.clear();
+            bg.fillStyle(0x3a3a4e, 0.9);
+            bg.fillRoundedRect(-15, -15, 30, 30, 5);
+            bg.lineStyle(1, 0x5a5a6e, 1);
+            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            this.movementKeys[direction] = false;
+        });
         
-        if (onUp) {
-            hitArea.on('pointerup', () => {
-                bg.clear();
-                bg.fillStyle(0x3a3a4e, 0.8);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
-                bg.lineStyle(1, 0x5a5a6e, 1);
-                bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
-                onUp();
-            });
-            hitArea.on('pointerout', () => {
-                bg.clear();
-                bg.fillStyle(0x3a3a4e, 0.8);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
-                bg.lineStyle(1, 0x5a5a6e, 1);
-                bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
-                onUp();
-            });
-        }
+        hitArea.on('pointerout', () => {
+            bg.clear();
+            bg.fillStyle(0x3a3a4e, 0.9);
+            bg.fillRoundedRect(-15, -15, 30, 30, 5);
+            bg.lineStyle(1, 0x5a5a6e, 1);
+            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            this.movementKeys[direction] = false;
+        });
         
         this.bottomControlsContainer.add(container);
         return container;
     }
 
+
     createActionButtons() {
-        const btnX = 288;
-        const btnY = 48;
-        const btnSize = 36;
-        const spacing = 50;
+        // Calculate center between D-pad right edge and UI right edge
+        // D-pad is at x:64 with buttons extending ~32px right = ~96px
+        // UI right edge is at 352px (total width)
+        // Center point between 96 and 352 = (96 + 352) / 2 = 224
+        const btnX = 224;
+        const btnY = 56;   // Moved down to match D-pad
+        const btnSize = 44;  // Bigger buttons
+        const spacing = 81;  // 50% more spacing (54 * 1.5 = 81)
         
-        // Attack button (red)
+        // Attack button (red) with sword icon
         const attackBtn = this.createActionButton(
             btnX - spacing/2, btnY, btnSize, 
-            'A', 0x8b0000, 0xff0000,
+            'sword', 0x8b0000, 0xff0000,
             () => this.handleAttack()
         );
         
-        // Ability button (blue)
+        // Ability button (blue) with scroll icon
         const abilityBtn = this.createActionButton(
             btnX + spacing/2, btnY, btnSize,
-            'B', 0x00008b, 0x0000ff,
+            'scroll', 0x00008b, 0x0000ff,
             () => this.handleAbility()
         );
     }
 
-    createActionButton(x, y, size, label, color1, color2, onPress) {
-        const container = this.add.container(x, y);
+    createActionButton(x, y, size, iconType, color1, color2, onPress) {
+        // Create a container for the button at the specified position
+        const buttonContainer = this.add.container(x, y);
         
-        // Button circle
+        // Create button background centered at 0,0 within container
         const bg = this.add.graphics();
-        bg.fillStyle(color1, 0.9);
+        bg.fillStyle(color1, 0.6);
         bg.fillCircle(0, 0, size/2);
-        bg.lineStyle(2, color2, 1);
+        bg.lineStyle(2, color2, 0.8);
         bg.strokeCircle(0, 0, size/2);
         
-        // Make interactive
+        // Create icon centered at 0,0 within container
+        let icon;
+        const textureKey = iconType === 'sword' ? 'icon-sword' : 'icon-scroll';
+        
+        if (this.textures.exists(textureKey)) {
+            // Icon loaded successfully
+            icon = this.add.image(0, 0, textureKey);
+            icon.setScale(iconType === 'sword' ? 0.8 : 0.7);
+        } else {
+            // Fallback to text if icon not loaded
+            console.warn(`Icon ${textureKey} not loaded, using text fallback`);
+            const label = iconType === 'sword' ? '⚔' : '📜';
+            icon = this.add.text(0, 0, label, {
+                fontSize: '24px',
+                color: '#ffffff'
+            }).setOrigin(0.5);
+        }
+        
+        // Create invisible hit area centered at 0,0
         const hitArea = this.add.circle(0, 0, size/2, 0x000000, 0);
         hitArea.setInteractive();
         
-        const text = this.add.text(0, 0, label, {
-            fontFamily: 'Alagard',
-            fontSize: '22px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
+        // Add all elements to button container
+        buttonContainer.add([bg, icon, hitArea]);
         
-        container.add([bg, hitArea, text]);
+        // Add button container to bottom controls
+        this.bottomControlsContainer.add(buttonContainer);
+        
+        // Store original scale for icon
+        const originalIconScale = iconType === 'sword' ? 0.8 : 0.7;
         
         hitArea.on('pointerdown', () => {
-            container.setScale(0.9);
+            // Scale the entire container down
+            buttonContainer.setScale(0.9);
             onPress();
         });
         
         hitArea.on('pointerup', () => {
-            container.setScale(1);
+            // Reset container scale
+            buttonContainer.setScale(1);
         });
         
         hitArea.on('pointerout', () => {
-            container.setScale(1);
+            // Reset container scale
+            buttonContainer.setScale(1);
         });
         
-        this.bottomControlsContainer.add(container);
-        return container;
+        return buttonContainer;
     }
 
     createTabBar() {
-        const tabY = 120;
+        const tabY = 135;  // Moved further down
         const tabWidth = 80;
         const tabHeight = 28;
         const tabs = [
-            { key: 'inventory', label: 'Bag', x: 50 },
-            { key: 'skills', label: 'Skills', x: 134 },
-            { key: 'map', label: 'Map', x: 218 },
-            { key: 'settings', label: 'Menu', x: 302 }
+            { key: 'map', label: 'Map', x: 50 },
+            { key: 'equip', label: 'Equip', x: 134 },
+            { key: 'stats', label: 'Stats', x: 218 },
+            { key: 'items', label: 'Items', x: 302 }
         ];
         
         this.tabButtons = {};
@@ -327,10 +376,10 @@ export class UIScene extends Scene {
         this.input.keyboard.on('keydown-E', () => this.handleAbility());
         
         // Tab switching with number keys
-        this.input.keyboard.on('keydown-ONE', () => this.switchTab('inventory'));
-        this.input.keyboard.on('keydown-TWO', () => this.switchTab('skills'));
-        this.input.keyboard.on('keydown-THREE', () => this.switchTab('map'));
-        this.input.keyboard.on('keydown-FOUR', () => this.switchTab('settings'));
+        this.input.keyboard.on('keydown-ONE', () => this.switchTab('map'));
+        this.input.keyboard.on('keydown-TWO', () => this.switchTab('equip'));
+        this.input.keyboard.on('keydown-THREE', () => this.switchTab('stats'));
+        this.input.keyboard.on('keydown-FOUR', () => this.switchTab('items'));
         
         // Toggle controls visibility with C
         this.input.keyboard.on('keydown-C', () => this.toggleControlsVisibility());
@@ -348,28 +397,34 @@ export class UIScene extends Scene {
             this.connectionOrb.setFillStyle(0x00ff00);
         }
         
-        // Check if self-data was already received and stored
+        // Clear any stored data after a short delay
         if (networkManager.selfData) {
-            this.updateCharacterInfo(networkManager.selfData.character);
-            
-            // Clear the stored data after using it
             this.time.delayedCall(100, () => {
                 networkManager.selfData = null;
                 networkManager.currentPlayers = null;
             });
         }
-        
-        networkManager.on('self-data', (data) => {
-            this.updateCharacterInfo(data.character);
-        });
 
         networkManager.on('disconnected', () => {
             this.connectionOrb.setFillStyle(0xff0000);
+            this.playerCountText.setText('0');
         });
 
         networkManager.on('connected', () => {
             this.connectionOrb.setFillStyle(0x00ff00);
         });
+        
+        // Listen for player count updates
+        networkManager.on('player-joined', () => {
+            this.updatePlayerCount();
+        });
+        
+        networkManager.on('player-left', () => {
+            this.updatePlayerCount();
+        });
+        
+        // Initial player count update
+        this.updatePlayerCount();
     }
 
     update() {
@@ -445,22 +500,23 @@ export class UIScene extends Scene {
     }
 
     updateControlsVisibility() {
-        // On desktop, hide controls by default
-        if (!this.isMobile) {
-            this.bottomControlsContainer.setAlpha(0.3);
-        }
+        // On desktop, controls are fully visible (no opacity change)
+        // Remove the alpha setting entirely
     }
 
     toggleControlsVisibility() {
+        // Toggle visibility without changing opacity
         this.controlsVisible = !this.controlsVisible;
-        this.bottomControlsContainer.setAlpha(this.controlsVisible ? 1 : 0.3);
+        // Could hide/show instead of changing alpha if needed
+        // this.bottomControlsContainer.setVisible(this.controlsVisible);
     }
-
-    updateCharacterInfo(character) {
-        if (character) {
-            const name = character.name || 'Unnamed';
-            const level = character.level || 1;
-            this.characterInfo.setText(`Lv.${level} ${name}`);
+    
+    updatePlayerCount() {
+        const gameScene = this.scene.get('GameScene');
+        if (gameScene && gameScene.players) {
+            const count = gameScene.players.size;
+            this.playerCountText.setText(count.toString());
         }
     }
+
 }
