@@ -593,7 +593,11 @@ CHARACTER_CLASSES: Dict[str, dict] = {
     },
     "mage": {
         "display_name": "Mage",
-        "upper_body": ["torso_clothes_robe"],
+        "upper_body": [
+            "torso_clothes_longsleeve", "torso_clothes_longsleeve2",
+            "torso_clothes_tunic", "dress_kimono",
+            "torso_clothes_blouse_longsleeve",
+        ],
         "lower_body": ["legs_pants", "legs_hose", "legs_skirt_straight"],
         "weapons": [
             "weapon_magic_wand", "weapon_magic_diamond", "weapon_magic_gnarled",
