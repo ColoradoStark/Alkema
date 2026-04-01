@@ -67,7 +67,8 @@ class ItemLayer(Base):
     item_id = Column(Integer, ForeignKey('items.id', ondelete='CASCADE'), nullable=False)
     layer_number = Column(Integer, nullable=False)
     z_pos = Column(Integer)
-    
+    custom_animation = Column(String(100), nullable=True)
+
     item = relationship("Item", back_populates="layers")
     body_types = relationship("ItemLayerBodyType", back_populates="layer", cascade="all, delete-orphan")
     
@@ -146,6 +147,42 @@ class Animation(Base):
     __table_args__ = (
         Index('idx_animations_name', 'name'),
     )
+
+
+class CustomAnimation(Base):
+    __tablename__ = 'custom_animations'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    frame_size = Column(Integer, nullable=False)  # 64, 128, or 192
+    num_directions = Column(Integer, nullable=False)  # typically 4
+    num_frames = Column(Integer, nullable=False)  # frames per direction
+
+    frames = relationship("CustomAnimationFrame", back_populates="custom_animation", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index('idx_custom_animations_name', 'name'),
+    )
+
+
+class CustomAnimationFrame(Base):
+    __tablename__ = 'custom_animation_frames'
+
+    id = Column(Integer, primary_key=True)
+    custom_animation_id = Column(Integer, ForeignKey('custom_animations.id', ondelete='CASCADE'), nullable=False)
+    direction_index = Column(Integer, nullable=False)  # 0=N, 1=W, 2=S, 3=E
+    frame_index = Column(Integer, nullable=False)  # position in sequence
+    source_animation = Column(String(50), nullable=False)  # e.g. 'slash'
+    source_direction = Column(String(10), nullable=False)  # 'n', 'w', 's', 'e'
+    source_frame = Column(Integer, nullable=False)  # column index in standard row
+
+    custom_animation = relationship("CustomAnimation", back_populates="frames")
+
+    __table_args__ = (
+        UniqueConstraint('custom_animation_id', 'direction_index', 'frame_index', name='uq_custom_anim_frame'),
+        Index('idx_custom_anim_frames_anim', 'custom_animation_id'),
+    )
+
 
 class BodyType(Base):
     __tablename__ = 'body_types'
