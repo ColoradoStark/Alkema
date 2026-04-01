@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from models import (
     init_database, create_session,
@@ -399,8 +399,21 @@ class LPCDataIngester:
     def _scan_and_update_animations(self):
         """Run filesystem scanner and update item_animations with verified data."""
         print("\nRunning filesystem animation scanner...")
+
+        # Build custom_to_standard mapping from DB
+        custom_to_standard = {}
+        custom_anims = self.session.query(CustomAnimation).options(
+            joinedload(CustomAnimation.frames)
+        ).all()
+        for ca in custom_anims:
+            if ca.frames:
+                custom_to_standard[ca.name] = ca.frames[0].source_animation
+        if custom_to_standard:
+            print(f"  Custom-to-standard mappings: {custom_to_standard}")
+
         scanner = AnimationScanner(
-            sheet_definitions_path=SHEET_DEFINITIONS_PATH
+            sheet_definitions_path=SHEET_DEFINITIONS_PATH,
+            custom_to_standard=custom_to_standard,
         )
         scan_results = scanner.scan_all_definitions()
 
