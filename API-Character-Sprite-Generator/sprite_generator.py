@@ -1,6 +1,6 @@
 """
 Sprite generation service using direct image composition with Pillow.
-Replaces the Puppeteer-based approach with database-driven sprite generation.
+Database-driven sprite generation with layer compositing.
 """
 
 import os
@@ -8,293 +8,608 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from PIL import Image
 import io
-from sqlalchemy.orm import Session
-from models import Item, ItemLayer, ItemLayerBodyType, ItemVariant
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
+from models import Item, ItemLayer, ItemLayerBodyType, ItemVariant, Animation, item_animations, CustomAnimation, CustomAnimationFrame
 import logging
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 SPRITE_BASE_PATH = "/generator/spritesheets"
 if not os.path.exists(SPRITE_BASE_PATH):
     SPRITE_BASE_PATH = "../Universal-LPC-Spritesheet-Character-Generator/spritesheets"
-    
-logger.info(f"Using sprite base path: {SPRITE_BASE_PATH}")
 
 SPRITE_WIDTH = 64
 SPRITE_HEIGHT = 64
 SHEET_COLUMNS = 13
 SHEET_ROWS = 53
+FULL_WIDTH = SPRITE_WIDTH * SHEET_COLUMNS   # 832
+FULL_HEIGHT = SPRITE_HEIGHT * SHEET_ROWS     # 3392
+
+# Animation layout: (name, start_row, num_rows)
+ANIMATIONS = [
+    ('spellcast', 0, 4),
+    ('thrust', 4, 4),
+    ('walk', 8, 4),
+    ('slash', 12, 4),
+    ('shoot', 16, 4),
+    ('hurt', 20, 1),
+    ('climb', 21, 1),
+    ('idle', 22, 4),
+    ('jump', 26, 4),
+    ('sit', 30, 4),
+    ('emote', 34, 4),
+    ('run', 38, 4),
+    ('combat_idle', 42, 4),
+    ('backslash', 46, 4),
+    ('halfslash', 50, 3),
+]
+
+# Standard animation row lookup
+DIRECTION_OFFSETS = {'n': 0, 'w': 1, 's': 2, 'e': 3}
+
+ANIMATION_ROWS = {}
+for _anim_name, _start_row, _num_rows in ANIMATIONS:
+    ANIMATION_ROWS[_anim_name] = _start_row
+
+# Cache for loaded sprite images to avoid repeated disk reads within a single generation
+_path_exists_cache: Dict[str, bool] = {}
+
 
 class SpriteGenerator:
     """Generates character spritesheets by compositing layers from the database."""
-    
+
     def __init__(self, session: Session):
         self.session = session
-        self.sprite_cache = {}
-        
+        self._image_cache: Dict[str, Image.Image] = {}
+
     def generate_spritesheet(
-        self, 
+        self,
         body_type: str,
-        selected_items: List[Dict[str, str]]
-    ) -> bytes:
+        selected_items: List[Dict[str, str]],
+    ) -> Tuple[bytes, Dict]:
         """
         Generate a complete spritesheet for a character.
-        
-        Args:
-            body_type: The body type (male, female, child, etc.)
-            selected_items: List of dicts with 'type', 'item', and optional 'variant'
-                           e.g., [{'type': 'body', 'item': 'body', 'variant': 'light'},
-                                  {'type': 'hair', 'item': 'hair_long', 'variant': 'blonde'}]
-        
+
         Returns:
-            PNG image bytes of the complete spritesheet
+            Tuple of (PNG image bytes, custom_animations layout metadata)
         """
-        logger.info(f"Generating spritesheet for body_type: {body_type}")
-        logger.info(f"Selected items: {selected_items}")
-        
         layers_to_draw = self._get_layers_to_draw(body_type, selected_items)
-        logger.info(f"Found {len(layers_to_draw)} layers to draw")
-        
         layers_to_draw.sort(key=lambda x: x['z_pos'] if x['z_pos'] is not None else 0)
-        
-        # Create the full spritesheet canvas
-        spritesheet = Image.new('RGBA', (SPRITE_WIDTH * SHEET_COLUMNS, SPRITE_HEIGHT * SHEET_ROWS), (0, 0, 0, 0))
-        
-        # Combine all animations for each layer
+
+        spritesheet = Image.new('RGBA', (FULL_WIDTH, FULL_HEIGHT), (0, 0, 0, 0))
+
         for layer_info in layers_to_draw:
-            layer_sheet = self._create_full_sheet_for_layer(layer_info, body_type, selected_items)
-            if layer_sheet:
-                spritesheet = Image.alpha_composite(spritesheet, layer_sheet)
-                    
-        logger.info(f"Successfully composited spritesheet")
-        
+            if layer_info['layer'].custom_animation:
+                continue  # handled separately below
+            self._composite_layer(spritesheet, layer_info, body_type, selected_items)
+
+        # Render custom/oversized animations below standard grid
+        custom_anims = self._get_custom_animations_needed(selected_items)
+        spritesheet, custom_layout = self._render_custom_animations(
+            spritesheet, body_type, selected_items, custom_anims,
+        )
+
         output = io.BytesIO()
-        spritesheet.save(output, format='PNG')
-        return output.getvalue()
-        
-    def _create_full_sheet_for_layer(self, layer_info: Dict, body_type: str, selected_items: List[Dict[str, str]]) -> Optional[Image.Image]:
-        """Create a full spritesheet for a single layer by combining all its animations."""
-        # Animation list with their row positions in the final sheet
-        animations = [
-            ('spellcast', 0),
-            ('thrust', 4),
-            ('walk', 8),
-            ('slash', 12),
-            ('shoot', 16),
-            ('hurt', 20),
-            ('climb', 21),
-            ('idle', 22),
-            ('jump', 26),
-            ('sit', 30),
-            ('emote', 34),
-            ('run', 38),
-            ('combat_idle', 42),
-            ('backslash', 46),
-            ('halfslash', 50)
-        ]
-        
-        # Create a blank canvas for this layer
-        layer_sheet = Image.new('RGBA', (SPRITE_WIDTH * SHEET_COLUMNS, SPRITE_HEIGHT * SHEET_ROWS), (0, 0, 0, 0))
-        animations_found = 0
-        
-        for animation_name, start_row in animations:
+        spritesheet.save(output, format='PNG', optimize=False)
+        return output.getvalue(), custom_layout
+
+    def _composite_layer(
+        self,
+        target: Image.Image,
+        layer_info: Dict,
+        body_type: str,
+        selected_items: List[Dict[str, str]],
+    ) -> None:
+        """Composite a single layer's animations directly onto the target canvas."""
+        for animation_name, start_row, num_rows in ANIMATIONS:
             sprite_path = self._resolve_animation_path(layer_info, body_type, animation_name)
-            
-            if os.path.exists(sprite_path):
-                try:
-                    anim_image = Image.open(sprite_path).convert('RGBA')
-                    
-                    # Apply body color matching if needed
-                    if layer_info.get('match_body_color'):
-                        body_color = self._get_body_color(selected_items)
-                        if body_color:
-                            anim_image = self._apply_color_mask(anim_image, body_color)
-                    
-                    # Calculate where to paste this animation
-                    y_position = start_row * SPRITE_HEIGHT
-                    
-                    # Paste the animation at the correct position
-                    layer_sheet.paste(anim_image, (0, y_position), anim_image)
-                    animations_found += 1
-                    logger.debug(f"Added animation {animation_name} at row {start_row}")
-                    
-                except Exception as e:
-                    logger.debug(f"Could not load {animation_name}: {e}")
-            else:
-                logger.debug(f"Animation not found: {sprite_path}")
-                
-        if animations_found > 0:
-            logger.info(f"Created layer with {animations_found} animations")
-            return layer_sheet
-        else:
-            return None
-            
+
+            if not os.path.exists(sprite_path):
+                continue
+
+            try:
+                anim_image = self._load_image(sprite_path)
+
+                y_position = start_row * SPRITE_HEIGHT
+
+                # Paste onto a temporary same-size canvas for alpha_composite
+                # (only the region that matters)
+                anim_h = anim_image.size[1]
+                region_h = min(anim_h, num_rows * SPRITE_HEIGHT)
+
+                # Crop the target region, composite, paste back
+                box = (0, y_position, FULL_WIDTH, y_position + region_h)
+                region = target.crop(box)
+                anim_crop = anim_image.crop((0, 0, min(anim_image.size[0], FULL_WIDTH), region_h))
+
+                # Ensure same size
+                if anim_crop.size != region.size:
+                    tmp = Image.new('RGBA', region.size, (0, 0, 0, 0))
+                    tmp.paste(anim_crop, (0, 0), anim_crop)
+                    anim_crop = tmp
+
+                composited = Image.alpha_composite(region, anim_crop)
+                target.paste(composited, (0, y_position))
+
+            except Exception:
+                pass
+
+    def _get_custom_animations_needed(
+        self,
+        selected_items: List[Dict[str, str]],
+    ) -> Dict[str, 'CustomAnimation']:
+        """Determine which custom animations are needed based on selected items."""
+        item_names = [s['item'] for s in selected_items]
+        if not item_names:
+            return {}
+
+        layers = (
+            self.session.query(ItemLayer)
+            .join(Item)
+            .filter(Item.file_name.in_(item_names))
+            .filter(ItemLayer.custom_animation.isnot(None))
+            .all()
+        )
+
+        custom_anim_names = {layer.custom_animation for layer in layers}
+        if not custom_anim_names:
+            return {}
+
+        custom_anims = (
+            self.session.query(CustomAnimation)
+            .options(joinedload(CustomAnimation.frames))
+            .filter(CustomAnimation.name.in_(custom_anim_names))
+            .all()
+        )
+
+        return {ca.name: ca for ca in custom_anims}
+
+    def _render_custom_animations(
+        self,
+        spritesheet: Image.Image,
+        body_type: str,
+        selected_items: List[Dict[str, str]],
+        custom_anims: Dict[str, 'CustomAnimation'],
+    ) -> Tuple[Image.Image, Dict[str, Dict]]:
+        """Render oversized/custom animations below the standard grid."""
+        if not custom_anims:
+            return spritesheet, {}
+
+        layers_to_draw = self._get_layers_to_draw(body_type, selected_items)
+        layout_meta = {}
+        current_y = FULL_HEIGHT
+
+        for anim_name, ca in sorted(custom_anims.items()):
+            fs = ca.frame_size
+            section_width = fs * ca.num_frames
+            section_height = fs * ca.num_directions
+
+            new_width = max(spritesheet.size[0], section_width)
+            new_height = current_y + section_height
+
+            if new_width > spritesheet.size[0] or new_height > spritesheet.size[1]:
+                expanded = Image.new('RGBA', (new_width, new_height), (0, 0, 0, 0))
+                expanded.paste(spritesheet, (0, 0))
+                spritesheet = expanded
+
+            # Get layers that reference this custom animation
+            custom_layers = [
+                l for l in layers_to_draw
+                if l['layer'].custom_animation == anim_name
+            ]
+            custom_layers.sort(key=lambda x: x['z_pos'] if x['z_pos'] is not None else 0)
+
+            # Build frame mapping from DB
+            frame_map = {}
+            for frame in ca.frames:
+                key = (frame.direction_index, frame.frame_index)
+                frame_map[key] = (frame.source_animation, frame.source_direction, frame.source_frame)
+
+            # Render each frame
+            for dir_idx in range(ca.num_directions):
+                for frame_idx in range(ca.num_frames):
+                    mapping = frame_map.get((dir_idx, frame_idx))
+                    if not mapping:
+                        continue
+
+                    src_anim, src_dir, src_frame_col = mapping
+                    dest_x = frame_idx * fs
+                    dest_y = current_y + dir_idx * fs
+
+                    frame_canvas = Image.new('RGBA', (fs, fs), (0, 0, 0, 0))
+                    offset = (fs - SPRITE_WIDTH) // 2
+
+                    for layer_info in custom_layers:
+                        sprite_path = self._resolve_animation_path(
+                            layer_info, body_type, src_anim
+                        )
+                        if not os.path.exists(sprite_path):
+                            continue
+
+                        try:
+                            src_image = self._load_image(sprite_path)
+                            # The loaded image is the animation spritesheet for this layer
+                            # Each row is one direction, columns are frames
+                            local_row = DIRECTION_OFFSETS.get(src_dir, 0)
+
+                            sx = src_frame_col * SPRITE_WIDTH
+                            sy = local_row * SPRITE_HEIGHT
+
+                            if sx + SPRITE_WIDTH <= src_image.size[0] and sy + SPRITE_HEIGHT <= src_image.size[1]:
+                                src_frame = src_image.crop((sx, sy, sx + SPRITE_WIDTH, sy + SPRITE_HEIGHT))
+                                temp = Image.new('RGBA', (fs, fs), (0, 0, 0, 0))
+                                temp.paste(src_frame, (offset, offset), src_frame)
+                                frame_canvas = Image.alpha_composite(frame_canvas, temp)
+                        except Exception:
+                            pass
+
+                    spritesheet.paste(frame_canvas, (dest_x, dest_y), frame_canvas)
+
+            layout_meta[anim_name] = {
+                'y_offset': current_y,
+                'frame_size': fs,
+                'num_frames': ca.num_frames,
+                'num_directions': ca.num_directions,
+            }
+            current_y += section_height
+
+        return spritesheet, layout_meta
+
+    def get_animation_coverage(
+        self,
+        selected_items: List[Dict[str, str]],
+    ) -> Dict[str, Dict]:
+        """
+        Get per-animation coverage info: whether standard sprites exist
+        and which oversized variant is available.
+        """
+        item_names = [s['item'] for s in selected_items]
+        if not item_names:
+            return {}
+
+        items = (
+            self.session.query(Item)
+            .options(joinedload(Item.animations))
+            .filter(Item.file_name.in_(item_names))
+            .all()
+        )
+        standard_anims = set()
+        for item in items:
+            for anim in item.animations:
+                standard_anims.add(anim.name)
+
+        custom_anim_names = set()
+        layers = (
+            self.session.query(ItemLayer)
+            .join(Item)
+            .filter(Item.file_name.in_(item_names))
+            .filter(ItemLayer.custom_animation.isnot(None))
+            .all()
+        )
+        for layer in layers:
+            custom_anim_names.add(layer.custom_animation)
+
+        custom_anims = (
+            self.session.query(CustomAnimation)
+            .options(joinedload(CustomAnimation.frames))
+            .filter(CustomAnimation.name.in_(custom_anim_names))
+            .all()
+        ) if custom_anim_names else []
+
+        oversized_map = {}
+        for ca in custom_anims:
+            if ca.frames:
+                base_anim = ca.frames[0].source_animation
+                oversized_map[base_anim] = ca.name
+
+        coverage = {}
+        for anim_name, _, _ in ANIMATIONS:
+            coverage[anim_name] = {
+                'standard': anim_name in standard_anims,
+                'oversized': oversized_map.get(anim_name),
+            }
+
+        return coverage
+
+    def _load_image(self, path: str) -> Image.Image:
+        """Load an image with caching."""
+        if path not in self._image_cache:
+            self._image_cache[path] = Image.open(path).convert('RGBA')
+        return self._image_cache[path]
+
     def _resolve_animation_path(self, layer_info: Dict, body_type: str, animation: str) -> str:
         """Resolve the path for a specific animation of a layer."""
         sprite_path = layer_info['sprite_path']
         variant = layer_info.get('variant')
         item = layer_info['item']
-        
+
         # Handle template replacements
         if item.replace_in_path:
             for key, value in item.replace_in_path.items():
-                if f"${{{key}}}" in sprite_path:
+                placeholder = f"${{{key}}}"
+                if placeholder in sprite_path:
                     if isinstance(value, dict):
                         replacement = value.get(variant) if variant else value.get('default', '')
                     else:
                         replacement = value if value else ''
-                    
-                    # Make sure replacement is a string
                     if replacement is None:
                         replacement = ''
-                    
-                    sprite_path = sprite_path.replace(f"${{{key}}}", str(replacement))
-        
-        # Remove trailing slash if present
-        if sprite_path.endswith('/'):
-            sprite_path = sprite_path[:-1]
-                    
+                    sprite_path = sprite_path.replace(placeholder, str(replacement))
+
+        # Remove trailing slash
+        sprite_path = sprite_path.rstrip('/')
+
         # Build the path with animation subdirectory
         if variant:
             sprite_path = f"{sprite_path}/{animation}/{variant}.png"
         else:
-            # No variant, just use the animation sheet
             sprite_path = f"{sprite_path}/{animation}.png"
-            
-        full_path = os.path.join(SPRITE_BASE_PATH, sprite_path)
-        
-        return full_path
-        
+
+        return os.path.join(SPRITE_BASE_PATH, sprite_path)
+
     def _get_layers_to_draw(
-        self, 
-        body_type: str, 
-        selected_items: List[Dict[str, str]]
+        self,
+        body_type: str,
+        selected_items: List[Dict[str, str]],
     ) -> List[Dict]:
         """Get all layers that need to be drawn for the selected items."""
+        # Batch-load all needed items in one query
+        item_names = [s['item'] for s in selected_items]
+        items = (
+            self.session.query(Item)
+            .options(
+                joinedload(Item.layers).joinedload(ItemLayer.body_types),
+                joinedload(Item.variants),
+                joinedload(Item.tags),
+            )
+            .filter(Item.file_name.in_(item_names))
+            .all()
+        )
+        item_map = {i.file_name: i for i in items}
+
+        # Determine body color from selections (for match_body_color items)
+        body_color = None
+        for sel in selected_items:
+            if sel.get('type') == 'body' and sel.get('variant'):
+                body_color = sel['variant']
+                break
+
         layers = []
-        
         for selection in selected_items:
-            logger.debug(f"Processing selection: {selection}")
-            
-            item = self.session.query(Item).filter_by(
-                file_name=selection['item']
-            ).first()
-            
+            item = item_map.get(selection['item'])
             if not item:
-                logger.warning(f"Item not found in database: {selection['item']}")
                 continue
-                
-            logger.debug(f"Found item: {item.name} with {len(item.layers)} layers")
-            
+
+            # Determine variant: if match_body_color, use body's color
+            variant = selection.get('variant')
+            if item.match_body_color and body_color:
+                variant = body_color
+
             for layer in item.layers:
                 body_type_layer = next(
                     (bt for bt in layer.body_types if bt.body_type == body_type),
-                    None
+                    None,
                 )
-                
                 if body_type_layer:
-                    layer_info = {
+                    layers.append({
                         'item': item,
                         'layer': layer,
                         'body_type_layer': body_type_layer,
                         'z_pos': layer.z_pos,
-                        'variant': selection.get('variant'),
+                        'variant': variant,
                         'match_body_color': item.match_body_color,
-                        'sprite_path': body_type_layer.sprite_path
-                    }
-                    layers.append(layer_info)
-                    logger.debug(f"Added layer: {body_type_layer.sprite_path} at z_pos {layer.z_pos}")
-                else:
-                    logger.debug(f"No {body_type} body type for this layer")
-                    
+                        'sprite_path': body_type_layer.sprite_path,
+                    })
+
         return layers
-        
-        
-    def _get_body_color(self, selected_items: List[Dict[str, str]]) -> Optional[str]:
-        """Get the body color from the selections."""
-        body_selection = next(
-            (s for s in selected_items if s['type'] == 'body'),
-            None
+
+    # ------------------------------------------------------------------
+    # Animation support
+    # ------------------------------------------------------------------
+
+    # Item types where missing animations make the character look visibly broken.
+    # Body/clothing missing = naked character.
+    # Accessories, face expressions, belts, capes, etc. are non-critical.
+    # Core clothing that would leave the character visibly naked if missing.
+    # Armor accessories (arms, bracers, shoulders, bauldron, wrists) only have
+    # 6 combat animations and are overlays — not critical.
+    CRITICAL_TYPES = {
+        'body', 'head', 'clothes', 'legs', 'dress', 'dress_sleeves',
+        'armour', 'chainmail', 'jacket', 'overalls', 'vest', 'sleeves',
+        'shoes', 'gloves',
+    }
+
+    # Weapons/shields are only critical for combat animations — missing weapon
+    # during walk/idle is fine, but missing during slash/shoot = wrong weapon motion.
+    WEAPON_TYPES = {'weapon', 'shield'}
+    # Spellcast looks fine without a weapon (character does casting motion).
+    COMBAT_ANIMATIONS = {
+        'slash', 'thrust', 'shoot', 'backslash', 'halfslash',
+    }
+
+    def get_supported_animations(
+        self,
+        selected_items: List[Dict[str, str]],
+    ) -> Dict:
+        """
+        Determine animation support for a character's equipment.
+
+        An animation is "supported" if all critical items (body, clothing, legs)
+        have it — minor accessories and weapons missing an animation won't
+        make it N/A since the character still looks clothed.
+
+        Returns:
+            {
+                "supported": ["walk", "slash", ...],
+                "na": ["climb", ...],
+                "na_reasons": {"climb": ["torso_clothes_robe"]},
+                "weapon_missing": {"shoot": ["weapon_sword_saber"]}
+            }
+        """
+        item_names = [s['item'] for s in selected_items]
+        if not item_names:
+            return {"supported": [], "na": [], "na_reasons": {}, "weapon_missing": {}}
+
+        # Get all items with their animations and type
+        items = (
+            self.session.query(Item)
+            .options(joinedload(Item.animations))
+            .filter(Item.file_name.in_(item_names))
+            .all()
         )
-        return body_selection.get('variant') if body_selection else None
-        
-    def _apply_color_mask(self, image: Image.Image, color: str) -> Image.Image:
-        """Apply a color mask to match body color (for items like eyes)."""
-        return image
-        
+
+        if not items:
+            return {"supported": [], "na": [], "na_reasons": {}, "weapon_missing": {}}
+
+        # Build per-item animation sets, separated by criticality
+        critical_items = {}   # file_name -> anim set (body/clothes/legs/head)
+        weapon_items = {}     # file_name -> anim set (weapons/shields)
+        for item in items:
+            anim_set = {a.name for a in item.animations}
+            if item.type_name in self.CRITICAL_TYPES:
+                critical_items[item.file_name] = anim_set
+            elif item.type_name in self.WEAPON_TYPES:
+                weapon_items[item.file_name] = anim_set
+
+        # All standard animation names
+        all_anims = {a[0] for a in ANIMATIONS}
+
+        # Step 1: Intersect critical (clothing/body) items
+        if critical_items:
+            clothing_supported = set(all_anims)
+            for anim_set in critical_items.values():
+                clothing_supported &= anim_set
+        else:
+            clothing_supported = set(all_anims)
+
+        # Step 2: For combat animations, also require weapons to support them
+        supported = set()
+        for anim_name in clothing_supported:
+            if anim_name in self.COMBAT_ANIMATIONS and weapon_items:
+                # Combat anim — weapon must also have it
+                all_weapons_have = all(
+                    anim_name in anim_set for anim_set in weapon_items.values()
+                )
+                if all_weapons_have:
+                    supported.add(anim_name)
+                # else: falls into na (weapon blocks this combat anim)
+            else:
+                # Non-combat anim — weapon doesn't matter
+                supported.add(anim_name)
+
+        na = all_anims - supported
+        na_reasons = {}
+        for anim_name in na:
+            blockers = []
+            # Check clothing blockers
+            for fn, anim_set in critical_items.items():
+                if anim_name not in anim_set:
+                    blockers.append(fn)
+            # Check weapon blockers (for combat anims)
+            if anim_name in self.COMBAT_ANIMATIONS:
+                for fn, anim_set in weapon_items.items():
+                    if anim_name not in anim_set:
+                        blockers.append(fn)
+            if blockers:
+                na_reasons[anim_name] = blockers
+
+        # Weapon missing for non-combat animations: informational only (orange)
+        weapon_missing = {}
+        for anim_name in supported:
+            missing_weapons = [
+                fn for fn, anim_set in weapon_items.items()
+                if anim_name not in anim_set
+            ]
+            if missing_weapons:
+                weapon_missing[anim_name] = missing_weapons
+
+        return {
+            "supported": sorted(supported),
+            "na": sorted(na),
+            "na_reasons": na_reasons,
+            "weapon_missing": weapon_missing,
+        }
+
+    # ------------------------------------------------------------------
+    # Available options
+    # ------------------------------------------------------------------
+
     def get_available_options(
         self,
         body_type: str,
-        current_selections: List[Dict[str, str]] = None
+        current_selections: List[Dict[str, str]] = None,
     ) -> Dict[str, List[Dict[str, any]]]:
-        """
-        Get all available options based on body type and current selections.
-        
-        Returns:
-            Dict mapping item types to lists of available items with their variants
-        """
+        """Get all available options based on body type and current selections."""
         current_selections = current_selections or []
         current_tags = self._get_current_tags(current_selections)
-        
-        items = self.session.query(Item).all()
-        available = {}
-        
+
+        items = (
+            self.session.query(Item)
+            .options(
+                joinedload(Item.layers).joinedload(ItemLayer.body_types),
+                joinedload(Item.variants),
+                joinedload(Item.tags),
+                joinedload(Item.required_tags),
+                joinedload(Item.excluded_tags),
+            )
+            .all()
+        )
+
+        available: Dict[str, list] = {}
         for item in items:
             if not self._is_item_compatible(item, body_type, current_tags):
                 continue
-                
             item_type = item.type_name
             if item_type not in available:
                 available[item_type] = []
-                
-            item_data = {
+            available[item_type].append({
                 'name': item.name,
                 'file_name': item.file_name,
                 'variants': [v.name for v in item.variants] if item.variants else [],
-                'tags': [t.name for t in item.tags]
-            }
-            available[item_type].append(item_data)
-            
+                'tags': [t.name for t in item.tags],
+            })
+
         return available
-        
+
     def _get_current_tags(self, selections: List[Dict[str, str]]) -> set:
         """Get all tags from current selections."""
         tags = set()
-        
-        for selection in selections:
-            item = self.session.query(Item).filter_by(
-                file_name=selection['item']
-            ).first()
-            
-            if item:
-                tags.update(t.name for t in item.tags)
-                
+        item_names = [s['item'] for s in selections]
+        if not item_names:
+            return tags
+        items = (
+            self.session.query(Item)
+            .options(joinedload(Item.tags))
+            .filter(Item.file_name.in_(item_names))
+            .all()
+        )
+        for item in items:
+            tags.update(t.name for t in item.tags)
         return tags
-        
+
     def _is_item_compatible(
-        self, 
-        item: Item, 
-        body_type: str, 
-        current_tags: set
+        self,
+        item: Item,
+        body_type: str,
+        current_tags: set,
     ) -> bool:
         """Check if an item is compatible with current selections."""
-        has_body_type = False
-        for layer in item.layers:
-            if any(bt.body_type == body_type for bt in layer.body_types):
-                has_body_type = True
-                break
-                
-        if not has_body_type and not item.fit_all_body_types:
+        has_body_type = item.fit_all_body_types or any(
+            bt.body_type == body_type
+            for layer in item.layers
+            for bt in layer.body_types
+        )
+        if not has_body_type:
             return False
-            
+
         for required_tag in item.required_tags:
             if required_tag.name not in current_tags:
                 return False
-                
+
         for excluded_tag in item.excluded_tags:
             if excluded_tag.name in current_tags:
                 return False
-                
+
         return True
