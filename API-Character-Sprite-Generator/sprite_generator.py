@@ -166,6 +166,40 @@ class SpriteGenerator:
 
         return {ca.name: ca for ca in custom_anims}
 
+    def _resolve_custom_animation_path(self, layer_info: Dict, body_type: str) -> Optional[str]:
+        """
+        Resolve the sprite path for a custom animation layer.
+
+        Custom animation layers point directly to the animation directory
+        (e.g. weapon/blunt/flail/attack_slash/). The sprite file is
+        {path}/{variant}.png — no animation subdirectory is appended.
+        """
+        sprite_path = layer_info['sprite_path']
+        item = layer_info['item']
+        variant = layer_info.get('variant')
+
+        # Handle template replacements
+        if item.replace_in_path:
+            for key, value in item.replace_in_path.items():
+                placeholder = f"${{{key}}}"
+                if placeholder in sprite_path:
+                    if isinstance(value, dict):
+                        replacement = value.get(variant) if variant else value.get('default', '')
+                    else:
+                        replacement = value if value else ''
+                    if replacement is None:
+                        replacement = ''
+                    sprite_path = sprite_path.replace(placeholder, str(replacement))
+
+        sprite_path = sprite_path.rstrip('/')
+
+        if variant:
+            sprite_path = f"{sprite_path}/{variant}.png"
+        else:
+            sprite_path = f"{sprite_path}.png"
+
+        return os.path.join(SPRITE_BASE_PATH, sprite_path)
+
     def _render_custom_animations(
         self,
         spritesheet: Image.Image,
@@ -207,43 +241,37 @@ class SpriteGenerator:
                 key = (frame.direction_index, frame.frame_index)
                 frame_map[key] = (frame.source_animation, frame.source_direction, frame.source_frame)
 
-            # Render each frame
+            # Load custom layer sprites — these are already at frame_size resolution
+            # (e.g. 1152x768 for 192px*6 frames x 192px*4 dirs)
+            # The sprite path points directly to the animation directory,
+            # so we just append /{variant}.png (no animation subdirectory).
+            loaded_layers = []
+            for layer_info in custom_layers:
+                sprite_path = self._resolve_custom_animation_path(
+                    layer_info, body_type
+                )
+                if not sprite_path or not os.path.exists(sprite_path):
+                    continue
+                try:
+                    loaded_layers.append(self._load_image(sprite_path))
+                except Exception:
+                    pass
+
+            # Render each frame by extracting fs x fs regions from loaded sprites
             for dir_idx in range(ca.num_directions):
                 for frame_idx in range(ca.num_frames):
-                    mapping = frame_map.get((dir_idx, frame_idx))
-                    if not mapping:
-                        continue
-
-                    src_anim, src_dir, src_frame_col = mapping
                     dest_x = frame_idx * fs
                     dest_y = current_y + dir_idx * fs
 
                     frame_canvas = Image.new('RGBA', (fs, fs), (0, 0, 0, 0))
-                    offset = (fs - SPRITE_WIDTH) // 2
 
-                    for layer_info in custom_layers:
-                        sprite_path = self._resolve_animation_path(
-                            layer_info, body_type, src_anim
-                        )
-                        if not os.path.exists(sprite_path):
-                            continue
+                    for src_image in loaded_layers:
+                        sx = frame_idx * fs
+                        sy = dir_idx * fs
 
-                        try:
-                            src_image = self._load_image(sprite_path)
-                            # The loaded image is the animation spritesheet for this layer
-                            # Each row is one direction, columns are frames
-                            local_row = DIRECTION_OFFSETS.get(src_dir, 0)
-
-                            sx = src_frame_col * SPRITE_WIDTH
-                            sy = local_row * SPRITE_HEIGHT
-
-                            if sx + SPRITE_WIDTH <= src_image.size[0] and sy + SPRITE_HEIGHT <= src_image.size[1]:
-                                src_frame = src_image.crop((sx, sy, sx + SPRITE_WIDTH, sy + SPRITE_HEIGHT))
-                                temp = Image.new('RGBA', (fs, fs), (0, 0, 0, 0))
-                                temp.paste(src_frame, (offset, offset), src_frame)
-                                frame_canvas = Image.alpha_composite(frame_canvas, temp)
-                        except Exception:
-                            pass
+                        if sx + fs <= src_image.size[0] and sy + fs <= src_image.size[1]:
+                            src_frame = src_image.crop((sx, sy, sx + fs, sy + fs))
+                            frame_canvas = Image.alpha_composite(frame_canvas, src_frame)
 
                     spritesheet.paste(frame_canvas, (dest_x, dest_y), frame_canvas)
 
