@@ -2170,24 +2170,15 @@ function startAnim(id) {
     const fs = os.frame_size;
     const yOff = os.y_offset;
     const numFrames = os.num_frames;
-    const numDirs = os.num_directions;
-    // Scale to fit 2x2 grid in 192px canvas
-    const scaledFs = Math.min(fs, 96);
-    const dirGrid = numDirs >= 4
-      ? [{dir: 0, x: 0,             y: 0},
-         {dir: 3, x: 192 - scaledFs, y: 0},
-         {dir: 1, x: 0,             y: 192 - scaledFs},
-         {dir: 2, x: 192 - scaledFs, y: 192 - scaledFs}]
-      : [{dir: 0, x: (192 - scaledFs) / 2, y: (192 - scaledFs) / 2}];
+    // Show south-facing direction (index 2) scaled to fill canvas
+    const dir = 2;
 
     let frame = 0;
     function draw() {
       ctx.clearRect(0, 0, 192, 192);
-      for (const d of dirGrid) {
-        const sx = frame * fs;
-        const sy = yOff + d.dir * fs;
-        ctx.drawImage(state.sheet, sx, sy, fs, fs, d.x, d.y, scaledFs, scaledFs);
-      }
+      const sx = frame * fs;
+      const sy = yOff + dir * fs;
+      ctx.drawImage(state.sheet, sx, sy, fs, fs, 0, 0, 192, 192);
       frame = (frame + 1) % numFrames;
     }
     draw();
