@@ -1847,6 +1847,8 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
   .anim-label { font-size: 0.75em; color: #4ecca3; min-width: 100px; text-align: center; transition: color 0.2s; }
   .anim-label.na { color: #e94560; }
   .anim-label.weapon-miss { color: #e9a045; }
+  .oversized-btn { background: #e9a045 !important; color: #1a1a2e !important; font-weight: 700; }
+  .oversized-btn:hover { background: #d4903a !important; }
   .anim-badge { font-size: 0.7em; color: #4ecca3; margin-left: 8px; }
   .anim-badge.limited { color: #e9a045; }
   .sprite-container { background: #111; border-radius: 6px; overflow: hidden; image-rendering: pixelated; }
@@ -2021,6 +2023,12 @@ async function generateOne() {
     const blob = await spriteResp.blob();
     const imgUrl = URL.createObjectURL(blob);
 
+    let spriteMeta = {};
+    const metaHeader = spriteResp.headers.get('X-Sprite-Meta');
+    if (metaHeader) {
+      try { spriteMeta = JSON.parse(metaHeader); } catch(e) {}
+    }
+
     // Fetch supported animations in parallel with card creation
     const animResp = await fetch(API + '/supported-animations', {
       method: 'POST',
@@ -2029,7 +2037,7 @@ async function generateOne() {
     });
     const animData = await animResp.json();
 
-    addCard(charData, imgUrl, animData);
+    addCard(charData, imgUrl, animData, spriteMeta);
   } catch (e) {
     console.error(e);
     alert('Error generating character: ' + e.message);
@@ -2046,7 +2054,7 @@ async function generateBatch() {
   setLoading(false);
 }
 
-function addCard(charData, imgUrl, animData) {
+function addCard(charData, imgUrl, animData, spriteMeta) {
   charCount++;
   const id = charCount;
   document.getElementById('counter').textContent = id + ' characters generated';
@@ -2057,9 +2065,32 @@ function addCard(charData, imgUrl, animData) {
   const weaponMissing = (animData && animData.weapon_missing) || {};
   const supportedCount = supportedSet.size;
 
+  const coverage = (animData && animData.animation_coverage) || {};
+  const customAnims = (spriteMeta && spriteMeta.custom_animations) || {};
+
+  // Build list of oversized animations available for this character
+  const oversizedAnims = [];
+  for (const [stdName, cov] of Object.entries(coverage)) {
+    if (cov.oversized && customAnims[cov.oversized]) {
+      oversizedAnims.push({
+        name: cov.oversized,
+        displayName: cov.oversized.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        standardName: stdName,
+        ...customAnims[cov.oversized],
+      });
+    }
+  }
+
   // Init animation state for this card
-  cardAnims[id] = { animIdx: DEFAULT_ANIM, intervalId: null, sheet: null,
-                     supported: supportedSet, na: naSet, weaponMissing: weaponMissing };
+  cardAnims[id] = {
+    animIdx: DEFAULT_ANIM, intervalId: null, sheet: null,
+    supported: supportedSet, na: naSet, weaponMissing: weaponMissing,
+    coverage: coverage,
+    customAnims: customAnims,
+    oversizedAnims: oversizedAnims,
+    oversizedIdx: -1,
+    showingOversized: false,
+  };
 
   const card = document.createElement('div');
   card.className = 'card';
@@ -2071,6 +2102,13 @@ function addCard(charData, imgUrl, animData) {
     </div>`
   ).join('');
 
+  const oversizedBtns = oversizedAnims.length > 0
+    ? `<div class="anim-controls" style="margin-top:4px">
+         <div class="anim-btn oversized-btn" onclick="toggleOversized(${id})" title="Toggle oversized animations" style="width:auto;padding:0 8px;border-radius:4px;font-size:0.7em">OS</div>
+         <span class="anim-label" id="os-label-${id}" style="font-size:0.65em;color:#888">${oversizedAnims.length} oversized</span>
+       </div>`
+    : '';
+
   card.innerHTML = `
     <div class="card-header">
       <h3>${(charData.race||'').charAt(0).toUpperCase()+(charData.race||'').slice(1)} ${charData.body_type.charAt(0).toUpperCase() + charData.body_type.slice(1)}${charData.character_class ? ' <span style="color:#4ecca3">'+charData.character_class.charAt(0).toUpperCase()+charData.character_class.slice(1)+'</span>' : ''}</h3>
@@ -2079,13 +2117,14 @@ function addCard(charData, imgUrl, animData) {
     <div class="card-body">
       <div class="sprite-col">
         <div class="sprite-preview">
-          <canvas id="anim-${id}" width="128" height="128"></canvas>
+          <canvas id="anim-${id}" width="192" height="192"></canvas>
         </div>
         <div class="anim-controls">
           <div class="anim-btn" onclick="changeAnim(${id},-1)">&#9664;</div>
           <span class="anim-label" id="anim-label-${id}">${ANIMATIONS[DEFAULT_ANIM][0]}</span>
           <div class="anim-btn" onclick="changeAnim(${id},1)">&#9654;</div>
         </div>
+        ${oversizedBtns}
         <details style="margin-top:10px">
           <summary style="cursor:pointer;font-size:0.8em;color:#4ecca3">Full sheet</summary>
           <div class="sprite-container" style="margin-top:6px">
@@ -2119,35 +2158,59 @@ function addCard(charData, imgUrl, animData) {
 function startAnim(id) {
   const state = cardAnims[id];
   if (!state || !state.sheet) return;
-
-  // Clear previous interval
   if (state.intervalId) clearInterval(state.intervalId);
 
   const canvas = document.getElementById('anim-' + id);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  const [name, startRow, numDirs, numFrames] = ANIMATIONS[state.animIdx];
+  if (state.showingOversized && state.oversizedIdx >= 0) {
+    const os = state.oversizedAnims[state.oversizedIdx];
+    const fs = os.frame_size;
+    const yOff = os.y_offset;
+    const numFrames = os.num_frames;
+    const numDirs = os.num_directions;
+    // Scale to fit 2x2 grid in 192px canvas
+    const scaledFs = Math.min(fs, 96);
+    const dirGrid = numDirs >= 4
+      ? [{dir: 0, x: 0,             y: 0},
+         {dir: 3, x: 192 - scaledFs, y: 0},
+         {dir: 1, x: 0,             y: 192 - scaledFs},
+         {dir: 2, x: 192 - scaledFs, y: 192 - scaledFs}]
+      : [{dir: 0, x: (192 - scaledFs) / 2, y: (192 - scaledFs) / 2}];
 
-  // 2x2 grid layout: top-left=up, top-right=right, bottom-left=left, bottom-right=down
-  // LPC row order: +0=up, +1=left, +2=down, +3=right
-  const dirGrid = numDirs >= 4
-    ? [{r: startRow,     x: 0,  y: 0},   // up     → top-left
-       {r: startRow + 3, x: 64, y: 0},   // right  → top-right
-       {r: startRow + 1, x: 0,  y: 64},  // left   → bottom-left
-       {r: startRow + 2, x: 64, y: 64}]  // down   → bottom-right
-    : [{r: startRow, x: 32, y: 32}];     // single direction → centered
-
-  let frame = 0;
-  function draw() {
-    ctx.clearRect(0, 0, 128, 128);
-    for (const d of dirGrid) {
-      ctx.drawImage(state.sheet, frame * 64, d.r * 64, 64, 64, d.x, d.y, 64, 64);
+    let frame = 0;
+    function draw() {
+      ctx.clearRect(0, 0, 192, 192);
+      for (const d of dirGrid) {
+        const sx = frame * fs;
+        const sy = yOff + d.dir * fs;
+        ctx.drawImage(state.sheet, sx, sy, fs, fs, d.x, d.y, scaledFs, scaledFs);
+      }
+      frame = (frame + 1) % numFrames;
     }
-    frame = (frame + 1) % numFrames;
+    draw();
+    state.intervalId = setInterval(draw, 150);
+  } else {
+    const [name, startRow, numDirs, numFrames] = ANIMATIONS[state.animIdx];
+    const dirGrid = numDirs >= 4
+      ? [{r: startRow,     x: 32,  y: 32},
+         {r: startRow + 3, x: 96, y: 32},
+         {r: startRow + 1, x: 32,  y: 96},
+         {r: startRow + 2, x: 96, y: 96}]
+      : [{r: startRow, x: 64, y: 64}];
+
+    let frame = 0;
+    function draw() {
+      ctx.clearRect(0, 0, 192, 192);
+      for (const d of dirGrid) {
+        ctx.drawImage(state.sheet, frame * 64, d.r * 64, 64, 64, d.x, d.y, 64, 64);
+      }
+      frame = (frame + 1) % numFrames;
+    }
+    draw();
+    state.intervalId = setInterval(draw, 150);
   }
-  draw();
-  state.intervalId = setInterval(draw, 150);
 }
 
 function getAnimStatus(id, animIdx) {
@@ -2163,13 +2226,52 @@ function getAnimStatus(id, animIdx) {
 function changeAnim(id, delta) {
   const state = cardAnims[id];
   if (!state) return;
-  state.animIdx = (state.animIdx + delta + ANIMATIONS.length) % ANIMATIONS.length;
-  const label = document.getElementById('anim-label-' + id);
-  const status = getAnimStatus(id, state.animIdx);
-  const suffix = status === 'na' ? ' (N/A)' : status === 'weapon-miss' ? ' (no weapon)' : '';
-  label.textContent = ANIMATIONS[state.animIdx][0] + suffix;
-  label.className = 'anim-label' + (status === 'na' ? ' na' : status === 'weapon-miss' ? ' weapon-miss' : '');
+
+  if (state.showingOversized) {
+    state.oversizedIdx = (state.oversizedIdx + delta + state.oversizedAnims.length) % state.oversizedAnims.length;
+  } else {
+    state.animIdx = (state.animIdx + delta + ANIMATIONS.length) % ANIMATIONS.length;
+  }
+
+  updateAnimLabel(id);
   startAnim(id);
+}
+
+function toggleOversized(id) {
+  const state = cardAnims[id];
+  if (!state || state.oversizedAnims.length === 0) return;
+
+  state.showingOversized = !state.showingOversized;
+  if (state.showingOversized) {
+    state.oversizedIdx = 0;
+  } else {
+    state.oversizedIdx = -1;
+  }
+
+  updateAnimLabel(id);
+  startAnim(id);
+}
+
+function updateAnimLabel(id) {
+  const state = cardAnims[id];
+  const label = document.getElementById('anim-label-' + id);
+  const osLabel = document.getElementById('os-label-' + id);
+  if (!state || !label) return;
+
+  if (state.showingOversized && state.oversizedIdx >= 0) {
+    const os = state.oversizedAnims[state.oversizedIdx];
+    label.textContent = os.displayName;
+    label.className = 'anim-label';
+    label.style.color = '#e9a045';
+    if (osLabel) osLabel.textContent = (state.oversizedIdx + 1) + '/' + state.oversizedAnims.length + ' oversized';
+  } else {
+    const status = getAnimStatus(id, state.animIdx);
+    const suffix = status === 'na' ? ' (N/A)' : status === 'weapon-miss' ? ' (no weapon)' : '';
+    label.textContent = ANIMATIONS[state.animIdx][0] + suffix;
+    label.className = 'anim-label' + (status === 'na' ? ' na' : status === 'weapon-miss' ? ' weapon-miss' : '');
+    label.style.color = '';
+    if (osLabel) osLabel.textContent = state.oversizedAnims.length + ' oversized';
+  }
 }
 
 function clearAll() {
