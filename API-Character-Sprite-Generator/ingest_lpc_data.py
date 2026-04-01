@@ -6,16 +6,101 @@ Run this after the database is initialized to populate all the LPC character dat
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from models import (
-    init_database, create_session, 
+    init_database, create_session,
     Item, ItemLayer, ItemLayerBodyType, ItemVariant, ItemCredit,
-    Tag, Animation, BodyType
+    Tag, Animation, BodyType, item_animations,
+    CustomAnimation, CustomAnimationFrame,
 )
+from animation_scanner import AnimationScanner, DISK_ANIMATIONS
+
+CUSTOM_ANIMATIONS_PATH = "/generator/sources/custom-animations.js"
+if not os.path.exists(CUSTOM_ANIMATIONS_PATH):
+    CUSTOM_ANIMATIONS_PATH = "../Universal-LPC-Spritesheet-Character-Generator/sources/custom-animations.js"
+
+
+def parse_custom_animations_js(file_path: str) -> Dict[str, Dict]:
+    """
+    Parse custom-animations.js and extract custom animation definitions.
+
+    Returns dict like:
+    {
+        'slash_oversize': {
+            'frame_size': 192,
+            'frames': [
+                [('slash', 'n', 0), ('slash', 'n', 1), ...],  # direction 0 (N)
+                [('slash', 'w', 0), ('slash', 'w', 1), ...],  # direction 1 (W)
+                ...
+            ]
+        },
+        ...
+    }
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Extract the customAnimations object block
+    match = re.search(r'const\s+customAnimations\s*=\s*\{', content)
+    if not match:
+        raise ValueError("Could not find customAnimations in JS file")
+
+    # Find the matching closing brace by counting braces
+    brace_count = 0
+    obj_start = None
+    for i in range(match.end() - 1, len(content)):
+        if content[i] == '{':
+            brace_count += 1
+            if obj_start is None:
+                obj_start = i
+        elif content[i] == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                obj_end = i + 1
+                break
+
+    obj_text = content[obj_start:obj_end]
+
+    # Parse individual animation entries using regex
+    results = {}
+    anim_pattern = re.compile(
+        r'(\w+)\s*:\s*\{[^}]*?frameSize\s*:\s*(\d+)\s*,'
+        r'[^}]*?frames\s*:\s*\[(.*?)\]\s*\}',
+        re.DOTALL
+    )
+
+    for m in anim_pattern.finditer(obj_text):
+        name = m.group(1)
+        frame_size = int(m.group(2))
+        frames_text = m.group(3)
+
+        # Parse each direction row: [...], [...], ...
+        directions = []
+        row_pattern = re.compile(r'\[(.*?)\]', re.DOTALL)
+        for row_match in row_pattern.finditer(frames_text):
+            row_text = row_match.group(1)
+            frame_refs = re.findall(r'"([^"]+)"', row_text)
+            parsed_frames = []
+            for ref in frame_refs:
+                anim_dir, frame_idx = ref.rsplit(',', 1)
+                anim_name, direction = anim_dir.rsplit('-', 1)
+                parsed_frames.append((anim_name, direction, int(frame_idx)))
+            if parsed_frames:
+                directions.append(parsed_frames)
+
+        if directions:
+            results[name] = {
+                'frame_size': frame_size,
+                'frames': directions,
+            }
+
+    return results
+
 
 SHEET_DEFINITIONS_PATH = "/generator/sheet_definitions"
 if not os.path.exists(SHEET_DEFINITIONS_PATH):
@@ -55,18 +140,20 @@ class LPCDataIngester:
     def ingest_all(self):
         """Main ingestion process."""
         print("Starting LPC data ingestion...")
-        
+
         try:
             self._init_static_data()
+            self._ingest_custom_animations()
             self._process_json_files()
-            
+            self._scan_and_update_animations()
+
             print(f"\nIngestion complete!")
             print(f"Items processed: {self.items_processed}")
             if self.errors:
                 print(f"Errors encountered: {len(self.errors)}")
                 for error in self.errors[:10]:
                     print(f"  - {error}")
-                    
+
         except Exception as e:
             print(f"Fatal error during ingestion: {e}")
             self.session.rollback()
@@ -113,7 +200,46 @@ class LPCDataIngester:
         self.session.commit()
         print(f"  Animations in cache: {len(self.animations_cache)}")
         print(f"  Body types in cache: {len(self.body_types_cache)}")
-        
+
+    def _ingest_custom_animations(self):
+        """Ingest custom animation definitions from custom-animations.js."""
+        existing = self.session.query(CustomAnimation).count()
+        if existing > 0:
+            print(f"  Custom animations already ingested ({existing} definitions). Skipping.")
+            return
+
+        if not os.path.exists(CUSTOM_ANIMATIONS_PATH):
+            print(f"  WARNING: custom-animations.js not found at {CUSTOM_ANIMATIONS_PATH}")
+            return
+
+        print("  Ingesting custom animation definitions...")
+        definitions = parse_custom_animations_js(CUSTOM_ANIMATIONS_PATH)
+
+        for name, defn in definitions.items():
+            custom_anim = CustomAnimation(
+                name=name,
+                frame_size=defn['frame_size'],
+                num_directions=len(defn['frames']),
+                num_frames=len(defn['frames'][0]) if defn['frames'] else 0,
+            )
+            self.session.add(custom_anim)
+            self.session.flush()
+
+            for dir_idx, direction_frames in enumerate(defn['frames']):
+                for frame_idx, (src_anim, src_dir, src_frame) in enumerate(direction_frames):
+                    frame = CustomAnimationFrame(
+                        custom_animation_id=custom_anim.id,
+                        direction_index=dir_idx,
+                        frame_index=frame_idx,
+                        source_animation=src_anim,
+                        source_direction=src_dir,
+                        source_frame=src_frame,
+                    )
+                    self.session.add(frame)
+
+        self.session.commit()
+        print(f"  Ingested {len(definitions)} custom animation definitions.")
+
     def _get_or_create_tag(self, tag_name: str) -> Tag:
         """Get existing tag or create new one."""
         if tag_name not in self.tags_cache:
@@ -178,7 +304,8 @@ class LPCDataIngester:
             layer = ItemLayer(
                 item=item,
                 layer_number=layer_count,
-                z_pos=layer_data.get('zPos')
+                z_pos=layer_data.get('zPos'),
+                custom_animation=layer_data.get('custom_animation')
             )
             
             for body_type in BODY_TYPES:
@@ -260,13 +387,62 @@ class LPCDataIngester:
             item.excluded_tags.append(tag)
             
     def _process_animations(self, item: Item, data: Dict):
-        """Process supported animations."""
-        animations = data.get('animations', list(ANIMATIONS.keys()))
-        
+        """Process supported animations - placeholder during initial ingestion.
+        Actual animation data is populated by the filesystem scanner in _scan_and_update_animations."""
+        # Store declared animations from JSON for reference, but don't trust them.
+        # The scanner will override with verified data after all items are ingested.
+        animations = data.get('animations', [])
         for anim_name in animations:
             if anim_name in self.animations_cache:
                 item.animations.append(self.animations_cache[anim_name])
                 
+    def _scan_and_update_animations(self):
+        """Run filesystem scanner and update item_animations with verified data."""
+        print("\nRunning filesystem animation scanner...")
+        scanner = AnimationScanner(
+            sheet_definitions_path=SHEET_DEFINITIONS_PATH
+        )
+        scan_results = scanner.scan_all_definitions()
+
+        # Ensure all disk animation names exist in the animations table
+        for anim_name in DISK_ANIMATIONS:
+            if anim_name not in self.animations_cache:
+                anim = Animation(name=anim_name)
+                self.session.add(anim)
+                self.animations_cache[anim_name] = anim
+        self.session.flush()
+
+        # Build animation name -> id lookup
+        anim_id_map = {
+            name: anim.id for name, anim in self.animations_cache.items()
+        }
+
+        # Get all items from DB
+        all_items = self.session.query(Item).all()
+        item_id_map = {item.file_name: item.id for item in all_items}
+
+        # Clear existing item_animations and repopulate with scanner results
+        from sqlalchemy import text
+        self.session.execute(text("DELETE FROM item_animations"))
+
+        insert_count = 0
+        for file_name, anim_support in scan_results.items():
+            item_id = item_id_map.get(file_name)
+            if not item_id:
+                continue
+            for anim_name, supported in anim_support.items():
+                if supported and anim_name in anim_id_map:
+                    self.session.execute(
+                        item_animations.insert().values(
+                            item_id=item_id,
+                            animation_id=anim_id_map[anim_name]
+                        )
+                    )
+                    insert_count += 1
+
+        self.session.commit()
+        print(f"Animation scan complete. {insert_count} item-animation associations written to DB.")
+
     def _process_credits(self, item: Item, data: Dict):
         """Process item credits/attribution."""
         credits = data.get('credits', [])
