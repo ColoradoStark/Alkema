@@ -197,6 +197,7 @@ class RandomCharacterResponse(BaseModel):
     character_class: Optional[str] = Field(None, description="Character class (warrior, mage, …)")
     selections: List[SelectionItem]
     description: str = Field(..., description="Human-readable summary of the character")
+    animation_coverage: Optional[Dict[str, Dict]] = Field(None, description="Per-animation coverage: standard sprite availability and oversized variant name")
 
 
 class CategoryListResponse(BaseModel):
