@@ -228,50 +228,84 @@ class SpriteGenerator:
                 expanded.paste(spritesheet, (0, 0))
                 spritesheet = expanded
 
-            # Get layers that reference this custom animation
-            custom_layers = [
-                l for l in layers_to_draw
-                if l['layer'].custom_animation == anim_name
-            ]
-            custom_layers.sort(key=lambda x: x['z_pos'] if x['z_pos'] is not None else 0)
-
             # Build frame mapping from DB
             frame_map = {}
             for frame in ca.frames:
                 key = (frame.direction_index, frame.frame_index)
                 frame_map[key] = (frame.source_animation, frame.source_direction, frame.source_frame)
 
-            # Load custom layer sprites — these are already at frame_size resolution
-            # (e.g. 1152x768 for 192px*6 frames x 192px*4 dirs)
-            # The sprite path points directly to the animation directory,
-            # so we just append /{variant}.png (no animation subdirectory).
-            loaded_layers = []
+            # Separate layers into custom (oversized weapon sprites) and standard
+            # (body/clothing that need 64x64 extraction + centering).
+            # Both must be composited together, sorted by z_pos.
+            custom_layers = [
+                l for l in layers_to_draw
+                if l['layer'].custom_animation == anim_name
+            ]
+            standard_layers = [
+                l for l in layers_to_draw
+                if not l['layer'].custom_animation
+            ]
+            # All layers sorted by z_pos for correct compositing order
+            all_layers = sorted(
+                custom_layers + standard_layers,
+                key=lambda x: x['z_pos'] if x['z_pos'] is not None else 0,
+            )
+
+            # Pre-load custom layer sprites (already at frame_size resolution)
+            custom_sprites = {}
             for layer_info in custom_layers:
                 sprite_path = self._resolve_custom_animation_path(
                     layer_info, body_type
                 )
-                if not sprite_path or not os.path.exists(sprite_path):
-                    continue
-                try:
-                    loaded_layers.append(self._load_image(sprite_path))
-                except Exception:
-                    pass
+                if sprite_path and os.path.exists(sprite_path):
+                    try:
+                        custom_sprites[id(layer_info)] = self._load_image(sprite_path)
+                    except Exception:
+                        pass
 
-            # Render each frame by extracting fs x fs regions from loaded sprites
+            # Render each frame
+            offset = (fs - SPRITE_WIDTH) // 2
             for dir_idx in range(ca.num_directions):
                 for frame_idx in range(ca.num_frames):
+                    mapping = frame_map.get((dir_idx, frame_idx))
+                    if not mapping:
+                        continue
+
+                    src_anim, src_dir, src_frame_col = mapping
                     dest_x = frame_idx * fs
                     dest_y = current_y + dir_idx * fs
-
                     frame_canvas = Image.new('RGBA', (fs, fs), (0, 0, 0, 0))
 
-                    for src_image in loaded_layers:
-                        sx = frame_idx * fs
-                        sy = dir_idx * fs
-
-                        if sx + fs <= src_image.size[0] and sy + fs <= src_image.size[1]:
-                            src_frame = src_image.crop((sx, sy, sx + fs, sy + fs))
-                            frame_canvas = Image.alpha_composite(frame_canvas, src_frame)
+                    for layer_info in all_layers:
+                        if layer_info['layer'].custom_animation == anim_name:
+                            # Custom layer: extract fs x fs frame from oversized sprite
+                            src_image = custom_sprites.get(id(layer_info))
+                            if not src_image:
+                                continue
+                            sx = frame_idx * fs
+                            sy = dir_idx * fs
+                            if sx + fs <= src_image.size[0] and sy + fs <= src_image.size[1]:
+                                src_frame = src_image.crop((sx, sy, sx + fs, sy + fs))
+                                frame_canvas = Image.alpha_composite(frame_canvas, src_frame)
+                        else:
+                            # Standard layer: extract 64x64 frame, center in fs x fs
+                            sprite_path = self._resolve_animation_path(
+                                layer_info, body_type, src_anim
+                            )
+                            if not os.path.exists(sprite_path):
+                                continue
+                            try:
+                                src_image = self._load_image(sprite_path)
+                                local_row = DIRECTION_OFFSETS.get(src_dir, 0)
+                                sx = src_frame_col * SPRITE_WIDTH
+                                sy = local_row * SPRITE_HEIGHT
+                                if sx + SPRITE_WIDTH <= src_image.size[0] and sy + SPRITE_HEIGHT <= src_image.size[1]:
+                                    src_frame = src_image.crop((sx, sy, sx + SPRITE_WIDTH, sy + SPRITE_HEIGHT))
+                                    temp = Image.new('RGBA', (fs, fs), (0, 0, 0, 0))
+                                    temp.paste(src_frame, (offset, offset), src_frame)
+                                    frame_canvas = Image.alpha_composite(frame_canvas, temp)
+                            except Exception:
+                                pass
 
                     spritesheet.paste(frame_canvas, (dest_x, dest_y), frame_canvas)
 
