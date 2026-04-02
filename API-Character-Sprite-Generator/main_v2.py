@@ -195,6 +195,8 @@ class RandomCharacterResponse(BaseModel):
     body_type: str
     race: Optional[str] = Field(None, description="Race / species (human, orc, wolf, …)")
     character_class: Optional[str] = Field(None, description="Character class (warrior, mage, …)")
+    armor: Optional[str] = Field(None, description="Armor weight (heavy, normal, light)")
+    color_palette: Optional[str] = Field(None, description="Colour palette used for outfit coordination")
     selections: List[SelectionItem]
     description: str = Field(..., description="Human-readable summary of the character")
     animation_coverage: Optional[Dict[str, Dict]] = Field(None, description="Per-animation coverage with weapon_visible and recommended_source per animation")
@@ -401,6 +403,41 @@ RACE_HEAD_CONFIG: Dict[str, Dict[str, List[str]]] = {
     "skeleton":     {"any_heads": ["heads_skeleton"]},
     "zombie":       {"any_heads": ["heads_zombie"]},
     "jack":         {"any_heads": ["heads_jack"]},
+    "elf": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "elf-grey": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "angel": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "demon": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "fey": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
 }
 
 # Body types considered "male-like" or "female-like" for head selection
@@ -465,8 +502,48 @@ RACE_SKIN_COLORS: Dict[str, List[str]] = {
     "zombie":       _UNDEAD_SKINS,
     "skeleton":     ["skeleton"],
     "jack":         ["jack"],
+    "elf":          _HUMAN_SKINS,
+    "elf-grey":     ["lavender"],
+    "angel":        ["light", "lavender"],
+    "demon":        ["bronze", "black", "bright_green", "dark_green"],
+    "fey":          ["light", "lavender", "pale_green", "blue", "amber"],
 }
 
+
+# Items automatically added for certain races.
+# Each entry is either:
+#   - a plain file_name string (variant picked normally)
+#   - a dict {"item": file_name, "variants": [allowed]} to restrict variant choice
+#   - a dict {"pick_one": [item_dicts]} to randomly pick one from a group
+_FEY_WING_VARIANTS = ["green", "blue", "purple", "gold", "rose", "pink", "violet", "forest"]
+RACE_FORCED_ITEMS: Dict[str, list] = {
+    "elf":      ["head_ears_long"],
+    "elf-grey": ["head_ears_elven"],
+    "angel":    [
+        {"item": "wings_feathered", "variants": ["white"]},
+    ],
+    "demon":    [
+        {"item": "hat_accessory_horns_upward", "variants": ["black", "charcoal", "brown", "gray", "maroon", "red"]},
+        {"item": "wings_bat", "variants": ["black", "raven", "dark brown", "dark gray", "navy", "purple"]},
+        {"item": "tail_dragon", "variants": ["black", "raven", "dark brown", "dark gray", "red", "navy"]},
+    ],
+    "fey":      [
+        "head_ears_down",
+        {"pick_one": [
+            {"item": "wings_pixie",                 "variants": _FEY_WING_VARIANTS},
+            {"item": "wings_pixie_transparent",      "variants": _FEY_WING_VARIANTS},
+            {"item": "wings_monarch",               "variants": _FEY_WING_VARIANTS},
+            {"item": "wings_dragonfly",             "variants": _FEY_WING_VARIANTS},
+            {"item": "wings_dragonfly_transparent",  "variants": _FEY_WING_VARIANTS},
+            {"item": "wings_lunar",                 "variants": _FEY_WING_VARIANTS},
+        ]},
+    ],
+}
+
+# Categories to never include for certain races (e.g. demons skip hats to show horns)
+RACE_SKIP_CATEGORIES: Dict[str, List[str]] = {
+    "demon": ["hat"],
+}
 
 BODY_TYPE_OPTIONS = ["male", "female", "muscular", "teen", "child", "pregnant"]
 
@@ -799,6 +876,160 @@ OPTIONAL_CATEGORIES = [
 # Weapon / accessory categories – pick at most one
 WEAPON_CATEGORIES = ["weapon", "shield"]
 
+# ---------------------------------------------------------------------------
+# Armor weight system
+# ---------------------------------------------------------------------------
+ARMOR_WEIGHTS = {
+    "heavy": {
+        "upper_body": [
+            "torso_armour_plate", "torso_armour_legion", "torso_chainmail",
+            "torso_armour_leather",
+        ],
+        "upper_body_categories": ["armour", "chainmail"],
+        "lower_body": ["legs_armour", "legs_skirts_legion"],
+        "hats": [
+            "hat_helmet_armet", "hat_helmet_armet_simple",
+            "hat_helmet_barbarian", "hat_helmet_barbarian_nasal", "hat_helmet_barbarian_viking",
+            "hat_helmet_barbuta", "hat_helmet_barbuta_simple",
+            "hat_helmet_bascinet", "hat_helmet_bascinet_pigface",
+            "hat_helmet_bascinet_pigface_raised", "hat_helmet_bascinet_round",
+            "hat_helmet_close", "hat_helmet_flattop", "hat_helmet_greathelm",
+            "hat_helmet_horned", "hat_helmet_kettle", "hat_helmet_legion",
+            "hat_helmet_maximus", "hat_helmet_morion", "hat_helmet_nasal",
+            "hat_helmet_norman", "hat_helmet_pointed",
+            "hat_helmet_spangenhelm", "hat_helmet_spangenhelm_viking",
+            "hat_helmet_sugarloaf", "hat_helmet_sugarloaf_simple",
+            "hat_helmet_xeon",
+        ],
+        "shoes": ["feet_armour"],
+        "optional_always": ["hat", "shoulders", "shoes"],
+        "optional_never": ["backpack", "barrette", "necklace"],
+        "shoulders": ["shoulders_plate", "shoulders_legion", "shoulders_mantal"],
+    },
+    "normal": {
+        # Normal is the default — no restrictions beyond what class already applies
+    },
+    "light": {
+        "upper_body": [
+            "torso_clothes_sleeveless", "torso_clothes_sleeveless2",
+            "torso_clothes_sleeveless_laced", "torso_clothes_sleeveless_striped",
+            "torso_clothes_sleeveless_tanktop",
+            "torso_clothes_sleeveless2_buttoned", "torso_clothes_sleeveless2_polo",
+            "torso_clothes_sleeveless2_scoop", "torso_clothes_sleeveless2_vneck",
+            "torso_clothes_sleeveless2_cardigan",
+            "torso_bandages", "dress_bodice",
+            "torso_clothes_corset", "torso_clothes_vest", "torso_clothes_vest_open",
+        ],
+        "upper_body_categories": ["clothes", "vest", "bandages"],
+        "lower_body": [
+            "legs_shorts_short", "legs_shorts",
+            "legs_skirts_plain", "legs_skirts_slit",
+            "legs_leggings", "legs_leggings2",
+        ],
+        "shoes": ["feet_sandals", "feet_slippers"],
+        "hat_class_only": True,
+        "optional_never": ["shoulders", "arms", "cape", "backpack"],
+    },
+    "nude": {
+        "skip_upper_body": True,
+        "skip_lower_body": True,
+        "shoes": ["feet_sandals", "feet_boots_basic", "feet_boots_fold"],
+        "optional_always": ["shoes"],
+        "optional_never": ["backpack", "quiver", "necklace", "belt", "barrette"],
+    },
+    "topless": {
+        "skip_upper_body": True,
+        "optional_never": ["backpack", "quiver"],
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Colour palette system – coordinates clothing, hat, cape, etc. variants
+# ---------------------------------------------------------------------------
+
+# Variant types that should NOT be palette-coordinated
+# (they use their own colour logic: skin-matching, hair colours, metals, etc.)
+_PALETTE_SKIP_TYPES = {
+    "body", "head", "ears", "ears_inner", "furry_ears", "furry_ears_skin",
+    "expression", "expression_crying", "hair", "hairextl", "hairextr",
+    "ponytail", "updo", "beard", "mustache", "eyebrows", "eye_color", "eyes",
+    "horns", "tail", "nose", "fins", "wrinkes", "shadow",
+    "wound_arm", "wound_brain", "wound_eye_left", "wound_eye_right",
+    "wound_mouth", "wound_ribs", "bandages",
+    "ammo", "quiver", "cargo", "prosthesis_hand", "prosthesis_leg",
+    "wheelchair", "ring",
+}
+
+# Metal variants get their own coordination
+_METAL_TYPES = {
+    "arms", "bracers", "buckles", "hat_buckle", "shoes_toe", "visor",
+    "necklace", "facial_right", "shield_trim",
+}
+
+_METALS_WARM = ["brass", "bronze", "copper", "gold"]
+_METALS_COOL = ["iron", "silver", "steel", "ceramic"]
+
+COLOR_PALETTES = {
+    "earth": {
+        "fabrics": ["brown", "tan", "leather", "forest", "walnut"],
+        "accents": ["maroon", "charcoal", "green"],
+        "metals": _METALS_WARM,
+    },
+    "royal": {
+        "fabrics": ["navy", "purple", "maroon"],
+        "accents": ["gold", "white", "lavender"],
+        "metals": ["gold", "brass"],
+    },
+    "shadow": {
+        "fabrics": ["black", "charcoal", "slate", "gray"],
+        "accents": ["red", "maroon", "navy"],
+        "metals": _METALS_COOL,
+    },
+    "woodland": {
+        "fabrics": ["green", "forest", "brown", "tan"],
+        "accents": ["leather", "walnut", "charcoal"],
+        "metals": ["bronze", "copper", "iron"],
+    },
+    "warm": {
+        "fabrics": ["red", "orange", "maroon", "tan"],
+        "accents": ["brown", "charcoal", "white"],
+        "metals": ["gold", "brass", "bronze"],
+    },
+    "cool": {
+        "fabrics": ["blue", "sky", "teal", "navy"],
+        "accents": ["white", "gray", "slate"],
+        "metals": _METALS_COOL,
+    },
+    "rose": {
+        "fabrics": ["rose", "pink", "lavender", "white"],
+        "accents": ["maroon", "purple", "gray"],
+        "metals": ["silver", "gold"],
+    },
+    "mercenary": {
+        "fabrics": ["leather", "charcoal", "brown", "slate"],
+        "accents": ["black", "tan", "maroon"],
+        "metals": _METALS_COOL,
+    },
+    "ivory": {
+        "fabrics": ["white", "tan", "gray", "sky"],
+        "accents": ["blue", "navy", "brown"],
+        "metals": ["silver", "gold"],
+    },
+    "autumn": {
+        "fabrics": ["orange", "brown", "maroon", "forest"],
+        "accents": ["tan", "charcoal", "leather"],
+        "metals": ["bronze", "copper", "brass"],
+    },
+}
+
+ALL_PALETTE_NAMES = list(COLOR_PALETTES.keys())
+
+# Race-specific palette restrictions
+RACE_PALETTES: Dict[str, List[str]] = {
+    "angel": ["ivory", "rose", "cool", "royal"],
+    "demon": ["shadow", "mercenary", "earth", "autumn"],
+}
+
 
 def generate_random_character(
     db: Session,
@@ -807,6 +1038,7 @@ def generate_random_character(
     preset: Optional[str] = None,
     age: Optional[str] = None,
     character_class: Optional[str] = None,
+    armor: Optional[str] = None,
 ) -> dict:
     """
     Build a random but valid character selection set.
@@ -925,10 +1157,23 @@ def generate_random_character(
     # Resolve class config
     cls_cfg = CHARACTER_CLASSES.get(character_class, {}) if character_class else {}
 
+    # Resolve armor weight config
+    armor_cfg = ARMOR_WEIGHTS.get(armor, {}) if armor else {}
+
     selections: List[dict] = []
     active_tags: set = set()
     used_types: set = set()
     body_color: Optional[str] = None
+
+    # Pick a colour palette for this character
+    race_palettes = RACE_PALETTES.get(original_race)
+    palette_name = random.choice(race_palettes if race_palettes else ALL_PALETTE_NAMES)
+    palette = COLOR_PALETTES[palette_name]
+    # Build the full set of palette-preferred colours (fabrics + accents)
+    # ~70% chance fabric, ~30% chance accent for variety within coordination
+    palette_fabrics = palette["fabrics"]
+    palette_accents = palette["accents"]
+    palette_metals = palette["metals"]
 
     def _is_compatible(item: dict) -> bool:
         has_bt = item["fit_all_body_types"] or body_type in item["body_types"]
@@ -949,7 +1194,33 @@ def generate_random_character(
             matching = [v for v in item["variants"] if v["name"] == body_color]
             if matching:
                 return matching[0]["name"]
-        return random.choice(item["variants"])["name"]
+
+        item_type = item.get("type_name", "")
+        variant_names = [v["name"] for v in item["variants"]]
+
+        # Metal items: pick from palette metals
+        if item_type in _METAL_TYPES:
+            metal_matches = [n for n in variant_names if n in palette_metals]
+            if metal_matches:
+                return random.choice(metal_matches)
+            return random.choice(variant_names)
+
+        # Non-palette types (hair, skin, etc.): fully random
+        if item_type in _PALETTE_SKIP_TYPES:
+            return random.choice(variant_names)
+
+        # Palette-coordinated: prefer fabric colours, sometimes accent
+        if random.random() < 0.7:
+            matches = [n for n in variant_names if n in palette_fabrics]
+        else:
+            matches = [n for n in variant_names if n in palette_accents]
+        # Fallback: try either fabric or accent
+        if not matches:
+            matches = [n for n in variant_names if n in palette_fabrics or n in palette_accents]
+        if matches:
+            return random.choice(matches)
+        # Last resort: random (item doesn't have any palette colours)
+        return random.choice(variant_names)
 
     def _can_match_body_color(item: dict) -> bool:
         if not item["match_body_color"] or not body_color:
@@ -987,6 +1258,26 @@ def generate_random_character(
                 return True
         # Fallback: pick any compatible item in this category
         return _pick_from_category(category)
+
+    def _pick_from_category_by_filename(file_name: str, allowed_variants: List[str] = None) -> bool:
+        """Force-pick a specific item by file_name, searching all categories."""
+        for cat_items in items_by_type.values():
+            for item in cat_items:
+                if item["file_name"] == file_name:
+                    if allowed_variants and item["variants"]:
+                        matching = [v for v in item["variants"] if v["name"] in allowed_variants]
+                        variant = random.choice(matching)["name"] if matching else _pick_variant(item)
+                    else:
+                        variant = _pick_variant(item)
+                    selections.append({
+                        "type": item["type_name"],
+                        "item": item["file_name"],
+                        "variant": variant,
+                    })
+                    active_tags.update(item["tags"])
+                    used_types.add(item["type_name"])
+                    return True
+        return False
 
     # Helper: pick a race-appropriate skin colour from a body item's variants
     def _pick_skin_variant(body_item: dict) -> Optional[str]:
@@ -1031,13 +1322,44 @@ def generate_random_character(
     # Step 2 – head (constrained to race's heads if specified)
     _pick_from_category("head", restrict_to=allowed_heads)
 
+    # Step 2.3 – race-forced items (e.g. elf ears, angel wings, demon horns)
+    for forced in RACE_FORCED_ITEMS.get(original_race, []):
+        if isinstance(forced, dict):
+            if "pick_one" in forced:
+                chosen = random.choice(forced["pick_one"])
+                _pick_from_category_by_filename(chosen["item"], chosen.get("variants"))
+            else:
+                _pick_from_category_by_filename(forced["item"], forced.get("variants"))
+        else:
+            _pick_from_category_by_filename(forced)
+
     # Step 2.5 – default neutral expression (if human tag is active)
     if "human" in active_tags:
         _pick_from_category("expression", restrict_to=["face_neutral"])
 
-    # Step 3 – upper body clothing (class-preferred)
-    if cls_cfg.get("upper_body"):
-        # Try class-preferred items in their respective categories first
+    # Step 3 – upper body clothing (class-preferred, armor-weight-aware)
+    armor_upper = armor_cfg.get("upper_body")
+    armor_upper_cats = armor_cfg.get("upper_body_categories")
+    upper_cats = armor_upper_cats if armor_upper_cats else UPPER_BODY_CATEGORIES
+
+    if armor_cfg.get("skip_upper_body"):
+        pass  # Nude — no torso clothing
+    elif armor_upper:
+        # Armor weight restricts to specific items
+        placed_upper = False
+        for cat in upper_cats:
+            items_in_cat = [fn for fn in armor_upper
+                            if any(i["file_name"] == fn and i["type_name"] == cat
+                                   for i in items_by_type.get(cat, []))]
+            if items_in_cat and _pick_from_category(cat, restrict_to=items_in_cat):
+                placed_upper = True
+                break
+        if not placed_upper:
+            for cat in upper_cats:
+                if _pick_from_category(cat):
+                    break
+    elif cls_cfg.get("upper_body"):
+        # Class-preferred items
         placed_upper = False
         for cat in UPPER_BODY_CATEGORIES:
             preferred_in_cat = [fn for fn in cls_cfg["upper_body"]
@@ -1055,8 +1377,14 @@ def generate_random_character(
             if _pick_from_category(cat):
                 break
 
-    # Step 4 – lower body clothing (class-preferred)
-    _pick_prefer("legs", cls_cfg.get("lower_body"))
+    # Step 4 – lower body clothing (class-preferred, armor-weight-aware)
+    armor_lower = armor_cfg.get("lower_body")
+    if armor_cfg.get("skip_lower_body"):
+        pass  # Nude — no leg clothing
+    elif armor_lower:
+        _pick_from_category("legs", restrict_to=armor_lower)
+    else:
+        _pick_prefer("legs", cls_cfg.get("lower_body"))
 
     # Step 4.5 – hair (mandatory, gender-filtered)
     if original_race not in ("skeleton", "zombie"):
@@ -1087,9 +1415,28 @@ def generate_random_character(
             active_tags.update(item["tags"])
             used_types.add("hair")
 
-    # Step 5 – optional categories (class-aware)
+    # Step 5 – optional categories (class-aware, race-aware, armor-weight-aware)
     cls_always = set(cls_cfg.get("optional_always", []))
     cls_never = set(cls_cfg.get("optional_never", []))
+    race_never = set(RACE_SKIP_CATEGORIES.get(original_race, []))
+    armor_always = set(armor_cfg.get("optional_always", []))
+    armor_never = set(armor_cfg.get("optional_never", []))
+
+    # Winged races skip capes when nude (capes clash with wings)
+    _WINGED_RACES = {"angel", "demon", "fey"}
+    if original_race in _WINGED_RACES:
+        armor_never.add("cape")
+    elif armor == "nude":
+        # Non-winged nude races always get a cape
+        armor_always.add("cape")
+    cls_never |= race_never | armor_never
+    cls_always = (cls_always | armor_always) - cls_never
+
+    # Armor weight can restrict items within specific categories
+    _armor_restrict: Dict[str, List[str]] = {}
+    for _akey in ("hats", "shoes", "shoulders"):
+        if _akey in armor_cfg:
+            _armor_restrict[_akey.rstrip("s") if _akey != "shoes" else _akey] = armor_cfg[_akey]
 
     # Resolve class-preferred items for a category (with gendered hat support)
     _CAT_KEY_MAP = {
@@ -1110,10 +1457,26 @@ def generate_random_character(
         pref_key = _CAT_KEY_MAP.get(cat)
         return cls_cfg.get(pref_key) if pref_key else None
 
-    # Always-include categories for this class
+    def _pick_optional(cat: str):
+        """Pick an item for an optional category. Class hats take priority over armor weight."""
+        class_preferred = _get_class_preferred(cat)
+        armor_items = _armor_restrict.get(cat)
+        if class_preferred:
+            # Class identity wins — pirate gets tricornes, not greathelms
+            _pick_prefer(cat, class_preferred)
+        elif cat == "hat" and armor_cfg.get("hat_class_only"):
+            # Light/similar armor: only wear hats if class defines them
+            return
+        elif armor_items:
+            # No class preference — armor weight restricts items
+            _pick_from_category(cat, restrict_to=armor_items)
+        else:
+            _pick_from_category(cat)
+
+    # Always-include categories for this class/armor
     for cat in cls_always:
         if cat not in used_types:
-            _pick_prefer(cat, _get_class_preferred(cat))
+            _pick_optional(cat)
 
     # Random optional categories (excluding never-list and already-used)
     available_optional = [c for c in OPTIONAL_CATEGORIES if c not in used_types and c not in cls_never]
@@ -1121,7 +1484,7 @@ def generate_random_character(
     chosen_optional = random.sample(available_optional, min(num_optional, len(available_optional)))
     for cat in chosen_optional:
         if cat not in used_types:
-            _pick_prefer(cat, _get_class_preferred(cat))
+            _pick_optional(cat)
 
     # Step 6 – second pass for tag-dependent items (e.g. cape_trim after cape)
     # Skip expression variants – we already set a neutral expression
@@ -1171,6 +1534,8 @@ def generate_random_character(
         "body_type": body_type,
         "race": original_race,
         "character_class": character_class,
+        "armor": armor,
+        "color_palette": palette_name,
         "selections": selections,
         "description": ", ".join(parts),
     }
@@ -1708,6 +2073,7 @@ async def random_character(
     body_type: Optional[str] = Query(None, description="Body build / gender (male, female, muscular, pregnant)"),
     age: Optional[str] = Query(None, description="Age category: 'child', 'teen', 'adult' (default), or 'elderly'. Human only."),
     character_class: Optional[str] = Query(None, alias="class", description="Character class: warrior, mage, pirate, ranger, thief, cleric, noble, guard, merchant, peasant"),
+    armor: Optional[str] = Query(None, description="Armor weight: heavy, normal, light"),
     db: Session = Depends(get_db),
 ):
     """
@@ -1729,8 +2095,13 @@ async def random_character(
     - **guard**: legion armour, polearms, kettle helmets
     - **merchant**: formal suits, tophats, no weapons
     - **peasant**: simple shirts, overalls, farm tools
+
+    Use `armor` to control armor weight:
+    - **heavy**: full helmets, plate armour, armoured boots
+    - **normal**: default (no restrictions)
+    - **light**: no hat, sleeveless/minimal clothing, sandals
     """
-    result = generate_random_character(db, body_type=body_type, race=race, preset=preset, age=age, character_class=character_class)
+    result = generate_random_character(db, body_type=body_type, race=race, preset=preset, age=age, character_class=character_class, armor=armor)
     generator = SpriteGenerator(db)
     result['animation_coverage'] = generator.get_animation_coverage(result['selections'])
     return result
@@ -1748,6 +2119,7 @@ async def random_character_sprite(
     body_type: Optional[str] = Query(None, description="Body build / gender (male, female, muscular, pregnant)"),
     age: Optional[str] = Query(None, description="Age category: 'child', 'teen', 'adult' (default), or 'elderly'. Human only."),
     character_class: Optional[str] = Query(None, alias="class", description="Character class (warrior, mage, …)"),
+    armor: Optional[str] = Query(None, description="Armor weight: heavy, normal, light"),
     db: Session = Depends(get_db),
 ):
     """
@@ -1758,7 +2130,7 @@ async def random_character_sprite(
     """
     import json as _json
 
-    char_data = generate_random_character(db, body_type=body_type, race=race, preset=preset, age=age, character_class=character_class)
+    char_data = generate_random_character(db, body_type=body_type, race=race, preset=preset, age=age, character_class=character_class, armor=armor)
     try:
         generator = SpriteGenerator(db)
         image_bytes, custom_layout = generator.generate_spritesheet(
@@ -1793,7 +2165,11 @@ async def test_characters_page():
     along with the full selection data. Useful for testing and exploring
     the character generator.
     """
-    return _TEST_PAGE_HTML
+    return HTMLResponse(
+        content=_TEST_PAGE_HTML,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
 
 
 # ---------------------------------------------------------------------------
@@ -1889,6 +2265,14 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
   </select>
   <select id="classSelect">
     <option value="">Any Class</option>
+  </select>
+  <select id="armorSelect">
+    <option value="">Random Armor</option>
+    <option value="heavy">Heavy</option>
+    <option value="normal">Normal</option>
+    <option value="light">Light</option>
+    <option value="topless">Topless</option>
+    <option value="nude">Nude</option>
   </select>
   <button id="btnGenerate" onclick="generateOne()">Generate Character</button>
   <button id="btnBatch" class="btn-secondary" onclick="generateBatch()">Generate 6</button>
@@ -2010,12 +2394,14 @@ async function generateOne() {
     const bt = document.getElementById('bodySelect').value;
     const age = document.getElementById('ageSelect').value;
     const cls = document.getElementById('classSelect').value;
+    const armorWt = document.getElementById('armorSelect').value;
     // Pass race + body_type individually so the age param can override body to teen
     const params = new URLSearchParams();
     if (race) params.set('race', race);
     if (bt) params.set('body_type', bt);
     if (age) params.set('age', age);
     if (cls) params.set('class', cls);
+    if (armorWt) params.set('armor', armorWt);
     const qs = params.toString();
     const url = API + '/random-character' + (qs ? '?' + qs : '');
     const charResp = await fetch(url);
@@ -2118,7 +2504,7 @@ function addCard(charData, imgUrl, animData, spriteMeta) {
   card.innerHTML = `
     <div class="card-header">
       <h3>${(charData.race||'').charAt(0).toUpperCase()+(charData.race||'').slice(1)} ${charData.body_type.charAt(0).toUpperCase() + charData.body_type.slice(1)}${charData.character_class ? ' <span style="color:#4ecca3">'+charData.character_class.charAt(0).toUpperCase()+charData.character_class.slice(1)+'</span>' : ''}</h3>
-      <span style="font-size:0.8em;color:#999">#${id} <span class="anim-badge${supportedCount < 15 ? ' limited' : ''}">${supportedCount}/15 anims</span></span>
+      <span style="font-size:0.8em;color:#999">#${id} <span class="anim-badge${supportedCount < 15 ? ' limited' : ''}">${supportedCount}/15 anims</span>${charData.armor ? ' <span style="color:#c9c9c9">'+charData.armor+'</span>' : ''}${charData.color_palette ? ' <span style="color:#e9a045">'+charData.color_palette+'</span>' : ''}</span>
     </div>
     <div class="card-body">
       <div class="sprite-col">
@@ -2170,12 +2556,9 @@ function startAnim(id) {
     const yOff = os.y_offset;
     const numFrames = os.num_frames;
     const numDirs = os.num_directions || 4;
-    // Show 4-direction grid matching standard layout
-    // Scale each oversized frame to fit in a quadrant (96x96 max)
     const quadSize = 96;
     const scale = Math.min(quadSize / fs, 1);
     const drawSz = Math.floor(fs * scale);
-    // Direction order: N(0)=top-left, E(3)=top-right, W(1)=bottom-left, S(2)=bottom-right
     const osGrid = numDirs >= 4
       ? [{dir: 0, x: 48 - drawSz/2, y: 48 - drawSz/2},
          {dir: 3, x: 144 - drawSz/2, y: 48 - drawSz/2},

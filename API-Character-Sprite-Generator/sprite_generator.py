@@ -194,7 +194,8 @@ class SpriteGenerator:
         sprite_path = sprite_path.rstrip('/')
 
         if variant:
-            sprite_path = f"{sprite_path}/{variant}.png"
+            disk_variant = variant.replace(' ', '_')
+            sprite_path = f"{sprite_path}/{disk_variant}.png"
         else:
             sprite_path = f"{sprite_path}.png"
 
@@ -351,7 +352,8 @@ class SpriteGenerator:
         # Separate items by type
         standard_anims = set()  # all animations any item supports
         has_weapon = False
-        weapon_items = []  # weapon Item objects
+        weapon_items = []  # weapon Item objects with custom animations
+        other_weapon_items = []  # weapon-type items without custom animations (e.g. shields)
         custom_anim_names = set()  # custom_animation names from weapon layers
 
         for item in items:
@@ -359,15 +361,26 @@ class SpriteGenerator:
             standard_anims |= item_anim_set
 
             if item.type_name in self.WEAPON_TYPES:
-                has_weapon = True
-                weapon_items.append(item)
-                for layer in item.layers:
-                    if layer.custom_animation:
-                        custom_anim_names.add(layer.custom_animation)
+                has_custom = any(l.custom_animation for l in item.layers)
+                if has_custom:
+                    has_weapon = True
+                    weapon_items.append(item)
+                    for layer in item.layers:
+                        if layer.custom_animation:
+                            custom_anim_names.add(layer.custom_animation)
+                else:
+                    other_weapon_items.append(item)
+
+        # If no weapon items have custom animations, treat all weapon-type items
+        # as regular weapons (no oversized concern)
+        if not has_weapon and other_weapon_items:
+            has_weapon = True
+            weapon_items = other_weapon_items
 
         # Check which animations weapon standard layers (custom_animation IS NULL)
-        # actually have on disk. item_animations includes both standard and custom
-        # layer coverage, but we need to know standard-only.
+        # actually have on disk. Only check the items that HAVE custom animations,
+        # not shields or other weapon-type items whose standard sprites are irrelevant
+        # to whether the actual weapon renders in the standard grid.
         weapon_standard_anims = set()
         if has_weapon:
             for item in weapon_items:
@@ -403,11 +416,26 @@ class SpriteGenerator:
                     for anim_name, _, _ in ANIMATIONS:
                         if anim_name in weapon_standard_anims:
                             continue  # already confirmed
-                        # Check if animation dir or file exists
+                        # Check if animation dir or file exists AND has visible content
                         anim_dir = os.path.join(base, anim_name)
+                        sprite_file = None
                         if os.path.exists(anim_dir) and os.path.isdir(anim_dir):
-                            weapon_standard_anims.add(anim_name)
+                            # Find the actual sprite file inside the directory
+                            if variant:
+                                disk_variant = variant.replace(' ', '_')
+                                candidate = os.path.join(anim_dir, f"{disk_variant}.png")
+                                if os.path.exists(candidate):
+                                    sprite_file = candidate
+                            if not sprite_file:
+                                # Use first .png found
+                                for entry in os.listdir(anim_dir):
+                                    if entry.endswith('.png'):
+                                        sprite_file = os.path.join(anim_dir, entry)
+                                        break
                         elif os.path.exists(anim_dir + '.png'):
+                            sprite_file = anim_dir + '.png'
+
+                        if sprite_file and self._sprite_has_content(sprite_file):
                             weapon_standard_anims.add(anim_name)
 
         # Load custom animation definitions to map oversized name -> base animation
@@ -460,6 +488,22 @@ class SpriteGenerator:
 
         return coverage
 
+    def _sprite_has_content(self, path: str, min_fill_pct: float = 1.0) -> bool:
+        """Check if a sprite file has meaningful visible content.
+        Some weapon sprites exist on disk but are nearly all transparent,
+        meaning the weapon is not actually visible in that animation.
+        Returns True if more than min_fill_pct% of pixels are non-transparent."""
+        try:
+            img = Image.open(path).convert('RGBA')
+            pixels = img.getdata()
+            total = len(pixels)
+            if total == 0:
+                return False
+            non_transparent = sum(1 for p in pixels if p[3] > 0)
+            return (non_transparent / total) * 100 >= min_fill_pct
+        except Exception:
+            return False
+
     def _load_image(self, path: str) -> Image.Image:
         """Load an image with caching."""
         if path not in self._image_cache:
@@ -490,7 +534,9 @@ class SpriteGenerator:
 
         # Build the path with animation subdirectory
         if variant:
-            sprite_path = f"{sprite_path}/{animation}/{variant}.png"
+            # Variant names use spaces in the DB but underscores on disk
+            disk_variant = variant.replace(' ', '_')
+            sprite_path = f"{sprite_path}/{animation}/{disk_variant}.png"
         else:
             sprite_path = f"{sprite_path}/{animation}.png"
 
