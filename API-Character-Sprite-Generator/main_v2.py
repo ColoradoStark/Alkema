@@ -197,7 +197,7 @@ class RandomCharacterResponse(BaseModel):
     character_class: Optional[str] = Field(None, description="Character class (warrior, mage, …)")
     selections: List[SelectionItem]
     description: str = Field(..., description="Human-readable summary of the character")
-    animation_coverage: Optional[Dict[str, Dict]] = Field(None, description="Per-animation coverage: standard sprite availability and oversized variant name")
+    animation_coverage: Optional[Dict[str, Dict]] = Field(None, description="Per-animation coverage with weapon_visible and recommended_source per animation")
 
 
 class CategoryListResponse(BaseModel):
@@ -1852,6 +1852,7 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
   .anim-label { font-size: 0.75em; color: #4ecca3; min-width: 100px; text-align: center; transition: color 0.2s; }
   .anim-label.na { color: #e94560; }
   .anim-label.weapon-miss { color: #e9a045; }
+  .anim-label.use-oversized { color: #45b7e9; }
   .oversized-btn { background: #e9a045 !important; color: #1a1a2e !important; font-weight: 700; }
   .oversized-btn:hover { background: #d4903a !important; }
   .anim-badge { font-size: 0.7em; color: #4ecca3; margin-left: 8px; }
@@ -2148,13 +2149,7 @@ function addCard(charData, imgUrl, animData, spriteMeta) {
   img.onload = () => {
     cardAnims[id].sheet = img;
     // Apply initial animation status
-    const status = getAnimStatus(id, DEFAULT_ANIM);
-    const label = document.getElementById('anim-label-' + id);
-    if (label) {
-      const suffix = status === 'na' ? ' (N/A)' : status === 'weapon-miss' ? ' (no weapon)' : '';
-      label.textContent = ANIMATIONS[DEFAULT_ANIM][0] + suffix;
-      label.className = 'anim-label' + (status === 'na' ? ' na' : status === 'weapon-miss' ? ' weapon-miss' : '');
-    }
+    updateAnimLabel(id);
     startAnim(id);
   };
   img.src = imgUrl;
@@ -2174,15 +2169,28 @@ function startAnim(id) {
     const fs = os.frame_size;
     const yOff = os.y_offset;
     const numFrames = os.num_frames;
-    // Show south-facing direction (index 2) scaled to fill canvas
-    const dir = 2;
+    const numDirs = os.num_directions || 4;
+    // Show 4-direction grid matching standard layout
+    // Scale each oversized frame to fit in a quadrant (96x96 max)
+    const quadSize = 96;
+    const scale = Math.min(quadSize / fs, 1);
+    const drawSz = Math.floor(fs * scale);
+    // Direction order: N(0)=top-left, E(3)=top-right, W(1)=bottom-left, S(2)=bottom-right
+    const osGrid = numDirs >= 4
+      ? [{dir: 0, x: 48 - drawSz/2, y: 48 - drawSz/2},
+         {dir: 3, x: 144 - drawSz/2, y: 48 - drawSz/2},
+         {dir: 1, x: 48 - drawSz/2, y: 144 - drawSz/2},
+         {dir: 2, x: 144 - drawSz/2, y: 144 - drawSz/2}]
+      : [{dir: 2, x: 96 - drawSz/2, y: 96 - drawSz/2}];
 
     let frame = 0;
     function draw() {
       ctx.clearRect(0, 0, 192, 192);
-      const sx = frame * fs;
-      const sy = yOff + dir * fs;
-      ctx.drawImage(state.sheet, sx, sy, fs, fs, 0, 0, 192, 192);
+      for (const d of osGrid) {
+        const sx = frame * fs;
+        const sy = yOff + d.dir * fs;
+        ctx.drawImage(state.sheet, sx, sy, fs, fs, d.x, d.y, drawSz, drawSz);
+      }
       frame = (frame + 1) % numFrames;
     }
     draw();
@@ -2210,11 +2218,16 @@ function startAnim(id) {
 }
 
 function getAnimStatus(id, animIdx) {
-  // Returns 'ok', 'weapon-miss', or 'na'
+  // Returns 'ok', 'weapon-miss', 'na', or 'use-oversized'
   const state = cardAnims[id];
   if (!state || state.supported.size === 0) return 'ok';
   const diskName = ANIMATIONS[animIdx][0].toLowerCase().replace(/ /g, '_');
   if (state.na.has(diskName)) return 'na';
+  const cov = state.coverage[diskName];
+  if (cov && cov.weapon_visible && !cov.weapon_visible.standard) {
+    if (cov.recommended_source === 'oversized') return 'use-oversized';
+    return 'weapon-miss';
+  }
   if (state.weaponMissing[diskName]) return 'weapon-miss';
   return 'ok';
 }
@@ -2262,9 +2275,13 @@ function updateAnimLabel(id) {
     if (osLabel) osLabel.textContent = (state.oversizedIdx + 1) + '/' + state.oversizedAnims.length + ' oversized';
   } else {
     const status = getAnimStatus(id, state.animIdx);
-    const suffix = status === 'na' ? ' (N/A)' : status === 'weapon-miss' ? ' (no weapon)' : '';
-    label.textContent = ANIMATIONS[state.animIdx][0] + suffix;
-    label.className = 'anim-label' + (status === 'na' ? ' na' : status === 'weapon-miss' ? ' weapon-miss' : '');
+    const animName = ANIMATIONS[state.animIdx][0];
+    let suffix = '';
+    if (status === 'na') suffix = ' (N/A)';
+    else if (status === 'weapon-miss') suffix = ' (no weapon)';
+    else if (status === 'use-oversized') suffix = ' (use OS)';
+    label.textContent = animName + suffix;
+    label.className = 'anim-label' + (status === 'na' ? ' na' : status === 'weapon-miss' ? ' weapon-miss' : status === 'use-oversized' ? ' use-oversized' : '');
     label.style.color = '';
     if (osLabel) osLabel.textContent = state.oversizedAnims.length + ' oversized';
   }

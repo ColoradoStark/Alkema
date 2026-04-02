@@ -324,8 +324,14 @@ class SpriteGenerator:
         selected_items: List[Dict[str, str]],
     ) -> Dict[str, Dict]:
         """
-        Get per-animation coverage info: whether standard sprites exist
-        and which oversized variant is available.
+        Get per-animation coverage info including weapon visibility
+        and recommended source (standard vs oversized).
+
+        Returns per-animation:
+            standard: bool - standard sprites exist for all critical items
+            oversized: str|None - name of oversized variant if available
+            weapon_visible: {standard: bool, oversized: bool}
+            recommended_source: "standard" | "oversized" | None
         """
         item_names = [s['item'] for s in selected_items]
         if not item_names:
@@ -333,26 +339,78 @@ class SpriteGenerator:
 
         items = (
             self.session.query(Item)
-            .options(joinedload(Item.animations))
+            .options(
+                joinedload(Item.animations),
+                joinedload(Item.layers).joinedload(ItemLayer.body_types),
+                joinedload(Item.variants),
+            )
             .filter(Item.file_name.in_(item_names))
             .all()
         )
-        standard_anims = set()
+
+        # Separate items by type
+        standard_anims = set()  # all animations any item supports
+        has_weapon = False
+        weapon_items = []  # weapon Item objects
+        custom_anim_names = set()  # custom_animation names from weapon layers
+
         for item in items:
-            for anim in item.animations:
-                standard_anims.add(anim.name)
+            item_anim_set = {a.name for a in item.animations}
+            standard_anims |= item_anim_set
 
-        custom_anim_names = set()
-        layers = (
-            self.session.query(ItemLayer)
-            .join(Item)
-            .filter(Item.file_name.in_(item_names))
-            .filter(ItemLayer.custom_animation.isnot(None))
-            .all()
-        )
-        for layer in layers:
-            custom_anim_names.add(layer.custom_animation)
+            if item.type_name in self.WEAPON_TYPES:
+                has_weapon = True
+                weapon_items.append(item)
+                for layer in item.layers:
+                    if layer.custom_animation:
+                        custom_anim_names.add(layer.custom_animation)
 
+        # Check which animations weapon standard layers (custom_animation IS NULL)
+        # actually have on disk. item_animations includes both standard and custom
+        # layer coverage, but we need to know standard-only.
+        weapon_standard_anims = set()
+        if has_weapon:
+            for item in weapon_items:
+                standard_layers = [l for l in item.layers if not l.custom_animation]
+                if not standard_layers:
+                    continue
+                # Get a representative variant for path checking
+                variant = None
+                if item.variants:
+                    variant = item.variants[0].name
+
+                for layer in standard_layers:
+                    bt_layer = next((bt for bt in layer.body_types), None)
+                    if not bt_layer:
+                        continue
+                    sprite_path = bt_layer.sprite_path.rstrip('/')
+                    # Resolve template replacements
+                    if item.replace_in_path:
+                        for key, value in item.replace_in_path.items():
+                            placeholder = f"${{{key}}}"
+                            if placeholder in sprite_path:
+                                if isinstance(value, dict):
+                                    replacement = value.get(variant) if variant else next(
+                                        (v for v in value.values() if v and v != 'none'), ''
+                                    )
+                                else:
+                                    replacement = value if value else ''
+                                if replacement is None:
+                                    replacement = ''
+                                sprite_path = sprite_path.replace(placeholder, str(replacement))
+
+                    base = os.path.join(SPRITE_BASE_PATH, sprite_path)
+                    for anim_name, _, _ in ANIMATIONS:
+                        if anim_name in weapon_standard_anims:
+                            continue  # already confirmed
+                        # Check if animation dir or file exists
+                        anim_dir = os.path.join(base, anim_name)
+                        if os.path.exists(anim_dir) and os.path.isdir(anim_dir):
+                            weapon_standard_anims.add(anim_name)
+                        elif os.path.exists(anim_dir + '.png'):
+                            weapon_standard_anims.add(anim_name)
+
+        # Load custom animation definitions to map oversized name -> base animation
         custom_anims = (
             self.session.query(CustomAnimation)
             .options(joinedload(CustomAnimation.frames))
@@ -368,9 +426,36 @@ class SpriteGenerator:
 
         coverage = {}
         for anim_name, _, _ in ANIMATIONS:
+            has_standard = anim_name in standard_anims
+            oversized_name = oversized_map.get(anim_name)
+
+            if has_weapon:
+                weapon_in_standard = anim_name in weapon_standard_anims
+                weapon_in_oversized = oversized_name is not None
+            else:
+                weapon_in_standard = True
+                weapon_in_oversized = True
+
+            # Determine recommended source
+            if oversized_name and not weapon_in_standard and weapon_in_oversized:
+                recommended = 'oversized'
+            elif has_standard and weapon_in_standard:
+                recommended = 'standard'
+            elif oversized_name:
+                recommended = 'oversized'
+            elif has_standard:
+                recommended = 'standard'
+            else:
+                recommended = None
+
             coverage[anim_name] = {
-                'standard': anim_name in standard_anims,
-                'oversized': oversized_map.get(anim_name),
+                'standard': has_standard,
+                'oversized': oversized_name,
+                'weapon_visible': {
+                    'standard': weapon_in_standard,
+                    'oversized': weapon_in_oversized,
+                },
+                'recommended_source': recommended,
             }
 
         return coverage
