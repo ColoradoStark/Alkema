@@ -53,8 +53,17 @@ ANIMATION_ROWS = {}
 for _anim_name, _start_row, _num_rows in ANIMATIONS:
     ANIMATION_ROWS[_anim_name] = _start_row
 
-# Cache for loaded sprite images to avoid repeated disk reads within a single generation
+# Global caches — persist across requests since sprite files don't change at runtime
 _path_exists_cache: Dict[str, bool] = {}
+_image_cache: Dict[str, Image.Image] = {}
+_sprite_content_cache: Dict[str, bool] = {}
+
+
+def _cached_path_exists(path: str) -> bool:
+    """Cached os.path.exists check for sprite files."""
+    if path not in _path_exists_cache:
+        _path_exists_cache[path] = os.path.exists(path)
+    return _path_exists_cache[path]
 
 
 class SpriteGenerator:
@@ -62,7 +71,6 @@ class SpriteGenerator:
 
     def __init__(self, session: Session):
         self.session = session
-        self._image_cache: Dict[str, Image.Image] = {}
 
     def generate_spritesheet(
         self,
@@ -106,7 +114,7 @@ class SpriteGenerator:
         for animation_name, start_row, num_rows in ANIMATIONS:
             sprite_path = self._resolve_animation_path(layer_info, body_type, animation_name)
 
-            if not os.path.exists(sprite_path):
+            if not _cached_path_exists(sprite_path):
                 continue
 
             try:
@@ -258,7 +266,7 @@ class SpriteGenerator:
                 sprite_path = self._resolve_custom_animation_path(
                     layer_info, body_type
                 )
-                if sprite_path and os.path.exists(sprite_path):
+                if sprite_path and _cached_path_exists(sprite_path):
                     try:
                         custom_sprites[id(layer_info)] = self._load_image(sprite_path)
                     except Exception:
@@ -293,7 +301,7 @@ class SpriteGenerator:
                             sprite_path = self._resolve_animation_path(
                                 layer_info, body_type, src_anim
                             )
-                            if not os.path.exists(sprite_path):
+                            if not _cached_path_exists(sprite_path):
                                 continue
                             try:
                                 src_image = self._load_image(sprite_path)
@@ -419,12 +427,12 @@ class SpriteGenerator:
                         # Check if animation dir or file exists AND has visible content
                         anim_dir = os.path.join(base, anim_name)
                         sprite_file = None
-                        if os.path.exists(anim_dir) and os.path.isdir(anim_dir):
+                        if _cached_path_exists(anim_dir) and os.path.isdir(anim_dir):
                             # Find the actual sprite file inside the directory
                             if variant:
                                 disk_variant = variant.replace(' ', '_')
                                 candidate = os.path.join(anim_dir, f"{disk_variant}.png")
-                                if os.path.exists(candidate):
+                                if _cached_path_exists(candidate):
                                     sprite_file = candidate
                             if not sprite_file:
                                 # Use first .png found
@@ -432,7 +440,7 @@ class SpriteGenerator:
                                     if entry.endswith('.png'):
                                         sprite_file = os.path.join(anim_dir, entry)
                                         break
-                        elif os.path.exists(anim_dir + '.png'):
+                        elif _cached_path_exists(anim_dir + '.png'):
                             sprite_file = anim_dir + '.png'
 
                         if sprite_file and self._sprite_has_content(sprite_file):
@@ -488,27 +496,52 @@ class SpriteGenerator:
 
         return coverage
 
-    def _sprite_has_content(self, path: str, min_fill_pct: float = 1.0) -> bool:
+    def _sprite_has_content(self, path: str, min_frames: int = 4, min_pixels: int = 10) -> bool:
         """Check if a sprite file has meaningful visible content.
-        Some weapon sprites exist on disk but are nearly all transparent,
-        meaning the weapon is not actually visible in that animation.
-        Returns True if more than min_fill_pct% of pixels are non-transparent."""
+        Some weapon sprites exist on disk but are nearly all transparent
+        (e.g. only 1 out of 32 frames has a few stray pixels).
+        Returns True if at least min_frames 64x64 cells each have
+        at least min_pixels non-transparent pixels."""
+        cache_key = f"{path}:{min_frames}:{min_pixels}"
+        if cache_key in _sprite_content_cache:
+            return _sprite_content_cache[cache_key]
         try:
             img = Image.open(path).convert('RGBA')
-            pixels = img.getdata()
-            total = len(pixels)
-            if total == 0:
+            w, h = img.size
+            if w < 64 or h < 64:
+                _sprite_content_cache[cache_key] = False
                 return False
-            non_transparent = sum(1 for p in pixels if p[3] > 0)
-            return (non_transparent / total) * 100 >= min_fill_pct
+            px = img.load()
+            cols = w // 64
+            rows = h // 64
+            filled = 0
+            for r in range(rows):
+                for c in range(cols):
+                    count = 0
+                    for y in range(r * 64, (r + 1) * 64):
+                        for x in range(c * 64, (c + 1) * 64):
+                            if px[x, y][3] > 0:
+                                count += 1
+                                if count >= min_pixels:
+                                    break
+                        if count >= min_pixels:
+                            break
+                    if count >= min_pixels:
+                        filled += 1
+                        if filled >= min_frames:
+                            _sprite_content_cache[cache_key] = True
+                            return True
+            _sprite_content_cache[cache_key] = False
+            return False
         except Exception:
+            _sprite_content_cache[cache_key] = False
             return False
 
     def _load_image(self, path: str) -> Image.Image:
         """Load an image with caching."""
-        if path not in self._image_cache:
-            self._image_cache[path] = Image.open(path).convert('RGBA')
-        return self._image_cache[path]
+        if path not in _image_cache:
+            _image_cache[path] = Image.open(path).convert('RGBA')
+        return _image_cache[path]
 
     def _resolve_animation_path(self, layer_info: Dict, body_type: str, animation: str) -> str:
         """Resolve the path for a specific animation of a layer."""

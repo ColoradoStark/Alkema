@@ -431,7 +431,56 @@ RACE_HEAD_CONFIG: Dict[str, Dict[str, List[str]]] = {
         "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
         "child_heads":     ["heads_human_child"],
     },
-    "fey": {
+    "fey-pixie": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "fey-sylph": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "fey-dark": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "furry-cat": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "furry-fox": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "furry-wolf": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "furry-bunny": {
+        "male_heads":      _HUMAN_MALE_HEADS,
+        "female_heads":    _HUMAN_FEMALE_HEADS,
+        "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
+        "female_teen_heads": _HUMAN_FEMALE_TEEN_HEADS,
+        "child_heads":     ["heads_human_child"],
+    },
+    "dragonblood": {
         "male_heads":      _HUMAN_MALE_HEADS,
         "female_heads":    _HUMAN_FEMALE_HEADS,
         "male_teen_heads": _HUMAN_MALE_TEEN_HEADS,
@@ -506,7 +555,14 @@ RACE_SKIN_COLORS: Dict[str, List[str]] = {
     "elf-grey":     ["lavender"],
     "angel":        ["light", "lavender"],
     "demon":        ["bronze", "black", "bright_green", "dark_green"],
-    "fey":          ["light", "lavender", "pale_green", "blue", "amber"],
+    "fey-pixie":    ["light", "lavender", "pale_green", "amber"],
+    "fey-sylph":    ["light", "lavender", "pale_green", "blue", "amber"],
+    "fey-dark":     ["bronze", "lavender", "blue", "dark_green"],
+    "furry-cat":    _FUR_SKINS + ["light", "taupe"],
+    "furry-fox":    _FUR_SKINS,
+    "furry-wolf":   _FUR_SKINS,
+    "furry-bunny":  _FUR_SKINS + ["light", "taupe"],
+    "dragonblood":  _LIZARD_SKINS + ["amber", "lavender"],
 }
 
 
@@ -515,7 +571,6 @@ RACE_SKIN_COLORS: Dict[str, List[str]] = {
 #   - a plain file_name string (variant picked normally)
 #   - a dict {"item": file_name, "variants": [allowed]} to restrict variant choice
 #   - a dict {"pick_one": [item_dicts]} to randomly pick one from a group
-_FEY_WING_VARIANTS = ["green", "blue", "purple", "gold", "rose", "pink", "violet", "forest"]
 RACE_FORCED_ITEMS: Dict[str, list] = {
     "elf":      ["head_ears_long"],
     "elf-grey": ["head_ears_elven"],
@@ -527,23 +582,61 @@ RACE_FORCED_ITEMS: Dict[str, list] = {
         {"item": "wings_bat", "variants": ["black", "raven", "dark brown", "dark gray", "navy", "purple"]},
         {"item": "tail_dragon", "variants": ["black", "raven", "dark brown", "dark gray", "red", "navy"]},
     ],
-    "fey":      [
+    "fey-pixie": [
         "head_ears_down",
-        {"pick_one": [
-            {"item": "wings_pixie",                 "variants": _FEY_WING_VARIANTS},
-            {"item": "wings_pixie_transparent",      "variants": _FEY_WING_VARIANTS},
-            {"item": "wings_monarch",               "variants": _FEY_WING_VARIANTS},
-            {"item": "wings_dragonfly",             "variants": _FEY_WING_VARIANTS},
-            {"item": "wings_dragonfly_transparent",  "variants": _FEY_WING_VARIANTS},
-            {"item": "wings_lunar",                 "variants": _FEY_WING_VARIANTS},
-        ]},
+        "wings_monarch",  # variant picked by palette (bright palettes)
+    ],
+    "fey-sylph": [
+        "head_ears_medium",
+        "wings_lunar",  # variant picked by palette (any palette)
+    ],
+    "fey-dark": [
+        "head_ears_long",
+        "wings_pixie",  # variant picked by palette (dark palettes)
+    ],
+    "furry-cat": [
+        "head_ears_cat",
+        "head_ears_cat_skin",
+        "tail_cat",
+    ],
+    "furry-fox": [
+        "head_ears_wolf",
+        "head_ears_wolf_skin",
+        "tail_wolf_fluffy",
+    ],
+    "furry-wolf": [
+        "head_ears_wolf",
+        "head_ears_wolf_skin",
+        "tail_wolf",
+    ],
+    "furry-bunny": [
+        "head_ears_hang",
+        "tail_cat",  # short fluffy tail works for bunny
+    ],
+    "dragonblood": [
+        "head_ears_dragon",
+        "tail_lizard",
     ],
 }
 
 # Categories to never include for certain races (e.g. demons skip hats to show horns)
 RACE_SKIP_CATEGORIES: Dict[str, List[str]] = {
-    "demon": ["hat"],
+    "demon":       ["hat"],
+    "furry-cat":   ["wings"],
+    "furry-fox":   ["wings"],
+    "furry-wolf":  ["wings"],
+    "furry-bunny": ["wings"],
+    "dragonblood": ["wings"],
 }
+
+# Races with wings — these never get capes (visual clash)
+_WINGED_RACES = {"angel", "demon", "fey-pixie", "fey-sylph", "fey-dark"}
+
+# Races where ears/tail should palette-coordinate instead of random color
+_FURRY_RACES = {"furry-cat", "furry-fox", "furry-wolf", "furry-bunny"}
+
+# Types that become palette-coordinated for furry races
+_FURRY_PALETTE_TYPES = {"furry_ears", "furry_ears_skin", "ears", "ears_inner", "tail"}
 
 BODY_TYPE_OPTIONS = ["male", "female", "muscular", "teen", "child", "pregnant"]
 
@@ -581,7 +674,7 @@ def _build_presets() -> List[dict]:
             if race == "jack":
                 display = f"Jack O'Lantern ({bt.capitalize()})"
             else:
-                display = f"{race.capitalize()} ({bt.capitalize()})"
+                display = f"{race.replace('-', ' ').title()} ({bt.capitalize()})"
             presets.append({
                 "id": preset_id, "race": race, "body_type": bt,
                 "display_name": display, "head_options": heads,
@@ -930,6 +1023,30 @@ ARMOR_WEIGHTS = {
         "hat_class_only": True,
         "optional_never": ["shoulders", "arms", "cape", "backpack"],
     },
+    "formal": {
+        "upper_body": [
+            # Female: dresses, tunics, blouses, robes
+            "dress_kimono", "dress_kimono_split", "dress_sash", "dress_slit",
+            "torso_clothes_robe", "torso_clothes_tunic", "torso_clothes_tunic_sara",
+            "torso_clothes_blouse", "torso_clothes_blouse_longsleeve",
+            "dress_bodice",
+            # Male: jackets, formal shirts, vests
+            "torso_jacket_collared", "torso_jacket_frock", "torso_jacket_iverness",
+            "torso_jacket_trench", "torso_jacket_tabard",
+            "torso_clothes_longsleeve_formal", "torso_clothes_longsleeve_formal_striped",
+            "torso_clothes_longsleeve_laced",
+            "torso_clothes_vest", "torso_clothes_vest_open",
+        ],
+        "upper_body_categories": ["dress", "clothes", "vest", "jacket"],
+        "lower_body": [
+            "legs_formal", "legs_formal_striped", "legs_hose",
+            "legs_skirt_belle", "legs_skirt_straight", "legs_skirt_overskirt",
+            "legs_pantaloons",
+        ],
+        "shoes": ["feet_shoes_basic", "feet_shoes_revised", "feet_boots_basic", "feet_slippers"],
+        "hat_class_only": True,
+        "optional_never": ["backpack", "quiver"],
+    },
     "nude": {
         "skip_upper_body": True,
         "skip_lower_body": True,
@@ -1028,6 +1145,8 @@ ALL_PALETTE_NAMES = list(COLOR_PALETTES.keys())
 RACE_PALETTES: Dict[str, List[str]] = {
     "angel": ["ivory", "rose", "cool", "royal"],
     "demon": ["shadow", "mercenary", "earth", "autumn"],
+    "fey-pixie": ["rose", "warm", "ivory", "cool"],
+    "fey-dark": ["shadow", "mercenary", "autumn", "earth"],
 }
 
 
@@ -1206,8 +1325,10 @@ def generate_random_character(
             return random.choice(variant_names)
 
         # Non-palette types (hair, skin, etc.): fully random
+        # Exception: furry races palette-coordinate their ears and tails
         if item_type in _PALETTE_SKIP_TYPES:
-            return random.choice(variant_names)
+            if not (original_race in _FURRY_RACES and item_type in _FURRY_PALETTE_TYPES):
+                return random.choice(variant_names)
 
         # Palette-coordinated: prefer fabric colours, sometimes accent
         if random.random() < 0.7:
@@ -1422,8 +1543,7 @@ def generate_random_character(
     armor_always = set(armor_cfg.get("optional_always", []))
     armor_never = set(armor_cfg.get("optional_never", []))
 
-    # Winged races skip capes when nude (capes clash with wings)
-    _WINGED_RACES = {"angel", "demon", "fey"}
+    # Winged races skip capes (capes clash with wings)
     if original_race in _WINGED_RACES:
         armor_never.add("cape")
     elif armor == "nude":
@@ -2066,6 +2186,153 @@ async def list_classes():
     return [{"id": k, "display_name": v["display_name"]} for k, v in CHARACTER_CLASSES.items()]
 
 
+@app.get("/rules", tags=["Documentation"])
+async def character_rules():
+    """Auto-generated documentation of all character generation rules.
+    Reads directly from the config data structures so it's always up to date."""
+
+    def _fmt_list(items, max_items=None):
+        """Format a list of item names into readable strings."""
+        if not items:
+            return "none"
+        display = [i.replace("_", " ") for i in items]
+        if max_items and len(display) > max_items:
+            return ", ".join(display[:max_items]) + f" (+{len(display) - max_items} more)"
+        return ", ".join(display)
+
+    # --- Races ---
+    races = {}
+    for race_name in RACE_HEAD_CONFIG:
+        race_info = {}
+        # Skin colors
+        skins = RACE_SKIN_COLORS.get(race_name)
+        if skins:
+            race_info["skin_colors"] = skins
+
+        # Forced items
+        forced = RACE_FORCED_ITEMS.get(race_name, [])
+        if forced:
+            forced_display = []
+            for f in forced:
+                if isinstance(f, dict):
+                    if "pick_one" in f:
+                        options = [o["item"].replace("_", " ") for o in f["pick_one"]]
+                        forced_display.append(f"random pick from: {', '.join(options)}")
+                    else:
+                        entry = f["item"].replace("_", " ")
+                        if f.get("variants"):
+                            entry += f" (variants: {', '.join(f['variants'])})"
+                        forced_display.append(entry)
+                else:
+                    forced_display.append(f.replace("_", " "))
+            race_info["forced_items"] = forced_display
+
+        # Palette restrictions
+        palettes = RACE_PALETTES.get(race_name)
+        if palettes:
+            race_info["palette_restriction"] = palettes
+
+        # Skip categories
+        skips = RACE_SKIP_CATEGORIES.get(race_name, [])
+        if skips:
+            race_info["skip_categories"] = skips
+
+        # Winged (no capes)
+        if race_name in _WINGED_RACES:
+            race_info["winged"] = True
+
+        races[race_name] = race_info
+
+    # --- Classes ---
+    classes = {}
+    for cls_name, cfg in CHARACTER_CLASSES.items():
+        cls_info = {
+            "display_name": cfg["display_name"],
+            "weapon_chance": cfg.get("weapon_chance", 0),
+            "shield_chance": cfg.get("shield_chance", 0),
+        }
+        if cfg.get("upper_body"):
+            cls_info["upper_body"] = cfg["upper_body"]
+        if cfg.get("lower_body"):
+            cls_info["lower_body"] = cfg["lower_body"]
+        if cfg.get("weapons"):
+            cls_info["weapons"] = cfg["weapons"]
+        if cfg.get("hats"):
+            cls_info["headgear"] = cfg["hats"]
+        if cfg.get("shields"):
+            cls_info["shields"] = cfg["shields"]
+        if cfg.get("shoulders"):
+            cls_info["shoulders"] = cfg["shoulders"]
+        if cfg.get("shoes"):
+            cls_info["shoes"] = cfg["shoes"]
+        if cfg.get("capes"):
+            cls_info["capes"] = cfg["capes"]
+        if cfg.get("optional_always"):
+            cls_info["always_equipped"] = cfg["optional_always"]
+        if cfg.get("optional_never"):
+            cls_info["never_equipped"] = cfg["optional_never"]
+        classes[cls_name] = cls_info
+
+    # --- Armor Weights ---
+    armor_weights = {}
+    for weight_name, cfg in ARMOR_WEIGHTS.items():
+        weight_info = {}
+        if cfg.get("skip_upper_body"):
+            weight_info["upper_body"] = "none (bare)"
+        elif cfg.get("upper_body"):
+            weight_info["upper_body"] = cfg["upper_body"]
+        if cfg.get("skip_lower_body"):
+            weight_info["lower_body"] = "none (bare)"
+        elif cfg.get("lower_body"):
+            weight_info["lower_body"] = cfg["lower_body"]
+        if cfg.get("hats"):
+            weight_info["headgear"] = cfg["hats"]
+        if cfg.get("hat_class_only"):
+            weight_info["headgear_rule"] = "class headgear only (no generic hats)"
+        if cfg.get("shoes"):
+            weight_info["shoes"] = cfg["shoes"]
+        if cfg.get("shoulders"):
+            weight_info["shoulders"] = cfg["shoulders"]
+        if cfg.get("optional_always"):
+            weight_info["always_equipped"] = cfg["optional_always"]
+        if cfg.get("optional_never"):
+            weight_info["never_equipped"] = cfg["optional_never"]
+        if not weight_info:
+            weight_info["note"] = "no restrictions (default behavior)"
+        armor_weights[weight_name] = weight_info
+
+    # --- Color Palettes ---
+    palettes = {}
+    for name, pal in COLOR_PALETTES.items():
+        palettes[name] = {
+            "fabrics": pal["fabrics"],
+            "accents": pal["accents"],
+            "metals": pal["metals"],
+        }
+
+    # --- System Rules ---
+    system_rules = [
+        "Class headgear always takes priority over armor weight headgear.",
+        f"Winged races ({', '.join(sorted(_WINGED_RACES))}) never receive capes.",
+        "Non-winged races in nude armor always receive a cape.",
+        "Palette system coordinates clothing, hat, cape, and accessory colors.",
+        f"Palette-skipped types (use own color logic): {_fmt_list(sorted(_PALETTE_SKIP_TYPES))}.",
+        f"Metal-coordinated types: {_fmt_list(sorted(_METAL_TYPES))}.",
+        "Weapon visibility metadata checks actual sprite pixel content, not just file existence.",
+        "Race forced items with no variant restriction use the palette system for color coordination.",
+    ]
+
+    return {
+        "generated_from": "live configuration (always up to date)",
+        "races": races,
+        "classes": classes,
+        "armor_weights": armor_weights,
+        "armor_weight_order": list(ARMOR_WEIGHTS.keys()),
+        "color_palettes": palettes,
+        "system_rules": system_rules,
+    }
+
+
 @app.get("/random-character", response_model=RandomCharacterResponse, tags=["Random Character"])
 async def random_character(
     preset: Optional[str] = Query(None, description="Preset id like 'human_female', 'orc_male' (see /presets)"),
@@ -2206,9 +2473,13 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
   select, button { padding: 10px 20px; border-radius: 6px; border: 1px solid #0f3460; font-size: 14px; }
   select { background: #16213e; color: #e0e0e0; }
   select:disabled { opacity: 0.4; cursor: not-allowed; }
-  button { background: #e94560; color: white; border: none; cursor: pointer; font-weight: 600; }
+  button { background: #e94560; color: white; border: none; cursor: pointer; font-weight: 600; transition: background 0.3s, transform 0.1s; }
   button:hover { background: #c73a52; }
   button:disabled { background: #555; cursor: wait; }
+  button.loading { background: #e9a045; animation: pulse-btn 1.2s ease-in-out infinite; }
+  button.loading .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes pulse-btn { 0%, 100% { opacity: 1; } 50% { opacity: 0.75; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .btn-secondary { background: #0f3460; }
   .btn-secondary:hover { background: #1a4a8a; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 20px; padding: 20px 30px; }
@@ -2271,6 +2542,7 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
     <option value="heavy">Heavy</option>
     <option value="normal">Normal</option>
     <option value="light">Light</option>
+    <option value="formal">Formal</option>
     <option value="topless">Topless</option>
     <option value="nude">Nude</option>
   </select>
@@ -2324,7 +2596,7 @@ fetch(API + '/presets').then(r => r.json()).then(data => {
   races.forEach(race => {
     const opt = document.createElement('option');
     opt.value = race;
-    opt.textContent = race.charAt(0).toUpperCase() + race.slice(1);
+    opt.textContent = race.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     raceSel.appendChild(opt);
   });
 
@@ -2382,13 +2654,25 @@ fetch(API + '/classes').then(r => r.json()).then(classes => {
   });
 });
 
-function setLoading(loading) {
-  document.getElementById('btnGenerate').disabled = loading;
-  document.getElementById('btnBatch').disabled = loading;
+function setLoading(loading, which) {
+  const btnGen = document.getElementById('btnGenerate');
+  const btnBatch = document.getElementById('btnBatch');
+  btnGen.disabled = loading;
+  btnBatch.disabled = loading;
+  if (loading) {
+    const active = which === 'batch' ? btnBatch : btnGen;
+    active.classList.add('loading');
+    active.innerHTML = '<span class="spinner"></span>Generating\u2026';
+  } else {
+    btnGen.classList.remove('loading');
+    btnBatch.classList.remove('loading');
+    btnGen.textContent = 'Generate Character';
+    btnBatch.textContent = 'Generate 6';
+  }
 }
 
-async function generateOne() {
-  setLoading(true);
+async function generateOne(standalone = true) {
+  if (standalone) setLoading(true, 'single');
   try {
     const race = document.getElementById('raceSelect').value;
     const bt = document.getElementById('bodySelect').value;
@@ -2434,14 +2718,14 @@ async function generateOne() {
     console.error(e);
     alert('Error generating character: ' + e.message);
   } finally {
-    setLoading(false);
+    if (standalone) setLoading(false);
   }
 }
 
 async function generateBatch() {
-  setLoading(true);
+  setLoading(true, 'batch');
   for (let i = 0; i < 6; i++) {
-    try { await generateOne(); } catch(e) { console.error(e); }
+    try { await generateOne(false); } catch(e) { console.error(e); }
   }
   setLoading(false);
 }
