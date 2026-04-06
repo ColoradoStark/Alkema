@@ -2400,9 +2400,17 @@ async def character_rules():
         "Class headgear always takes priority over armor weight headgear.",
         f"Winged races ({', '.join(sorted(_WINGED_RACES))}) never receive capes.",
         "Non-winged races in nude armor always receive a cape.",
+        "All characters receive a shadow layer.",
         "Palette system coordinates clothing, hat, cape, and accessory colors.",
         f"Palette-skipped types (use own color logic): {_fmt_list(sorted(_PALETTE_SKIP_TYPES))}.",
         f"Metal-coordinated types: {_fmt_list(sorted(_METAL_TYPES))}.",
+        f"Furry races ({', '.join(sorted(_FURRY_RACES))}) palette-coordinate ears and tails with clothing.",
+        f"Cosmetic races ({', '.join(sorted(_COSMETIC_RACES))}) can receive: "
+            "males 40% beard or mustache (hair-color matched), "
+            "females 30% hair extensions as matched L/R pairs, "
+            "pirates 20% prosthetic (hook or peg leg).",
+        f"Excluded items (anachronistic): {_fmt_list(sorted(_EXCLUDED_ITEMS))}.",
+        "Male hair is filtered to exclude feminine styles; female hair prefers feminine styles.",
         "Weapon visibility metadata checks actual sprite pixel content, not just file existence.",
         "Race forced items with no variant restriction use the palette system for color coordination.",
     ]
