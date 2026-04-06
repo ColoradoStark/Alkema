@@ -622,6 +622,8 @@ RACE_FORCED_ITEMS: Dict[str, list] = {
 # Categories to never include for certain races (e.g. demons skip hats to show horns)
 RACE_SKIP_CATEGORIES: Dict[str, List[str]] = {
     "demon":       ["hat"],
+    "jack":        ["hat", "hair"],
+    "alien":       ["hat", "hair"],
     "furry-cat":   ["wings"],
     "furry-fox":   ["wings"],
     "furry-wolf":  ["wings"],
@@ -637,6 +639,19 @@ _FURRY_RACES = {"furry-cat", "furry-fox", "furry-wolf", "furry-bunny"}
 
 # Types that become palette-coordinated for furry races
 _FURRY_PALETTE_TYPES = {"furry_ears", "furry_ears_skin", "ears", "ears_inner", "tail"}
+
+# Items excluded from random generation (anachronistic or visually out of place)
+_EXCLUDED_ITEMS = {
+    "hat_formal_bowler", "hat_formal_tophat", "hat_holiday_christmas",
+    "hat_cap_bonnie", "hat_cap_bonnie_tilt",
+}
+
+# Races eligible for cosmetic extras (facial hair, hair extensions, prosthetics)
+_COSMETIC_RACES = {
+    "human", "elf", "elf-grey",
+    "fey-pixie", "fey-sylph", "fey-dark",
+    "furry-cat", "furry-fox", "furry-wolf", "furry-bunny",
+}
 
 BODY_TYPE_OPTIONS = ["male", "female", "muscular", "teen", "child", "pregnant"]
 
@@ -801,7 +816,6 @@ CHARACTER_CLASSES: Dict[str, dict] = {
             "hat_tricorne", "hat_tricorne_captain", "hat_tricorne_lieutenant",
             "hat_bicorne_athwart_basic", "hat_bicorne_athwart_captain",
             "hat_bicorne_athwart_admiral", "hat_bicorne_foreaft",
-            "hat_cap_bonnie", "hat_cap_bonnie_tilt",
         ],
         "shields": [],  # no shield
         "shoulders": ["shoulders_epaulets"],
@@ -823,7 +837,7 @@ CHARACTER_CLASSES: Dict[str, dict] = {
             "weapon_ranged_bow_recurve", "weapon_ranged_bow_great",
             "weapon_ranged_bow_normal", "weapon_ranged_crossbow",
         ],
-        "hats": ["hat_hood_cloth", "hat_cap_bonnie", "hat_cap_leather"],
+        "hats": ["hat_hood_cloth", "hat_cap_leather"],
         "shields": [],  # no shield
         "shoulders": ["shoulders_leather"],
         "shoes": ["feet_boots_basic", "feet_boots_revised", "feet_boots_fold"],
@@ -924,7 +938,7 @@ CHARACTER_CLASSES: Dict[str, dict] = {
         ],
         "lower_body": ["legs_formal", "legs_pants", "legs_hose"],
         "weapons": [],
-        "hats": ["hat_formal_tophat", "hat_formal_bowler", "hat_cap_bonnie"],
+        "hats": [],
         "shields": [],
         "shoulders": [],
         "shoes": ["feet_shoes_revised", "feet_shoes_ghillies", "feet_shoes_basic"],
@@ -943,7 +957,7 @@ CHARACTER_CLASSES: Dict[str, dict] = {
         ],
         "lower_body": ["legs_pants", "legs_shorts", "legs_shorts_short", "legs_widepants"],
         "weapons": ["tool_rod", "tool_smash", "tool_thrust", "weapon_polearm_scythe"],
-        "hats": ["hat_cap_bonnie", "hat_cap_bonnie_tilt", "hat_hood_sack_cloth"],
+        "hats": ["hat_hood_sack_cloth"],
         "shields": [],
         "shoulders": [],
         "shoes": ["feet_sandals", "feet_boots_basic", "feet_shoes_basic"],
@@ -1268,9 +1282,11 @@ def generate_random_character(
         if elderly_heads:
             allowed_heads = elderly_heads
 
-    # Index items by type_name
+    # Index items by type_name (excluding anachronistic items)
     items_by_type: Dict[str, List[dict]] = {}
     for item in all_items:
+        if item["file_name"] in _EXCLUDED_ITEMS:
+            continue
         items_by_type.setdefault(item["type_name"], []).append(item)
 
     # Resolve class config
@@ -1508,7 +1524,9 @@ def generate_random_character(
         _pick_prefer("legs", cls_cfg.get("lower_body"))
 
     # Step 4.5 – hair (mandatory, gender-filtered)
-    if original_race not in ("skeleton", "zombie"):
+    hair_color: Optional[str] = None
+    race_skip = set(RACE_SKIP_CATEGORIES.get(original_race, []))
+    if original_race not in ("skeleton", "zombie") and "hair" not in race_skip:
         hair_items = [i for i in items_by_type.get("hair", []) if _is_compatible(i)]
         if body_type in _FEMALE_BODY_TYPES:
             feminine = [i for i in hair_items if i["file_name"] in _FEMININE_HAIR]
@@ -1517,10 +1535,9 @@ def generate_random_character(
             else:
                 hair_items = [i for i in hair_items if i["file_name"] not in _MASCULINE_HAIR]
         elif body_type in _MALE_BODY_TYPES:
-            hair_items = [i for i in hair_items if i["file_name"] not in {
-                "hair_pigtails", "hair_pigtails_bangs", "hair_bunches",
-                "hair_high_ponytail",
-            }]
+            masculine = [i for i in hair_items if i["file_name"] not in _FEMININE_HAIR]
+            if masculine:
+                hair_items = masculine
         if hair_items:
             if body_color:
                 good = [i for i in hair_items if _can_match_body_color(i)]
@@ -1528,6 +1545,7 @@ def generate_random_character(
                     hair_items = good
             item = random.choice(hair_items)
             variant = _pick_variant(item)
+            hair_color = variant
             selections.append({
                 "type": item["type_name"],
                 "item": item["file_name"],
@@ -1535,6 +1553,73 @@ def generate_random_character(
             })
             active_tags.update(item["tags"])
             used_types.add("hair")
+
+    # Step 4.6 – shadow (all characters)
+    _pick_from_category("shadow")
+
+    # Step 4.7 – cosmetic extras (humans, elves, furries, fey only)
+    if original_race in _COSMETIC_RACES:
+
+        # Helper: pick item from category with hair-colour matching
+        def _pick_hair_matched(category: str, restrict_to: Optional[List[str]] = None) -> Optional[str]:
+            candidates = [i for i in items_by_type.get(category, []) if _is_compatible(i)]
+            if restrict_to:
+                candidates = [i for i in candidates if i["file_name"] in restrict_to]
+            if not candidates:
+                return None
+            item = random.choice(candidates)
+            # Match hair colour if possible
+            if hair_color and item["variants"]:
+                matching = [v for v in item["variants"] if v["name"] == hair_color]
+                variant = matching[0]["name"] if matching else _pick_variant(item)
+            else:
+                variant = _pick_variant(item)
+            selections.append({
+                "type": item["type_name"],
+                "item": item["file_name"],
+                "variant": variant,
+            })
+            active_tags.update(item["tags"])
+            used_types.add(category)
+            return item["file_name"]
+
+        # Male characters: 40% chance of beard or mustache
+        if body_type in _MALE_BODY_TYPES and random.random() < 0.40:
+            if random.random() < 0.5:
+                _pick_hair_matched("beard")
+            else:
+                _pick_hair_matched("mustache")
+
+        # Female characters: 30% chance of hair extensions (matched pair + optional ponytail/updo)
+        if body_type in _FEMALE_BODY_TYPES and random.random() < 0.30:
+            # Pick a random extension style and add both left and right
+            ext_left = items_by_type.get("hairextl", [])
+            ext_left = [i for i in ext_left if _is_compatible(i)]
+            if ext_left:
+                chosen = random.choice(ext_left)
+                # Derive the right-side name: replace trailing 'l' with 'r'
+                base_name = chosen["file_name"][:-1]  # strip 'l'
+                right_name = base_name + "r"
+                # Add left side
+                lv = hair_color if hair_color and any(v["name"] == hair_color for v in chosen["variants"]) else _pick_variant(chosen)
+                selections.append({"type": "hairextl", "item": chosen["file_name"], "variant": lv})
+                active_tags.update(chosen["tags"])
+                used_types.add("hairextl")
+                # Add right side
+                _pick_hair_matched("hairextr", restrict_to=[right_name])
+            # 50% chance of also adding a ponytail or updo
+            if random.random() < 0.5:
+                if random.random() < 0.7:
+                    _pick_hair_matched("ponytail")
+                else:
+                    _pick_hair_matched("updo")
+
+        # Pirates: 20% chance of a prosthetic (hook or peg leg)
+        if character_class == "pirate" and random.random() < 0.20:
+            if random.random() < 0.5:
+                _pick_from_category("prosthesis_hand")
+            else:
+                _pick_from_category("prosthesis_leg")
 
     # Step 5 – optional categories (class-aware, race-aware, armor-weight-aware)
     cls_always = set(cls_cfg.get("optional_always", []))
