@@ -1,0 +1,25 @@
+name: Sync Public Repo
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'public/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+
+      - name: Push to public repo
+        uses: cpina/github-action-push-to-another-repository@v1.7.2
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
+        with:
+          source-directory: 'public'
+          destination-github-username: 'ColoradoStark'
+          destination-repository-name: 'Alkema'
+          target-branch: 'main'
+          commit-message: 'Sync from private repo'
