@@ -38,6 +38,9 @@ services:
     volumes:
       - ./Universal-LPC-Spritesheet-Character-Generator:/usr/share/nginx/html:ro
       - ./Universal-LPC-Spritesheet-Character-Generator/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - default
+      - caddy-net
 
   api-character-sprite-generator:
     build: ./API-Character-Sprite-Generator

@@ -2565,7 +2565,7 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
   .header p { color: #999; margin-top: 4px; }
   .controls { padding: 20px 30px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
   select, button { padding: 10px 20px; border-radius: 6px; border: 1px solid #0f3460; font-size: 14px; }
-  select { background: #16213e; color: #e0e0e0; }
+  select { background: #16213e; color: #e0e0e0; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23e0e0e0' fill='none' stroke-width='2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
   select:disabled { opacity: 0.4; cursor: not-allowed; }
   button { background: #e94560; color: white; border: none; cursor: pointer; font-weight: 600; transition: background 0.3s, transform 0.1s; }
   button:hover { background: #c73a52; }

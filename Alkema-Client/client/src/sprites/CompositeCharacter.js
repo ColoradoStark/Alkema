@@ -54,10 +54,10 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         
         // Base layer configs
         const layerConfigs = [
-            { name: 'body', url: `http://localhost:8080/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
-            { name: 'pants', url: `http://localhost:8080/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
-            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: false }, // Made required for debugging
-            { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` }
+            { name: 'body', url: `/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
+            { name: 'pants', url: `/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
+            { name: 'shirt', url: `/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: false }, // Made required for debugging
+            { name: 'head', url: `/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` }
         ];
         
         // Handle special hair styles that have bg/fg structure
@@ -68,13 +68,13 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             // These styles have background (behind head) and foreground (the actual detail)
             // Note: fg layer doesn't have color variants - it's just the shape overlay
             layerConfigs.push(
-                { name: 'hair_bg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`, optional: true },
-                { name: 'hair_fg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/fg/walk.png`, optional: true }
+                { name: 'hair_bg', url: `/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`, optional: true },
+                { name: 'hair_fg', url: `/spritesheets/hair/${hairStyle}/adult/fg/walk.png`, optional: true }
             );
         } else {
             // Regular hair styles just have one layer
             layerConfigs.push(
-                { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/walk/${mappedHairColor}.png`, optional: true }
+                { name: 'hair', url: `/spritesheets/hair/${hairStyle}/adult/walk/${mappedHairColor}.png`, optional: true }
             );
         }
         
