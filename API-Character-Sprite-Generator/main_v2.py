@@ -2649,7 +2649,7 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
 <div class="grid" id="grid"></div>
 
 <script>
-const API = window.location.origin;
+const API = window.location.href.replace(/\/test-characters\/?$/, '');
 let charCount = 0;
 
 /* ── Animation layout matching sprite_generator.py ──
