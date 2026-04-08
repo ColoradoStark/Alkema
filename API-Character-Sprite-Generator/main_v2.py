@@ -1768,6 +1768,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Alkema Character API",
     version="3.0.0",
+    root_path=os.environ.get("ROOT_PATH", ""),
     description="""
 ## LPC Character Customization API
 
