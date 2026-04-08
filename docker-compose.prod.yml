@@ -46,6 +46,8 @@ services:
     build: ./API-Character-Sprite-Generator
     container_name: alkema-api
     restart: unless-stopped
+    volumes:
+      - ./Universal-LPC-Spritesheet-Character-Generator:/generator:ro
     environment:
       DATABASE_URL: postgresql://alkema_user:alkema_pass@postgres:5432/alkema_db
       MONGODB_URI: mongodb://admin:adminpassword@mongodb:27017/alkema?authSource=admin
