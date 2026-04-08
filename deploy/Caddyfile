@@ -39,7 +39,8 @@ z3q.com {
 		reverse_proxy alkema-api:8000
 	}
 
-	handle /spritesheets/* {
+	@spritesheets path /spritesheets/*
+	handle @spritesheets {
 		reverse_proxy alkema-legacy-generator:80
 	}
 
