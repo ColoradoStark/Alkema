@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: alkema-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alkema_user
+      POSTGRES_PASSWORD: alkema_pass
+      POSTGRES_DB: alkema_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alkema_user -d alkema_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:7.0
+    container_name: alkema-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpassword
+      MONGO_INITDB_DATABASE: alkema
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  legacy-generator:
+    image: nginx:1.29.0
+    container_name: alkema-legacy-generator
+    restart: unless-stopped
+    volumes:
+      - ./Universal-LPC-Spritesheet-Character-Generator:/usr/share/nginx/html:ro
+      - ./Universal-LPC-Spritesheet-Character-Generator/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  api-character-sprite-generator:
+    build: ./API-Character-Sprite-Generator
+    container_name: alkema-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://alkema_user:alkema_pass@postgres:5432/alkema_db
+      MONGODB_URI: mongodb://admin:adminpassword@mongodb:27017/alkema?authSource=admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; exit(0 if requests.get('http://localhost:8000/health').status_code == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - default
+      - caddy-net
+
+  game-server:
+    build: ./Alkema-Client/server
+    container_name: alkema-game-server
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      MONGODB_URI: mongodb://admin:adminpassword@mongodb:27017/alkema?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this}
+      API_URL: http://alkema-api:8000
+      API_BASE_URL: http://alkema-api:8000
+    depends_on:
+      - mongodb
+      - api-character-sprite-generator
+    volumes:
+      - /app/node_modules
+    networks:
+      - default
+      - caddy-net
+
+  game-client:
+    build: ./Alkema-Client/client
+    container_name: alkema-game-client
+    restart: unless-stopped
+    depends_on:
+      - game-server
+    volumes:
+      - /app/node_modules
+    networks:
+      - default
+      - caddy-net
+
+networks:
+  caddy-net:
+    external: true
+
+volumes:
+  postgres_data:
+  mongodb_data:

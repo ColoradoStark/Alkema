@@ -1,0 +1,49 @@
+localhost {
+	encode zstd gzip
+	templates
+	file_server browse
+}
+
+gamersdailynews.com {
+	handle_path /site1* {
+		root * /var/www/site1
+		try_files {path}.html {path}
+		templates
+		file_server
+	}
+
+	handle {
+		reverse_proxy wordpress:80
+	}
+}
+
+www.gamersdailynews.com {
+	handle_path /site1* {
+		root * /var/www/site1
+		try_files {path}.html {path}
+		templates
+		file_server
+	}
+
+	handle {
+		reverse_proxy wordpress:80
+	}
+}
+
+z3q.com {
+	handle /socket.io/* {
+		reverse_proxy alkema-game-server:3001
+	}
+
+	handle /api/* {
+		reverse_proxy alkema-api:8000
+	}
+
+	handle {
+		reverse_proxy alkema-game-client:3000
+	}
+}
+
+www.z3q.com {
+	redir https://z3q.com{uri} permanent
+}

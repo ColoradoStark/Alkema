@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  caddy:
+    image: caddy:2.5.1
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./www-data:/var/www
+      - ./config:/etc/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+      - /home/ubuntu/upload/:/home/user/upload
+    networks:
+      - default
+      - caddy-net
+    restart: always
+
+  db:
+    image: mysql:8.0.15
+    cap_add:
+      - SYS_NICE
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    env_file:
+      - db-variables.env
+
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:6.0
+    restart: always
+    env_file:
+      - wp-variables.env
+    volumes:
+      - ./www-data:/var/www/html
+
+networks:
+  caddy-net:
+    external: true
+
+volumes:
+  www-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "./www-data"
+  db_data: {}
+  caddy_data: {}
+  caddy_config: {}
