@@ -73,18 +73,31 @@ try {
     screen.orientation.lock('portrait').catch(() => {});
 } catch (e) { /* not supported */ }
 
-// Mobile only: debounced resize to fix rotation resize bug on iOS
+// Mobile: set container to actual visible height and handle resize
 if (isMobile) {
+    const container = document.getElementById('game-container');
+
+    function setMobileHeight() {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        container.style.height = vh + 'px';
+    }
+
+    setMobileHeight();
+
     let resizeTimeout;
     function handleResize() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
+            setMobileHeight();
             if (game && game.scale) {
                 game.scale.refresh();
             }
         }, 150);
     }
     window.addEventListener('resize', handleResize);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleResize);
+    }
     window.addEventListener('orientationchange', () => {
         setTimeout(handleResize, 300);
     });
