@@ -58,8 +58,7 @@ body {
     }
 
     #game-container canvas {
-        width: auto;
-        height: auto;
+        /* JS sets exact width/height via visualViewport */
     }
 }
 
