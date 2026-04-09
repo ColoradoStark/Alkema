@@ -31,7 +31,7 @@ export class UIScene extends Scene {
         const topBg = this.add.graphics();
         topBg.fillStyle(0x3d2510, 0.95);
         topBg.fillRect(0, 0, 352, 32);
-        topBg.lineStyle(2, 0xc8a04a, 1);
+        topBg.lineStyle(1, 0xc8a04a, 1);
         topBg.strokeRect(0, 0, 352, 32);
         this.topBarContainer.add(topBg);
         
@@ -77,7 +77,7 @@ export class UIScene extends Scene {
         const controlsBg = this.add.graphics();
         controlsBg.fillStyle(0x2e1a0a, 0.95);
         controlsBg.fillRect(0, 0, 352, 160);
-        controlsBg.lineStyle(2, 0xc8a04a, 1);
+        controlsBg.lineStyle(1, 0xc8a04a, 1);
         controlsBg.strokeRect(0, 0, 352, 160);
         this.bottomControlsContainer.add(controlsBg);
         
@@ -120,7 +120,7 @@ export class UIScene extends Scene {
         
         // Button background
         const bg = this.add.graphics();
-        bg.fillStyle(0x5c3a1e, 0.9);
+        bg.fillStyle(0x3a2210, 0.9);
         bg.fillRoundedRect(-16, -16, 33, 33, 5);
         bg.lineStyle(1, 0x8a6030, 1);
         bg.strokeRoundedRect(-16, -16, 33, 33, 5);
@@ -185,7 +185,7 @@ export class UIScene extends Scene {
         
         hitArea.on('pointerdown', () => {
             bg.clear();
-            bg.fillStyle(0x8a6030, 1);
+            bg.fillStyle(0x5c3a1e, 1);
             bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0xb8883a, 1);
             bg.strokeRoundedRect(-16, -16, 33, 33, 5);
@@ -194,7 +194,7 @@ export class UIScene extends Scene {
         
         hitArea.on('pointerup', () => {
             bg.clear();
-            bg.fillStyle(0x5c3a1e, 0.9);
+            bg.fillStyle(0x3a2210, 0.9);
             bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0x8a6030, 1);
             bg.strokeRoundedRect(-16, -16, 33, 33, 5);
@@ -203,7 +203,7 @@ export class UIScene extends Scene {
         
         hitArea.on('pointerout', () => {
             bg.clear();
-            bg.fillStyle(0x5c3a1e, 0.9);
+            bg.fillStyle(0x3a2210, 0.9);
             bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0x8a6030, 1);
             bg.strokeRoundedRect(-16, -16, 33, 33, 5);
@@ -342,7 +342,7 @@ export class UIScene extends Scene {
             hitArea.on('pointerover', () => {
                 if (this.activeTab !== tab.key) {
                     bg.clear();
-                    bg.fillStyle(0x5c3a1e, 0.9);
+                    bg.fillStyle(0x3a2210, 0.9);
                     bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
                     bg.lineStyle(1, 0x8a6030, 1);
                     bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
