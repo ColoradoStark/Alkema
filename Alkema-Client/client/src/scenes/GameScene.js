@@ -47,16 +47,17 @@ export class GameScene extends Scene {
     }
 
     createWorld() {
-        // Add the placeholder map as background
+        // Add the placeholder map as background, scaled 2x
         const mapBackground = this.add.image(0, 0, 'placeholder-map');
         mapBackground.setOrigin(0, 0);
+        mapBackground.setScale(2);
         mapBackground.setDepth(-10); // Ensure it's behind everything
-        
-        // Set world bounds to match the map size (4096x4096)
-        this.physics.world.setBounds(0, 0, 4096, 4096);
-        
-        // Set camera bounds to the map size so players can explore
-        this.cameras.main.setBounds(0, 0, 4096, 4096);
+
+        // Set world bounds to match the scaled map size (8192x8192)
+        this.physics.world.setBounds(0, 0, 8192, 8192);
+
+        // Set camera bounds to the scaled map size so players can explore
+        this.cameras.main.setBounds(0, 0, 8192, 8192);
         
         // Optional: Add a subtle grid overlay for debugging (remove later if not needed)
         const gridSize = 32;
@@ -168,8 +169,8 @@ export class GameScene extends Scene {
 
         const player = new Player(
             this,
-            playerData.x || 2048,  // Start in center of 4096x4096 map
-            playerData.y || 2048,
+            playerData.x || 4096,  // Start in center of 8192x8192 map
+            playerData.y || 4096,
             playerData.id,
             playerData.character,
             playerData.isLocal || false
