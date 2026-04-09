@@ -43,16 +43,8 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
         width: BASE_WIDTH,
         height: BASE_HEIGHT,
-        min: {
-            width: BASE_WIDTH,
-            height: BASE_HEIGHT
-        },
-        max: {
-            width: BASE_WIDTH * 4,
-            height: BASE_HEIGHT * 4
-        },
         autoRound: true,  // Ensures integer positioning
-        expandParent: false
+        expandParent: true
     },
     render: {
         pixelArt: true,
