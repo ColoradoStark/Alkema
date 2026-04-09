@@ -93,15 +93,15 @@ export class UIScene extends Scene {
 
     createDPad() {
         const dpadX = 64;
-        const dpadY = 56;  // Moved down from 48
-        const btnSpacing = 32;
-        
+        const dpadY = 60;  // Centered in controls area (0-120)
+        const btnSpacing = 35;
+
         // D-pad background circle
         const dpadBg = this.add.graphics();
         dpadBg.fillStyle(0x3d2510, 0.5);
-        dpadBg.fillCircle(dpadX, dpadY, 45);
+        dpadBg.fillCircle(dpadX, dpadY, 50);
         dpadBg.lineStyle(2, 0xc8a04a, 0.8);
-        dpadBg.strokeCircle(dpadX, dpadY, 45);
+        dpadBg.strokeCircle(dpadX, dpadY, 50);
         this.bottomControlsContainer.add(dpadBg);
         
         // Create custom arrow graphics since sprites aren't loading
@@ -121,9 +121,9 @@ export class UIScene extends Scene {
         // Button background
         const bg = this.add.graphics();
         bg.fillStyle(0x5c3a1e, 0.9);
-        bg.fillRoundedRect(-15, -15, 30, 30, 5);
+        bg.fillRoundedRect(-16, -16, 33, 33, 5);
         bg.lineStyle(1, 0x8a6030, 1);
-        bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+        bg.strokeRoundedRect(-16, -16, 33, 33, 5);
         
         // Draw arrow
         const arrow = this.add.graphics();
@@ -178,7 +178,7 @@ export class UIScene extends Scene {
         }
         
         // Make interactive
-        const hitArea = this.add.rectangle(0, 0, 30, 30, 0x000000, 0);
+        const hitArea = this.add.rectangle(0, 0, 33, 33, 0x000000, 0);
         hitArea.setInteractive();
         
         container.add([bg, arrow, hitArea]);
@@ -186,27 +186,27 @@ export class UIScene extends Scene {
         hitArea.on('pointerdown', () => {
             bg.clear();
             bg.fillStyle(0x8a6030, 1);
-            bg.fillRoundedRect(-15, -15, 30, 30, 5);
+            bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0xb8883a, 1);
-            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            bg.strokeRoundedRect(-16, -16, 33, 33, 5);
             this.movementKeys[direction] = true;
         });
         
         hitArea.on('pointerup', () => {
             bg.clear();
             bg.fillStyle(0x5c3a1e, 0.9);
-            bg.fillRoundedRect(-15, -15, 30, 30, 5);
+            bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0x8a6030, 1);
-            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            bg.strokeRoundedRect(-16, -16, 33, 33, 5);
             this.movementKeys[direction] = false;
         });
         
         hitArea.on('pointerout', () => {
             bg.clear();
             bg.fillStyle(0x5c3a1e, 0.9);
-            bg.fillRoundedRect(-15, -15, 30, 30, 5);
+            bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0x8a6030, 1);
-            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            bg.strokeRoundedRect(-16, -16, 33, 33, 5);
             this.movementKeys[direction] = false;
         });
         
@@ -221,9 +221,9 @@ export class UIScene extends Scene {
         // UI right edge is at 352px (total width)
         // Center point between 96 and 352 = (96 + 352) / 2 = 224
         const btnX = 224;
-        const btnY = 56;   // Moved down to match D-pad
-        const btnSize = 66;  // 50% larger (44 * 1.5)
-        const spacing = 100; // More horizontal spacing
+        const btnY = 60;   // Centered in controls area to match D-pad
+        const btnSize = 44;  // Bigger buttons
+        const spacing = 81;  // 50% more spacing (54 * 1.5 = 81)
         
         // Attack button (red) with sword icon
         const attackBtn = this.createActionButton(
