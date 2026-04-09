@@ -120,7 +120,7 @@ export class UIScene extends Scene {
         
         // Button background
         const bg = this.add.graphics();
-        bg.fillStyle(0x3a2210, 0.9);
+        bg.fillStyle(0x2e1a0a, 1);
         bg.fillRoundedRect(-16, -16, 33, 33, 5);
         bg.lineStyle(1, 0x8a6030, 1);
         bg.strokeRoundedRect(-16, -16, 33, 33, 5);
@@ -194,7 +194,7 @@ export class UIScene extends Scene {
         
         hitArea.on('pointerup', () => {
             bg.clear();
-            bg.fillStyle(0x3a2210, 0.9);
+            bg.fillStyle(0x2e1a0a, 1);
             bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0x8a6030, 1);
             bg.strokeRoundedRect(-16, -16, 33, 33, 5);
@@ -203,7 +203,7 @@ export class UIScene extends Scene {
         
         hitArea.on('pointerout', () => {
             bg.clear();
-            bg.fillStyle(0x3a2210, 0.9);
+            bg.fillStyle(0x2e1a0a, 1);
             bg.fillRoundedRect(-16, -16, 33, 33, 5);
             bg.lineStyle(1, 0x8a6030, 1);
             bg.strokeRoundedRect(-16, -16, 33, 33, 5);
