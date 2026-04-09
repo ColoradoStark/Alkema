@@ -319,7 +319,7 @@ export class UIScene extends Scene {
             
             // Tab background
             const bg = this.add.graphics();
-            bg.fillStyle(0x1a0e04, 1);
+            bg.fillStyle(0x2e1a0a, 1);
             bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
             bg.lineStyle(1, 0xc8a04a, 1);
             bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
@@ -342,7 +342,7 @@ export class UIScene extends Scene {
             hitArea.on('pointerover', () => {
                 if (this.activeTab !== tab.key) {
                     bg.clear();
-                    bg.fillStyle(0x120a02, 1);
+                    bg.fillStyle(0x241408, 1);
                     bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
                     bg.lineStyle(1, 0x8a6030, 1);
                     bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
@@ -351,7 +351,7 @@ export class UIScene extends Scene {
             hitArea.on('pointerout', () => {
                 if (this.activeTab !== tab.key) {
                     bg.clear();
-                    bg.fillStyle(0x1a0e04, 1);
+                    bg.fillStyle(0x2e1a0a, 1);
                     bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
                     bg.lineStyle(1, 0xc8a04a, 1);
                     bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
@@ -490,7 +490,7 @@ export class UIScene extends Scene {
                 text.setColor('#ffe060');
             } else {
                 // Inactive tab
-                bg.fillStyle(0x1a0e04, 1);
+                bg.fillStyle(0x2e1a0a, 1);
                 bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
                 bg.lineStyle(1, 0xc8a04a, 1);
                 bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
