@@ -319,11 +319,11 @@ export class UIScene extends Scene {
             
             // Tab background
             const bg = this.add.graphics();
-            bg.fillStyle(0x3d2510, 0.8);
+            bg.fillStyle(0x2a1808, 0.9);
             bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
             bg.lineStyle(1, 0xc8a04a, 1);
             bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
-            
+
             // Make interactive
             const hitArea = this.add.rectangle(0, 0, tabWidth, tabHeight, 0x000000, 0);
             hitArea.setInteractive();
@@ -342,7 +342,7 @@ export class UIScene extends Scene {
             hitArea.on('pointerover', () => {
                 if (this.activeTab !== tab.key) {
                     bg.clear();
-                    bg.fillStyle(0x3a2210, 0.9);
+                    bg.fillStyle(0x1e1206, 0.95);
                     bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
                     bg.lineStyle(1, 0x8a6030, 1);
                     bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
@@ -351,7 +351,7 @@ export class UIScene extends Scene {
             hitArea.on('pointerout', () => {
                 if (this.activeTab !== tab.key) {
                     bg.clear();
-                    bg.fillStyle(0x3d2510, 0.8);
+                    bg.fillStyle(0x2a1808, 0.9);
                     bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
                     bg.lineStyle(1, 0xc8a04a, 1);
                     bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
@@ -490,7 +490,7 @@ export class UIScene extends Scene {
                 text.setColor('#ffe060');
             } else {
                 // Inactive tab
-                bg.fillStyle(0x3d2510, 0.8);
+                bg.fillStyle(0x2a1808, 0.9);
                 bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
                 bg.lineStyle(1, 0xc8a04a, 1);
                 bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
