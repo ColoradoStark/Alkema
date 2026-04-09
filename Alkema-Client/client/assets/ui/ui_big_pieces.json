@@ -79,66 +79,6 @@
         "dpad_center": {
             "frame": {"x": 736, "y": 368, "w": 32, "h": 32},
             "sourceSize": {"w": 32, "h": 32}
-        },
-        "fill_red": {
-            "frame": {"x": 330, "y": 28, "w": 28, "h": 12},
-            "sourceSize": {"w": 28, "h": 12}
-        },
-        "fill_blue": {
-            "frame": {"x": 426, "y": 28, "w": 28, "h": 12},
-            "sourceSize": {"w": 28, "h": 12}
-        },
-        "fill_green": {
-            "frame": {"x": 330, "y": 60, "w": 28, "h": 12},
-            "sourceSize": {"w": 28, "h": 12}
-        },
-        "fill_yellow": {
-            "frame": {"x": 362, "y": 28, "w": 28, "h": 12},
-            "sourceSize": {"w": 28, "h": 12}
-        },
-        "fill_dark": {
-            "frame": {"x": 298, "y": 28, "w": 28, "h": 12},
-            "sourceSize": {"w": 28, "h": 12}
-        },
-        "frame_top_small": {
-            "frame": {"x": 0, "y": 0, "w": 160, "h": 48},
-            "sourceSize": {"w": 160, "h": 48}
-        },
-        "hud_piece": {
-            "frame": {"x": 456, "y": 193, "w": 192, "h": 64},
-            "sourceSize": {"w": 192, "h": 64}
-        },
-        "button_long_brown": {
-            "frame": {"x": 636, "y": 96, "w": 108, "h": 28},
-            "sourceSize": {"w": 108, "h": 28}
-        },
-        "button_long_golden": {
-            "frame": {"x": 636, "y": 128, "w": 108, "h": 28},
-            "sourceSize": {"w": 108, "h": 28}
-        },
-        "frame_deco_left": {
-            "frame": {"x": 648, "y": 193, "w": 32, "h": 48},
-            "sourceSize": {"w": 32, "h": 48}
-        },
-        "frame_deco_right": {
-            "frame": {"x": 712, "y": 193, "w": 32, "h": 48},
-            "sourceSize": {"w": 32, "h": 48}
-        },
-        "icon_helmet": {
-            "frame": {"x": 337, "y": 433, "w": 24, "h": 24},
-            "sourceSize": {"w": 24, "h": 24}
-        },
-        "icon_ring": {
-            "frame": {"x": 369, "y": 433, "w": 24, "h": 24},
-            "sourceSize": {"w": 24, "h": 24}
-        },
-        "icon_chest": {
-            "frame": {"x": 401, "y": 433, "w": 24, "h": 24},
-            "sourceSize": {"w": 24, "h": 24}
-        },
-        "icon_person": {
-            "frame": {"x": 433, "y": 433, "w": 24, "h": 24},
-            "sourceSize": {"w": 24, "h": 24}
         }
     }
 }
