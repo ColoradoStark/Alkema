@@ -40,7 +40,7 @@ const config = {
     pixelArt: true,
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
         width: BASE_WIDTH,
         height: BASE_HEIGHT,
         min: {
@@ -73,5 +73,26 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+// Try to lock orientation to portrait
+try {
+    screen.orientation.lock('portrait').catch(() => {});
+} catch (e) { /* not supported */ }
+
+// Debounced resize to fix rotation resize bug on iOS
+let resizeTimeout;
+function handleResize() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        if (game && game.scale) {
+            game.scale.refresh();
+        }
+    }, 150);
+}
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', () => {
+    // iOS needs a delay after orientation change to report correct dimensions
+    setTimeout(handleResize, 300);
+});
 
 export default game;
