@@ -32,7 +32,7 @@ export class UIScene extends Scene {
         topBg.fillStyle(0x3d2510, 0.95);
         topBg.fillRect(0, 0, 352, 32);
         topBg.lineStyle(1, 0xc8a04a, 1);
-        topBg.strokeRect(0, 0, 352, 32);
+        topBg.strokeRect(1, 1, 350, 30);
         this.topBarContainer.add(topBg);
         
         // Connection status orb (moved left to make room)
@@ -78,7 +78,7 @@ export class UIScene extends Scene {
         controlsBg.fillStyle(0x2e1a0a, 0.95);
         controlsBg.fillRect(0, 0, 352, 160);
         controlsBg.lineStyle(1, 0xc8a04a, 1);
-        controlsBg.strokeRect(0, 0, 352, 160);
+        controlsBg.strokeRect(1, 1, 350, 158);
         this.bottomControlsContainer.add(controlsBg);
         
         // D-Pad
@@ -222,8 +222,8 @@ export class UIScene extends Scene {
         // Center point between 96 and 352 = (96 + 352) / 2 = 224
         const btnX = 224;
         const btnY = 60;   // Centered in controls area to match D-pad
-        const btnSize = 44;  // Bigger buttons
-        const spacing = 81;  // 50% more spacing (54 * 1.5 = 81)
+        const btnSize = 66;  // 50% larger (44 * 1.5)
+        const spacing = 100; // More horizontal spacing
         
         // Attack button (red) with sword icon
         const attackBtn = this.createActionButton(
