@@ -55,10 +55,9 @@ body {
         border: none;
         border-radius: 0;
         box-shadow: none;
-    }
-
-    #game-container canvas {
-        /* JS sets exact width/height via visualViewport */
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 }
 
