@@ -30,9 +30,9 @@ export class UIScene extends Scene {
         // Simple background panel for top bar
         const topBg = this.add.graphics();
         topBg.fillStyle(0x3d2510, 0.95);
-        topBg.fillRoundedRect(4, 4, 344, 24, 4);
+        topBg.fillRect(0, 0, 352, 32);
         topBg.lineStyle(2, 0xc8a04a, 1);
-        topBg.strokeRoundedRect(4, 4, 344, 24, 4);
+        topBg.strokeRect(0, 0, 352, 32);
         this.topBarContainer.add(topBg);
         
         // Connection status orb (moved left to make room)
@@ -76,9 +76,9 @@ export class UIScene extends Scene {
         // Background for controls
         const controlsBg = this.add.graphics();
         controlsBg.fillStyle(0x2e1a0a, 0.95);
-        controlsBg.fillRoundedRect(4, 4, 344, 152, 8);
+        controlsBg.fillRect(0, 0, 352, 160);
         controlsBg.lineStyle(2, 0x5c3a1e, 1);
-        controlsBg.strokeRoundedRect(4, 4, 344, 152, 8);
+        controlsBg.strokeRect(0, 0, 352, 160);
         this.bottomControlsContainer.add(controlsBg);
         
         // D-Pad
