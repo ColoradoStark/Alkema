@@ -32,7 +32,7 @@ export class UIScene extends Scene {
         topBg.fillStyle(0x3d2510, 0.95);
         topBg.fillRect(0, 0, 352, 32);
         topBg.lineStyle(1, 0xc8a04a, 1);
-        topBg.strokeRect(1, 1, 350, 30);
+        topBg.strokeRect(0.5, 0.5, 351, 31);
         this.topBarContainer.add(topBg);
         
         // Connection status orb (moved left to make room)
@@ -78,7 +78,7 @@ export class UIScene extends Scene {
         controlsBg.fillStyle(0x3d2510, 0.95);
         controlsBg.fillRect(0, 0, 352, 160);
         controlsBg.lineStyle(1, 0xc8a04a, 1);
-        controlsBg.strokeRect(1, 1, 350, 158);
+        controlsBg.strokeRect(0.5, 0.5, 351, 159);
         this.bottomControlsContainer.add(controlsBg);
         
         // D-Pad
