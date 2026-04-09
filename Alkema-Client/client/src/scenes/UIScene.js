@@ -222,8 +222,8 @@ export class UIScene extends Scene {
         // Center point between 96 and 352 = (96 + 352) / 2 = 224
         const btnX = 224;
         const btnY = 56;   // Moved down to match D-pad
-        const btnSize = 44;  // Bigger buttons
-        const spacing = 81;  // 50% more spacing (54 * 1.5 = 81)
+        const btnSize = 66;  // 50% larger (44 * 1.5)
+        const spacing = 100; // More horizontal spacing
         
         // Attack button (red) with sword icon
         const attackBtn = this.createActionButton(
