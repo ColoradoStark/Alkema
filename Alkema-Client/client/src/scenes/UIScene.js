@@ -77,7 +77,7 @@ export class UIScene extends Scene {
         const controlsBg = this.add.graphics();
         controlsBg.fillStyle(0x2e1a0a, 0.95);
         controlsBg.fillRect(0, 0, 352, 160);
-        controlsBg.lineStyle(2, 0x5c3a1e, 1);
+        controlsBg.lineStyle(2, 0xc8a04a, 1);
         controlsBg.strokeRect(0, 0, 352, 160);
         this.bottomControlsContainer.add(controlsBg);
         
