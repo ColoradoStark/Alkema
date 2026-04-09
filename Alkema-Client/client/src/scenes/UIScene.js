@@ -10,394 +10,385 @@ export class UIScene extends Scene {
     }
 
     create() {
-        // Detect if mobile/touch device
         this.isMobile = this.game.device.input.touch;
-        
-        // Create UI layers
+
         this.topBarContainer = this.add.container(0, 0);
         this.bottomControlsContainer = this.add.container(0, 480);
-        
+
         this.setupTopBar();
         this.setupBottomControls();
         this.setupKeyboardControls();
         this.setupEventHandlers();
-        
-        // Show/hide controls based on device
         this.updateControlsVisibility();
     }
 
+    // ─── Top Bar ───────────────────────────────────────────────
+
     setupTopBar() {
-        // Simple background panel for top bar
+        // Warm wooden panel background
         const topBg = this.add.graphics();
-        topBg.fillStyle(0x2a2a3e, 0.95);
-        topBg.fillRoundedRect(4, 4, 344, 24, 4);
-        topBg.lineStyle(2, 0x4a4a5e, 1);
-        topBg.strokeRoundedRect(4, 4, 344, 24, 4);
+        topBg.fillStyle(0x5c3a1e, 0.92);
+        topBg.fillRoundedRect(2, 2, 348, 28, 6);
+        // Golden border
+        topBg.lineStyle(2, 0xc8a04a, 1);
+        topBg.strokeRoundedRect(2, 2, 348, 28, 6);
+        // Inner shadow line
+        topBg.lineStyle(1, 0x7a5030, 0.5);
+        topBg.strokeRoundedRect(4, 4, 344, 24, 5);
         this.topBarContainer.add(topBg);
-        
-        // Connection status orb (moved left to make room)
+
+        // HP bar using golden frame from atlas
+        const hpFrame = this.add.image(72, 16, 'ui-atlas', 'bar_frame_golden');
+        hpFrame.setScale(0.85, 0.75);
+        this.topBarContainer.add(hpFrame);
+
+        // HP fill (red) - drawn behind the frame
+        this.hpBar = this.add.graphics();
+        this.hpBar.setDepth(-1);
+        this.drawHpBar(1.0);
+        this.topBarContainer.add(this.hpBar);
+
+        // HP label
+        const hpLabel = this.add.text(25, 16, 'HP', {
+            fontFamily: 'Alagard',
+            fontSize: '11px',
+            color: '#ffcccc',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0, 0.5);
+        this.topBarContainer.add(hpLabel);
+
+        // MP bar using golden frame
+        const mpFrame = this.add.image(185, 16, 'ui-atlas', 'bar_frame_golden');
+        mpFrame.setScale(0.7, 0.75);
+        this.topBarContainer.add(mpFrame);
+
+        // MP fill (blue)
+        this.mpBar = this.add.graphics();
+        this.mpBar.setDepth(-1);
+        this.drawMpBar(1.0);
+        this.topBarContainer.add(this.mpBar);
+
+        // MP label
+        const mpLabel = this.add.text(148, 16, 'MP', {
+            fontFamily: 'Alagard',
+            fontSize: '11px',
+            color: '#ccccff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0, 0.5);
+        this.topBarContainer.add(mpLabel);
+
+        // Connection orb with golden ring
+        const orbRing = this.add.graphics();
+        orbRing.lineStyle(2, 0xc8a04a, 1);
+        orbRing.strokeCircle(300, 16, 7);
+        this.topBarContainer.add(orbRing);
+
         this.connectionOrb = this.add.circle(300, 16, 5, 0xffff00);
         this.topBarContainer.add(this.connectionOrb);
-        
-        // Player count next to connection orb - larger and more readable
-        this.playerCountText = this.add.text(310, 16, '0', {
+
+        // Player count
+        this.playerCountText = this.add.text(312, 16, '0', {
             fontFamily: 'Alagard',
             fontSize: '14px',
-            color: '#ffffff',
+            color: '#f0d890',
             stroke: '#000000',
-            strokeThickness: 1
+            strokeThickness: 2
         }).setOrigin(0, 0.5);
         this.topBarContainer.add(this.playerCountText);
-        
-        // Health bar - moved to the left since no name
-        const hpBg = this.add.graphics();
-        hpBg.fillStyle(0x4a0000, 1);
-        hpBg.fillRoundedRect(20, 12, 100, 8, 2);
-        this.topBarContainer.add(hpBg);
-        
-        this.hpBar = this.add.graphics();
-        this.hpBar.fillStyle(0xff3333, 1);
-        this.hpBar.fillRoundedRect(20, 12, 100, 8, 2);
-        this.topBarContainer.add(this.hpBar);
-        
-        // Mana bar
-        const mpBg = this.add.graphics();
-        mpBg.fillStyle(0x00004a, 1);
-        mpBg.fillRoundedRect(130, 12, 80, 8, 2);
-        this.topBarContainer.add(mpBg);
-        
-        this.mpBar = this.add.graphics();
-        this.mpBar.fillStyle(0x3366ff, 1);
-        this.mpBar.fillRoundedRect(130, 12, 80, 8, 2);
-        this.topBarContainer.add(this.mpBar);
     }
 
+    drawHpBar(pct) {
+        this.hpBar.clear();
+        // Background
+        this.hpBar.fillStyle(0x3a0a0a, 1);
+        this.hpBar.fillRect(35, 10, 75, 12);
+        // Fill
+        if (pct > 0) {
+            this.hpBar.fillStyle(0xcc2222, 1);
+            this.hpBar.fillRect(35, 10, Math.floor(75 * pct), 12);
+            // Highlight
+            this.hpBar.fillStyle(0xff5555, 0.4);
+            this.hpBar.fillRect(35, 10, Math.floor(75 * pct), 4);
+        }
+    }
+
+    drawMpBar(pct) {
+        this.mpBar.clear();
+        // Background
+        this.mpBar.fillStyle(0x0a0a3a, 1);
+        this.mpBar.fillRect(160, 10, 52, 12);
+        // Fill
+        if (pct > 0) {
+            this.mpBar.fillStyle(0x2244cc, 1);
+            this.mpBar.fillRect(160, 10, Math.floor(52 * pct), 12);
+            // Highlight
+            this.mpBar.fillStyle(0x5577ff, 0.4);
+            this.mpBar.fillRect(160, 10, Math.floor(52 * pct), 4);
+        }
+    }
+
+    // ─── Bottom Controls ───────────────────────────────────────
+
     setupBottomControls() {
-        // Background for controls
+        // Wooden panel background
         const controlsBg = this.add.graphics();
-        controlsBg.fillStyle(0x1a1a2e, 0.95);
-        controlsBg.fillRoundedRect(4, 4, 344, 152, 8);
-        controlsBg.lineStyle(2, 0x3a3a4e, 1);
-        controlsBg.strokeRoundedRect(4, 4, 344, 152, 8);
+        // Dark wood base
+        controlsBg.fillStyle(0x3d2510, 0.95);
+        controlsBg.fillRoundedRect(2, 2, 348, 156, 8);
+        // Lighter wood inner
+        controlsBg.fillStyle(0x5c3a1e, 0.9);
+        controlsBg.fillRoundedRect(6, 6, 340, 148, 6);
+        // Golden border
+        controlsBg.lineStyle(2, 0xc8a04a, 1);
+        controlsBg.strokeRoundedRect(2, 2, 348, 156, 8);
+        // Inner edge highlight
+        controlsBg.lineStyle(1, 0x8a6030, 0.6);
+        controlsBg.strokeRoundedRect(6, 6, 340, 148, 6);
         this.bottomControlsContainer.add(controlsBg);
-        
-        // D-Pad
+
+        // Separator line above tabs
+        const sep = this.add.graphics();
+        sep.lineStyle(1, 0xc8a04a, 0.5);
+        sep.lineBetween(16, 115, 336, 115);
+        this.bottomControlsContainer.add(sep);
+
         this.createDPad();
-        
-        // Action buttons
         this.createActionButtons();
-        
-        // Tab bar
         this.createTabBar();
     }
 
+    // ─── D-Pad ─────────────────────────────────────────────────
+
     createDPad() {
         const dpadX = 64;
-        const dpadY = 56;  // Moved down from 48
+        const dpadY = 56;
         const btnSpacing = 32;
-        
-        // D-pad background circle
-        const dpadBg = this.add.graphics();
-        dpadBg.fillStyle(0x2a2a3e, 0.5);
-        dpadBg.fillCircle(dpadX, dpadY, 45);
-        dpadBg.lineStyle(2, 0x4a4a5e, 0.8);
-        dpadBg.strokeCircle(dpadX, dpadY, 45);
+
+        // D-pad background - round brown button from atlas
+        const dpadBg = this.add.image(dpadX, dpadY, 'ui-atlas', 'button_round_brown');
+        dpadBg.setScale(0.95);
+        dpadBg.setAlpha(0.7);
         this.bottomControlsContainer.add(dpadBg);
-        
-        // Create custom arrow graphics since sprites aren't loading
-        this.createArrowButton(dpadX, dpadY - btnSpacing, 'up');
-        this.createArrowButton(dpadX, dpadY + btnSpacing, 'down');
-        this.createArrowButton(dpadX - btnSpacing, dpadY, 'left');
-        this.createArrowButton(dpadX + btnSpacing, dpadY, 'right');
-        
-        // Center decoration
-        const center = this.add.circle(dpadX, dpadY, 8, 0x4a4a5e, 0.8);
+
+        // Arrow buttons using atlas arrows
+        this.createDPadButton(dpadX, dpadY - btnSpacing, 'up', 'arrow_up');
+        this.createDPadButton(dpadX, dpadY + btnSpacing, 'down', 'arrow_down');
+        this.createDPadButton(dpadX - btnSpacing, dpadY, 'left', 'arrow_left');
+        this.createDPadButton(dpadX + btnSpacing, dpadY, 'right', 'arrow_right');
+
+        // Center jewel
+        const center = this.add.image(dpadX, dpadY, 'ui-atlas', 'dpad_center');
+        center.setScale(0.5);
         this.bottomControlsContainer.add(center);
     }
-    
-    createArrowButton(x, y, direction) {
+
+    createDPadButton(x, y, direction, atlasFrame) {
         const container = this.add.container(x, y);
-        
-        // Button background
-        const bg = this.add.graphics();
-        bg.fillStyle(0x3a3a4e, 0.9);
-        bg.fillRoundedRect(-15, -15, 30, 30, 5);
-        bg.lineStyle(1, 0x5a5a6e, 1);
-        bg.strokeRoundedRect(-15, -15, 30, 30, 5);
-        
-        // Draw arrow
-        const arrow = this.add.graphics();
-        arrow.lineStyle(3, 0xffffff, 1);
-        arrow.fillStyle(0xffffff, 1);
-        
-        switch(direction) {
-            case 'up':
-                arrow.moveTo(0, -8);
-                arrow.lineTo(-6, 2);
-                arrow.lineTo(-2, 2);
-                arrow.lineTo(-2, 8);
-                arrow.lineTo(2, 8);
-                arrow.lineTo(2, 2);
-                arrow.lineTo(6, 2);
-                arrow.closePath();
-                arrow.fillPath();
-                break;
-            case 'down':
-                arrow.moveTo(0, 8);
-                arrow.lineTo(-6, -2);
-                arrow.lineTo(-2, -2);
-                arrow.lineTo(-2, -8);
-                arrow.lineTo(2, -8);
-                arrow.lineTo(2, -2);
-                arrow.lineTo(6, -2);
-                arrow.closePath();
-                arrow.fillPath();
-                break;
-            case 'left':
-                arrow.moveTo(-8, 0);
-                arrow.lineTo(2, -6);
-                arrow.lineTo(2, -2);
-                arrow.lineTo(8, -2);
-                arrow.lineTo(8, 2);
-                arrow.lineTo(2, 2);
-                arrow.lineTo(2, 6);
-                arrow.closePath();
-                arrow.fillPath();
-                break;
-            case 'right':
-                arrow.moveTo(8, 0);
-                arrow.lineTo(-2, -6);
-                arrow.lineTo(-2, -2);
-                arrow.lineTo(-8, -2);
-                arrow.lineTo(-8, 2);
-                arrow.lineTo(-2, 2);
-                arrow.lineTo(-2, 6);
-                arrow.closePath();
-                arrow.fillPath();
-                break;
-        }
-        
-        // Make interactive
+
+        // Button background - small brown square
+        const bg = this.add.image(0, 0, 'ui-atlas', 'button_square_brown');
+
+        // Arrow icon from atlas
+        const arrow = this.add.image(0, 0, 'ui-atlas', atlasFrame);
+
+        // Hit area
         const hitArea = this.add.rectangle(0, 0, 30, 30, 0x000000, 0);
         hitArea.setInteractive();
-        
+
         container.add([bg, arrow, hitArea]);
-        
+
         hitArea.on('pointerdown', () => {
-            bg.clear();
-            bg.fillStyle(0x5a5a6e, 1);
-            bg.fillRoundedRect(-15, -15, 30, 30, 5);
-            bg.lineStyle(1, 0x7a7a8e, 1);
-            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+            bg.setTint(0xffee88);
             this.movementKeys[direction] = true;
         });
-        
-        hitArea.on('pointerup', () => {
-            bg.clear();
-            bg.fillStyle(0x3a3a4e, 0.9);
-            bg.fillRoundedRect(-15, -15, 30, 30, 5);
-            bg.lineStyle(1, 0x5a5a6e, 1);
-            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
+
+        const release = () => {
+            bg.clearTint();
             this.movementKeys[direction] = false;
-        });
-        
-        hitArea.on('pointerout', () => {
-            bg.clear();
-            bg.fillStyle(0x3a3a4e, 0.9);
-            bg.fillRoundedRect(-15, -15, 30, 30, 5);
-            bg.lineStyle(1, 0x5a5a6e, 1);
-            bg.strokeRoundedRect(-15, -15, 30, 30, 5);
-            this.movementKeys[direction] = false;
-        });
-        
+        };
+        hitArea.on('pointerup', release);
+        hitArea.on('pointerout', release);
+
         this.bottomControlsContainer.add(container);
         return container;
     }
 
+    // ─── Action Buttons ────────────────────────────────────────
 
     createActionButtons() {
-        // Calculate center between D-pad right edge and UI right edge
-        // D-pad is at x:64 with buttons extending ~32px right = ~96px
-        // UI right edge is at 352px (total width)
-        // Center point between 96 and 352 = (96 + 352) / 2 = 224
         const btnX = 224;
-        const btnY = 56;   // Moved down to match D-pad
-        const btnSize = 44;  // Bigger buttons
-        const spacing = 81;  // 50% more spacing (54 * 1.5 = 81)
-        
-        // Attack button (red) with sword icon
-        const attackBtn = this.createActionButton(
-            btnX - spacing/2, btnY, btnSize, 
-            'sword', 0x8b0000, 0xff0000,
+        const btnY = 56;
+        const spacing = 81;
+
+        // Attack button - red button from atlas with sword
+        this.createAtlasActionButton(
+            btnX - spacing / 2, btnY,
+            'button_red', 'icon-sword', 0.8,
             () => this.handleAttack()
         );
-        
-        // Ability button (blue) with scroll icon
-        const abilityBtn = this.createActionButton(
-            btnX + spacing/2, btnY, btnSize,
-            'scroll', 0x00008b, 0x0000ff,
+
+        // Spell button - blue button from atlas with scroll
+        this.createAtlasActionButton(
+            btnX + spacing / 2, btnY,
+            'button_blue', 'icon-scroll', 0.7,
             () => this.handleAbility()
         );
     }
 
-    createActionButton(x, y, size, iconType, color1, color2, onPress) {
-        // Create a container for the button at the specified position
-        const buttonContainer = this.add.container(x, y);
-        
-        // Create button background centered at 0,0 within container
-        const bg = this.add.graphics();
-        bg.fillStyle(color1, 0.6);
-        bg.fillCircle(0, 0, size/2);
-        bg.lineStyle(2, color2, 0.8);
-        bg.strokeCircle(0, 0, size/2);
-        
-        // Create icon centered at 0,0 within container
+    createAtlasActionButton(x, y, buttonFrame, iconKey, iconScale, onPress) {
+        const container = this.add.container(x, y);
+
+        // Button from atlas
+        const bg = this.add.image(0, 0, 'ui-atlas', buttonFrame);
+
+        // Icon overlay - use the separate icon images (LPC sword/scroll)
         let icon;
-        const textureKey = iconType === 'sword' ? 'icon-sword' : 'icon-scroll';
-        
-        if (this.textures.exists(textureKey)) {
-            // Icon loaded successfully
-            icon = this.add.image(0, 0, textureKey);
-            icon.setScale(iconType === 'sword' ? 0.8 : 0.7);
+        if (this.textures.exists(iconKey)) {
+            icon = this.add.image(0, 0, iconKey);
+            icon.setScale(iconScale);
         } else {
-            // Fallback to text if icon not loaded
-            console.warn(`Icon ${textureKey} not loaded, using text fallback`);
-            const label = iconType === 'sword' ? '⚔' : '📜';
+            const label = iconKey === 'icon-sword' ? '⚔' : '📜';
             icon = this.add.text(0, 0, label, {
                 fontSize: '24px',
                 color: '#ffffff'
             }).setOrigin(0.5);
         }
-        
-        // Create invisible hit area centered at 0,0
-        const hitArea = this.add.circle(0, 0, size/2, 0x000000, 0);
+
+        // Hit area
+        const hitArea = this.add.circle(0, 0, 24, 0x000000, 0);
         hitArea.setInteractive();
-        
-        // Add all elements to button container
-        buttonContainer.add([bg, icon, hitArea]);
-        
-        // Add button container to bottom controls
-        this.bottomControlsContainer.add(buttonContainer);
-        
-        // Store original scale for icon
-        const originalIconScale = iconType === 'sword' ? 0.8 : 0.7;
-        
+
+        container.add([bg, icon, hitArea]);
+        this.bottomControlsContainer.add(container);
+
         hitArea.on('pointerdown', () => {
-            // Scale the entire container down
-            buttonContainer.setScale(0.9);
+            container.setScale(0.9);
+            bg.setTint(0xffee88);
             onPress();
         });
-        
-        hitArea.on('pointerup', () => {
-            // Reset container scale
-            buttonContainer.setScale(1);
-        });
-        
-        hitArea.on('pointerout', () => {
-            // Reset container scale
-            buttonContainer.setScale(1);
-        });
-        
-        return buttonContainer;
+
+        const release = () => {
+            container.setScale(1);
+            bg.clearTint();
+        };
+        hitArea.on('pointerup', release);
+        hitArea.on('pointerout', release);
+
+        return container;
     }
 
+    // ─── Tab Bar ───────────────────────────────────────────────
+
     createTabBar() {
-        const tabY = 135;  // Moved further down
-        const tabWidth = 80;
-        const tabHeight = 28;
+        const tabY = 138;
+        const tabWidth = 76;
+        const tabHeight = 26;
         const tabs = [
-            { key: 'map', label: 'Map', x: 50 },
-            { key: 'equip', label: 'Equip', x: 134 },
-            { key: 'stats', label: 'Stats', x: 218 },
-            { key: 'items', label: 'Items', x: 302 }
+            { key: 'map', label: 'Map', icon: 'icon_map', x: 50 },
+            { key: 'equip', label: 'Equip', icon: 'icon_sword', x: 134 },
+            { key: 'stats', label: 'Stats', icon: 'icon_shield', x: 218 },
+            { key: 'items', label: 'Items', icon: 'icon_potion', x: 302 }
         ];
-        
+
         this.tabButtons = {};
-        
+
         tabs.forEach(tab => {
             const container = this.add.container(tab.x, tabY);
-            
-            // Tab background
+
+            // Tab background - draw styled
             const bg = this.add.graphics();
-            bg.fillStyle(0x2a2a3e, 0.8);
-            bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
-            bg.lineStyle(1, 0x4a4a5e, 1);
-            bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
-            
-            // Make interactive
+            this.drawTabBg(bg, tabWidth, tabHeight, false);
+
+            // Tab icon from atlas (small)
+            const icon = this.add.image(-tabWidth / 2 + 14, 0, 'ui-atlas', tab.icon);
+            icon.setScale(0.65);
+
+            // Tab label
+            const text = this.add.text(6, 0, tab.label, {
+                fontFamily: 'Alagard',
+                fontSize: '12px',
+                color: '#f0d890',
+                stroke: '#000000',
+                strokeThickness: 2
+            }).setOrigin(0.5);
+
+            // Hit area
             const hitArea = this.add.rectangle(0, 0, tabWidth, tabHeight, 0x000000, 0);
             hitArea.setInteractive();
-            
-            const text = this.add.text(0, 0, tab.label, {
-                fontFamily: 'Alagard',
-                fontSize: '14px',
-                color: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 1
-            }).setOrigin(0.5);
-            
-            container.add([bg, hitArea, text]);
-            
+
+            container.add([bg, icon, text, hitArea]);
+
             hitArea.on('pointerdown', () => this.switchTab(tab.key));
             hitArea.on('pointerover', () => {
                 if (this.activeTab !== tab.key) {
-                    bg.clear();
-                    bg.fillStyle(0x3a3a4e, 0.9);
-                    bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
-                    bg.lineStyle(1, 0x5a5a6e, 1);
-                    bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
+                    this.drawTabBg(bg, tabWidth, tabHeight, false, true);
                 }
             });
             hitArea.on('pointerout', () => {
                 if (this.activeTab !== tab.key) {
-                    bg.clear();
-                    bg.fillStyle(0x2a2a3e, 0.8);
-                    bg.fillRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
-                    bg.lineStyle(1, 0x4a4a5e, 1);
-                    bg.strokeRoundedRect(-tabWidth/2, -tabHeight/2, tabWidth, tabHeight, 4);
+                    this.drawTabBg(bg, tabWidth, tabHeight, false);
                 }
             });
-            
-            this.tabButtons[tab.key] = { container, bg, text, width: tabWidth, height: tabHeight };
+
+            this.tabButtons[tab.key] = { container, bg, text, icon, width: tabWidth, height: tabHeight };
             this.bottomControlsContainer.add(container);
         });
-        
-        // Highlight active tab
+
         this.updateTabHighlight();
     }
 
+    drawTabBg(bg, w, h, active, hover) {
+        bg.clear();
+        if (active) {
+            // Active - golden highlight
+            bg.fillStyle(0x7a5a20, 1);
+            bg.fillRoundedRect(-w / 2, -h / 2, w, h, 4);
+            bg.lineStyle(2, 0xdab040, 1);
+            bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 4);
+        } else if (hover) {
+            // Hover - lighter wood
+            bg.fillStyle(0x6a4a28, 0.9);
+            bg.fillRoundedRect(-w / 2, -h / 2, w, h, 4);
+            bg.lineStyle(1, 0xa07030, 1);
+            bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 4);
+        } else {
+            // Default - dark wood
+            bg.fillStyle(0x4a3018, 0.8);
+            bg.fillRoundedRect(-w / 2, -h / 2, w, h, 4);
+            bg.lineStyle(1, 0x7a5030, 0.8);
+            bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 4);
+        }
+    }
+
+    // ─── Keyboard ──────────────────────────────────────────────
+
     setupKeyboardControls() {
-        // WASD and Arrow keys for movement
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,S,A,D');
-        
-        // Action keys
+
         this.input.keyboard.on('keydown-SPACE', () => this.handleAttack());
         this.input.keyboard.on('keydown-E', () => this.handleAbility());
-        
-        // Tab switching with number keys
+
         this.input.keyboard.on('keydown-ONE', () => this.switchTab('map'));
         this.input.keyboard.on('keydown-TWO', () => this.switchTab('equip'));
         this.input.keyboard.on('keydown-THREE', () => this.switchTab('stats'));
         this.input.keyboard.on('keydown-FOUR', () => this.switchTab('items'));
-        
-        // Toggle controls visibility with C
+
         this.input.keyboard.on('keydown-C', () => this.toggleControlsVisibility());
     }
 
+    // ─── Events ────────────────────────────────────────────────
+
     setupEventHandlers() {
         const networkManager = this.game.registry.get('networkManager');
-        
-        if (!networkManager) {
-            return;
-        }
-        
-        // Check if already connected
+        if (!networkManager) return;
+
         if (networkManager.connected) {
             this.connectionOrb.setFillStyle(0x00ff00);
         }
-        
-        // Clear any stored data after a short delay
+
         if (networkManager.selfData) {
             this.time.delayedCall(100, () => {
                 networkManager.selfData = null;
@@ -413,50 +404,44 @@ export class UIScene extends Scene {
         networkManager.on('connected', () => {
             this.connectionOrb.setFillStyle(0x00ff00);
         });
-        
-        // Listen for player count updates
-        networkManager.on('player-joined', () => {
-            this.updatePlayerCount();
-        });
-        
-        networkManager.on('player-left', () => {
-            this.updatePlayerCount();
-        });
-        
-        // Initial player count update
+
+        networkManager.on('player-joined', () => this.updatePlayerCount());
+        networkManager.on('player-left', () => this.updatePlayerCount());
+
         this.updatePlayerCount();
     }
 
+    // ─── Update Loop ───────────────────────────────────────────
+
     update() {
-        // Check keyboard input for movement
         const gameScene = this.scene.get('GameScene');
         if (!gameScene || !gameScene.localPlayer) return;
-        
+
         let dx = 0;
         let dy = 0;
-        
-        // Keyboard input
+
         if (this.cursors.left.isDown || this.wasd.A.isDown || this.movementKeys.left) {
             dx = -1;
         } else if (this.cursors.right.isDown || this.wasd.D.isDown || this.movementKeys.right) {
             dx = 1;
         }
-        
+
         if (this.cursors.up.isDown || this.wasd.W.isDown || this.movementKeys.up) {
             dy = -1;
         } else if (this.cursors.down.isDown || this.wasd.S.isDown || this.movementKeys.down) {
             dy = 1;
         }
-        
-        // Always send movement state to game scene (including stop)
+
         gameScene.handlePlayerMovement(dx, dy);
     }
+
+    // ─── Actions ───────────────────────────────────────────────
 
     handleAttack() {
         console.log('Attack!');
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.localPlayer) {
-            // Trigger attack animation or action
+            // Trigger attack animation
         }
     }
 
@@ -464,59 +449,41 @@ export class UIScene extends Scene {
         console.log('Ability!');
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.localPlayer) {
-            // Trigger ability animation or action
+            // Trigger ability animation
         }
     }
+
+    // ─── Tabs ──────────────────────────────────────────────────
 
     switchTab(tabKey) {
         this.activeTab = tabKey;
         this.updateTabHighlight();
-        console.log('Switched to tab:', tabKey);
-        // TODO: Show/hide different UI panels based on active tab
     }
 
     updateTabHighlight() {
         Object.keys(this.tabButtons).forEach(key => {
             const tab = this.tabButtons[key];
-            const { bg, text, width, height } = tab;
-            
-            bg.clear();
-            if (key === this.activeTab) {
-                // Active tab - golden highlight
-                bg.fillStyle(0x5a5a3e, 1);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
-                bg.lineStyle(2, 0x8a8a4e, 1);
-                bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
-                text.setColor('#ffff66');
-            } else {
-                // Inactive tab
-                bg.fillStyle(0x2a2a3e, 0.8);
-                bg.fillRoundedRect(-width/2, -height/2, width, height, 4);
-                bg.lineStyle(1, 0x4a4a5e, 1);
-                bg.strokeRoundedRect(-width/2, -height/2, width, height, 4);
-                text.setColor('#ffffff');
-            }
+            const active = key === this.activeTab;
+            this.drawTabBg(tab.bg, tab.width, tab.height, active);
+            tab.text.setColor(active ? '#ffe060' : '#f0d890');
+            tab.icon.setTint(active ? 0xffe060 : 0xffffff);
         });
     }
 
+    // ─── Visibility ────────────────────────────────────────────
+
     updateControlsVisibility() {
-        // On desktop, controls are fully visible (no opacity change)
-        // Remove the alpha setting entirely
+        // Controls always visible
     }
 
     toggleControlsVisibility() {
-        // Toggle visibility without changing opacity
         this.controlsVisible = !this.controlsVisible;
-        // Could hide/show instead of changing alpha if needed
-        // this.bottomControlsContainer.setVisible(this.controlsVisible);
     }
-    
+
     updatePlayerCount() {
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.players) {
-            const count = gameScene.players.size;
-            this.playerCountText.setText(count.toString());
+            this.playerCountText.setText(gameScene.players.size.toString());
         }
     }
-
 }
