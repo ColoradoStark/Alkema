@@ -59,10 +59,12 @@ body {
     }
 
     #game-container canvas {
-        width: auto !important;
-        height: auto !important;
+        width: 100% !important;
+        height: 100% !important;
+        height: -webkit-fill-available !important;
         max-height: none;
         max-width: none;
+        object-fit: contain;
     }
 }
 
