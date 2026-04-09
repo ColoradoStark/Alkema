@@ -22,19 +22,18 @@ body {
 }
 
 #game-container {
-    max-width: 704px;
-    max-height: 1280px;
-    width: 100%;
-    height: 100vh;
-    height: -webkit-fill-available;
     background: #0f0f1e;
     overflow: hidden;
     border: 2px solid #16213e;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-/* Ensure pixel-perfect rendering */
+/* Desktop: fixed canvas, CSS scales it to fit viewport */
 #game-container canvas {
+    width: 352px;
+    height: 640px;
+    max-height: 100vh;
+    max-width: calc(100vh * 352 / 640);
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
@@ -43,7 +42,7 @@ body {
     image-rendering: -webkit-optimize-contrast;
 }
 
-/* Mobile: fill entire screen */
+/* Mobile: fill entire screen, let Phaser FIT mode handle canvas sizing */
 @media (pointer: coarse) {
     body {
         position: fixed;
@@ -53,11 +52,19 @@ body {
     }
 
     #game-container {
-        max-width: none;
-        max-height: none;
+        width: 100%;
+        height: 100vh;
+        height: -webkit-fill-available;
         border: none;
         border-radius: 0;
         box-shadow: none;
+    }
+
+    #game-container canvas {
+        width: auto !important;
+        height: auto !important;
+        max-height: none;
+        max-width: none;
     }
 }
 

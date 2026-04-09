@@ -32,6 +32,8 @@ const GAME_HEIGHT = 448; // 14 tiles * 32px (game area only)
 const TOP_BAR_HEIGHT = 32; // 1 tile for info display
 const BOTTOM_CONTROLS_HEIGHT = 160; // 5 tiles for controls and tabs
 
+const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
@@ -39,12 +41,12 @@ const config = {
     height: BASE_HEIGHT,
     pixelArt: true,
     scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
+        mode: isMobile ? Phaser.Scale.FIT : Phaser.Scale.NONE,
+        autoCenter: isMobile ? Phaser.Scale.CENTER_HORIZONTALLY : Phaser.Scale.NONE,
         width: BASE_WIDTH,
         height: BASE_HEIGHT,
-        autoRound: true,  // Ensures integer positioning
-        expandParent: true
+        autoRound: true,
+        expandParent: isMobile
     },
     render: {
         pixelArt: true,
@@ -71,20 +73,21 @@ try {
     screen.orientation.lock('portrait').catch(() => {});
 } catch (e) { /* not supported */ }
 
-// Debounced resize to fix rotation resize bug on iOS
-let resizeTimeout;
-function handleResize() {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        if (game && game.scale) {
-            game.scale.refresh();
-        }
-    }, 150);
+// Mobile only: debounced resize to fix rotation resize bug on iOS
+if (isMobile) {
+    let resizeTimeout;
+    function handleResize() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (game && game.scale) {
+                game.scale.refresh();
+            }
+        }, 150);
+    }
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(handleResize, 300);
+    });
 }
-window.addEventListener('resize', handleResize);
-window.addEventListener('orientationchange', () => {
-    // iOS needs a delay after orientation change to report correct dimensions
-    setTimeout(handleResize, 300);
-});
 
 export default game;
