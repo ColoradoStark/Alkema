@@ -202,14 +202,10 @@ export class GameScene extends Scene {
     }
 
     updatePlayerCount() {
-        const count = this.players.size;
-        
-        // Get UIScene and update it directly
         const uiScene = this.scene.get('UIScene');
-        if (uiScene && uiScene.playerCount) {
-            uiScene.playerCount.setText(`Players: ${count}`);
+        if (uiScene && uiScene.updatePlayerCount) {
+            uiScene.updatePlayerCount();
         } else {
-            // If UIScene isn't ready yet, try again in a moment
             this.time.delayedCall(100, () => this.updatePlayerCount());
         }
     }
