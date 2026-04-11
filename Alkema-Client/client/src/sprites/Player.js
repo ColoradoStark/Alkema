@@ -23,7 +23,7 @@ export class Player {
         }
 
         // Show "Loading..." until sprite is ready, then show real name
-        this.nameText = scene.add.text(0, -40, 'Loading...', {
+        this.nameText = scene.add.text(0, -40, 'Spawning...', {
             fontFamily: 'Alagard',
             fontSize: '14px',
             color: '#ffffff',
