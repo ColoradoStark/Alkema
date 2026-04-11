@@ -347,7 +347,13 @@ _sprite_paths_cache: Optional[Dict[str, Dict[str, str]]] = None
 
 
 def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
-    """Cache mapping: item file_name → {body_type: sprite_directory_path}."""
+    """Cache mapping: item file_name → {body_type: sprite_directory_path}.
+
+    Picks the highest-zPos layer without custom_animation (the foreground walk
+    layer). Falls back to the highest-zPos layer overall if every layer uses a
+    custom animation.  Strips a trailing '/walk' so the client can always build
+    URLs as  sprite_path/walk/variant.png  without double-walk issues.
+    """
     global _sprite_paths_cache
     if _sprite_paths_cache is not None:
         return _sprite_paths_cache
@@ -360,17 +366,43 @@ def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
         defs_dir = _Path("../Universal-LPC-Spritesheet-Character-Generator/sheet_definitions")
 
     _sprite_paths_cache = {}
+    layer_keys = [f"layer_{i}" for i in range(1, 9)]
+
     for jf in defs_dir.glob("*.json"):
         try:
             d = _json.loads(jf.read_text())
         except Exception:
             continue
         file_name = jf.stem
-        layer = d.get("layer_1", {})
+
+        # Find best layer: highest zPos without custom_animation
+        best_layer = None
+        best_z = -1
+        fallback_layer = None
+        fallback_z = -1
+        for lk in layer_keys:
+            layer = d.get(lk)
+            if not isinstance(layer, dict):
+                continue
+            z = layer.get("zPos", 0)
+            if not layer.get("custom_animation"):
+                if z > best_z:
+                    best_z = z
+                    best_layer = layer
+            if z > fallback_z:
+                fallback_z = z
+                fallback_layer = layer
+
+        layer = best_layer or fallback_layer or d.get("layer_1", {})
+
         paths = {}
         for bt in ("male", "female", "child", "teen", "muscular", "pregnant"):
             if bt in layer and isinstance(layer[bt], str):
-                paths[bt] = layer[bt].rstrip("/")
+                p = layer[bt].rstrip("/")
+                # Strip trailing /walk to avoid client building /walk/walk/
+                if p.endswith("/walk"):
+                    p = p[:-5]
+                paths[bt] = p
         if paths:
             _sprite_paths_cache[file_name] = paths
     return _sprite_paths_cache
@@ -1909,7 +1941,7 @@ def generate_random_character(
             _pick_prefer("shield", shields_pref)
 
     # Resolve sprite paths for each selection (skip items without walk sprites)
-    _SKIP_SPRITE_PATH = {"expression", "expression_crying", "weapon", "shield", "ammo", "quiver"}
+    _SKIP_SPRITE_PATH = {"expression", "expression_crying", "ammo", "quiver"}
     sprite_paths = _load_sprite_paths()
     for sel in selections:
         if sel["type"] in _SKIP_SPRITE_PATH:

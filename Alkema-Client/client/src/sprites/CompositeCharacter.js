@@ -32,8 +32,9 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         if (selections && selections.length > 0) {
             for (const sel of selections) {
                 if (!sel.sprite_path) continue;
-                const url = sel.variant
-                    ? `/spritesheets/${sel.sprite_path}/walk/${sel.variant}.png`
+                const variant = sel.variant ? sel.variant.replace(/ /g, '_') : null;
+                const url = variant
+                    ? `/spritesheets/${sel.sprite_path}/walk/${variant}.png`
                     : `/spritesheets/${sel.sprite_path}/walk.png`;
                 await this.loadLayer(sel.type, url, true);
             }
