@@ -174,7 +174,7 @@ export class GameManager {
             body_type: apiChar.body_type,
             race: apiChar.race,
             character_class: apiChar.character_class,
-            spriteUrl: `/api/sprites/${playerId}.png`,
+            spriteUrl: `/sprites/${playerId}.png`,
             spriteMeta: spriteMeta,
             equipment: {},
             animations: {

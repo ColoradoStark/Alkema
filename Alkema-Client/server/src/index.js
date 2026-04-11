@@ -32,7 +32,7 @@ app.get('/api/health', (req, res) => {
 const gameManager = new GameManager(io);
 
 // Serve composited spritesheets
-app.get('/api/sprites/:id.png', (req, res) => {
+app.get('/sprites/:id.png', (req, res) => {
     const buffer = gameManager.spriteBuffers.get(req.params.id);
     if (!buffer) {
         return res.status(404).send('Sprite not found');
