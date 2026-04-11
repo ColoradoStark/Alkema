@@ -230,9 +230,10 @@ class CharacterEquipment(BaseModel):
 
 class CharacterMetadata(BaseModel):
     """Sprite and animation metadata."""
+    supportedAnimations: Optional[List[str]] = None
+    blankedAnimations: Optional[List[str]] = None
     animationCoverage: Optional[Dict[str, Dict]] = None
     customAnimations: Optional[Dict[str, Dict]] = None
-    blankedAnimations: Optional[List[str]] = None
     spriteSheetUrl: Optional[str] = None
     spriteSheetHash: Optional[str] = None
 
@@ -2530,14 +2531,15 @@ async def random_character(
 
     result = generate_random_character(db, body_type=body_type, race=race, preset=preset, age=age, character_class=character_class, armor=armor)
     generator = SpriteGenerator(db)
-    coverage = generator.get_animation_coverage(result['selections'])
+    sels = result['selections']
+    coverage = generator.get_animation_coverage(sels)
+    support = generator.get_supported_animations(sels)
 
     result['name'] = generate_full_name(result['body_type'])
     result['metadata'] = {
+        'supportedAnimations': support.get('supported', []),
         'animationCoverage': coverage,
     }
-    # Pydantic defaults handle: level, experience, attributes, stats,
-    # position, equipment, inventory, and remaining metadata fields
     return result
 
 
@@ -3150,7 +3152,8 @@ function downloadCharJSON(id) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (data.name || 'character_' + id).replace(/\s+/g, '_') + '.json';
+  const suffix = data.character_class ? data.race + '_' + data.character_class : data.race + '_' + data.body_type;
+  a.download = ((data.name || 'character_' + id) + '_' + (suffix || '')).replace(/\s+/g, '_') + '.json';
   a.click();
   URL.revokeObjectURL(url);
 }
