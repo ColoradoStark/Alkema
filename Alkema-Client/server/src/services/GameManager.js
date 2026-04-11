@@ -7,7 +7,8 @@ export class GameManager {
         this.io = io;
         this.players = new Map();
         this.rooms = new Map();
-        this.usedNames = new Set(); // Track used names to avoid duplicates
+        this.usedNames = new Set();
+        this.spriteBuffers = new Map(); // Player ID → PNG buffer
     }
 
     async handlePlayerConnection(socket) {
@@ -120,6 +121,7 @@ export class GameManager {
             }
             this.io.to(player.room).emit('player-left', playerId);
             this.players.delete(playerId);
+            this.spriteBuffers.delete(playerId);
             this.updatePlayerCount(player.room);
         }
     }
@@ -147,13 +149,33 @@ export class GameManager {
 
         console.log(`GameManager: API character: ${characterName} (${apiChar.body_type}, ${apiChar.race}, ${apiChar.character_class})`);
 
+        // Generate composited spritesheet
+        let spriteMeta = null;
+        try {
+            const spriteResponse = await axios.post(
+                `${API_URL}/generate-sprite?mode=optimized`,
+                { body_type: apiChar.body_type, selections: apiChar.selections },
+                { responseType: 'arraybuffer' }
+            );
+            this.spriteBuffers.set(playerId, Buffer.from(spriteResponse.data));
+
+            // Parse sprite metadata from response header
+            const metaHeader = spriteResponse.headers['x-sprite-meta'];
+            if (metaHeader) {
+                spriteMeta = JSON.parse(metaHeader);
+            }
+        } catch (err) {
+            console.error(`GameManager: Failed to generate sprite for ${characterName}:`, err.message);
+        }
+
         return {
             id: playerId,
             name: characterName,
             body_type: apiChar.body_type,
             race: apiChar.race,
             character_class: apiChar.character_class,
-            selections: apiChar.selections,
+            spriteUrl: `/api/sprites/${playerId}.png`,
+            spriteMeta: spriteMeta,
             equipment: {},
             animations: {
                 available: apiChar.metadata?.supportedAnimations || ['idle', 'walk', 'attack', 'hurt'],

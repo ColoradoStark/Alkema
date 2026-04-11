@@ -31,6 +31,17 @@ app.get('/api/health', (req, res) => {
 
 const gameManager = new GameManager(io);
 
+// Serve composited spritesheets
+app.get('/api/sprites/:id.png', (req, res) => {
+    const buffer = gameManager.spriteBuffers.get(req.params.id);
+    if (!buffer) {
+        return res.status(404).send('Sprite not found');
+    }
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
+});
+
 io.on('connection', (socket) => {
     console.log('Player connected:', socket.id);
     gameManager.handlePlayerConnection(socket);

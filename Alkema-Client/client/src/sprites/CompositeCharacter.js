@@ -1,13 +1,41 @@
+// Optimized spritesheet row layout (64x64 frames)
+// Each animation group has 4 rows: north, west, south, east
+const ANIM_ROWS = {
+    spellcast: { start: 0, dirs: 4, frames: 7 },
+    thrust:    { start: 4, dirs: 4, frames: 8 },
+    walk:      { start: 8, dirs: 4, frames: 9 },
+    slash:     { start: 12, dirs: 4, frames: 6 },
+    shoot:     { start: 16, dirs: 4, frames: 13 },
+    hurt:      { start: 20, dirs: 1, frames: 6 },
+    // row 21 = climb (always blanked)
+    // rows 22-25 = idle (often empty in optimized sheets)
+    jump:      { start: 26, dirs: 4, frames: 6 },
+    sit:       { start: 30, dirs: 4, frames: 4 },
+    emote:     { start: 34, dirs: 4, frames: 4 },
+    run:       { start: 38, dirs: 4, frames: 8 },
+    combat_idle: { start: 42, dirs: 4, frames: 2 },
+    backslash: { start: 46, dirs: 4, frames: 6 },
+    halfslash: { start: 50, dirs: 3, frames: 6 },
+};
+
+// Walk row start - used for idle fallback
+const WALK_START = 8;
+
+// Direction to row offset within a 4-direction animation group
+const DIR_OFFSET = { up: 0, left: 1, down: 2, right: 3 };
+
+const FRAME_SIZE = 64;
+
 export class CompositeCharacter extends Phaser.GameObjects.Container {
     constructor(scene, x, y, characterData) {
         super(scene, x, y);
 
         this.scene = scene;
         this.characterData = characterData || {};
-        this.layers = {};
-        this.layerFrameInfo = {}; // Per-layer frame size and columns
+        this.sprite = null;
         this.animationKey = null;
         this.currentDirection = 'down';
+        this.sheetCols = 13; // detected from actual image
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -15,172 +43,118 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         // Set physics body size
         this.body.setSize(32, 48);
 
-        // Keep container visible for physics, but alpha 0 until loaded
+        // Start invisible until sprite loads
         this.setAlpha(0);
 
-        // Load character layers
-        this.loadCharacterLayers().then(() => {
+        this.loadSpritesheet();
+    }
+
+    loadSpritesheet() {
+        const spriteUrl = this.characterData.spriteUrl;
+        if (!spriteUrl) {
             this.setAlpha(1);
-        }).catch(err => {
-            this.setAlpha(1); // Show anyway
-        });
-    }
-
-    async loadCharacterLayers() {
-        const selections = this.characterData.selections;
-
-        // New path: selections array with sprite_path from the API
-        if (selections && selections.length > 0) {
-            // First pass: load behind layers (low z-order, rendered below body)
-            for (const sel of selections) {
-                if (!sel.sprite_path_behind) continue;
-                await this.loadLayer(`${sel.type}_behind`, `/spritesheets/${sel.sprite_path_behind}`, true);
-            }
-
-            // Second pass: load main layers (normal z-order)
-            for (const sel of selections) {
-                if (!sel.sprite_path) continue;
-                await this.loadLayer(sel.type, `/spritesheets/${sel.sprite_path}`, true);
-            }
-        } else {
-            // Legacy flat format fallback
-            const bodyType = this.characterData.body_type || 'male';
-            const skinColor = this.characterData.skin_color || 'light';
-            const hairStyle = this.characterData.hair_style || 'plain';
-            const hairColor = this.characterData.hair_color || 'brown';
-            const shirtColor = this.characterData.shirt_color || 'blue';
-            const pantsColor = this.characterData.pants_color || 'brown';
-            const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
-
-            const layerConfigs = [
-                { name: 'shadow', url: `/spritesheets/shadow/adult/walk/shadow.png`, optional: true },
-                { name: 'body', url: `/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
-                { name: 'pants', url: `/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
-                { name: 'shirt', url: `/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: true },
-                { name: 'head', url: `/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` },
-                { name: 'hair', url: `/spritesheets/hair/${hairStyle}/adult/walk/${hairColor}.png`, optional: true }
-            ];
-            for (const config of layerConfigs) {
-                await this.loadLayer(config.name, config.url, config.optional);
-            }
-        }
-
-        this.createAnimations();
-        this.playAnimation('idle', 'down');
-    }
-
-    async loadLayer(layerName, url, optional = false) {
-        const layerKey = `${this.characterData.id}_${layerName}`;
-
-        // Check if already loaded
-        if (this.scene.textures.exists(layerKey)) {
-            const info = this.layerFrameInfo[layerName] || { frameSize: 64, cols: 9 };
-            this.addLayerSprite(layerName, layerKey);
             return;
         }
 
-        // Load image
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
+        const textureKey = `sprite_${this.characterData.id}`;
 
-            img.onload = () => {
-                // Detect oversized sprites (128x128 frames vs standard 64x64)
-                const frameSize = (img.width > 576 || img.height > 256) ? 128 : 64;
-                const cols = Math.floor(img.width / frameSize);
+        if (this.scene.textures.exists(textureKey)) {
+            this.onTextureReady(textureKey);
+            return;
+        }
 
-                this.layerFrameInfo[layerName] = { frameSize, cols };
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
 
-                this.scene.textures.addSpriteSheet(layerKey, img, {
-                    frameWidth: frameSize,
-                    frameHeight: frameSize
-                });
-                this.addLayerSprite(layerName, layerKey);
-                resolve();
-            };
+        img.onload = () => {
+            // Detect actual columns from image width
+            this.sheetCols = Math.floor(img.width / FRAME_SIZE);
 
-            img.onerror = () => {
-                // Silently handle missing optional layers
-                resolve();
-            };
-
-            img.src = url;
-        });
-    }
-
-    addLayerSprite(layerName, textureKey) {
-        // Create sprite for this layer
-        const sprite = this.scene.add.sprite(0, 0, textureKey, 0);
-
-        // Add to container
-        this.add(sprite);
-
-        // Store reference
-        this.layers[layerName] = sprite;
-    }
-
-    createAnimations() {
-        if (Object.keys(this.layers).length === 0) return;
-
-        this.animationKey = `${this.characterData.id}_anims`;
-
-        // LPC spritesheet layout (rows):
-        // 0: Walk up, 1: Walk left, 2: Walk down, 3: Walk right
-        const directions = ['up', 'left', 'down', 'right'];
-
-        // Create animations for each layer and direction
-        Object.entries(this.layers).forEach(([layerName, sprite]) => {
-            const info = this.layerFrameInfo[layerName] || { frameSize: 64, cols: 9 };
-            const framesPerRow = info.cols;
-
-            directions.forEach((direction, row) => {
-                const walkKey = `${this.animationKey}_${layerName}_walk_${direction}`;
-                const idleKey = `${this.animationKey}_${layerName}_idle_${direction}`;
-
-                if (!this.scene.anims.exists(walkKey)) {
-                    const startFrame = row * framesPerRow;
-                    // Use up to 9 frames for walk (standard cycle length)
-                    const walkFrames = Math.min(framesPerRow, 9);
-
-                    // Walk animation
-                    this.scene.anims.create({
-                        key: walkKey,
-                        frames: this.scene.anims.generateFrameNumbers(sprite.texture.key, {
-                            start: startFrame,
-                            end: startFrame + walkFrames - 1
-                        }),
-                        frameRate: 10,
-                        repeat: -1
-                    });
-
-                    // Idle animation (first frame of walk)
-                    this.scene.anims.create({
-                        key: idleKey,
-                        frames: [ { key: sprite.texture.key, frame: startFrame } ],
-                        frameRate: 1,
-                        repeat: 0
-                    });
-                }
+            this.scene.textures.addSpriteSheet(textureKey, img, {
+                frameWidth: FRAME_SIZE,
+                frameHeight: FRAME_SIZE
             });
-        });
+            this.onTextureReady(textureKey);
+        };
+
+        img.onerror = () => {
+            console.warn('Failed to load spritesheet:', spriteUrl);
+            this.setAlpha(1);
+        };
+
+        img.src = spriteUrl;
+    }
+
+    onTextureReady(textureKey) {
+        this.sprite = this.scene.add.sprite(0, 0, textureKey, 0);
+        this.add(this.sprite);
+
+        this.animationKey = `anim_${this.characterData.id}`;
+        this.createAnimations(textureKey);
+        this.playAnimation('idle', 'down');
+        this.setAlpha(1);
+    }
+
+    createAnimations(textureKey) {
+        const directions = ['up', 'left', 'down', 'right'];
+        const cols = this.sheetCols;
+
+        // Create idle animations using walk frame 0 (idle rows are often blank)
+        for (let i = 0; i < 4; i++) {
+            const dir = directions[i];
+            const idleKey = `${this.animationKey}_idle_${dir}`;
+            if (!this.scene.anims.exists(idleKey)) {
+                const walkRow = WALK_START + i;
+                this.scene.anims.create({
+                    key: idleKey,
+                    frames: [{ key: textureKey, frame: walkRow * cols }],
+                    frameRate: 1,
+                    repeat: 0
+                });
+            }
+        }
+
+        // Create all other animations
+        for (const [animName, config] of Object.entries(ANIM_ROWS)) {
+            const dirCount = config.dirs;
+            const dirsToCreate = dirCount >= 4 ? directions : directions.slice(0, dirCount);
+            const frameCount = config.frames;
+
+            for (let i = 0; i < dirsToCreate.length; i++) {
+                const dir = dirsToCreate[i];
+                const row = config.start + i;
+                const startFrame = row * cols;
+
+                const key = `${this.animationKey}_${animName}_${dir}`;
+                if (this.scene.anims.exists(key)) continue;
+
+                const isLooping = (animName === 'walk' || animName === 'run');
+
+                this.scene.anims.create({
+                    key,
+                    frames: this.scene.anims.generateFrameNumbers(textureKey, {
+                        start: startFrame,
+                        end: startFrame + frameCount - 1
+                    }),
+                    frameRate: 10,
+                    repeat: isLooping ? -1 : 0
+                });
+            }
+        }
     }
 
     playAnimation(animName, direction = null) {
-        if (Object.keys(this.layers).length === 0) return;
+        if (!this.sprite) return;
 
         const dir = direction || this.currentDirection || 'down';
-
         if (direction) {
             this.currentDirection = direction;
         }
 
-        // Play animation on all layers
-        Object.entries(this.layers).forEach(([layerName, sprite]) => {
-            const animKey = `${this.animationKey}_${layerName}_${animName}_${dir}`;
-            if (this.scene.anims.exists(animKey)) {
-                sprite.play(animKey, true);
-            }
-        });
+        const animKey = `${this.animationKey}_${animName}_${dir}`;
+        if (this.scene.anims.exists(animKey)) {
+            this.sprite.play(animKey, true);
+        }
     }
 
     stopAnimation() {
