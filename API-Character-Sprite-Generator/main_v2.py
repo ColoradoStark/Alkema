@@ -396,27 +396,27 @@ def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
             continue
         file_name = jf.stem
 
-        # Collect all non-custom layers sorted by zPos
-        layers_by_z = []
+        # Collect layers by category: walk-custom > non-custom > other-custom
+        walk_custom = []
+        non_custom = []
+        other_custom = []
         for lk in layer_keys:
             layer = d.get(lk)
             if not isinstance(layer, dict):
                 continue
-            if not layer.get("custom_animation"):
-                layers_by_z.append((layer.get("zPos", 0), layer))
+            z = layer.get("zPos", 0)
+            ca = layer.get("custom_animation", "")
+            if "walk" in ca:
+                walk_custom.append((z, layer))
+            elif not ca:
+                non_custom.append((z, layer))
+            else:
+                other_custom.append((z, layer))
 
-        # Fallback: if all layers have custom_animation, prefer walk-related
+        # Prefer walk-custom (dedicated walk sprites) over non-custom
+        layers_by_z = walk_custom if walk_custom else non_custom
         if not layers_by_z:
-            walk_layers = []
-            other_layers = []
-            for lk in layer_keys:
-                layer = d.get(lk)
-                if not isinstance(layer, dict):
-                    continue
-                ca = layer.get("custom_animation", "")
-                bucket = walk_layers if "walk" in ca else other_layers
-                bucket.append((layer.get("zPos", 0), layer))
-            layers_by_z = walk_layers if walk_layers else other_layers
+            layers_by_z = other_custom
 
         if not layers_by_z:
             continue
