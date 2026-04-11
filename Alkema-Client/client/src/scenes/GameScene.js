@@ -18,7 +18,10 @@ export class GameScene extends Scene {
         // Set camera to only show the game area (excluding UI bars)
         this.cameras.main.setBackgroundColor('#3a3a3a');
         this.cameras.main.setViewport(0, 32, 352, 448);  // x, y, width, height
-        
+
+        // Center camera on spawn position immediately to avoid snap
+        this.cameras.main.centerOn(512, 384);
+
         this.createWorld();
         this.setupNetworkHandlers();
         this.setupInput();
