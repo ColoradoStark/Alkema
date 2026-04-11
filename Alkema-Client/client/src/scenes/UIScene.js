@@ -512,6 +512,7 @@ export class UIScene extends Scene {
     }
     
     updatePlayerCount() {
+        if (!this.playerCountText) return;
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.players) {
             const count = gameScene.players.size;
