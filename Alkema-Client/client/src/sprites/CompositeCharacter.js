@@ -49,7 +49,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.loadSpritesheet();
     }
 
-    loadSpritesheet() {
+    loadSpritesheet(retryCount = 0) {
         const spriteUrl = this.characterData.spriteUrl;
         if (!spriteUrl) {
             this.setAlpha(1);
@@ -78,8 +78,14 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         };
 
         img.onerror = () => {
-            console.warn('Failed to load spritesheet:', spriteUrl);
-            this.setAlpha(1);
+            // Sprite may not be generated yet (background task), retry
+            if (retryCount < 5) {
+                const delay = 1000 * (retryCount + 1);
+                setTimeout(() => this.loadSpritesheet(retryCount + 1), delay);
+            } else {
+                console.warn('Failed to load spritesheet after retries:', spriteUrl);
+                this.setAlpha(1);
+            }
         };
 
         img.src = spriteUrl;

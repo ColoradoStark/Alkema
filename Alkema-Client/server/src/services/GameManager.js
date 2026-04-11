@@ -13,12 +13,14 @@ export class GameManager {
 
     async handlePlayerConnection(socket) {
         console.log('GameManager: Player connected', socket.id);
-        
-        // Create player immediately
+
+        // Get character data from API (fast ~200ms)
+        const character = await this.createCharacterData(socket.id);
+
         const player = {
             id: socket.id,
             socket: socket,
-            character: await this.createDefaultCharacter(socket.id),
+            character: character,
             position: { x: 512, y: 384 },
             room: 'spawn'
         };
@@ -26,7 +28,7 @@ export class GameManager {
         this.players.set(socket.id, player);
         socket.join(player.room);
 
-        // Send self data first
+        // Send self data immediately (sprite will load when ready)
         socket.emit('self-data', {
             id: player.id,
             character: player.character,
@@ -61,6 +63,11 @@ export class GameManager {
 
         socket.on('disconnect', () => {
             this.handlePlayerDisconnection(socket.id);
+        });
+
+        // Generate composited spritesheet in background (don't block connection)
+        this.generateSprite(socket.id, character).catch(err => {
+            console.error(`GameManager: Sprite generation failed for ${character.name}:`, err.message);
         });
     }
 
@@ -126,7 +133,7 @@ export class GameManager {
         }
     }
 
-    async createDefaultCharacter(playerId) {
+    async createCharacterData(playerId) {
         // Call the API for a random character
         const bodyType = Math.random() < 0.5 ? 'male' : 'female';
         const races = ['human', 'elf'];
@@ -149,33 +156,14 @@ export class GameManager {
 
         console.log(`GameManager: API character: ${characterName} (${apiChar.body_type}, ${apiChar.race}, ${apiChar.character_class})`);
 
-        // Generate composited spritesheet
-        let spriteMeta = null;
-        try {
-            const spriteResponse = await axios.post(
-                `${API_URL}/generate-sprite?mode=optimized`,
-                { body_type: apiChar.body_type, selections: apiChar.selections },
-                { responseType: 'arraybuffer' }
-            );
-            this.spriteBuffers.set(playerId, Buffer.from(spriteResponse.data));
-
-            // Parse sprite metadata from response header
-            const metaHeader = spriteResponse.headers['x-sprite-meta'];
-            if (metaHeader) {
-                spriteMeta = JSON.parse(metaHeader);
-            }
-        } catch (err) {
-            console.error(`GameManager: Failed to generate sprite for ${characterName}:`, err.message);
-        }
-
         return {
             id: playerId,
             name: characterName,
             body_type: apiChar.body_type,
             race: apiChar.race,
             character_class: apiChar.character_class,
+            selections: apiChar.selections,
             spriteUrl: `/sprites/${playerId}.png`,
-            spriteMeta: spriteMeta,
             equipment: {},
             animations: {
                 available: apiChar.metadata?.supportedAnimations || ['idle', 'walk', 'attack', 'hurt'],
@@ -183,6 +171,15 @@ export class GameManager {
             },
             lastUpdated: Date.now()
         };
+    }
+
+    async generateSprite(playerId, character) {
+        const spriteResponse = await axios.post(
+            `${API_URL}/generate-sprite?mode=optimized`,
+            { body_type: character.body_type, selections: character.selections },
+            { responseType: 'arraybuffer' }
+        );
+        this.spriteBuffers.set(playerId, Buffer.from(spriteResponse.data));
     }
 
     detectCharacterAnimations(character) {
