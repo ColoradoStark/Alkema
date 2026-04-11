@@ -36,6 +36,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.animationKey = null;
         this.currentDirection = 'down';
         this.sheetCols = 13; // detected from actual image
+        this.onLoaded = null; // callback when sprite is ready
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -99,6 +100,8 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.createAnimations(textureKey);
         this.playAnimation('idle', 'down');
         this.setAlpha(1);
+
+        if (this.onLoaded) this.onLoaded();
     }
 
     createAnimations(textureKey) {

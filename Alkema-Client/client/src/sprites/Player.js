@@ -8,29 +8,33 @@ export class Player {
         this.characterData = characterData;
         
         this.sprite = new CompositeCharacter(scene, x, y, characterData);
-        
+
         // Set depth based on whether local or remote
         if (isLocal) {
             this.sprite.setDepth(20);
         } else {
             this.sprite.setDepth(10);
         }
-        
+
         if (!isLocal) {
             this.targetX = x;
             this.targetY = y;
             this.interpolationSpeed = 0.1;
         }
-        
-        // Add name text as a child of the sprite container
-        this.nameText = scene.add.text(0, -40, characterData?.name || 'Player', {
+
+        // Show "Loading..." until sprite is ready, then show real name
+        this.nameText = scene.add.text(0, -40, 'Loading...', {
             fontFamily: 'Alagard',
             fontSize: '14px',
             color: '#ffffff',
             backgroundColor: '#000000aa',
             padding: { x: 4, y: 2 }
         }).setOrigin(0.5);
-        
+
+        this.sprite.onLoaded = () => {
+            this.nameText.setText(characterData?.name || 'Player');
+        };
+
         // Add the name text to the sprite container so it moves with it
         this.sprite.add(this.nameText);
     }
