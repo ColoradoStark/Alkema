@@ -44,16 +44,12 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         // Set physics body size
         this.body.setSize(32, 48);
 
-        // Start invisible until sprite loads
-        this.setAlpha(0);
-
         this.loadSpritesheet();
     }
 
     loadSpritesheet(retryCount = 0) {
         const spriteUrl = this.characterData.spriteUrl;
         if (!spriteUrl) {
-            this.setAlpha(1);
             return;
         }
 
@@ -85,7 +81,6 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                 setTimeout(() => this.loadSpritesheet(retryCount + 1), delay);
             } else {
                 console.warn('Failed to load spritesheet after retries:', spriteUrl);
-                this.setAlpha(1);
             }
         };
 
@@ -99,7 +94,6 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.animationKey = `anim_${this.characterData.id}`;
         this.createAnimations(textureKey);
         this.playAnimation('idle', 'down');
-        this.setAlpha(1);
 
         if (this.onLoaded) this.onLoaded();
     }
