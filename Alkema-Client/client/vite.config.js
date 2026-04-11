@@ -11,6 +11,9 @@ export default defineConfig({
       },
       '/api': {
         target: 'http://localhost:3001'
+      },
+      '/spritesheets': {
+        target: 'http://localhost:8080'
       }
     }
   },
