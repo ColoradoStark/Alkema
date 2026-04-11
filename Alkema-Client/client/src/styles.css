@@ -95,8 +95,8 @@ html {
     margin-bottom: 16px;
 }
 
-/* Only show on touch devices in landscape — not desktop browsers */
-@media (pointer: coarse) and (orientation: landscape) {
+/* Only show on small touch devices in landscape — not desktop/laptop touchscreens */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
     #landscape-overlay {
         display: flex;
     }
