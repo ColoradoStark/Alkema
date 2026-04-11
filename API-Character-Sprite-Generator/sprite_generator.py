@@ -75,7 +75,9 @@ class SpriteGenerator:
     # Animations always blanked in optimized mode (not useful for game client)
     OPTIMIZED_ALWAYS_BLANK = {'climb'}
     # Animations always kept in optimized mode even if weapon is missing
-    OPTIMIZED_ALWAYS_KEEP = {'spellcast'}
+    OPTIMIZED_ALWAYS_KEEP = {'spellcast', 'hurt'}
+    # Combat animations blanked when weapon sprites are missing
+    OPTIMIZED_BLANK_IF_WEAPON_MISSING = {'slash', 'thrust', 'shoot'}
 
     def generate_spritesheet(
         self,
@@ -128,14 +130,15 @@ class SpriteGenerator:
         """
         Blank out rows for animations the game client shouldn't use.
 
-        Blanks: climb (always), N/A animations (critical items missing).
-        Keeps: spellcast (always, even if weapon missing).
+        Blanks: climb (always), N/A animations (critical items missing),
+            slash/thrust/shoot when weapon sprites are missing.
+        Keeps: spellcast and hurt (always, even if weapon missing).
 
         Returns list of animation names that were blanked.
         """
-        # Get N/A animations from support check
         support = self.get_supported_animations(selected_items)
         na_set = set(support.get('na', []))
+        weapon_missing = set(support.get('weapon_missing', {}).keys())
 
         blanked = []
 
@@ -145,6 +148,8 @@ class SpriteGenerator:
             if anim_name in self.OPTIMIZED_ALWAYS_BLANK:
                 should_blank = True
             elif anim_name in na_set and anim_name not in self.OPTIMIZED_ALWAYS_KEEP:
+                should_blank = True
+            elif anim_name in weapon_missing and anim_name in self.OPTIMIZED_BLANK_IF_WEAPON_MISSING:
                 should_blank = True
 
             if should_blank:
