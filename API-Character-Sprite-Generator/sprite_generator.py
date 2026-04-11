@@ -72,16 +72,28 @@ class SpriteGenerator:
     def __init__(self, session: Session):
         self.session = session
 
+    # Animations always blanked in optimized mode (not useful for game client)
+    OPTIMIZED_ALWAYS_BLANK = {'climb'}
+    # Animations always kept in optimized mode even if weapon is missing
+    OPTIMIZED_ALWAYS_KEEP = {'spellcast'}
+
     def generate_spritesheet(
         self,
         body_type: str,
         selected_items: List[Dict[str, str]],
+        optimized: bool = False,
     ) -> Tuple[bytes, Dict]:
         """
         Generate a complete spritesheet for a character.
 
+        Args:
+            optimized: If True, blank out rows for unusable animations (climb,
+                N/A animations). Same 832x3392 dimensions — blank rows compress
+                to nearly zero bytes in PNG.
+
         Returns:
             Tuple of (PNG image bytes, custom_animations layout metadata)
+            When optimized=True, metadata includes 'blanked_animations' list.
         """
         layers_to_draw = self._get_layers_to_draw(body_type, selected_items)
         layers_to_draw.sort(key=lambda x: x['z_pos'] if x['z_pos'] is not None else 0)
@@ -99,9 +111,50 @@ class SpriteGenerator:
             spritesheet, body_type, selected_items, custom_anims,
         )
 
+        blanked = []
+        if optimized:
+            blanked = self._blank_unusable_animations(spritesheet, selected_items)
+            custom_layout['blanked_animations'] = blanked
+
         output = io.BytesIO()
         spritesheet.save(output, format='PNG', optimize=False)
         return output.getvalue(), custom_layout
+
+    def _blank_unusable_animations(
+        self,
+        spritesheet: Image.Image,
+        selected_items: List[Dict[str, str]],
+    ) -> List[str]:
+        """
+        Blank out rows for animations the game client shouldn't use.
+
+        Blanks: climb (always), N/A animations (critical items missing).
+        Keeps: spellcast (always, even if weapon missing).
+
+        Returns list of animation names that were blanked.
+        """
+        # Get N/A animations from support check
+        support = self.get_supported_animations(selected_items)
+        na_set = set(support.get('na', []))
+
+        blanked = []
+
+        for anim_name, start_row, num_rows in ANIMATIONS:
+            should_blank = False
+
+            if anim_name in self.OPTIMIZED_ALWAYS_BLANK:
+                should_blank = True
+            elif anim_name in na_set and anim_name not in self.OPTIMIZED_ALWAYS_KEEP:
+                should_blank = True
+
+            if should_blank:
+                y_start = start_row * SPRITE_HEIGHT
+                y_end = y_start + num_rows * SPRITE_HEIGHT
+                region = Image.new('RGBA', (FULL_WIDTH, y_end - y_start), (0, 0, 0, 0))
+                spritesheet.paste(region, (0, y_start))
+                blanked.append(anim_name)
+
+        return blanked
 
     def _composite_layer(
         self,

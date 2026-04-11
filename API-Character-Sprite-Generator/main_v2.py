@@ -2116,7 +2116,11 @@ async def get_item_detail(file_name: str, db: Session = Depends(get_db)):
     responses={200: {"content": {"image/png": {}}, "description": "Spritesheet PNG"}},
     tags=["Sprite Generation"],
 )
-async def generate_sprite(request: SpriteRequest, db: Session = Depends(get_db)):
+async def generate_sprite(
+    request: SpriteRequest,
+    mode: str = Query("raw", description="Sheet mode: 'raw' (full) or 'optimized' (blank unusable rows)"),
+    db: Session = Depends(get_db),
+):
     """
     Generate a character spritesheet PNG from a list of item selections.
 
@@ -2126,18 +2130,23 @@ async def generate_sprite(request: SpriteRequest, db: Session = Depends(get_db))
     - `item` – the `file_name` of the item
     - `variant` – (optional) the variant name for colour/style
 
+    **mode** parameter:
+    - `raw` (default) – full 832×3392 sheet with all animations
+    - `optimized` – same dimensions, but rows for unusable animations
+      (climb, N/A) are blanked out. PNG compression makes blank rows nearly free.
+
     Returns a **832 × 3392 px** PNG spritesheet (13 columns × 53 rows of 64 × 64 sprites)
     containing all animation frames.
     """
     try:
         generator = SpriteGenerator(db)
+        sels = [s.model_dump() for s in request.selections]
         image_bytes, custom_layout = generator.generate_spritesheet(
             request.body_type,
-            [s.model_dump() for s in request.selections],
+            sels,
+            optimized=(mode == 'optimized'),
         )
-        coverage = generator.get_animation_coverage(
-            [s.model_dump() for s in request.selections],
-        )
+        coverage = generator.get_animation_coverage(sels)
         import json as _json
         metadata = {
             'custom_animations': custom_layout,
@@ -2785,13 +2794,19 @@ async function generateOne(standalone = true) {
     const charResp = await fetch(url);
     const charData = await charResp.json();
 
-    const spriteResp = await fetch(API + '/generate-sprite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(charData),
-    });
-    const blob = await spriteResp.blob();
-    const imgUrl = URL.createObjectURL(blob);
+    const bodyJson = JSON.stringify(charData);
+    const hdrs = { 'Content-Type': 'application/json' };
+
+    // Fetch raw sprite, optimized sprite, and supported animations in parallel
+    const [spriteResp, optResp, animResp] = await Promise.all([
+      fetch(API + '/generate-sprite?mode=raw', { method: 'POST', headers: hdrs, body: bodyJson }),
+      fetch(API + '/generate-sprite?mode=optimized', { method: 'POST', headers: hdrs, body: bodyJson }),
+      fetch(API + '/supported-animations', { method: 'POST', headers: hdrs, body: bodyJson }),
+    ]);
+
+    const [rawBlob, optBlob] = await Promise.all([spriteResp.blob(), optResp.blob()]);
+    const imgUrl = URL.createObjectURL(rawBlob);
+    const optImgUrl = URL.createObjectURL(optBlob);
 
     let spriteMeta = {};
     const metaHeader = spriteResp.headers.get('X-Sprite-Meta');
@@ -2799,15 +2814,15 @@ async function generateOne(standalone = true) {
       try { spriteMeta = JSON.parse(metaHeader); } catch(e) {}
     }
 
-    // Fetch supported animations in parallel with card creation
-    const animResp = await fetch(API + '/supported-animations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(charData),
-    });
+    let optMeta = {};
+    const optMetaHeader = optResp.headers.get('X-Sprite-Meta');
+    if (optMetaHeader) {
+      try { optMeta = JSON.parse(optMetaHeader); } catch(e) {}
+    }
+
     const animData = await animResp.json();
 
-    addCard(charData, imgUrl, animData, spriteMeta);
+    addCard(charData, imgUrl, optImgUrl, animData, spriteMeta, optMeta);
   } catch (e) {
     console.error(e);
     alert('Error generating character: ' + e.message);
@@ -2824,7 +2839,7 @@ async function generateBatch() {
   setLoading(false);
 }
 
-function addCard(charData, imgUrl, animData, spriteMeta) {
+function addCard(charData, imgUrl, optImgUrl, animData, spriteMeta, optMeta) {
   charCount++;
   const id = charCount;
   document.getElementById('counter').textContent = id + ' characters generated';
@@ -2879,6 +2894,11 @@ function addCard(charData, imgUrl, animData, spriteMeta) {
        </div>`
     : '';
 
+  const blanked = (optMeta && optMeta.custom_animations && optMeta.custom_animations.blanked_animations) || [];
+  const blankedHtml = blanked.length > 0
+    ? `<div style="margin-top:6px;font-size:0.65em;color:#e94560">Blanked: ${blanked.join(', ')}</div>`
+    : '<div style="margin-top:6px;font-size:0.65em;color:#4ecca3">No animations blanked</div>';
+
   card.innerHTML = `
     <div class="card-header">
       <h3>${(charData.race||'').charAt(0).toUpperCase()+(charData.race||'').slice(1)} ${charData.body_type.charAt(0).toUpperCase() + charData.body_type.slice(1)}${charData.character_class ? ' <span style="color:#4ecca3">'+charData.character_class.charAt(0).toUpperCase()+charData.character_class.slice(1)+'</span>' : ''}</h3>
@@ -2896,10 +2916,20 @@ function addCard(charData, imgUrl, animData, spriteMeta) {
         </div>
         ${oversizedBtns}
         <details style="margin-top:10px">
-          <summary style="cursor:pointer;font-size:0.8em;color:#4ecca3">Full sheet</summary>
-          <div class="sprite-container" style="margin-top:6px">
-            <img src="${imgUrl}" style="width:208px" />
+          <summary style="cursor:pointer;font-size:0.8em;color:#4ecca3">Sheets &amp; Downloads</summary>
+          <div style="margin-top:6px;display:flex;gap:8px">
+            <div style="text-align:center">
+              <div style="font-size:0.65em;color:#999;margin-bottom:3px">Raw</div>
+              <div class="sprite-container"><img src="${imgUrl}" style="width:104px" /></div>
+              <a href="${imgUrl}" download="char_${id}_raw.png" style="font-size:0.65em;color:#4ecca3;display:block;margin-top:3px">Download</a>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:0.65em;color:#e9a045;margin-bottom:3px">Optimized</div>
+              <div class="sprite-container"><img src="${optImgUrl}" style="width:104px" /></div>
+              <a href="${optImgUrl}" download="char_${id}_optimized.png" style="font-size:0.65em;color:#e9a045;display:block;margin-top:3px">Download</a>
+            </div>
           </div>
+          ${blankedHtml}
         </details>
       </div>
       <div class="selections">${selectionsHtml}</div>
