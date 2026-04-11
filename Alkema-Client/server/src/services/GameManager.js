@@ -128,7 +128,7 @@ export class GameManager {
         // Call the API for a random character
         const bodyType = Math.random() < 0.5 ? 'male' : 'female';
         const response = await axios.get(`${API_URL}/random-character`, {
-            params: { armor: 'light', race: 'human', body_type: bodyType }
+            params: { class: 'warrior', armor: 'light', race: 'human', body_type: bodyType }
         });
         const apiChar = response.data;
 
