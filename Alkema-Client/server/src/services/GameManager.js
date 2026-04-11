@@ -1,12 +1,12 @@
-import { AssetManager } from './AssetManager.js';
-import { nameGenerator } from './NameGenerator.js';
+import axios from 'axios';
+
+const API_URL = process.env.API_URL || 'http://api-character-sprite-generator:8000';
 
 export class GameManager {
     constructor(io) {
         this.io = io;
         this.players = new Map();
         this.rooms = new Map();
-        this.assetManager = new AssetManager();
         this.usedNames = new Set(); // Track used names to avoid duplicates
     }
 
@@ -125,37 +125,31 @@ export class GameManager {
     }
 
     async createDefaultCharacter(playerId) {
-        // Use AssetManager to get a valid random character
-        const charData = await this.assetManager.getRandomCharacter();
-        
-        // Generate a unique name (passing skin color and body type for appropriate name generation)
-        let characterName;
-        let attempts = 0;
-        do {
-            characterName = nameGenerator.generateFullName(charData.skin_color, charData.body_type);
-            attempts++;
-            // If we've tried too many times, add a number suffix
-            if (attempts > 50) {
-                characterName = `${characterName} ${Math.floor(Math.random() * 100)}`;
-            }
-        } while (this.usedNames.has(characterName) && attempts < 100);
-        
+        // Call the API for a random character
+        const response = await axios.get(`${API_URL}/random-character`, {
+            params: { class: 'starter', armor: 'starter' }
+        });
+        const apiChar = response.data;
+
+        // Use the API-generated name, deduplicate locally
+        let characterName = apiChar.name;
+        if (this.usedNames.has(characterName)) {
+            characterName = `${characterName} ${Math.floor(Math.random() * 100)}`;
+        }
         this.usedNames.add(characterName);
-        console.log(`GameManager: Generated character name: ${characterName} (${charData.body_type}, skin: ${charData.skin_color})`);
-        
+
+        console.log(`GameManager: API character: ${characterName} (${apiChar.body_type}, ${apiChar.race}, ${apiChar.character_class})`);
+
         return {
             id: playerId,
             name: characterName,
-            body_type: charData.body_type,
-            skin_color: charData.skin_color,
-            hair_style: charData.hair_style,
-            hair_color: charData.hair_color,
-            shirt_type: charData.shirt_type,  // Note: using shirt_type now
-            shirt_color: charData.shirt_color,
-            pants_color: charData.pants_color,
+            body_type: apiChar.body_type,
+            race: apiChar.race,
+            character_class: apiChar.character_class,
+            selections: apiChar.selections,
             equipment: {},
             animations: {
-                available: ['idle', 'walk', 'attack', 'hurt'],
+                available: apiChar.metadata?.supportedAnimations || ['idle', 'walk', 'attack', 'hurt'],
                 custom: {}
             },
             lastUpdated: Date.now()

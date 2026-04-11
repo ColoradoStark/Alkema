@@ -26,63 +26,40 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
     }
     
     async loadCharacterLayers() {
-        const bodyType = this.characterData.body_type || 'male';
-        const skinColor = this.characterData.skin_color || 'light';
-        const hairStyle = this.characterData.hair_style || 'plain';
-        let hairColor = this.characterData.hair_color || 'brown';
-        const shirtColor = this.characterData.shirt_color || 'blue';
-        const pantsColor = this.characterData.pants_color || 'brown';
-        
-        // Map hair colors to actual file names - many styles use different color naming
-        const hairColorMap = {
-            'brown': 'dark_brown',
-            'blonde': 'blonde',
-            'black': 'black',
-            'red': 'red',
-            'gray': 'gray',
-            'grey': 'gray',
-            'white': 'white'
-        };
-        
-        // Apply color mapping for styles that need it
-        const mappedHairColor = hairColorMap[hairColor] || hairColor;
-        
-        // Define layer URLs in order (bottom to top)
-        // Use shirt_type from character data if available, otherwise default based on gender
-        const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
-        
-        
-        // Base layer configs
-        const layerConfigs = [
-            { name: 'body', url: `/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
-            { name: 'pants', url: `/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
-            { name: 'shirt', url: `/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: false }, // Made required for debugging
-            { name: 'head', url: `/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` }
-        ];
-        
-        // Handle special hair styles that have bg/fg structure
-        // These hairstyles need both background and foreground layers
-        const twoLayerHairStyles = ['ponytail', 'ponytail2', 'princess', 'shoulderl', 'shoulderr', 'pigtails'];
-        
-        if (twoLayerHairStyles.includes(hairStyle)) {
-            // These styles have background (behind head) and foreground (the actual detail)
-            // Note: fg layer doesn't have color variants - it's just the shape overlay
-            layerConfigs.push(
-                { name: 'hair_bg', url: `/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`, optional: true },
-                { name: 'hair_fg', url: `/spritesheets/hair/${hairStyle}/adult/fg/walk.png`, optional: true }
-            );
+        const selections = this.characterData.selections;
+
+        // New path: selections array with sprite_path from the API
+        if (selections && selections.length > 0) {
+            for (const sel of selections) {
+                if (!sel.sprite_path) continue;
+                const url = sel.variant
+                    ? `/spritesheets/${sel.sprite_path}/walk/${sel.variant}.png`
+                    : `/spritesheets/${sel.sprite_path}/walk.png`;
+                await this.loadLayer(sel.type, url, true);
+            }
         } else {
-            // Regular hair styles just have one layer
-            layerConfigs.push(
-                { name: 'hair', url: `/spritesheets/hair/${hairStyle}/adult/walk/${mappedHairColor}.png`, optional: true }
-            );
+            // Legacy flat format fallback
+            const bodyType = this.characterData.body_type || 'male';
+            const skinColor = this.characterData.skin_color || 'light';
+            const hairStyle = this.characterData.hair_style || 'plain';
+            const hairColor = this.characterData.hair_color || 'brown';
+            const shirtColor = this.characterData.shirt_color || 'blue';
+            const pantsColor = this.characterData.pants_color || 'brown';
+            const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
+
+            const layerConfigs = [
+                { name: 'shadow', url: `/spritesheets/shadow/adult/walk/shadow.png`, optional: true },
+                { name: 'body', url: `/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
+                { name: 'pants', url: `/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
+                { name: 'shirt', url: `/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: true },
+                { name: 'head', url: `/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` },
+                { name: 'hair', url: `/spritesheets/hair/${hairStyle}/adult/walk/${hairColor}.png`, optional: true }
+            ];
+            for (const config of layerConfigs) {
+                await this.loadLayer(config.name, config.url, config.optional);
+            }
         }
-        
-        // Load each layer
-        for (const config of layerConfigs) {
-            await this.loadLayer(config.name, config.url, config.optional);
-        }
-        
+
         this.createAnimations();
         this.playAnimation('idle', 'down');
     }

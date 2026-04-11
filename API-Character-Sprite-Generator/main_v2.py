@@ -123,6 +123,7 @@ class SelectionItem(BaseModel):
     type: str = Field(..., description="Category of the item (body, hair, legs, …)")
     item: str = Field(..., description="file_name of the item")
     variant: Optional[str] = Field(None, description="Variant name (colour / style)")
+    sprite_path: Optional[str] = Field(None, description="Relative sprite directory path for this body type")
 
     class Config:
         json_schema_extra = {
@@ -342,6 +343,37 @@ def _load_item_eager(db: Session, file_name: str) -> Optional[Item]:
 
 # Application-level cache for item data (static, never changes at runtime)
 _items_cache: Optional[List[dict]] = None
+_sprite_paths_cache: Optional[Dict[str, Dict[str, str]]] = None
+
+
+def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
+    """Cache mapping: item file_name → {body_type: sprite_directory_path}."""
+    global _sprite_paths_cache
+    if _sprite_paths_cache is not None:
+        return _sprite_paths_cache
+
+    import json as _json
+    from pathlib import Path as _Path
+
+    defs_dir = _Path("/generator/sheet_definitions")
+    if not defs_dir.exists():
+        defs_dir = _Path("../Universal-LPC-Spritesheet-Character-Generator/sheet_definitions")
+
+    _sprite_paths_cache = {}
+    for jf in defs_dir.glob("*.json"):
+        try:
+            d = _json.loads(jf.read_text())
+        except Exception:
+            continue
+        file_name = jf.stem
+        layer = d.get("layer_1", {})
+        paths = {}
+        for bt in ("male", "female", "child", "teen", "muscular", "pregnant"):
+            if bt in layer and isinstance(layer[bt], str):
+                paths[bt] = layer[bt].rstrip("/")
+        if paths:
+            _sprite_paths_cache[file_name] = paths
+    return _sprite_paths_cache
 
 
 def _load_all_items_for_random(db: Session) -> List[dict]:
@@ -1022,6 +1054,52 @@ CHARACTER_CLASSES: Dict[str, dict] = {
         "optional_always": ["shoes"],
         "optional_never": ["wings", "quiver", "backpack", "shoulders", "necklace", "facial"],
     },
+    "starter": {
+        "display_name": "Starter",
+        "upper_body": [
+            "torso_clothes_vest", "torso_clothes_longsleeve", "torso_clothes_tunic",
+        ],
+        "lower_body": ["legs_pants"],
+        "weapons": [],
+        "hats": [],
+        "shields": [],
+        "shoulders": [],
+        "shoes": [],
+        "weapon_chance": 0.0,
+        "shield_chance": 0.0,
+        "optional_always": [],
+        "optional_never": [
+            "hat", "cape", "shoulders", "necklace", "belt", "barrette",
+            "buckle", "quiver", "backpack", "wings", "shoes", "facial",
+            "arms", "hands", "feet",
+        ],
+        "hair_male": [
+            "hair_plain", "hair_bedhead", "hair_buzzcut", "hair_messy1", "hair_spiked",
+        ],
+        "hair_female": [
+            "hair_plain", "hair_loose", "hair_ponytail", "hair_princess",
+            "hair_pixie", "hair_long", "hair_bob",
+        ],
+        "hair_female_long": [
+            "hair_loose", "hair_ponytail", "hair_princess", "hair_long",
+        ],
+        "hair_female_short": [
+            "hair_pixie", "hair_bob", "hair_plain",
+        ],
+        "hair_female_long_chance": 0.85,
+        "skip_hair_extensions": True,
+        "skip_facial_hair": True,
+        "skip_cosmetics": True,
+        "skin_colors": ["light", "amber", "olive", "brown", "black"],
+        "variant_restrict": {
+            "hair": ["blonde", "dark_brown", "black", "gray", "white", "red"],
+            "clothes": ["brown", "blue", "green", "red", "black", "white", "purple", "pink"],
+            "vest": ["brown", "blue", "green", "red", "black", "white", "purple"],
+            "legs": ["brown", "black", "blue", "gray", "tan"],
+        },
+        "force_race": "human",
+        "force_body_types": ["male", "female"],
+    },
 }
 
 ALL_CLASS_NAMES = list(CHARACTER_CLASSES.keys())
@@ -1127,6 +1205,15 @@ ARMOR_WEIGHTS = {
     "topless": {
         "skip_upper_body": True,
         "optional_never": ["backpack", "quiver"],
+    },
+    "starter": {
+        "lower_body": ["legs_pants"],
+        "hat_class_only": True,
+        "optional_never": [
+            "hat", "cape", "shoulders", "necklace", "belt", "barrette",
+            "buckle", "quiver", "backpack", "wings", "shoes", "facial",
+            "arms", "hands", "feet",
+        ],
     },
 }
 
@@ -1249,6 +1336,13 @@ def generate_random_character(
 
     if not age:
         age = "adult"
+
+    # Apply class force_race and force_body_types before resolution (e.g. starter → human, male/female only)
+    _pre_cls = CHARACTER_CLASSES.get(character_class, {}) if character_class else {}
+    if _pre_cls.get("force_race") and not race and not preset:
+        race = _pre_cls["force_race"]
+    if _pre_cls.get("force_body_types") and not body_type and not preset:
+        body_type = random.choice(_pre_cls["force_body_types"])
 
     # --- resolve preset / race / body_type ---
     allowed_heads: Optional[List[str]] = None  # None = any head
@@ -1389,6 +1483,13 @@ def generate_random_character(
         item_type = item.get("type_name", "")
         variant_names = [v["name"] for v in item["variants"]]
 
+        # Class variant restrictions (e.g. starter limits to client-compatible colors)
+        vr = cls_cfg.get("variant_restrict", {}).get(item_type)
+        if vr:
+            restricted = [n for n in variant_names if n in vr]
+            if restricted:
+                return random.choice(restricted)
+
         # Metal items: pick from palette metals
         if item_type in _METAL_TYPES:
             metal_matches = [n for n in variant_names if n in palette_metals]
@@ -1476,6 +1577,12 @@ def generate_random_character(
     def _pick_skin_variant(body_item: dict) -> Optional[str]:
         if not body_item["variants"]:
             return None
+        # Class can restrict skin colours (e.g. starter uses client's 5 colours)
+        cls_skins = cls_cfg.get("skin_colors")
+        if cls_skins:
+            good = [v for v in body_item["variants"] if v["name"] in cls_skins]
+            if good:
+                return random.choice(good)["name"]
         allowed_skins = RACE_SKIN_COLORS.get(original_race) if original_race else None
         if allowed_skins:
             good = [v for v in body_item["variants"] if v["name"] in allowed_skins]
@@ -1552,15 +1659,17 @@ def generate_random_character(
                 if _pick_from_category(cat):
                     break
     elif cls_cfg.get("upper_body"):
-        # Class-preferred items
-        placed_upper = False
+        # Class-preferred items — collect all compatible across categories, pick one
+        all_preferred = []
         for cat in UPPER_BODY_CATEGORIES:
-            preferred_in_cat = [fn for fn in cls_cfg["upper_body"]
-                                if any(i["file_name"] == fn and i["type_name"] == cat
-                                       for i in items_by_type.get(cat, []))]
-            if preferred_in_cat and _pick_from_category(cat, restrict_to=preferred_in_cat):
-                placed_upper = True
-                break
+            for fn in cls_cfg["upper_body"]:
+                for item in items_by_type.get(cat, []):
+                    if item["file_name"] == fn and item["type_name"] == cat and _is_compatible(item):
+                        all_preferred.append((cat, fn))
+        placed_upper = False
+        if all_preferred:
+            chosen_cat, chosen_fn = random.choice(all_preferred)
+            placed_upper = _pick_from_category(chosen_cat, restrict_to=[chosen_fn])
         if not placed_upper:
             for cat in UPPER_BODY_CATEGORIES:
                 if _pick_from_category(cat):
@@ -1584,7 +1693,23 @@ def generate_random_character(
     race_skip = set(RACE_SKIP_CATEGORIES.get(original_race, []))
     if original_race not in ("skeleton", "zombie") and "hair" not in race_skip:
         hair_items = [i for i in items_by_type.get("hair", []) if _is_compatible(i)]
-        if body_type in _FEMALE_BODY_TYPES:
+        # Starter class: restrict to specific hair lists with weighted selection
+        starter_hair_male = cls_cfg.get("hair_male")
+        starter_hair_female = cls_cfg.get("hair_female")
+        if starter_hair_male and body_type in _MALE_BODY_TYPES:
+            hair_items = [i for i in hair_items if i["file_name"] in starter_hair_male]
+        elif starter_hair_female and body_type in _FEMALE_BODY_TYPES:
+            long_chance = cls_cfg.get("hair_female_long_chance", 0.5)
+            long_list = cls_cfg.get("hair_female_long", starter_hair_female)
+            short_list = cls_cfg.get("hair_female_short", [])
+            if short_list and random.random() >= long_chance:
+                hair_items = [i for i in hair_items if i["file_name"] in short_list]
+            else:
+                hair_items = [i for i in hair_items if i["file_name"] in long_list]
+            if not hair_items:
+                hair_items = [i for i in items_by_type.get("hair", [])
+                              if _is_compatible(i) and i["file_name"] in starter_hair_female]
+        elif body_type in _FEMALE_BODY_TYPES:
             feminine = [i for i in hair_items if i["file_name"] in _FEMININE_HAIR]
             if feminine:
                 hair_items = feminine
@@ -1614,7 +1739,7 @@ def generate_random_character(
     _pick_from_category("shadow")
 
     # Step 4.7 – cosmetic extras (humans, elves, furries, fey only)
-    if original_race in _COSMETIC_RACES:
+    if original_race in _COSMETIC_RACES and not cls_cfg.get("skip_cosmetics"):
 
         # Helper: pick item from category with hair-colour matching
         def _pick_hair_matched(category: str, restrict_to: Optional[List[str]] = None) -> Optional[str]:
@@ -1741,8 +1866,11 @@ def generate_random_character(
 
     # Random optional categories (excluding never-list and already-used)
     available_optional = [c for c in OPTIONAL_CATEGORIES if c not in used_types and c not in cls_never]
-    num_optional = random.randint(2, min(5, len(available_optional)))
-    chosen_optional = random.sample(available_optional, min(num_optional, len(available_optional)))
+    if not available_optional:
+        chosen_optional = []
+    else:
+        num_optional = random.randint(min(2, len(available_optional)), min(5, len(available_optional)))
+        chosen_optional = random.sample(available_optional, min(num_optional, len(available_optional)))
     for cat in chosen_optional:
         if cat not in used_types:
             _pick_optional(cat)
@@ -1779,6 +1907,18 @@ def generate_random_character(
             _pick_from_category("shield")
         elif shields_pref:
             _pick_prefer("shield", shields_pref)
+
+    # Resolve sprite paths for each selection (skip items without walk sprites)
+    _SKIP_SPRITE_PATH = {"expression", "expression_crying", "weapon", "shield", "ammo", "quiver"}
+    sprite_paths = _load_sprite_paths()
+    for sel in selections:
+        if sel["type"] in _SKIP_SPRITE_PATH:
+            continue
+        paths = sprite_paths.get(sel["item"])
+        if paths:
+            path = paths.get(body_type) or next(iter(paths.values()), None)
+            if path and "${" not in path:
+                sel["sprite_path"] = path
 
     # Build description
     class_label = cls_cfg.get("display_name", "") if cls_cfg else ""
@@ -2422,6 +2562,20 @@ async def character_rules():
             cls_info["always_equipped"] = cfg["optional_always"]
         if cfg.get("optional_never"):
             cls_info["never_equipped"] = cfg["optional_never"]
+        if cfg.get("force_race"):
+            cls_info["force_race"] = cfg["force_race"]
+        if cfg.get("force_body_types"):
+            cls_info["force_body_types"] = cfg["force_body_types"]
+        if cfg.get("skin_colors"):
+            cls_info["skin_colors"] = cfg["skin_colors"]
+        if cfg.get("hair_male"):
+            cls_info["hair_male"] = cfg["hair_male"]
+        if cfg.get("hair_female"):
+            cls_info["hair_female"] = cfg["hair_female"]
+        if cfg.get("hair_female_long_chance"):
+            cls_info["hair_female_long_chance"] = cfg["hair_female_long_chance"]
+        if cfg.get("skip_cosmetics"):
+            cls_info["skip_cosmetics"] = True
         classes[cls_name] = cls_info
 
     # --- Armor Weights ---
@@ -2521,11 +2675,13 @@ async def random_character(
     - **guard**: legion armour, polearms, kettle helmets
     - **merchant**: formal suits, tophats, no weapons
     - **peasant**: simple shirts, overalls, farm tools
+    - **starter**: basic human clothing (vest/longsleeve/tunic + pants), no accessories
 
     Use `armor` to control armor weight:
     - **heavy**: full helmets, plate armour, armoured boots
     - **normal**: default (no restrictions)
     - **light**: no hat, sleeveless/minimal clothing, sandals
+    - **starter**: basic clothing only, no accessories (pair with class=starter)
     """
     from name_generator import generate_full_name
 
@@ -2714,6 +2870,7 @@ _TEST_PAGE_HTML = r"""<!DOCTYPE html>
     <option value="formal">Formal</option>
     <option value="topless">Topless</option>
     <option value="nude">Nude</option>
+    <option value="starter">Starter</option>
   </select>
   <button id="btnGenerate" onclick="generateOne()">Generate Character</button>
   <button id="btnBatch" class="btn-secondary" onclick="generateBatch()">Generate 6</button>
