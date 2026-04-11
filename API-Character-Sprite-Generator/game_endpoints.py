@@ -9,7 +9,7 @@ import secrets
 
 from mongodb_models import (
     Player, Character, GameSession,
-    CharacterAppearance, CharacterStats, CharacterPosition,
+    CharacterAttributes, CharacterStats, CharacterPosition,
     MongoDBConnection, get_database,
     get_player_by_username, get_character_by_id, get_session_by_socket
 )
@@ -136,9 +136,13 @@ async def create_character(
     # Create character
     character = Character(name=name, owner_id=player_id)
     
-    # Apply appearance if provided
-    if appearance:
-        character.appearance = CharacterAppearance(**appearance)
+    # Apply selections if provided
+    if appearance and 'selections' in appearance:
+        character.selections = appearance['selections']
+    if appearance and 'race' in appearance:
+        character.race = appearance['race']
+    if appearance and 'body_type' in appearance:
+        character.body_type = appearance['body_type']
     
     # Save character
     result = await db.characters.insert_one(character.dict(by_alias=True))
@@ -177,19 +181,16 @@ async def update_character_appearance(
     appearance: Dict[str, Any],
     db=Depends(get_database)
 ):
-    """Update character appearance."""
+    """Update character appearance (selections, race, body_type, etc.)."""
     try:
-        # Validate appearance data
-        appearance_obj = CharacterAppearance(**appearance)
-        
+        update_fields = {"last_played": datetime.utcnow()}
+        for key in ('selections', 'race', 'body_type', 'character_class', 'armor', 'color_palette', 'metadata'):
+            if key in appearance:
+                update_fields[key] = appearance[key]
+
         result = await db.characters.update_one(
             {"_id": ObjectId(character_id)},
-            {
-                "$set": {
-                    "appearance": appearance_obj.dict(),
-                    "last_played": datetime.utcnow()
-                }
-            }
+            {"$set": update_fields}
         )
         
         if result.matched_count == 0:

@@ -3,7 +3,7 @@ from fastapi.responses import Response, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import distinct, func
 from models import (
@@ -190,16 +190,71 @@ class AvailableOptionsResponse(BaseModel):
     total_categories: int
 
 
+class CharacterAttributes(BaseModel):
+    """RPG attribute scores."""
+    strength: int = 10
+    dexterity: int = 10
+    intelligence: int = 10
+    vitality: int = 10
+    endurance: int = 10
+    charisma: int = 10
+
+
+class CharacterStats(BaseModel):
+    """Gameplay statistics."""
+    health: int = 100
+    maxHealth: int = 100
+    mana: int = 50
+    maxMana: int = 50
+    attack: int = 10
+    defense: int = 5
+    speed: int = 5
+
+
+class CharacterPosition(BaseModel):
+    """Position in the game world."""
+    x: float = 512
+    y: float = 384
+    map: str = "spawn"
+
+
+class CharacterEquipment(BaseModel):
+    """Equipment slots (null = empty)."""
+    armor: Optional[Dict[str, Any]] = None
+    weapon: Optional[Dict[str, Any]] = None
+    helmet: Optional[Dict[str, Any]] = None
+    boots: Optional[Dict[str, Any]] = None
+    gloves: Optional[Dict[str, Any]] = None
+    accessory: Optional[Dict[str, Any]] = None
+
+
+class CharacterMetadata(BaseModel):
+    """Sprite and animation metadata."""
+    animationCoverage: Optional[Dict[str, Dict]] = None
+    customAnimations: Optional[Dict[str, Dict]] = None
+    blankedAnimations: Optional[List[str]] = None
+    spriteSheetUrl: Optional[str] = None
+    spriteSheetHash: Optional[str] = None
+
+
 class RandomCharacterResponse(BaseModel):
-    """The selections that make up a randomly generated character."""
+    """Complete character document — ready for MongoDB insertion and JSON download."""
+    name: str = Field(..., description="Generated fantasy name")
     body_type: str
     race: Optional[str] = Field(None, description="Race / species (human, orc, wolf, …)")
     character_class: Optional[str] = Field(None, description="Character class (warrior, mage, …)")
     armor: Optional[str] = Field(None, description="Armor weight (heavy, normal, light)")
     color_palette: Optional[str] = Field(None, description="Colour palette used for outfit coordination")
+    level: int = 1
+    experience: int = 0
+    attributes: CharacterAttributes = Field(default_factory=CharacterAttributes)
+    stats: CharacterStats = Field(default_factory=CharacterStats)
+    position: CharacterPosition = Field(default_factory=CharacterPosition)
     selections: List[SelectionItem]
+    equipment: CharacterEquipment = Field(default_factory=CharacterEquipment)
+    inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    metadata: CharacterMetadata = Field(default_factory=CharacterMetadata)
     description: str = Field(..., description="Human-readable summary of the character")
-    animation_coverage: Optional[Dict[str, Dict]] = Field(None, description="Per-animation coverage with weapon_visible and recommended_source per animation")
 
 
 class CategoryListResponse(BaseModel):
@@ -2471,9 +2526,18 @@ async def random_character(
     - **normal**: default (no restrictions)
     - **light**: no hat, sleeveless/minimal clothing, sandals
     """
+    from name_generator import generate_full_name
+
     result = generate_random_character(db, body_type=body_type, race=race, preset=preset, age=age, character_class=character_class, armor=armor)
     generator = SpriteGenerator(db)
-    result['animation_coverage'] = generator.get_animation_coverage(result['selections'])
+    coverage = generator.get_animation_coverage(result['selections'])
+
+    result['name'] = generate_full_name(result['body_type'])
+    result['metadata'] = {
+        'animationCoverage': coverage,
+    }
+    # Pydantic defaults handle: level, experience, attributes, stats,
+    # position, equipment, inventory, and remaining metadata fields
     return result
 
 
@@ -2875,6 +2939,7 @@ function addCard(charData, imgUrl, optImgUrl, animData, spriteMeta, optMeta) {
     oversizedAnims: oversizedAnims,
     oversizedIdx: -1,
     showingOversized: false,
+    charData: charData,
   };
 
   const card = document.createElement('div');
@@ -2901,8 +2966,8 @@ function addCard(charData, imgUrl, optImgUrl, animData, spriteMeta, optMeta) {
 
   card.innerHTML = `
     <div class="card-header">
-      <h3>${(charData.race||'').charAt(0).toUpperCase()+(charData.race||'').slice(1)} ${charData.body_type.charAt(0).toUpperCase() + charData.body_type.slice(1)}${charData.character_class ? ' <span style="color:#4ecca3">'+charData.character_class.charAt(0).toUpperCase()+charData.character_class.slice(1)+'</span>' : ''}</h3>
-      <span style="font-size:0.8em;color:#999">#${id} <span class="anim-badge${supportedCount < 15 ? ' limited' : ''}">${supportedCount}/15 anims</span>${charData.armor ? ' <span style="color:#c9c9c9">'+charData.armor+'</span>' : ''}${charData.color_palette ? ' <span style="color:#e9a045">'+charData.color_palette+'</span>' : ''}</span>
+      <h3>${charData.name || ''} <span style="font-size:0.75em;color:#999">${(charData.race||'').charAt(0).toUpperCase()+(charData.race||'').slice(1)} ${charData.body_type.charAt(0).toUpperCase() + charData.body_type.slice(1)}${charData.character_class ? ' <span style="color:#4ecca3">'+charData.character_class.charAt(0).toUpperCase()+charData.character_class.slice(1)+'</span>' : ''}</span></h3>
+      <span style="font-size:0.8em;color:#999"><span class="anim-badge${supportedCount < 15 ? ' limited' : ''}">${supportedCount}/15</span>${charData.armor ? ' <span style="color:#c9c9c9">'+charData.armor+'</span>' : ''}${charData.color_palette ? ' <span style="color:#e9a045">'+charData.color_palette+'</span>' : ''} <button onclick="downloadCharJSON(${id})" style="padding:2px 8px;font-size:0.85em;border-radius:4px;background:#0f3460;color:#4ecca3;border:1px solid #1a4a8a;cursor:pointer" title="Download character JSON">JSON</button></span>
     </div>
     <div class="card-body">
       <div class="sprite-col">
@@ -3076,6 +3141,18 @@ function updateAnimLabel(id) {
     label.style.color = '';
     if (osLabel) osLabel.textContent = state.oversizedAnims.length + ' oversized';
   }
+}
+
+function downloadCharJSON(id) {
+  const data = cardAnims[id] && cardAnims[id].charData;
+  if (!data) return;
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (data.name || 'character_' + id).replace(/\s+/g, '_') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function clearAll() {

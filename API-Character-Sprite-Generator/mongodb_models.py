@@ -54,23 +54,22 @@ class MongoBase(BaseModel):
     id: Optional[Annotated[ObjectId, PyObjectId]] = Field(default=None, alias="_id")
 
 
-class CharacterAppearance(BaseModel):
-    """Character visual appearance data."""
-    body_type: str = "male"
-    skin_color: str = "light"
-    hair_style: str = "plain"
-    hair_color: str = "brown"
-    shirt_type: str = "vest"
-    shirt_color: str = "white"
-    pants_color: str = "brown"
+class CharacterAttributes(BaseModel):
+    """RPG attribute scores."""
+    strength: int = 10
+    dexterity: int = 10
+    intelligence: int = 10
+    vitality: int = 10
+    endurance: int = 10
+    charisma: int = 10
 
 
 class CharacterStats(BaseModel):
-    """Character gameplay statistics."""
+    """Gameplay statistics."""
     health: int = 100
-    max_health: int = 100
+    maxHealth: int = 100
     mana: int = 50
-    max_mana: int = 50
+    maxMana: int = 50
     attack: int = 10
     defense: int = 5
     speed: int = 5
@@ -84,37 +83,42 @@ class CharacterPosition(BaseModel):
 
 
 class Character(MongoBase):
-    """Character model for MongoDB."""
+    """Character model for MongoDB — matches the unified JSON schema."""
     name: str
-    owner_id: Optional[str] = None  # Player ID who owns this character
+    owner_id: Optional[str] = None
+    body_type: str = "male"
+    race: Optional[str] = None
+    character_class: Optional[str] = None
+    armor: Optional[str] = None
+    color_palette: Optional[str] = None
     level: int = 1
     experience: int = 0
-    appearance: CharacterAppearance = Field(default_factory=CharacterAppearance)
+    attributes: CharacterAttributes = Field(default_factory=CharacterAttributes)
     stats: CharacterStats = Field(default_factory=CharacterStats)
     position: CharacterPosition = Field(default_factory=CharacterPosition)
+    selections: List[Dict[str, Any]] = Field(default_factory=list)
     equipment: Dict[str, Any] = Field(default_factory=dict)
     inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    description: str = ""
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_played: datetime = Field(default_factory=datetime.utcnow)
-    
+
     def to_game_format(self) -> dict:
         """Convert to format expected by game client."""
         return {
             "id": str(self.id),
             "name": self.name,
-            "body_type": self.appearance.body_type,
-            "skin_color": self.appearance.skin_color,
-            "hair_style": self.appearance.hair_style,
-            "hair_color": self.appearance.hair_color,
-            "shirt_type": self.appearance.shirt_type,
-            "shirt_color": self.appearance.shirt_color,
-            "pants_color": self.appearance.pants_color,
+            "body_type": self.body_type,
+            "race": self.race,
+            "character_class": self.character_class,
+            "armor": self.armor,
+            "color_palette": self.color_palette,
+            "level": self.level,
+            "selections": self.selections,
             "equipment": self.equipment,
-            "animations": {
-                "available": ["idle", "walk", "attack", "hurt"],
-                "custom": {}
-            },
-            "lastUpdated": int(self.last_played.timestamp() * 1000)
+            "metadata": self.metadata,
+            "lastUpdated": int(self.last_played.timestamp() * 1000),
         }
 
 
