@@ -124,6 +124,7 @@ class SelectionItem(BaseModel):
     item: str = Field(..., description="file_name of the item")
     variant: Optional[str] = Field(None, description="Variant name (colour / style)")
     sprite_path: Optional[str] = Field(None, description="Relative sprite directory path for this body type")
+    sprite_path_behind: Optional[str] = Field(None, description="Behind-body layer sprite path (weapons/shields)")
 
     class Config:
         json_schema_extra = {
@@ -344,6 +345,22 @@ def _load_item_eager(db: Session, file_name: str) -> Optional[Item]:
 # Application-level cache for item data (static, never changes at runtime)
 _items_cache: Optional[List[dict]] = None
 _sprite_paths_cache: Optional[Dict[str, Dict[str, str]]] = None
+_behind_paths_cache: Optional[Dict[str, Dict[str, str]]] = None
+
+
+def _build_walk_url(directory: str, variant: str) -> str:
+    """Build the relative URL to a walk sprite PNG.
+
+    If the directory already ends with /walk (oversized weapon paths), the file
+    is directly inside that directory.  Otherwise append /walk/.
+    """
+    d = directory.rstrip("/")
+    vf = variant.replace(" ", "_") if variant else ""
+    if not vf:
+        return f"{d}/walk.png"
+    if d.endswith("/walk") or "/walk/" in d:
+        return f"{d}/{vf}.png"
+    return f"{d}/walk/{vf}.png"
 
 
 def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
@@ -353,8 +370,11 @@ def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
     layer). Falls back to the highest-zPos layer overall if every layer uses a
     custom animation.  Strips a trailing '/walk' so the client can always build
     URLs as  sprite_path/walk/variant.png  without double-walk issues.
+
+    Also builds _behind_paths_cache: the lowest-zPos layer (behind-body) for
+    items that have multiple layers (weapons, shields).
     """
-    global _sprite_paths_cache
+    global _sprite_paths_cache, _behind_paths_cache
     if _sprite_paths_cache is not None:
         return _sprite_paths_cache
 
@@ -366,6 +386,7 @@ def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
         defs_dir = _Path("../Universal-LPC-Spritesheet-Character-Generator/sheet_definitions")
 
     _sprite_paths_cache = {}
+    _behind_paths_cache = {}
     layer_keys = [f"layer_{i}" for i in range(1, 9)]
 
     for jf in defs_dir.glob("*.json"):
@@ -375,37 +396,60 @@ def _load_sprite_paths() -> Dict[str, Dict[str, str]]:
             continue
         file_name = jf.stem
 
-        # Find best layer: highest zPos without custom_animation
-        best_layer = None
-        best_z = -1
-        fallback_layer = None
-        fallback_z = -1
+        # Collect all non-custom layers sorted by zPos
+        layers_by_z = []
         for lk in layer_keys:
             layer = d.get(lk)
             if not isinstance(layer, dict):
                 continue
-            z = layer.get("zPos", 0)
             if not layer.get("custom_animation"):
-                if z > best_z:
-                    best_z = z
-                    best_layer = layer
-            if z > fallback_z:
-                fallback_z = z
-                fallback_layer = layer
+                layers_by_z.append((layer.get("zPos", 0), layer))
 
-        layer = best_layer or fallback_layer or d.get("layer_1", {})
+        # Fallback: if all layers have custom_animation, prefer walk-related
+        if not layers_by_z:
+            walk_layers = []
+            other_layers = []
+            for lk in layer_keys:
+                layer = d.get(lk)
+                if not isinstance(layer, dict):
+                    continue
+                ca = layer.get("custom_animation", "")
+                bucket = walk_layers if "walk" in ca else other_layers
+                bucket.append((layer.get("zPos", 0), layer))
+            layers_by_z = walk_layers if walk_layers else other_layers
 
-        paths = {}
-        for bt in ("male", "female", "child", "teen", "muscular", "pregnant"):
-            if bt in layer and isinstance(layer[bt], str):
-                p = layer[bt].rstrip("/")
-                # Strip trailing /walk to avoid client building /walk/walk/
-                if p.endswith("/walk"):
-                    p = p[:-5]
-                paths[bt] = p
-        if paths:
-            _sprite_paths_cache[file_name] = paths
+        if not layers_by_z:
+            continue
+
+        layers_by_z.sort(key=lambda x: x[0])
+        fg_layer = layers_by_z[-1][1]  # Highest zPos = foreground
+
+        # Build foreground paths (raw directory, _build_walk_url handles /walk)
+        body_types = ("male", "female", "child", "teen", "muscular", "pregnant")
+        fg_paths = {}
+        for bt in body_types:
+            if bt in fg_layer and isinstance(fg_layer[bt], str):
+                fg_paths[bt] = fg_layer[bt].rstrip("/")
+        if fg_paths:
+            _sprite_paths_cache[file_name] = fg_paths
+
+        # Build behind paths (lowest zPos layer, only if different from fg)
+        if len(layers_by_z) >= 2:
+            bg_layer = layers_by_z[0][1]  # Lowest zPos = behind body
+            bg_paths = {}
+            for bt in body_types:
+                if bt in bg_layer and isinstance(bg_layer[bt], str):
+                    bg_paths[bt] = bg_layer[bt].rstrip("/")
+            if bg_paths:
+                _behind_paths_cache[file_name] = bg_paths
+
     return _sprite_paths_cache
+
+
+def _load_behind_paths() -> Dict[str, Dict[str, str]]:
+    """Return behind-layer paths cache (built by _load_sprite_paths)."""
+    _load_sprite_paths()  # Ensure cache is populated
+    return _behind_paths_cache or {}
 
 
 def _load_all_items_for_random(db: Session) -> List[dict]:
@@ -1943,14 +1987,23 @@ def generate_random_character(
     # Resolve sprite paths for each selection (skip items without walk sprites)
     _SKIP_SPRITE_PATH = {"expression", "expression_crying", "ammo", "quiver"}
     sprite_paths = _load_sprite_paths()
+    behind_paths = _load_behind_paths()
     for sel in selections:
         if sel["type"] in _SKIP_SPRITE_PATH:
             continue
+        variant = sel.get("variant", "")
+        # Foreground layer
         paths = sprite_paths.get(sel["item"])
         if paths:
             path = paths.get(body_type) or next(iter(paths.values()), None)
             if path and "${" not in path:
-                sel["sprite_path"] = path
+                sel["sprite_path"] = _build_walk_url(path, variant)
+        # Behind layer for weapons/shields (rendered below body)
+        bg_paths = behind_paths.get(sel["item"])
+        if bg_paths:
+            bg_path = bg_paths.get(body_type) or next(iter(bg_paths.values()), None)
+            if bg_path and "${" not in bg_path:
+                sel["sprite_path_behind"] = _build_walk_url(bg_path, variant)
 
     # Build description
     class_label = cls_cfg.get("display_name", "") if cls_cfg else ""
