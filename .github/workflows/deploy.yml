@@ -17,6 +17,6 @@ jobs:
           script: |
             cd /home/ubuntu/Alkema-Backend
             git pull origin master
-            docker-compose -f docker-compose.prod.yml build --no-cache
-            docker-compose -f docker-compose.prod.yml up -d --force-recreate
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate
             docker exec wordpress-mega-merger_caddy_1 caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true

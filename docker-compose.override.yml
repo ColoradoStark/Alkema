@@ -1,0 +1,37 @@
+# Local development overrides — auto-loaded by `docker compose up`.
+# Adds port mappings for direct access and source volume mounts for hot reload.
+# NOT used in production (deploy uses -f docker-compose.yml -f docker-compose.prod.yml).
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  mongodb:
+    ports:
+      - "27017:27017"
+
+  legacy-generator:
+    ports:
+      - "8080:80"
+
+  api-character-sprite-generator:
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./API-Character-Sprite-Generator:/app
+      - ./Universal-LPC-Spritesheet-Character-Generator:/generator:ro
+
+  game-server:
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./Alkema-Client/server:/app
+      - /app/node_modules
+
+  game-client:
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./Alkema-Client/client:/app
+      - /app/node_modules
