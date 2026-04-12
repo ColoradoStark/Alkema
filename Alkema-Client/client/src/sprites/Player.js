@@ -39,7 +39,52 @@ export class Player {
         this.sprite.add(this.nameText);
     }
 
+    playAttack() {
+        if (this.isAttacking) return;
+        this.isAttacking = true;
+
+        // Stop movement during attack
+        if (this.sprite.body) {
+            this.sprite.body.setVelocity(0, 0);
+        }
+
+        // Pick animation based on weapon type from selections
+        const attackAnim = this.getAttackAnimation();
+        const dir = this.sprite.currentDirection || 'down';
+
+        this.sprite.playAnimation(attackAnim, dir);
+
+        // Listen for animation complete to return to idle
+        if (this.sprite.sprite) {
+            this.sprite.sprite.once('animationcomplete', () => {
+                this.isAttacking = false;
+                this.sprite.stopAnimation();
+            });
+        }
+    }
+
+    getAttackAnimation() {
+        const selections = this.characterData?.selections || [];
+        const weapon = selections.find(s => s.type === 'weapon');
+        if (!weapon) return 'thrust'; // unarmed
+
+        // weapon.item format: "weapon_sword_longsword", "weapon_ranged_bow_great", etc.
+        const parts = weapon.item.split('_');
+        const weaponCategory = parts[1]; // sword, ranged, blunt, magic, polearm, tool
+
+        switch (weaponCategory) {
+            case 'sword': return 'slash';
+            case 'ranged': return 'shoot';
+            case 'magic': return 'spellcast';
+            case 'polearm': return 'thrust';
+            case 'blunt': return 'slash';
+            case 'tool': return 'slash';
+            default: return 'slash';
+        }
+    }
+
     setVelocity(vx, vy) {
+        if (this.isAttacking) return; // Don't move during attack
         if (this.isLocal) {
             if (!this.sprite.body) {
                 return;

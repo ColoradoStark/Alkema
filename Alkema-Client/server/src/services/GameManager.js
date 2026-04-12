@@ -113,6 +113,13 @@ export class GameManager {
             });
         });
 
+        socket.on('player-attack', (data) => {
+            socket.to(player.room).emit('player-attacked', {
+                id: player.id,
+                direction: data.direction
+            });
+        });
+
         socket.on('request-animations', () => {
             const animations = this.detectCharacterAnimations(player.character);
             socket.emit('animations-available', animations);

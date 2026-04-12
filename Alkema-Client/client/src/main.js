@@ -67,6 +67,7 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+window.__PHASER_GAME = game; // debug access for testing
 
 // Try to lock orientation to portrait
 try {

@@ -122,6 +122,13 @@ export class GameScene extends Scene {
         this.networkManager.on('player-updated', (data) => {
             this.updatePlayerAppearance(data.id, data.character);
         });
+
+        this.networkManager.on('player-attacked', (data) => {
+            const player = this.players.get(data.id);
+            if (player && player !== this.localPlayer) {
+                player.playAttack();
+            }
+        });
     }
 
     setupInput() {
@@ -201,6 +208,14 @@ export class GameScene extends Scene {
         const player = this.players.get(playerId);
         if (player) {
             player.updateAppearance(characterData);
+        }
+    }
+
+    emitAttack() {
+        if (this.networkManager && this.networkManager.socket && this.networkManager.socket.connected) {
+            this.networkManager.socket.emit('player-attack', {
+                direction: this.localPlayer.sprite.currentDirection || 'down'
+            });
         }
     }
 

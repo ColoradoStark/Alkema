@@ -453,10 +453,10 @@ export class UIScene extends Scene {
     }
 
     handleAttack() {
-        console.log('Attack!');
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.localPlayer) {
-            // Trigger attack animation or action
+            gameScene.localPlayer.playAttack();
+            gameScene.emitAttack();
         }
     }
 
