@@ -22,9 +22,12 @@ const ANIM_ROWS = {
 const OVERSIZE_TO_STANDARD = {
     slash_oversize: 'slash',
     slash_reverse_oversize: 'slash',
+    slash_128: 'slash',
     thrust_oversize: 'thrust',
     walk_128: 'walk',
     shoot_oversize: 'shoot',
+    backslash_128: 'backslash',
+    halfslash_128: 'halfslash',
 };
 
 // Walk row start - used for idle fallback

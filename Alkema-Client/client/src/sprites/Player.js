@@ -64,12 +64,9 @@ export class Player {
 
         this.sprite.onAnimationComplete(finishAttack);
 
-        // Safety timeout: always end attack even if animationcomplete doesn't fire
-        const activeAnim = this.sprite.getActiveSprite()?.anims?.currentAnim;
-        const frames = activeAnim?.frames?.length || 6;
-        const fps = activeAnim?.frameRate || 10;
-        const duration = (frames / fps) * 1000 + 200;
-        setTimeout(finishAttack, duration);
+        // Safety timeout based on known animation lengths (10fps)
+        // Most attacks are 6-13 frames at 10fps = 600-1300ms
+        setTimeout(finishAttack, 1500);
     }
 
     getAttackAnimation() {
