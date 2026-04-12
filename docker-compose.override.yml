@@ -20,7 +20,6 @@ services:
       - "8000:8000"
     volumes:
       - ./API-Character-Sprite-Generator:/app
-      - ./Universal-LPC-Spritesheet-Character-Generator:/generator:ro
 
   game-server:
     ports:
