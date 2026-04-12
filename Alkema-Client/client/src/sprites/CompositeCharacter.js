@@ -113,6 +113,13 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.playAnimation('idle', 'down');
 
         if (this.onLoaded) this.onLoaded();
+
+        // If sprite-meta arrived before spritesheet loaded, apply it now
+        if (this._pendingMeta) {
+            const meta = this._pendingMeta;
+            this._pendingMeta = null;
+            this.applySpriteMeta(meta);
+        }
     }
 
     createAnimations(textureKey) {
@@ -171,6 +178,12 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         const hasOversized = Object.keys(customAnims).some(k => k !== 'blanked_animations');
         if (!hasOversized) return;
 
+        // If spritesheet hasn't loaded yet, defer until onTextureReady
+        if (!this.animationKey) {
+            this._pendingMeta = meta;
+            return;
+        }
+
         // Re-fetch the spritesheet as a blob to get untainted canvas access
         const spriteUrl = this.characterData.spriteUrl;
         if (!spriteUrl) return;
@@ -181,6 +194,20 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             .then(bitmap => {
                 this._createOversizedAnimations(bitmap, customAnims);
                 bitmap.close();
+
+                // Re-play current animation so it picks up oversized version
+                const currentAnim = this.sprite?.anims?.currentAnim;
+                if (currentAnim) {
+                    // Extract the animation name from the key (e.g. "anim_abc_walk_down" → "walk")
+                    const parts = currentAnim.key.split('_');
+                    const dir = parts.pop();
+                    // animName is everything between animationKey prefix and direction
+                    const prefix = this.animationKey + '_';
+                    const animName = currentAnim.key.slice(prefix.length, -(dir.length + 1));
+                    if (animName) {
+                        this.playAnimation(animName, dir);
+                    }
+                }
             })
             .catch(err => console.warn('Failed to load oversized animations:', err));
     }
