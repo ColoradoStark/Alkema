@@ -331,15 +331,8 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                 const osTextureKey = anim.frames[0].textureKey;
 
                 this.oversizedSprite = this.scene.add.sprite(0, 0, osTextureKey, 0);
-                // Scale oversized frames down to fit the standard display size
-                const scale = FRAME_SIZE / result.frameSize;
-                this.oversizedSprite.setScale(scale);
                 this.add(this.oversizedSprite);
             }
-
-            // Update scale if frame size changed
-            const scale = FRAME_SIZE / result.frameSize;
-            this.oversizedSprite.setScale(scale);
 
             // Show oversized, hide standard
             this.oversizedSprite.setVisible(true);
