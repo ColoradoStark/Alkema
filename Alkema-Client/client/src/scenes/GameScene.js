@@ -36,10 +36,11 @@ export class GameScene extends Scene {
                 this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
                 this.cameras.main.setZoom(1);
             }
-            
+
             this.updatePlayerCount();
+            this.applyPendingSpriteMeta();
         }
-        
+
         if (this.networkManager.currentPlayers) {
             Object.values(this.networkManager.currentPlayers).forEach(player => {
                 this.addPlayer(player);
@@ -93,6 +94,7 @@ export class GameScene extends Scene {
                     this.cameras.main.setZoom(1);
                 }
                 this.updatePlayerCount();
+                this.applyPendingSpriteMeta();
             }
         });
 
@@ -129,6 +131,18 @@ export class GameScene extends Scene {
                 player.playAttack();
             }
         });
+
+        this.networkManager.on('sprite-meta', (meta) => {
+            if (this.localPlayer) {
+                this.localPlayer.applySpriteMeta(meta);
+            }
+        });
+    }
+
+    applyPendingSpriteMeta() {
+        if (this.networkManager.spriteMeta && this.localPlayer) {
+            this.localPlayer.applySpriteMeta(this.networkManager.spriteMeta);
+        }
     }
 
     setupInput() {

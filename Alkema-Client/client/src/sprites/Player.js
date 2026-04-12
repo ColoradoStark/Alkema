@@ -55,12 +55,21 @@ export class Player {
         this.sprite.playAnimation(attackAnim, dir);
 
         // Listen for animation complete to return to idle
-        if (this.sprite.sprite) {
-            this.sprite.sprite.once('animationcomplete', () => {
-                this.isAttacking = false;
-                this.sprite.stopAnimation();
-            });
-        }
+        // Must get active sprite AFTER playAnimation since it may switch to oversized
+        const finishAttack = () => {
+            if (!this.isAttacking) return;
+            this.isAttacking = false;
+            this.sprite.stopAnimation();
+        };
+
+        this.sprite.onAnimationComplete(finishAttack);
+
+        // Safety timeout: always end attack even if animationcomplete doesn't fire
+        const activeAnim = this.sprite.getActiveSprite()?.anims?.currentAnim;
+        const frames = activeAnim?.frames?.length || 6;
+        const fps = activeAnim?.frameRate || 10;
+        const duration = (frames / fps) * 1000 + 200;
+        setTimeout(finishAttack, duration);
     }
 
     getAttackAnimation() {
@@ -120,6 +129,10 @@ export class Player {
     setTargetPosition(x, y) {
         this.targetX = x;
         this.targetY = y;
+    }
+
+    applySpriteMeta(meta) {
+        this.sprite.applySpriteMeta(meta);
     }
 
     updateAppearance(characterData) {

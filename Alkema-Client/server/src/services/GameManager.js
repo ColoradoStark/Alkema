@@ -187,6 +187,21 @@ export class GameManager {
             { responseType: 'arraybuffer' }
         );
         this.spriteBuffers.set(playerId, Buffer.from(spriteResponse.data));
+
+        // Capture sprite metadata (oversized animations, coverage info)
+        const metaHeader = spriteResponse.headers['x-sprite-meta'];
+        if (metaHeader) {
+            try {
+                const meta = JSON.parse(metaHeader);
+                const player = this.players.get(playerId);
+                if (player) {
+                    player.character.spriteMeta = meta;
+                    player.socket.emit('sprite-meta', meta);
+                }
+            } catch (e) {
+                console.error('GameManager: Failed to parse sprite meta:', e.message);
+            }
+        }
     }
 
     detectCharacterAnimations(character) {
