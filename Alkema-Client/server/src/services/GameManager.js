@@ -147,7 +147,7 @@ export class GameManager {
         const classes = ['warrior', 'mage', 'pirate', 'ranger', 'thief', 'cleric'];
         const armors = ['light', 'normal', 'heavy'];
         const race = races[Math.floor(Math.random() * races.length)];
-        const charClass = 'ranger'; // TODO: restore random: classes[Math.floor(Math.random() * classes.length)];
+        const charClass = classes[Math.floor(Math.random() * classes.length)];
         const armor = armors[Math.floor(Math.random() * armors.length)];
         const response = await axios.get(`${API_URL}/random-character`, {
             params: { class: charClass, armor, race, body_type: bodyType }
