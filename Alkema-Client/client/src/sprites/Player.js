@@ -85,7 +85,8 @@ export class Player {
         const frame = row * 13 + 10;
 
         const arrow = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow-projectile', frame);
-        arrow.setDepth(15);
+        arrow.setDepth(25);
+        arrow.setScale(3);
 
         const speed = 300;
         const velocity = { up: { x: 0, y: -speed }, down: { x: 0, y: speed }, left: { x: -speed, y: 0 }, right: { x: speed, y: 0 } };
