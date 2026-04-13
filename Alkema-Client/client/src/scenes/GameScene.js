@@ -132,6 +132,13 @@ export class GameScene extends Scene {
             }
         });
 
+        this.networkManager.on('player-cast', (data) => {
+            const player = this.players.get(data.id);
+            if (player && player !== this.localPlayer) {
+                player.playCast();
+            }
+        });
+
         this.networkManager.on('sprite-meta', (meta) => {
             if (this.localPlayer) {
                 this.localPlayer.applySpriteMeta(meta);
@@ -228,6 +235,14 @@ export class GameScene extends Scene {
     emitAttack() {
         if (this.networkManager && this.networkManager.socket && this.networkManager.socket.connected) {
             this.networkManager.socket.emit('player-attack', {
+                direction: this.localPlayer.sprite.currentDirection || 'down'
+            });
+        }
+    }
+
+    emitCast() {
+        if (this.networkManager && this.networkManager.socket && this.networkManager.socket.connected) {
+            this.networkManager.socket.emit('player-cast', {
                 direction: this.localPlayer.sprite.currentDirection || 'down'
             });
         }

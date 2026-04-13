@@ -48,19 +48,18 @@ export class Player {
             this.sprite.body.setVelocity(0, 0);
         }
 
-        // Pick animation based on weapon type from selections
-        const attackAnim = this.getAttackAnimation();
         const dir = this.sprite.currentDirection || 'down';
 
-        this.sprite.playAnimation(attackAnim, dir);
-
-        // Spawn arrow projectile for ranged attacks
-        if (attackAnim === 'shoot') {
+        // Melee button: use melee animation, but if weapon is ranged, shoot + arrow
+        const rangedAnim = this.getRangedAnimation();
+        if (rangedAnim) {
+            this.sprite.playAnimation(rangedAnim, dir);
             setTimeout(() => this.spawnArrow(dir), 200);
+        } else {
+            const meleeAnim = this.getMeleeAnimation();
+            this.sprite.playAnimation(meleeAnim, dir);
         }
 
-        // Listen for animation complete to return to idle
-        // Must get active sprite AFTER playAnimation since it may switch to oversized
         const finishAttack = () => {
             if (!this.isAttacking) return;
             this.isAttacking = false;
@@ -70,8 +69,30 @@ export class Player {
         this.sprite.onAnimationComplete(finishAttack);
 
         // Safety timeout based on known animation lengths (20fps)
-        // Most attacks are 6-13 frames at 20fps = 300-650ms
         setTimeout(finishAttack, 750);
+    }
+
+    playCast() {
+        if (this.isAttacking) return;
+        this.isAttacking = true;
+
+        if (this.sprite.body) {
+            this.sprite.body.setVelocity(0, 0);
+        }
+
+        const dir = this.sprite.currentDirection || 'down';
+        this.sprite.playAnimation('spellcast', dir);
+
+        const finishCast = () => {
+            if (!this.isAttacking) return;
+            this.isAttacking = false;
+            this.sprite.stopAnimation();
+        };
+
+        this.sprite.onAnimationComplete(finishCast);
+
+        // Spellcast is 7 frames at 20fps = 350ms
+        setTimeout(finishCast, 500);
     }
 
     spawnArrow(direction) {
@@ -110,7 +131,7 @@ export class Player {
         this.scene.events.on('update', updateArrow);
     }
 
-    getAttackAnimation() {
+    getMeleeAnimation() {
         const selections = this.characterData?.selections || [];
         const weapon = selections.find(s => s.type === 'weapon');
         if (!weapon) return 'thrust'; // unarmed
@@ -118,16 +139,31 @@ export class Player {
         // weapon.item format: "weapon_sword_longsword", "weapon_ranged_bow_great", etc.
         const parts = weapon.item.split('_');
         const weaponCategory = parts[1]; // sword, ranged, blunt, magic, polearm, tool
+        const weaponName = parts[2]; // specific weapon name
 
         switch (weaponCategory) {
             case 'sword': return 'slash';
-            case 'ranged': return 'shoot';
-            case 'magic': return 'spellcast';
+            case 'ranged': return 'thrust'; // melee fallback for bows
+            case 'magic':
+                // wand uses slash, all staffs use thrust
+                return weaponName === 'wand' ? 'slash' : 'thrust';
             case 'polearm': return 'thrust';
             case 'blunt': return 'slash';
             case 'tool': return 'slash';
             default: return 'slash';
         }
+    }
+
+    getRangedAnimation() {
+        const selections = this.characterData?.selections || [];
+        const weapon = selections.find(s => s.type === 'weapon');
+        if (!weapon) return null;
+
+        const parts = weapon.item.split('_');
+        const weaponCategory = parts[1];
+
+        if (weaponCategory === 'ranged') return 'shoot';
+        return null;
     }
 
     setVelocity(vx, vy) {

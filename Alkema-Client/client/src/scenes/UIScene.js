@@ -461,10 +461,10 @@ export class UIScene extends Scene {
     }
 
     handleAbility() {
-        console.log('Ability!');
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.localPlayer) {
-            // Trigger ability animation or action
+            gameScene.localPlayer.playCast();
+            gameScene.emitCast();
         }
     }
 
