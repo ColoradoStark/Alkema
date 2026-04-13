@@ -79,14 +79,13 @@ export class Player {
         if (!this.scene.textures.exists('arrow-projectile')) return;
 
         // Arrow spritesheet: 13 cols x 4 rows (up=0, left=1, down=2, right=3)
-        // Frame 10 in each row is a clean in-flight arrow
+        // Frame 5 in each row is a clear in-flight arrow
         const dirRow = { up: 0, left: 1, down: 2, right: 3 };
         const row = dirRow[direction] ?? 2;
-        const frame = row * 13 + 10;
+        const frame = row * 13 + 5;
 
         const arrow = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow-projectile', frame);
         arrow.setDepth(25);
-        arrow.setScale(3);
 
         const speed = 300;
         const velocity = { up: { x: 0, y: -speed }, down: { x: 0, y: speed }, left: { x: -speed, y: 0 }, right: { x: speed, y: 0 } };
