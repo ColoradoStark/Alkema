@@ -56,7 +56,6 @@ export class Player {
 
         // Spawn arrow projectile for ranged attacks
         if (attackAnim === 'shoot') {
-            // Delay projectile spawn to match the release point in the shoot animation
             setTimeout(() => this.spawnArrow(dir), 200);
         }
 
@@ -78,14 +77,16 @@ export class Player {
     spawnArrow(direction) {
         if (!this.scene.textures.exists('arrow-projectile')) return;
 
-        // Arrow spritesheet: 13 cols x 4 rows (up=0, left=1, down=2, right=3)
-        // Frame 5 in each row is a clear in-flight arrow
-        const dirRow = { up: 0, left: 1, down: 2, right: 3 };
-        const row = dirRow[direction] ?? 2;
-        const frame = row * 13 + 5;
+        // Use left/right arrow rows and rotate for up/down
+        // Row 1 = left, Row 3 = right, frames 0-8 animate then hold
+        const row = (direction === 'left' || direction === 'up') ? 1 : 3;
+        const startFrame = row * 13;
 
+        const frame = startFrame + 5;
         const arrow = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow-projectile', frame);
         arrow.setDepth(25);
+        if (direction === 'up') arrow.setRotation(-Math.PI / 2);
+        if (direction === 'down') arrow.setRotation(Math.PI / 2);
 
         const speed = 300;
         const velocity = { up: { x: 0, y: -speed }, down: { x: 0, y: speed }, left: { x: -speed, y: 0 }, right: { x: speed, y: 0 } };
