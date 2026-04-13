@@ -156,6 +156,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                 if (this.scene.anims.exists(key)) continue;
 
                 const isLooping = (animName === 'walk' || animName === 'run');
+                const isAttack = ['slash', 'thrust', 'shoot', 'spellcast', 'backslash', 'halfslash'].includes(animName);
 
                 this.scene.anims.create({
                     key,
@@ -163,7 +164,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                         start: startFrame,
                         end: startFrame + frameCount - 1
                     }),
-                    frameRate: 10,
+                    frameRate: isAttack ? 20 : 10,
                     repeat: isLooping ? -1 : 0
                 });
             }
@@ -244,6 +245,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             const cols = num_frames;
             const dirsToCreate = directions.slice(0, num_directions);
             const isLooping = animName === 'walk_128';
+            const isAttack = !isLooping; // all non-walk oversized are attack animations
 
             for (let i = 0; i < dirsToCreate.length; i++) {
                 const dir = dirsToCreate[i];
@@ -257,7 +259,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                         start: startFrame,
                         end: startFrame + num_frames - 1
                     }),
-                    frameRate: 10,
+                    frameRate: isAttack ? 20 : 10,
                     repeat: isLooping ? -1 : 0
                 });
             }

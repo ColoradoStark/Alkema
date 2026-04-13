@@ -54,6 +54,12 @@ export class Player {
 
         this.sprite.playAnimation(attackAnim, dir);
 
+        // Spawn arrow projectile for ranged attacks
+        if (attackAnim === 'shoot') {
+            // Delay projectile spawn to match the release point in the shoot animation
+            setTimeout(() => this.spawnArrow(dir), 200);
+        }
+
         // Listen for animation complete to return to idle
         // Must get active sprite AFTER playAnimation since it may switch to oversized
         const finishAttack = () => {
@@ -64,9 +70,43 @@ export class Player {
 
         this.sprite.onAnimationComplete(finishAttack);
 
-        // Safety timeout based on known animation lengths (10fps)
-        // Most attacks are 6-13 frames at 10fps = 600-1300ms
-        setTimeout(finishAttack, 1500);
+        // Safety timeout based on known animation lengths (20fps)
+        // Most attacks are 6-13 frames at 20fps = 300-650ms
+        setTimeout(finishAttack, 750);
+    }
+
+    spawnArrow(direction) {
+        if (!this.scene.textures.exists('arrow-projectile')) return;
+
+        // Arrow spritesheet: 13 cols x 4 rows (up=0, left=1, down=2, right=3)
+        // Frame 10 in each row is a clean in-flight arrow
+        const dirRow = { up: 0, left: 1, down: 2, right: 3 };
+        const row = dirRow[direction] ?? 2;
+        const frame = row * 13 + 10;
+
+        const arrow = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow-projectile', frame);
+        arrow.setDepth(15);
+
+        const speed = 300;
+        const velocity = { up: { x: 0, y: -speed }, down: { x: 0, y: speed }, left: { x: -speed, y: 0 }, right: { x: speed, y: 0 } };
+        const vel = velocity[direction] || velocity.down;
+
+        // Use scene update to move the arrow each frame
+        const updateArrow = (time, delta) => {
+            arrow.x += vel.x * (delta / 1000);
+            arrow.y += vel.y * (delta / 1000);
+
+            // Remove when far offscreen from camera
+            const cam = this.scene.cameras.main;
+            const margin = 100;
+            if (arrow.x < cam.scrollX - margin || arrow.x > cam.scrollX + cam.width + margin ||
+                arrow.y < cam.scrollY - margin || arrow.y > cam.scrollY + cam.height + margin) {
+                arrow.destroy();
+                this.scene.events.off('update', updateArrow);
+            }
+        };
+
+        this.scene.events.on('update', updateArrow);
     }
 
     getAttackAnimation() {
