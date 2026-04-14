@@ -104,9 +104,24 @@ export class Player {
         const startFrame = row * 13;
 
         const frame = startFrame + 5;
-        const arrow = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow-projectile', frame);
+
+        // Arrow spawn offset from character center, per weapon and direction.
+        // Aligns the projectile with the weapon's muzzle/release point in the
+        // attack animation. Positive X = right, positive Y = down.
+        const ARROW_OFFSETS = {
+            bow:      { up: { x:  3, y: -32 }, down: { x: -3, y: 12 }, left: { x: 0, y:  3 }, right: { x: 0, y:  3 } },
+            crossbow: { up: { x:  6, y: -32 }, down: { x: -6, y: 12 }, left: { x: 0, y: 15 }, right: { x: 0, y: 15 } },
+        };
+
+        const selections = this.characterData?.selections || [];
+        const weapon = selections.find(s => s.type === 'weapon');
+        const weaponType = weapon?.item.split('_')[2]; // bow, crossbow, slingshot
+        const offsets = ARROW_OFFSETS[weaponType] || ARROW_OFFSETS.bow;
+        const { x: offsetX, y: offsetY } = offsets[direction] || { x: 0, y: 0 };
+
+        const arrow = this.scene.add.sprite(this.sprite.x + offsetX, this.sprite.y + offsetY, 'arrow-projectile', frame);
         arrow.setDepth(25);
-        if (direction === 'up') arrow.setRotation(-Math.PI / 2);
+        if (direction === 'up') arrow.setRotation(Math.PI / 2);
         if (direction === 'down') arrow.setRotation(Math.PI / 2);
 
         const speed = 300;
