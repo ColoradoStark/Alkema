@@ -139,16 +139,29 @@ export class GameScene extends Scene {
             }
         });
 
-        this.networkManager.on('sprite-meta', (meta) => {
-            if (this.localPlayer) {
-                this.localPlayer.applySpriteMeta(meta);
+        this.networkManager.on('sprite-meta', (data) => {
+            const { playerId, meta } = data;
+            if (playerId) {
+                // New format: includes playerId so we can apply to any player
+                const player = this.players.get(playerId);
+                if (player) {
+                    player.applySpriteMeta(meta);
+                }
+            } else {
+                // Legacy format: apply to local player
+                if (this.localPlayer) {
+                    this.localPlayer.applySpriteMeta(data);
+                }
             }
         });
     }
 
     applyPendingSpriteMeta() {
-        if (this.networkManager.spriteMeta && this.localPlayer) {
-            this.localPlayer.applySpriteMeta(this.networkManager.spriteMeta);
+        const metaMap = this.networkManager.spriteMetaMap;
+        if (!metaMap) return;
+        for (const [playerId, meta] of Object.entries(metaMap)) {
+            const player = this.players.get(playerId);
+            if (player) player.applySpriteMeta(meta);
         }
     }
 
@@ -207,6 +220,15 @@ export class GameScene extends Scene {
         );
 
         this.players.set(playerData.id, player);
+
+        // Apply sprite-meta if it's in the character data (existing players)
+        // or if it arrived before this player was added to the scene
+        const meta = playerData.character?.spriteMeta
+            || this.networkManager.spriteMetaMap?.[playerData.id];
+        if (meta) {
+            player.applySpriteMeta(meta);
+        }
+
         return player;
     }
 

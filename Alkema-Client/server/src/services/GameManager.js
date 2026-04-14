@@ -151,7 +151,7 @@ export class GameManager {
         // Call the API for a random character
         const bodyType = Math.random() < 0.5 ? 'male' : 'female';
         const races = ['human', 'elf'];
-        const classes = ['warrior', 'mage', 'pirate', 'ranger', 'thief', 'cleric'];
+        const classes = ['warrior', 'mage', 'pirate', 'ranger', 'thief', 'cleric', 'guard'];
         const armors = ['light', 'normal', 'heavy'];
         const race = races[Math.floor(Math.random() * races.length)];
         const charClass = classes[Math.floor(Math.random() * classes.length)];
@@ -168,7 +168,8 @@ export class GameManager {
         }
         this.usedNames.add(characterName);
 
-        console.log(`GameManager: API character: ${characterName} (${apiChar.body_type}, ${apiChar.race}, ${apiChar.character_class})`);
+        const weapon = apiChar.selections?.find(s => s.type === 'weapon');
+        console.log(`GameManager: API character: ${characterName} (${apiChar.body_type}, ${apiChar.race}, ${apiChar.character_class}, weapon: ${weapon?.item || 'none'})`);
 
         return {
             id: playerId,
@@ -203,7 +204,8 @@ export class GameManager {
                 const player = this.players.get(playerId);
                 if (player) {
                     player.character.spriteMeta = meta;
-                    player.socket.emit('sprite-meta', meta);
+                    // Send to owner and all other players in the room
+                    this.io.to(player.room).emit('sprite-meta', { playerId, meta });
                 }
             } catch (e) {
                 console.error('GameManager: Failed to parse sprite meta:', e.message);

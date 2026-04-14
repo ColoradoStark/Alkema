@@ -67,6 +67,11 @@ export class NetworkManager {
                 } else if (event === 'current-players') {
                     this.currentPlayers = data;
                 } else if (event === 'sprite-meta') {
+                    // Store per-player sprite meta
+                    if (!this.spriteMetaMap) this.spriteMetaMap = {};
+                    if (data.playerId) {
+                        this.spriteMetaMap[data.playerId] = data.meta;
+                    }
                     this.spriteMeta = data;
                 }
                 

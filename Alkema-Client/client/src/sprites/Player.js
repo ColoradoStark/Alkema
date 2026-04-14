@@ -42,6 +42,8 @@ export class Player {
     playAttack() {
         if (this.isAttacking) return;
         this.isAttacking = true;
+        this._attackId = (this._attackId || 0) + 1;
+        const attackId = this._attackId;
 
         // Stop movement during attack
         if (this.sprite.body) {
@@ -61,20 +63,20 @@ export class Player {
         }
 
         const finishAttack = () => {
-            if (!this.isAttacking) return;
+            if (this._attackId !== attackId) return;
             this.isAttacking = false;
             this.sprite.stopAnimation();
         };
 
         this.sprite.onAnimationComplete(finishAttack);
-
-        // Safety timeout based on known animation lengths (20fps)
         setTimeout(finishAttack, 750);
     }
 
     playCast() {
         if (this.isAttacking) return;
         this.isAttacking = true;
+        this._attackId = (this._attackId || 0) + 1;
+        const attackId = this._attackId;
 
         if (this.sprite.body) {
             this.sprite.body.setVelocity(0, 0);
@@ -84,14 +86,12 @@ export class Player {
         this.sprite.playAnimation('spellcast', dir);
 
         const finishCast = () => {
-            if (!this.isAttacking) return;
+            if (this._attackId !== attackId) return;
             this.isAttacking = false;
             this.sprite.stopAnimation();
         };
 
         this.sprite.onAnimationComplete(finishCast);
-
-        // Spellcast is 7 frames at 20fps = 350ms
         setTimeout(finishCast, 500);
     }
 
@@ -161,9 +161,13 @@ export class Player {
 
         const parts = weapon.item.split('_');
         const weaponCategory = parts[1];
+        const weaponType = parts[2]; // bow, crossbow, slingshot, boomerang
 
-        if (weaponCategory === 'ranged') return 'shoot';
-        return null;
+        if (weaponCategory !== 'ranged') return null;
+
+        // Bows use shoot animation, crossbow/slingshot use thrust
+        // All spawn an arrow projectile
+        return weaponType === 'bow' ? 'shoot' : 'thrust';
     }
 
     setVelocity(vx, vy) {
@@ -219,27 +223,31 @@ export class Player {
             const dx = this.targetX - this.sprite.x;
             const dy = this.targetY - this.sprite.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (distance > 2) {
                 // Use lerp for smoother movement
                 const lerpFactor = Math.min(this.interpolationSpeed * (delta / 16.67), 1);
                 this.sprite.x = Phaser.Math.Linear(this.sprite.x, this.targetX, lerpFactor);
                 this.sprite.y = Phaser.Math.Linear(this.sprite.y, this.targetY, lerpFactor);
-                
-                let direction;
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    direction = dx > 0 ? 'right' : 'left';
-                } else {
-                    direction = dy > 0 ? 'down' : 'up';
+
+                if (!this.isAttacking) {
+                    let direction;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        direction = dx > 0 ? 'right' : 'left';
+                    } else {
+                        direction = dy > 0 ? 'down' : 'up';
+                    }
+
+                    this.sprite.setDirection(direction);
+                    this.sprite.playAnimation('walk', direction);
                 }
-                
-                this.sprite.setDirection(direction);
-                this.sprite.playAnimation('walk', direction);
             } else {
                 // Snap to final position when very close
                 this.sprite.x = this.targetX;
                 this.sprite.y = this.targetY;
-                this.sprite.stopAnimation();
+                if (!this.isAttacking) {
+                    this.sprite.stopAnimation();
+                }
             }
         }
         
