@@ -171,8 +171,43 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         }
     }
 
+    _updateIdleFrames(idleFrames) {
+        const directions = ['up', 'left', 'down', 'right'];
+        const cols = this.sheetCols;
+        const textureKey = `sprite_${this.characterData.id}`;
+
+        for (let i = 0; i < 4; i++) {
+            const dir = directions[i];
+            const frameOffset = idleFrames[dir];
+            if (frameOffset === undefined || frameOffset === 0) continue;
+
+            const walkRow = WALK_START + i;
+            const idleKey = `${this.animationKey}_idle_${dir}`;
+
+            // Remove old idle animation and create new one with correct frame
+            if (this.scene.anims.exists(idleKey)) {
+                this.scene.anims.remove(idleKey);
+            }
+            this.scene.anims.create({
+                key: idleKey,
+                frames: [{ key: textureKey, frame: walkRow * cols + frameOffset }],
+                frameRate: 1,
+                repeat: 0
+            });
+        }
+
+        // Re-play idle if currently idle so it picks up the new frame
+        this.playAnimation('idle', this.currentDirection);
+    }
+
     applySpriteMeta(meta) {
         this.spriteMeta = meta;
+
+        // Update idle animations if idle_frames metadata specifies non-zero frames
+        if (meta?.custom_animations?.idle_frames && this.animationKey) {
+            this._updateIdleFrames(meta.custom_animations.idle_frames);
+        }
+
         if (!meta?.custom_animations) return;
 
         const customAnims = meta.custom_animations;
@@ -263,12 +298,38 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                     repeat: isLooping ? -1 : 0
                 });
             }
+
+            // For walk_128, also create oversized idle using frame 0 of each direction
+            if (animName === 'walk_128') {
+                for (let i = 0; i < dirsToCreate.length; i++) {
+                    const dir = dirsToCreate[i];
+                    const idleKey = `${this.animationKey}_os_idle_${dir}`;
+                    if (this.scene.anims.exists(idleKey)) continue;
+
+                    this.scene.anims.create({
+                        key: idleKey,
+                        frames: [{ key: textureKey, frame: i * cols }],
+                        frameRate: 1,
+                        repeat: 0
+                    });
+                }
+            }
         }
     }
 
     // Get the best animation key, preferring oversized when weapon is missing in standard
     getAnimationKey(animName, direction) {
         const dir = direction || this.currentDirection || 'down';
+
+        // For idle, prefer oversized idle (from walk_128) if it exists
+        // This ensures weapons like bows/polearms are visible when standing still
+        if (animName === 'idle') {
+            const osIdleKey = `${this.animationKey}_os_idle_${dir}`;
+            if (this.scene.anims.exists(osIdleKey)) {
+                const walkFrameSize = this.spriteMeta?.custom_animations?.walk_128?.frame_size || FRAME_SIZE;
+                return { key: osIdleKey, oversized: true, frameSize: walkFrameSize };
+            }
+        }
 
         // Check if we have oversized animations and coverage recommends them
         if (this.spriteMeta?.animation_coverage) {

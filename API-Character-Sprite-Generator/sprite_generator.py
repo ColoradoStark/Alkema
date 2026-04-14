@@ -101,17 +101,29 @@ class SpriteGenerator:
         layers_to_draw.sort(key=lambda x: x['z_pos'] if x['z_pos'] is not None else 0)
 
         spritesheet = Image.new('RGBA', (FULL_WIDTH, FULL_HEIGHT), (0, 0, 0, 0))
+        # Also render without weapons to detect idle frame weapon visibility
+        body_only = Image.new('RGBA', (FULL_WIDTH, FULL_HEIGHT), (0, 0, 0, 0))
 
         for layer_info in layers_to_draw:
             if layer_info['layer'].custom_animation:
                 continue  # handled separately below
             self._composite_layer(spritesheet, layer_info, body_type, selected_items)
+            # Render non-weapon layers to body_only sheet
+            item = layer_info.get('item')
+            if not item or item.type_name not in self.WEAPON_TYPES:
+                self._composite_layer(body_only, layer_info, body_type, selected_items)
+
+        # Detect which walk frame to use for idle per direction
+        idle_frames = self._detect_idle_frames(spritesheet, body_only)
 
         # Render custom/oversized animations below standard grid
         custom_anims = self._get_custom_animations_needed(selected_items)
         spritesheet, custom_layout = self._render_custom_animations(
             spritesheet, body_type, selected_items, custom_anims,
         )
+
+        if idle_frames:
+            custom_layout['idle_frames'] = idle_frames
 
         blanked = []
         if optimized:
@@ -121,6 +133,62 @@ class SpriteGenerator:
         output = io.BytesIO()
         spritesheet.save(output, format='PNG', optimize=False)
         return output.getvalue(), custom_layout
+
+    def _detect_idle_frames(
+        self,
+        full_sheet: Image.Image,
+        body_only: Image.Image,
+    ) -> Optional[Dict[str, int]]:
+        """
+        Detect which walk frame to use for idle per direction.
+
+        Compares walk frame 0 (used for idle) between full sheet and body-only.
+        If they're identical, the weapon isn't visible in idle. Scans frames 1-8
+        to find one where the weapon IS visible.
+
+        Returns dict like {"up": 1, "down": 0, "left": 2, "right": 2}
+        or None if all directions use frame 0.
+        """
+        directions = ['up', 'left', 'down', 'right']
+        walk_start_row = 8  # walk animation starts at row 8
+        result = {}
+        any_override = False
+
+        for i, dir_name in enumerate(directions):
+            row = walk_start_row + i
+            y = row * SPRITE_HEIGHT
+
+            # Check if frame 0 has weapon pixels (diff between full and body-only)
+            frame0_full = full_sheet.crop((0, y, SPRITE_WIDTH, y + SPRITE_HEIGHT))
+            frame0_body = body_only.crop((0, y, SPRITE_WIDTH, y + SPRITE_HEIGHT))
+
+            if self._frames_differ(frame0_full, frame0_body):
+                # Weapon IS visible in frame 0, use it
+                result[dir_name] = 0
+                continue
+
+            # Weapon not visible in frame 0 — find first frame where it is
+            best_frame = 0
+            for f in range(1, 9):  # frames 1-8
+                x = f * SPRITE_WIDTH
+                frame_full = full_sheet.crop((x, y, x + SPRITE_WIDTH, y + SPRITE_HEIGHT))
+                frame_body = body_only.crop((x, y, x + SPRITE_WIDTH, y + SPRITE_HEIGHT))
+                if self._frames_differ(frame_full, frame_body):
+                    best_frame = f
+                    break
+
+            result[dir_name] = best_frame
+            if best_frame != 0:
+                any_override = True
+
+        return result if any_override else None
+
+    @staticmethod
+    def _frames_differ(frame_a: Image.Image, frame_b: Image.Image) -> bool:
+        """Check if two RGBA frames have any pixel differences (weapon present)."""
+        a_data = frame_a.tobytes()
+        b_data = frame_b.tobytes()
+        return a_data != b_data
 
     def _blank_unusable_animations(
         self,
