@@ -1,5 +1,6 @@
 import { CompositeCharacter } from './CompositeCharacter.js';
 import { getWeaponItemKey, getWeaponType, getMeleeAnimation, getRangedAnimation } from './weaponTypes.js';
+import { spawnArrow, spawnRock } from './ProjectileSpawner.js';
 
 const WEAPON_COMBO_ATTACKS = {
     'weapon_sword_longsword':  ['slash', 'slash_reverse', 'thrust'],
@@ -83,9 +84,9 @@ export class Player {
             this.lastAttackType = rangedAnim;
             const weaponType = getWeaponType(this.characterData);
             if (weaponType === 'slingshot') {
-                setTimeout(() => this.spawnRock(dir), 200);
+                setTimeout(() => spawnRock(this.scene, this.sprite.x, this.sprite.y, dir), 200);
             } else {
-                setTimeout(() => this.spawnArrow(dir), 200);
+                setTimeout(() => spawnArrow(this.scene, this.sprite.x, this.sprite.y, dir, weaponType), 200);
             }
         } else {
             const weaponKey = getWeaponItemKey(this.characterData);
@@ -149,91 +150,13 @@ export class Player {
         setTimeout(finishCast, 500);
     }
 
+    // Backward-compat delegate methods (GameScene's remote player-attacked handler calls spawnArrow/spawnRock on the Player instance)
     spawnArrow(direction) {
-        if (!this.scene.textures.exists('arrow-projectile')) return;
-
-        // Use left/right arrow rows and rotate for up/down
-        // Row 1 = left, Row 3 = right, frames 0-8 animate then hold
-        const row = (direction === 'left' || direction === 'up') ? 1 : 3;
-        const startFrame = row * 13;
-
-        const frame = startFrame + 5;
-
-        // Arrow spawn offset from character center, per weapon and direction.
-        // Aligns the projectile with the weapon's muzzle/release point in the
-        // attack animation. Positive X = right, positive Y = down.
-        const ARROW_OFFSETS = {
-            bow:      { up: { x:  3, y: -32 }, down: { x: -3, y: 12 }, left: { x: 0, y:  3 }, right: { x: 0, y:  3 } },
-            crossbow: { up: { x:  6, y: -32 }, down: { x: -6, y: 12 }, left: { x: 0, y: 15 }, right: { x: 0, y: 15 } },
-        };
-
-        const selections = this.characterData?.selections || [];
-        const weapon = selections.find(s => s.type === 'weapon');
-        const weaponType = weapon?.item.split('_')[2]; // bow, crossbow, slingshot
-        const offsets = ARROW_OFFSETS[weaponType] || ARROW_OFFSETS.bow;
-        const { x: offsetX, y: offsetY } = offsets[direction] || { x: 0, y: 0 };
-
-        const arrow = this.scene.add.sprite(this.sprite.x + offsetX, this.sprite.y + offsetY, 'arrow-projectile', frame);
-        arrow.setDepth(25);
-        if (direction === 'up') arrow.setRotation(Math.PI / 2);
-        if (direction === 'down') arrow.setRotation(Math.PI / 2);
-
-        const speed = 300;
-        const velocity = { up: { x: 0, y: -speed }, down: { x: 0, y: speed }, left: { x: -speed, y: 0 }, right: { x: speed, y: 0 } };
-        const vel = velocity[direction] || velocity.down;
-
-        // Use scene update to move the arrow each frame
-        const updateArrow = (time, delta) => {
-            arrow.x += vel.x * (delta / 1000);
-            arrow.y += vel.y * (delta / 1000);
-
-            // Remove when far offscreen from camera
-            const cam = this.scene.cameras.main;
-            const margin = 100;
-            if (arrow.x < cam.scrollX - margin || arrow.x > cam.scrollX + cam.width + margin ||
-                arrow.y < cam.scrollY - margin || arrow.y > cam.scrollY + cam.height + margin) {
-                arrow.destroy();
-                this.scene.events.off('update', updateArrow);
-            }
-        };
-
-        this.scene.events.on('update', updateArrow);
+        spawnArrow(this.scene, this.sprite.x, this.sprite.y, direction, getWeaponType(this.characterData));
     }
 
     spawnRock(direction) {
-        if (!this.scene.textures.exists('rock-projectile')) return;
-
-        const ROCK_OFFSETS = {
-            up:    { x:  0, y: -24 },
-            down:  { x:  0, y:  16 },
-            left:  { x: -16, y:  0 },
-            right: { x:  16, y:  0 },
-        };
-
-        const { x: offsetX, y: offsetY } = ROCK_OFFSETS[direction] || { x: 0, y: 0 };
-
-        const rock = this.scene.add.sprite(this.sprite.x + offsetX, this.sprite.y + offsetY, 'rock-projectile');
-        rock.setScale(0.5);
-        rock.setDepth(25);
-
-        const speed = 250;
-        const velocity = { up: { x: 0, y: -speed }, down: { x: 0, y: speed }, left: { x: -speed, y: 0 }, right: { x: speed, y: 0 } };
-        const vel = velocity[direction] || velocity.down;
-
-        const updateRock = (time, delta) => {
-            rock.x += vel.x * (delta / 1000);
-            rock.y += vel.y * (delta / 1000);
-
-            const cam = this.scene.cameras.main;
-            const margin = 100;
-            if (rock.x < cam.scrollX - margin || rock.x > cam.scrollX + cam.width + margin ||
-                rock.y < cam.scrollY - margin || rock.y > cam.scrollY + cam.height + margin) {
-                rock.destroy();
-                this.scene.events.off('update', updateRock);
-            }
-        };
-
-        this.scene.events.on('update', updateRock);
+        spawnRock(this.scene, this.sprite.x, this.sprite.y, direction);
     }
 
     // Backward-compat delegate methods (GameScene's remote player-attacked handler calls these on the Player instance)
