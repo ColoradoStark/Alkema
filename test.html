@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alkema Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .info { color: #2196f3; }
+    </style>
+</head>
+<body>
+    <h1>Alkema Connection Test</h1>
+    <div id="status">Testing connections...</div>
+    
+    <script type="module">
+        const status = document.getElementById('status');
+        
+        async function test() {
+            let html = '<h3>Test Results:</h3>';
+            
+            // Test 1: Check if we can reach the game server
+            try {
+                const response = await fetch('/socket.io/socket.io.js');
+                if (response.ok) {
+                    html += '<div class="success">✓ Socket.IO library loaded</div>';
+                } else {
+                    html += '<div class="error">✗ Socket.IO library failed to load</div>';
+                }
+            } catch (e) {
+                html += '<div class="error">✗ Cannot reach game server: ' + e.message + '</div>';
+            }
+            
+            // Test 2: Try to connect with Socket.IO
+            try {
+                const script = document.createElement('script');
+                script.src = '/socket.io/socket.io.js';
+                document.head.appendChild(script);
+                
+                await new Promise((resolve) => {
+                    script.onload = resolve;
+                    script.onerror = () => resolve();
+                    setTimeout(resolve, 2000);
+                });
+                
+                if (window.io) {
+                    html += '<div class="success">✓ Socket.IO client available</div>';
+                    
+                    const socket = io('/', {
+                        path: '/socket.io/',
+                        transports: ['websocket']
+                    });
+                    
+                    await new Promise((resolve, reject) => {
+                        socket.on('connect', () => {
+                            html += '<div class="success">✓ Connected to game server</div>';
+                            html += '<div class="info">Socket ID: ' + socket.id + '</div>';
+                            socket.disconnect();
+                            resolve();
+                        });
+                        
+                        socket.on('connect_error', (error) => {
+                            html += '<div class="error">✗ Connection error: ' + error.message + '</div>';
+                            reject(error);
+                        });
+                        
+                        setTimeout(() => {
+                            html += '<div class="error">✗ Connection timeout</div>';
+                            reject(new Error('timeout'));
+                        }, 5000);
+                    }).catch(() => {});
+                } else {
+                    html += '<div class="error">✗ Socket.IO client not loaded</div>';
+                }
+            } catch (e) {
+                html += '<div class="error">✗ Socket test failed: ' + e.message + '</div>';
+            }
+            
+            // Test 3: Check sprite server
+            try {
+                const response = await fetch('http://localhost:8080/spritesheets/body/bodies/male/walk/light.png', {
+                    method: 'HEAD'
+                });
+                if (response.ok) {
+                    html += '<div class="success">✓ Sprite server accessible</div>';
+                } else {
+                    html += '<div class="error">✗ Sprite server returned ' + response.status + '</div>';
+                }
+            } catch (e) {
+                html += '<div class="info">⚠ Cannot reach sprite server directly (CORS expected)</div>';
+            }
+            
+            status.innerHTML = html;
+        }
+        
+        test();
+    </script>
+</body>
+</html>

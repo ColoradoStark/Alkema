@@ -1,0 +1,84 @@
+{
+    "frames": {
+        "arrow_up": {
+            "frame": {"x": 193, "y": 112, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "arrow_down": {
+            "frame": {"x": 193, "y": 138, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "arrow_left": {
+            "frame": {"x": 168, "y": 112, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "arrow_right": {
+            "frame": {"x": 218, "y": 112, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "panel_brown": {
+            "frame": {"x": 16, "y": 288, "w": 48, "h": 48},
+            "sourceSize": {"w": 48, "h": 48}
+        },
+        "panel_beige": {
+            "frame": {"x": 64, "y": 288, "w": 48, "h": 48},
+            "sourceSize": {"w": 48, "h": 48}
+        },
+        "panel_blue": {
+            "frame": {"x": 112, "y": 288, "w": 48, "h": 48},
+            "sourceSize": {"w": 48, "h": 48}
+        },
+        "button_round_brown": {
+            "frame": {"x": 736, "y": 272, "w": 96, "h": 96},
+            "sourceSize": {"w": 96, "h": 96}
+        },
+        "button_square_brown": {
+            "frame": {"x": 801, "y": 433, "w": 31, "h": 31},
+            "sourceSize": {"w": 31, "h": 31}
+        },
+        "button_square_grey": {
+            "frame": {"x": 801, "y": 481, "w": 31, "h": 31},
+            "sourceSize": {"w": 31, "h": 31}
+        },
+        "bar_frame": {
+            "frame": {"x": 636, "y": 28, "w": 108, "h": 28},
+            "sourceSize": {"w": 108, "h": 28}
+        },
+        "bar_frame_golden": {
+            "frame": {"x": 636, "y": 60, "w": 108, "h": 28},
+            "sourceSize": {"w": 108, "h": 28}
+        },
+        "icon_sword": {
+            "frame": {"x": 209, "y": 433, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "icon_shield": {
+            "frame": {"x": 273, "y": 433, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "icon_potion": {
+            "frame": {"x": 305, "y": 433, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "icon_map": {
+            "frame": {"x": 241, "y": 433, "w": 24, "h": 24},
+            "sourceSize": {"w": 24, "h": 24}
+        },
+        "button_red": {
+            "frame": {"x": 129, "y": 193, "w": 49, "h": 49},
+            "sourceSize": {"w": 49, "h": 49}
+        },
+        "button_blue": {
+            "frame": {"x": 345, "y": 193, "w": 49, "h": 49},
+            "sourceSize": {"w": 49, "h": 49}
+        },
+        "button_grey": {
+            "frame": {"x": 399, "y": 193, "w": 49, "h": 49},
+            "sourceSize": {"w": 49, "h": 49}
+        },
+        "dpad_center": {
+            "frame": {"x": 736, "y": 368, "w": 32, "h": 32},
+            "sourceSize": {"w": 32, "h": 32}
+        }
+    }
+}

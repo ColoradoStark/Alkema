@@ -1,0 +1,560 @@
+======================================================================
+CREDITS
+======================================================================
+
+Alkema uses character sprites from the Liberated Pixel Cup (LPC)
+spritesheet collection. These assets are community-created and
+shared under open licenses that require attribution.
+
+Thank you to every artist who contributed to the LPC project.
+Your work makes open-source game development possible.
+
+For the full LPC project, see:
+https://lpc.opengameart.org/
+https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+
+
+======================================================================
+CONTRIBUTING ARTISTS
+======================================================================
+
+7Soul
+  License(s): CC0
+  https://opengameart.org/content/cc0-jewelry-icons
+  https://opengameart.org/content/lpc-jewelry
+
+AntumDeluge
+  License(s): CC-BY 3.0, CC0
+  https://opengameart.org/content/cc0-jewelry-icons
+  https://opengameart.org/content/dungeon-crawl-32x32-tiles
+  https://opengameart.org/content/lpc-folk
+  https://opengameart.org/content/lpc-jewelry
+  https://opengameart.org/content/musclemanogreminotaur
+  ... and 1 more
+
+Barbara Riviera
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/concept-art-for-lpc-entry
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-expanded-hair
+
+Benjamin K. Smith (BenCreating)
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/drakes-and-lizardfolk
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-backpacks
+  ... and 24 more
+
+bluecarrot16
+  License(s): CC-BY 3.0, CC-BY 4.0, CC-BY-SA 3.0, CC-BY-SA 4.0, CC0, GPL 2.0, GPL 3.0, OGA-BY 3.0, OGA-BY 3.0+
+  http://opengameart.org/content/dungeon-crawl-32x32-tiles
+  http://opengameart.org/content/lpc-clothing-updates
+  http://opengameart.org/content/lpc-folk
+  http://opengameart.org/content/lpc-revised-character-basics
+  http://opengameart.org/content/sara-wizard
+  ... and 107 more
+
+Bluecarrot16
+  License(s): CC-BY 3.0+, CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-expanded-pants
+  https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+  ... and 3 more
+
+Carlo Enrico Victoria (Nemisys)
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-brunet-mustache
+  https://opengameart.org/content/lpc-white-beard
+
+Charles Sanchez (CharlesGabriel)
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-crown
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+
+Cobra Hubbard (BlueVortexGames)
+  License(s): CC-BY 3.0
+  https://opengameart.org/content/anime-lpc-hair
+  https://opengameart.org/content/lpc-hair
+
+dalonedrau
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  https://opengameart.org/content/lpc-be-seated
+  https://opengameart.org/content/lpc-character-bases
+  https://opengameart.org/content/lpc-jump-expanded
+  ... and 5 more
+
+Daniel Eddeland (daneeklu)
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0
+  http://opengameart.org/content/lpc-folk
+  https://opengameart.org/content/lpc-boarman
+  https://opengameart.org/content/lpc-character-bases
+  https://opengameart.org/content/lpc-extended-weapon-animations
+  https://opengameart.org/content/lpc-farming-tilesets-magic-animations-and-ui-elements
+  ... and 8 more
+
+DarkwallLKE
+  License(s): CC-BY-SA 3.0, GPL 2.0, GPL 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-crown
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-kite-shield
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+  ... and 1 more
+
+DCSS authors
+  License(s): CC0
+  http://opengameart.org/content/dungeon-crawl-32x32-tiles
+  https://opengameart.org/content/cc0-headgear-icons
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-helmets-mega-pack
+
+Dr. Jamgo
+  License(s): CC0
+  https://opengameart.org/content/lpc-simple-staff
+
+drjamgo@hotmail.com
+  License(s): CC0
+  https://opengameart.org/content/lpc-crossbow-final
+  https://opengameart.org/content/shadow-for-lpc-sprite
+
+Durrani
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  https://opengameart.org/content/lpc-be-seated
+  ... and 14 more
+
+Eliza Wyatt
+  License(s): CC-BY 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-revised-elders
+
+Eliza Wyatt (ElizaWy)
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  https://opengameart.org/content/lpc-be-seated
+  ... and 13 more
+
+ElizaWy
+  License(s): CC-BY, CC-BY-SA 3.0, CC-BY-SA 4.0, CC0, GPL 2.0, GPL 3.0, OGA-BY 3.0, OGA-SA 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  http://opengameart.org/content/lpc-revised-character-basics
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/blob/main/Characters/Hair
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  ... and 47 more
+
+ElizaWy; walk and down by JaidynReiman
+  License(s): OGA-BY 3.0
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Props/Sword%2001%20-%20Arming%20Sword
+  https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+
+Emilio J. Sanchez-Sierra
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-hair
+  https://opengameart.org/content/steampun-a-fy-with-concept-art
+
+Evert
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  ... and 23 more
+
+Fabzy
+  License(s): CC-BY-SA 3.0
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-hair
+  https://opengameart.org/content/lpc-pirates
+  https://opengameart.org/content/the-revolution-hair
+
+gr3yh47
+  License(s): CC-BY-SA 3.0
+  https://opengameart.org/content/lpc-extended-weapon-animations
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+  https://opengameart.org/content/lpc-walk-animations-for-bows
+  https://opengameart.org/content/lpc-weapons-two-bows-a-spear-and-a-trident
+
+Inboxninja
+  License(s): CC-BY-SA 3.0
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+  https://opengameart.org/content/lpc-spear-and-shovel-reworked
+
+JaidynReiman
+  License(s): CC-BY 3.0, CC-BY 3.0+, CC-BY-SA 3.0, CC-BY-SA 4.0, CC0, GPL 2.0, GPL 3.0, GPL 3.0+, OGA-BY 3.0, OGA-BY 3.0+
+  http://opengameart.org/content/lpc-clothing-updates
+  http://opengameart.org/content/lpc-revised-character-basics
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Hair
+  ... and 70 more
+
+JaidynReiman, bluecarrot16, Michael Whitlock (bigbeargames), Johannes Sjölund (wulax)
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-combat-armor-for-women
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+
+Joe White
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://github.com/jrconway3/Universal-LPC-spritesheet/commit/46ddcf05a0e43e7aa6ffd47d350eef0eb529ac24
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-expanded-hair
+  https://opengameart.org/content/lpc-expanded-pants
+  ... and 5 more
+
+Johannes Sjölund (wulax)
+  License(s): CC-BY 3.0+, CC-BY 4.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0, OGA-BY 3.0+, OGA-SA 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  http://opengameart.org/content/lpc-revised-character-basics
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Hair
+  ... and 47 more
+
+Joshua Taylor
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/fruit-and-veggie-inventory
+  https://opengameart.org/content/lpc-folk
+
+kcilds/Rocetti/Eredah
+  License(s): CC-BY 4.0
+  https://opengameart.org/content/eredah-rpg-character-base-48x64-ongoing
+  https://opengameart.org/content/lpc-hair
+
+kheftel
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-character-bases
+  https://opengameart.org/content/lpc-child-standing-template
+  https://opengameart.org/content/lpc-children-walk-animation
+  https://opengameart.org/content/lpc-jump-expanded
+  ... and 1 more
+
+kirts
+  License(s): CC0
+  https://opengameart.org/content/cyclops-and-his-eye
+
+laetissima
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://opengameart.org/content/clothing-facial-features-and-ui-elements
+  https://opengameart.org/content/lpc-2-characters
+  https://opengameart.org/content/lpc-base-character-expressions
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  ... and 5 more
+
+Lanea Zimmerman (Sharm)
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://github.com/jrconway3/Universal-LPC-spritesheet/commit/c32ce8a7edd9fc7fe7daa62a39cf64e5946020a2
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-dress-in-combat-poses
+  ... and 1 more
+
+LordNeo
+  License(s): CC0
+  https://opengameart.org/content/lpc-magic-staff
+  https://opengameart.org/content/staff-64-x64
+
+Luke Mehl
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://opengameart.org/content/female-mage-clothing-set
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-expanded-socks-shoes
+  https://opengameart.org/content/thin-mage-clothing-set
+
+macmanmatty
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-backpacks
+
+Makrohn
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-2-characters
+  https://opengameart.org/content/lpc-gentleman
+
+Mandi Paugh
+  License(s): CC-BY 3.0, CC-BY 3.0+, CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  https://opengameart.org/content/fantasy-rpg-npcs
+  https://opengameart.org/content/lpc-expanded-pants
+  https://opengameart.org/content/lpc-expanded-socks-shoes
+  ... and 6 more
+
+Manuel Riecke (MrBeast)
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://github.com/jrconway3/Universal-LPC-spritesheet/commit/46ddcf05a0e43e7aa6ffd47d350eef0eb529ac24
+  https://github.com/jrconway3/Universal-LPC-spritesheet/commit/c32ce8a7edd9fc7fe7daa62a39cf64e5946020a2
+  https://opengameart.org/content/concept-art-for-lpc-entry
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-expanded-hair
+  ... and 2 more
+
+Marcel van de Steeg (MadMarcel)
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://github.com/makrohn/Universal-LPC-spritesheet/commit/f50007cb47c235d8896cafae7a613f0b6a9a09a8?short_path=02b86d4#diff-02b86d45789a3e3e8e79519c7d17d15c9e6ecc9b4ddecb1bcd8dfbbaef430b75
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-character-bases
+  ... and 7 more
+
+Matthew Krohn (makrohn)
+  License(s): CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://github.com/makrohn/Universal-LPC-spritesheet/commit/f50007cb47c235d8896cafae7a613f0b6a9a09a8?short_path=02b86d4#diff-02b86d45789a3e3e8e79519c7d17d15c9e6ecc9b4ddecb1bcd8dfbbaef430b75
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/four-characters-my-lpc-entries
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  ... and 31 more
+
+Matthew Krohn (Makrohn)
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+
+Michael Whitlock (bigbeargames)
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, CC0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://github.com/makrohn/Universal-LPC-spritesheet/commit/f50007cb47c235d8896cafae7a613f0b6a9a09a8?short_path=02b86d4#diff-02b86d45789a3e3e8e79519c7d17d15c9e6ecc9b4ddecb1bcd8dfbbaef430b75
+  https://opengameart.org/content/lpc-2-characters
+  https://opengameart.org/content/lpc-base-character-expressions
+  https://opengameart.org/content/lpc-celestial-wizard-hats
+  ... and 12 more
+
+MuffinElZangano
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  https://opengameart.org/content/lpc-be-seated
+  ... and 14 more
+
+Napsio
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-celestial-wizard-hats
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+  https:/opengameart.org/content/lpc-celestial-wizard-hats
+  https:/opengameart.org/content/lpc-expanded-hats-facial-helmets
+
+Napsio (Vitruvian Studio)
+  License(s): CC-BY-SA 3.0, OGA-BY 3.0
+  https://github.com/makrohn/Universal-LPC-spritesheet/commit/f50007cb47c235d8896cafae7a613f0b6a9a09a8?short_path=02b86d4#diff-02b86d45789a3e3e8e79519c7d17d15c9e6ecc9b4ddecb1bcd8dfbbaef430b75
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-female-orcogregoblintroll-base-walkcycle
+
+Nila122
+  License(s): CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0, OGA-SA 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://opengameart.org/content/3-hairs-for-lpc
+  https://opengameart.org/content/drakes-and-lizardfolk
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  ... and 26 more
+
+Nyom
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt
+
+Page
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-expanded-hair
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+
+Pierre Vigier (pvigier)
+  License(s): CC-BY 4.0, CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0, OGA-BY 3.0+
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-be-seated
+  https://opengameart.org/content/lpc-hand-tools
+  ... and 11 more
+
+Pierre Vigier and DCSS artists (see https://github.com/crawl/tiles/blob/master/ARTISTS.md)
+  License(s): OGA-BY 3.0
+  https://opengameart.org/content/lpc-dcss-swords
+
+PlatForge project
+  License(s): CC-BY-SA 3.0
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/wizard-2
+  https://opengameart.org/content/wizard-hat
+
+Radomir Dopieralski
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/alternate-lpc-character-sprites-george
+  https://opengameart.org/content/lpc-hair
+  https://opengameart.org/content/one-more-lpc-alternate-character
+
+Sander Frenken (castelonia)
+  License(s): CC-BY-SA 3.0, CC-BY-SA 4.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  https://opengameart.org/content/lpc-be-seated
+  https://opengameart.org/content/lpc-character-bases
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  ... and 15 more
+
+Shaun Williams
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-full-plate-golden-armor
+  https://opengameart.org/content/lpc-full-plate-golden-armor-0
+  https://opengameart.org/content/lpc-helmets-mega-pack
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+
+Skorpio
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-hair
+  https://opengameart.org/content/lpc-skorpios-scifi-sprite-pack
+
+Stafford McIntyre
+  License(s): CC-BY-SA 3.0
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/wizard-2
+  https://opengameart.org/content/wizard-hat
+
+Stephen Challener (Redshrike)
+  License(s): CC-BY, CC-BY 3.0, CC-BY 3.0+, CC-BY 4.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0, OGA-BY 3.0+, OGA-SA 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  http://opengameart.org/content/lpc-folk
+  http://opengameart.org/content/lpc-revised-character-basics
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  ... and 54 more
+
+Thane Brimhall (pennomi)
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  http://opengameart.org/content/lpc-clothing-updates
+  https://opengameart.org/content/clothing-facial-features-and-ui-elements
+  https://opengameart.org/content/lpc-2-characters
+  https://opengameart.org/content/lpc-base-character-expressions
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  ... and 5 more
+
+The Foreman
+  License(s): CC-BY-SA 4.0, OGA-BY 4.0
+  https://opengameart.org/content/lpc-fairy-wings
+  https://opengameart.org/content/lpc-fairy-wings-pack-2
+
+thecilekli
+  License(s): CC0
+  https://github.com/ElizaWy/LPC/blob/main/Characters/Hair
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Hair
+  https://opengameart.org/content/lpc-expanded-hair
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+  ... and 6 more
+
+TheraHedwig
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://gitlab.com/vagabondgame/lpc-characters
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-7-womens-shirts
+  https://opengameart.org/content/lpc-barbarian-sprite-base
+  https://opengameart.org/content/lpc-be-seated
+  ... and 12 more
+
+Tracy
+  License(s): CC-BY 3.0
+  https://opengameart.org/content/lpc-celestial-wizard-hats
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https:/opengameart.org/content/lpc-celestial-wizard-hats
+  https:/opengameart.org/content/lpc-expanded-hats-facial-helmets
+
+tskaufma
+  License(s): CC-BY-SA 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-extended-weapon-animations
+  https://opengameart.org/content/lpc-glow-sword
+  https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+
+Tuomo Untinen (reemax)
+  License(s): CC-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0
+  https://opengameart.org/content/lpc-expanded-hats-facial-helmets
+  https://opengameart.org/content/lpc-folk
+  https://opengameart.org/content/lpc-hand-tools
+  https://opengameart.org/content/lpc-items-and-game-effects
+  https://opengameart.org/content/lpc-kite-shield
+  ... and 5 more
+
+William.Thompsonj
+  License(s): CC-BY 3.0, CC-BY 3.0+, CC-BY-SA 3.0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  http://opengameart.org/content/sara-wizard
+  https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+  https://opengameart.org/content/lpc-character-bases
+  https://opengameart.org/content/lpc-expanded-pants
+  ... and 6 more
+
+William.Thomsponj
+  License(s): CC-BY 4.0, GPL 2.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/lpc-folk
+  https://opengameart.org/content/lpc-goblin
+
+Yamilian
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-hair
+  https://opengameart.org/content/lpc-heroine
+  https://opengameart.org/content/lpc-heroine-2
+
+Zi Ye
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/four-characters-my-lpc-entries
+  https://opengameart.org/content/lpc-character-bases
+  https://opengameart.org/content/lpc-male-sheets
+  https://opengameart.org/content/sinbad-the-ogre
+
+
+======================================================================
+LICENSES USED
+======================================================================
+
+The assets in this project are licensed under one or more of the
+following open licenses. Each asset may use a different combination.
+See the individual asset pages linked above for specific terms.
+
+  - CC-BY
+  - CC-BY 3.0
+  - CC-BY 3.0+
+  - CC-BY 4.0
+  - CC-BY-SA 3.0
+  - CC-BY-SA 4.0
+  - CC0
+  - GPL 2.0
+  - GPL 3.0
+  - GPL 3.0+
+  - OGA-BY 3.0
+  - OGA-BY 3.0+
+  - OGA-BY 4.0
+  - OGA-SA 3.0
+
+
+======================================================================
+ADDITIONAL NOTES
+======================================================================
+
+The Universal LPC Spritesheet Character Generator was originally
+created for the Liberated Pixel Cup contest on OpenGameArt.org.
+
+If you use these assets in your own project, you must provide
+attribution to the original artists as required by their licenses.
+
+This file lists 71 contributing artists.
