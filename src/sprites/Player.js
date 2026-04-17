@@ -1,4 +1,5 @@
 import { CompositeCharacter } from './CompositeCharacter.js';
+import { getWeaponItemKey, getWeaponType, getMeleeAnimation, getRangedAnimation } from './weaponTypes.js';
 
 const WEAPON_COMBO_ATTACKS = {
     'weapon_sword_longsword':  ['slash', 'slash_reverse', 'thrust'],
@@ -76,18 +77,18 @@ export class Player {
         const dir = this.sprite.currentDirection || 'down';
 
         // Melee button: use melee animation, but if weapon is ranged, shoot + projectile
-        const rangedAnim = this.getRangedAnimation();
+        const rangedAnim = getRangedAnimation(this.characterData);
         if (rangedAnim) {
             this.sprite.playAnimation(rangedAnim, dir);
             this.lastAttackType = rangedAnim;
-            const weaponType = this.getWeaponItemKey()?.split('_')[2];
+            const weaponType = getWeaponType(this.characterData);
             if (weaponType === 'slingshot') {
                 setTimeout(() => this.spawnRock(dir), 200);
             } else {
                 setTimeout(() => this.spawnArrow(dir), 200);
             }
         } else {
-            const weaponKey = this.getWeaponItemKey();
+            const weaponKey = getWeaponItemKey(this.characterData);
             const comboList = weaponKey ? WEAPON_COMBO_ATTACKS[weaponKey] : null;
             let meleeAnim;
 
@@ -95,7 +96,7 @@ export class Player {
                 this.comboIndex = (this.comboIndex + 1) % comboList.length;
                 meleeAnim = comboList[this.comboIndex];
             } else {
-                meleeAnim = this.getMeleeAnimation();
+                meleeAnim = getMeleeAnimation(this.characterData);
             }
 
             this.sprite.playAnimation(meleeAnim, dir);
@@ -235,49 +236,17 @@ export class Player {
         this.scene.events.on('update', updateRock);
     }
 
+    // Backward-compat delegate methods (GameScene's remote player-attacked handler calls these on the Player instance)
     getMeleeAnimation() {
-        const selections = this.characterData?.selections || [];
-        const weapon = selections.find(s => s.type === 'weapon');
-        if (!weapon) return 'thrust'; // unarmed
-
-        // weapon.item format: "weapon_sword_longsword", "weapon_ranged_bow_great", or "tool_rod"
-        const parts = weapon.item.split('_');
-
-        // Tools use "tool_X" format, weapons use "weapon_category_name"
-        if (parts[0] === 'tool') {
-            // tool_rod and tool_thrust use thrust frames; tool_smash and tool_whip use slash frames
-            return (parts[1] === 'thrust' || parts[1] === 'rod') ? 'thrust' : 'slash';
-        }
-
-        const weaponCategory = parts[1]; // sword, ranged, blunt, magic, polearm
-        const weaponName = parts[2]; // specific weapon name
-
-        switch (weaponCategory) {
-            case 'sword': return 'slash';
-            case 'ranged': return 'thrust'; // melee fallback for bows
-            case 'magic':
-                // wand uses slash, all staffs use thrust
-                return weaponName === 'wand' ? 'slash' : 'thrust';
-            case 'polearm': return weaponName === 'scythe' ? 'slash' : 'thrust';
-            case 'blunt': return 'slash';
-            default: return 'slash';
-        }
+        return getMeleeAnimation(this.characterData);
     }
 
     getRangedAnimation() {
-        const selections = this.characterData?.selections || [];
-        const weapon = selections.find(s => s.type === 'weapon');
-        if (!weapon) return null;
+        return getRangedAnimation(this.characterData);
+    }
 
-        const parts = weapon.item.split('_');
-        const weaponCategory = parts[1];
-        const weaponType = parts[2]; // bow, crossbow, slingshot, boomerang
-
-        if (weaponCategory !== 'ranged') return null;
-
-        // Bows and slingshots use shoot animation, crossbow uses thrust
-        if (weaponType === 'bow' || weaponType === 'slingshot') return 'shoot';
-        return 'thrust';
+    getWeaponItemKey() {
+        return getWeaponItemKey(this.characterData);
     }
 
     setVelocity(vx, vy) {
@@ -355,12 +324,6 @@ export class Player {
         }
         
         // Name text now moves automatically as part of the container
-    }
-
-    getWeaponItemKey() {
-        const selections = this.characterData?.selections || [];
-        const weapon = selections.find(s => s.type === 'weapon');
-        return weapon?.item || null;
     }
 
     destroy() {
