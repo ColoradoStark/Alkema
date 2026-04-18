@@ -28,7 +28,12 @@ export class Player {
         if (!isLocal) {
             this.targetX = x;
             this.targetY = y;
-            this.interpolationSpeed = 0.1;
+            // At 60fps with speed=160, the target advances ~2.67 px/frame.
+            // A lerp factor of 0.1 leaves the remote sprite ~27 px behind
+            // the sender at steady state, which reads as obvious lag when
+            // walking past other players. 0.3 cuts that to ~9 px while
+            // still looking smooth.
+            this.interpolationSpeed = 0.3;
         }
 
         // Show "Loading..." until sprite is ready, then show real name
