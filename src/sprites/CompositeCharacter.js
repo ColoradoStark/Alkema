@@ -20,6 +20,11 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.spriteMeta = null;
         this.oversizedSprite = null;
         this.usingOversized = false;
+        // Animation requests that arrive before the spritesheet finishes loading
+        // are stored here and replayed from onTextureReady. Without this, remote
+        // players can stay stuck on idle because their first walk calls land in
+        // the async-load window and get silently dropped.
+        this._pendingAnimation = null;
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -51,7 +56,16 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
 
         this.animationKey = `anim_${this.characterData.id}`;
         createStandardAnimations(this.scene, textureKey, this.animationKey, this.sheetCols);
-        this.playAnimation('idle', 'down');
+
+        // Replay any animation that was requested while the spritesheet was
+        // still loading (e.g. remote player moved before their sprite was ready).
+        if (this._pendingAnimation) {
+            const { animName, direction } = this._pendingAnimation;
+            this._pendingAnimation = null;
+            this.playAnimation(animName, direction);
+        } else {
+            this.playAnimation('idle', this.currentDirection || 'down');
+        }
 
         if (this.onLoaded) this.onLoaded();
 
@@ -106,10 +120,17 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
     }
 
     playAnimation(animName, direction = null) {
-        if (!this.sprite) return;
+        // Track direction even before the sprite loads so it's correct on replay.
+        if (direction) this.currentDirection = direction;
+
+        if (!this.sprite) {
+            // Keep only the latest request — there's no point replaying a stale walk
+            // once a newer attack or idle arrives.
+            this._pendingAnimation = { animName, direction: direction || this.currentDirection || 'down' };
+            return;
+        }
 
         const dir = direction || this.currentDirection || 'down';
-        if (direction) this.currentDirection = direction;
 
         const result = resolveAnimationKey(this.scene, this.animationKey, animName, dir, this.spriteMeta);
         if (!result) return;

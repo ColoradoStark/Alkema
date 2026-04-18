@@ -233,8 +233,17 @@ export class Player {
                 this.sprite.y = Phaser.Math.Linear(this.sprite.y, this.targetY, lerpFactor);
 
                 if (!this.isAttacking) {
-                    // Direction is set by server via player-moved event
-                    this.sprite.playAnimation('walk', this.sprite.currentDirection);
+                    // Direction is normally set by the server via player-moved,
+                    // but derive from the movement delta as a fallback so the
+                    // walk animation still plays in a sensible direction if the
+                    // direction field is missing on any given update.
+                    let dir = this.sprite.currentDirection;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        dir = dx < 0 ? 'left' : 'right';
+                    } else if (dy !== 0) {
+                        dir = dy < 0 ? 'up' : 'down';
+                    }
+                    this.sprite.playAnimation('walk', dir);
                 }
             } else {
                 // Snap to final position when very close

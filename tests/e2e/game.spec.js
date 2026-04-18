@@ -210,6 +210,96 @@ test.describe('Multiplayer', () => {
         await context2.close();
     });
 
+    test('remote player plays walk animation when moving', async ({ browser }) => {
+        // Regression test: walk animations were intermittently not showing on
+        // remote clients because CompositeCharacter.playAnimation silently
+        // dropped calls that arrived before the async spritesheet load finished,
+        // and onTextureReady always forced idle. Queue-and-replay fixes that.
+        const context1 = await browser.newContext();
+        const context2 = await browser.newContext();
+        const page1 = await context1.newPage();
+        const page2 = await context2.newPage();
+
+        const waitForGame = (page) => page.evaluate(() => {
+            return new Promise((resolve) => {
+                const check = () => {
+                    const game = window.__PHASER_GAME;
+                    if (!game) return setTimeout(check, 200);
+                    const gs = game.scene.getScene('GameScene');
+                    if (gs?.scene.isActive() && gs.localPlayer) { resolve(true); return; }
+                    setTimeout(check, 200);
+                };
+                check();
+                setTimeout(() => resolve(false), 15000);
+            });
+        });
+
+        await page1.goto('/');
+        await waitForGame(page1);
+
+        await page2.goto('/');
+        await waitForGame(page2);
+
+        // Give both sides time to receive the player-joined event and begin
+        // the async spritesheet load for the remote player.
+        await page2.waitForTimeout(1500);
+
+        // Initialize a move emitter on page1 that emits one step per invocation.
+        // We drive it from the Playwright side (not setInterval) because
+        // background-tab throttling can clamp setInterval to 1Hz and stall the
+        // test. Playwright-driven evaluate calls run regardless of tab focus.
+        await page1.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            window.__MOVE_X = gs.localPlayer.sprite.x;
+            window.__MOVE_Y = gs.localPlayer.sprite.y;
+            window.__EMIT_MOVE = () => {
+                const g = window.__PHASER_GAME?.scene?.getScene('GameScene');
+                if (!g?.networkManager?.socket) return;
+                window.__MOVE_X += 20;
+                g.networkManager.socket.emit('player-move', {
+                    x: window.__MOVE_X,
+                    y: window.__MOVE_Y,
+                    vx: 100, vy: 0, direction: 'right',
+                });
+            };
+        });
+
+        // Run two loops concurrently: page1 emits moves continuously, page2
+        // polls the remote player's animation. Resolve as soon as walk is seen.
+        let walkDetected = false;
+        let stop = false;
+        const emitLoop = (async () => {
+            const deadline = Date.now() + 15000;
+            while (!stop && Date.now() < deadline) {
+                await page1.evaluate(() => window.__EMIT_MOVE());
+                await new Promise(r => setTimeout(r, 100));
+            }
+        })();
+
+        const pollLoop = (async () => {
+            const deadline = Date.now() + 15000;
+            while (Date.now() < deadline) {
+                const key = await page2.evaluate(() => {
+                    const gs = window.__PHASER_GAME?.scene?.getScene('GameScene');
+                    if (!gs?.players) return '';
+                    let remote = null;
+                    gs.players.forEach(p => { if (p !== gs.localPlayer) remote = p; });
+                    return remote?.sprite?.sprite?.anims?.currentAnim?.key || '';
+                });
+                if (key.includes('walk')) { walkDetected = true; break; }
+                await new Promise(r => setTimeout(r, 100));
+            }
+            stop = true;
+        })();
+
+        await Promise.all([emitLoop, pollLoop]);
+
+        expect(walkDetected).toBe(true);
+
+        await context1.close();
+        await context2.close();
+    });
+
     test('player disappears when disconnecting', async ({ browser }) => {
         const context1 = await browser.newContext();
         const context2 = await browser.newContext();
