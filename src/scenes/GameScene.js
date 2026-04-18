@@ -88,18 +88,37 @@ export class GameScene extends Scene {
     handlePlayerMovement(dx, dy) {
         if (!this.localPlayer) return;
 
-        const speed = 100;
+        const speed = 160;
         const vx = dx * speed;
         const vy = dy * speed;
 
         this.localPlayer.setVelocity(vx, vy);
 
-        if (this.networkManager?.socket?.connected) {
+        if (!this.networkManager?.socket?.connected) return;
+
+        const moving = vx !== 0 || vy !== 0;
+        // Emit while moving, plus a single final "stopped" event when keys are
+        // released so remote clients can switch to idle. Emitting on every
+        // frame regardless of movement state floods the server and (when
+        // paired with low movement speeds) left remote sprites flickering
+        // between walk and idle because each update advanced the target by
+        // less than the distance-snap threshold.
+        if (moving) {
+            this._wasMoving = true;
             this.networkManager.socket.emit('player-move', {
                 x: this.localPlayer.sprite.x,
                 y: this.localPlayer.sprite.y,
                 vx,
                 vy,
+                direction: this.localPlayer.sprite.currentDirection
+            });
+        } else if (this._wasMoving) {
+            this._wasMoving = false;
+            this.networkManager.socket.emit('player-move', {
+                x: this.localPlayer.sprite.x,
+                y: this.localPlayer.sprite.y,
+                vx: 0,
+                vy: 0,
                 direction: this.localPlayer.sprite.currentDirection
             });
         }
@@ -136,10 +155,10 @@ export class GameScene extends Scene {
         }
     }
 
-    updatePlayerPosition(playerId, x, y, direction) {
+    updatePlayerPosition(playerId, x, y, direction, vx = 0, vy = 0) {
         const player = this.players.get(playerId);
         if (player && player !== this.localPlayer) {
-            player.setTargetPosition(x, y);
+            player.setTargetPosition(x, y, vx, vy);
             if (direction) player.sprite.setDirection(direction);
         }
     }

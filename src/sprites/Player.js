@@ -206,9 +206,16 @@ export class Player {
         }
     }
 
-    setTargetPosition(x, y) {
+    setTargetPosition(x, y, vx = 0, vy = 0) {
         this.targetX = x;
         this.targetY = y;
+        // Sender's velocity is the authoritative "is the player walking?"
+        // signal. Deciding based on local position-vs-target distance is
+        // unreliable: when new positions arrive faster than the lerp can
+        // close the gap, distance can dip below any small threshold every
+        // frame, causing the walk animation to flicker on and off.
+        this.targetVx = vx;
+        this.targetVy = vy;
     }
 
     applySpriteMeta(meta) {
@@ -226,35 +233,37 @@ export class Player {
             const dy = this.targetY - this.sprite.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance > 2) {
-                // Use lerp for smoother movement
+            // Lerp position toward target (always — even tiny distances,
+            // so the remote sprite stays synced with the sender).
+            if (distance > 0.5) {
                 const lerpFactor = Math.min(this.interpolationSpeed * (delta / 16.67), 1);
                 this.sprite.x = Phaser.Math.Linear(this.sprite.x, this.targetX, lerpFactor);
                 this.sprite.y = Phaser.Math.Linear(this.sprite.y, this.targetY, lerpFactor);
-
-                if (!this.isAttacking) {
-                    // Direction is normally set by the server via player-moved,
-                    // but derive from the movement delta as a fallback so the
-                    // walk animation still plays in a sensible direction if the
-                    // direction field is missing on any given update.
-                    let dir = this.sprite.currentDirection;
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        dir = dx < 0 ? 'left' : 'right';
-                    } else if (dy !== 0) {
-                        dir = dy < 0 ? 'up' : 'down';
-                    }
-                    this.sprite.playAnimation('walk', dir);
-                }
             } else {
-                // Snap to final position when very close
                 this.sprite.x = this.targetX;
                 this.sprite.y = this.targetY;
-                if (!this.isAttacking) {
+            }
+
+            // Pick walk vs idle from the sender's velocity, not local distance.
+            if (!this.isAttacking) {
+                const vx = this.targetVx || 0;
+                const vy = this.targetVy || 0;
+                const isMoving = vx !== 0 || vy !== 0;
+                if (isMoving) {
+                    // Prefer server-supplied direction; fall back to velocity.
+                    let dir = this.sprite.currentDirection;
+                    if (Math.abs(vx) > Math.abs(vy)) {
+                        dir = vx < 0 ? 'left' : 'right';
+                    } else if (vy !== 0) {
+                        dir = vy < 0 ? 'up' : 'down';
+                    }
+                    this.sprite.playAnimation('walk', dir);
+                } else {
                     this.sprite.stopAnimation();
                 }
             }
         }
-        
+
         // Name text now moves automatically as part of the container
     }
 
