@@ -1,23 +1,18 @@
 import { defineConfig } from 'vite';
 
+const gameServer = process.env.GAME_SERVER_URL || 'http://localhost:3001';
+const legacyGen = process.env.LEGACY_GENERATOR_URL || 'http://localhost:8080';
+
 export default defineConfig({
   publicDir: 'assets',
   server: {
     port: 3000,
+    host: true,
     proxy: {
-      '/socket.io': {
-        target: 'http://localhost:3001',
-        ws: true
-      },
-      '/api': {
-        target: 'http://localhost:3001'
-      },
-      '/sprites': {
-        target: 'http://localhost:3001'
-      },
-      '/spritesheets': {
-        target: 'http://localhost:8080'
-      }
+      '/socket.io': { target: gameServer, ws: true },
+      '/api/': { target: gameServer },
+      '/sprites/': { target: gameServer },
+      '/spritesheets/': { target: legacyGen }
     }
   },
   build: {

@@ -362,3 +362,25 @@ test.describe('Test characters page', () => {
         await expect(page.locator('body')).toContainText('Character', { timeout: 10000 });
     });
 });
+
+// ---------------------------------------------------------------------------
+// Asset proxy routes
+// ---------------------------------------------------------------------------
+// Regression guard: the client dev server must proxy `/spritesheets/*` to the
+// legacy generator, not the game-server. A prefix-matching bug where `/sprites`
+// swallowed `/spritesheets` caused every arrow projectile to 404.
+
+test.describe('Asset proxy', () => {
+    test('spritesheet assets load through client proxy', async ({ request }) => {
+        const r = await request.get('/spritesheets/weapon/ranged/bow/arrow/shoot/arrow.png');
+        expect(r.status()).toBe(200);
+    });
+
+    test('/sprites/ still routes to game-server', async ({ request }) => {
+        // Any unknown sprite id returns 404, but the response must come from
+        // game-server (Express), not from the legacy nginx. Distinguish by
+        // checking the x-powered-by header.
+        const r = await request.get('/sprites/nonexistent.png');
+        expect(r.headers()['x-powered-by']).toBe('Express');
+    });
+});
