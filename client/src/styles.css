@@ -1,0 +1,81 @@
+@font-face {
+    font-family: 'Alagard';
+    src: url('/assets/fonts/alagard.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #1a1a2e;
+    font-family: 'Alagard', monospace;
+    overflow: hidden;
+    touch-action: none; /* Prevent mobile scroll/zoom */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#game-container {
+    border: 2px solid #16213e;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #0f0f1e;
+}
+
+/* Ensure pixel-perfect rendering */
+#game-container canvas {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    -ms-interpolation-mode: nearest-neighbor;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    body {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+    
+    #game-container {
+        border: none;
+        border-radius: 0;
+    }
+}
+
+/* Prevent iOS bounce effect */
+html {
+    position: fixed;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Landscape warning for mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    #game-container::before {
+        content: "Please rotate your device to portrait mode";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 18px;
+        text-align: center;
+        z-index: 1000;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 10px;
+    }
+}

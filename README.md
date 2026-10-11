@@ -66,6 +66,19 @@ Server-side collision using oriented bounding boxes (OBB) computed per-frame fro
 
 Walk, Run, Idle, Combat Idle, Slash, Thrust, Spellcast, Shoot, Backslash, Halfslash, Jump, Sit, Emote, Hurt — all in 4 directions. Weapons with oversized sprites (128px, 192px) get larger attack frames automatically.
 
+## Playing: Create Your Hero
+
+Every session opens in a character creator built for one-thumb play on a phone:
+
+- Pick a body (Male / Female), a race (Human, Elf, Furry, Fey) and a class (Warrior, Mage, Ranger, Thief, Cleric), or tap the **Random New Hero** die
+- The die re-rolls everything you haven't picked yourself, so you can lock in a race and keep rolling looks
+- Random heroes get natural skin tones; fur, lavender and other race colors are yours to choose in **Customize look**, along with race kind (e.g. Cat, Fox, Wolf, Bunny), hair style, hair color and outfit colors
+- A live preview walks your hero through the town and shows off only the moves their gear fully supports; rotate them to see every side
+- Each class starts with a humble kit (e.g. a warrior gets legion armor, an arming sword and a wooden shield)
+- **Play** is always one tap away; returning players start as the hero they last played
+
+Other races and classes are reserved for NPCs and enemies.
+
 ## Multiplayer
 
 Real-time multiplayer via Socket.io. Players share a 4096×4096 tile map world with:
@@ -87,7 +100,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 | Endpoint | Description |
 |----------|-------------|
 | `POST /generate-sprite` | Generate a character spritesheet PNG from item selections |
-| `GET /random-character` | Generate a random character with race/class/armor rules |
+| `GET /random-character` | Generate a random character with race/class/armor rules; supports starter kits, seeds and look overrides |
 | `GET /random-character/sprite` | Random character as a PNG |
 | `POST /generate-gif` | Animated GIF promo image from selections |
 | `GET /random-character/gif` | Random character as an animated GIF |
@@ -95,6 +108,8 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 | `GET /items`, `GET /items/{category}` | Browse the item database |
 | `POST /available-options` | Items compatible with current selections |
 | `GET /classes`, `GET /rules` | Character class and generation rule docs |
+| `GET /player-options` | Races, classes and looks available to players, with color swatches |
+| `GET /random-name` | A race-appropriate fantasy name |
 | `GET /weapon-hitboxes` | Weapon hitbox data for all melee weapons |
 
 ## Tech Stack

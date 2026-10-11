@@ -73,15 +73,6 @@ export class PreloadScene extends Scene {
         
         // Load placeholder map background
         this.load.image('placeholder-map', '/ui/PlaceHolder_Map.png');
-
-        // Load arrow projectile spritesheet (13 cols x 4 rows of 64x64, directions: up/left/down/right)
-        this.load.spritesheet('arrow-projectile', '/spritesheets/weapon/ranged/bow/arrow/shoot/arrow.png', {
-            frameWidth: 64,
-            frameHeight: 64
-        });
-
-        // Load rock projectile for slingshot
-        this.load.image('rock-projectile', '/projectiles/rock.png');
     }
 
     create() {

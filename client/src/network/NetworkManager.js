@@ -7,7 +7,6 @@ export class NetworkManager {
         this.listeners = new Map();
         this.selfData = null;
         this.currentPlayers = null;
-        this.spriteMeta = null;
     }
 
     connect() {
@@ -54,10 +53,7 @@ export class NetworkManager {
             'self-data',
             'player-count',
             'game-state',
-            'chat-message',
-            'sprite-meta',
-            'player-attacked',
-            'player-hit'
+            'chat-message'
         ];
 
         events.forEach(event => {
@@ -67,13 +63,6 @@ export class NetworkManager {
                     this.selfData = data;
                 } else if (event === 'current-players') {
                     this.currentPlayers = data;
-                } else if (event === 'sprite-meta') {
-                    // Store per-player sprite meta
-                    if (!this.spriteMetaMap) this.spriteMetaMap = {};
-                    if (data.playerId) {
-                        this.spriteMetaMap[data.playerId] = data.meta;
-                    }
-                    this.spriteMeta = data;
                 }
                 
                 this.emit(event, data);
