@@ -7,6 +7,7 @@ export class NetworkManager {
         this.listeners = new Map();
         this.selfData = null;
         this.currentPlayers = null;
+        this.spriteMeta = null;
     }
 
     connect() {
@@ -53,7 +54,10 @@ export class NetworkManager {
             'self-data',
             'player-count',
             'game-state',
-            'chat-message'
+            'chat-message',
+            'sprite-meta',
+            'player-attacked',
+            'player-hit'
         ];
 
         events.forEach(event => {
@@ -63,6 +67,13 @@ export class NetworkManager {
                     this.selfData = data;
                 } else if (event === 'current-players') {
                     this.currentPlayers = data;
+                } else if (event === 'sprite-meta') {
+                    // Store per-player sprite meta
+                    if (!this.spriteMetaMap) this.spriteMetaMap = {};
+                    if (data.playerId) {
+                        this.spriteMetaMap[data.playerId] = data.meta;
+                    }
+                    this.spriteMeta = data;
                 }
                 
                 this.emit(event, data);
@@ -83,6 +94,20 @@ export class NetworkManager {
         if (callbacks) {
             callbacks.forEach(callback => callback(data));
         }
+    }
+
+    /** Send an event and resolve with the server's ack payload. */
+    request(event, data = {}, timeoutMs = 20000) {
+        return new Promise((resolve, reject) => {
+            if (!this.socket) {
+                reject(new Error('Not connected'));
+                return;
+            }
+            this.socket.timeout(timeoutMs).emit(event, data, (err, response) => {
+                if (err) reject(err);
+                else resolve(response);
+            });
+        });
     }
 
     on(event, callback) {

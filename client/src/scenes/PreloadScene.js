@@ -8,11 +8,12 @@ export class PreloadScene extends Scene {
     preload() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+        this.cameras.main.setBackgroundColor('#000000');
 
         const progressBar = this.add.graphics();
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
-        progressBox.fillRect(width/2 - 160, height/2 - 25, 320, 50);
+        progressBox.fillRect(width/2 - 150, height/2 - 25, 300, 50);
 
         const loadingText = this.add.text(width/2, height/2 - 50, 'Loading...', {
             fontFamily: 'Alagard',
@@ -29,8 +30,8 @@ export class PreloadScene extends Scene {
         this.load.on('progress', (value) => {
             percentText.setText(parseInt(value * 100) + '%');
             progressBar.clear();
-            progressBar.fillStyle(0xffffff, 1);
-            progressBar.fillRect(width/2 - 150, height/2 - 15, 300 * value, 30);
+            progressBar.fillStyle(0xd27d2c, 1);
+            progressBar.fillRect(width/2 - 140, height/2 - 15, 280 * value, 30);
         });
         
         this.load.on('filefailed', (file) => {
@@ -70,23 +71,25 @@ export class PreloadScene extends Scene {
         // Load icon images
         this.load.image('icon-sword', '/ui/long_sword_1_old.png');
         this.load.image('icon-scroll', '/ui/scroll_old.png');
+
+        // Leather tile for the HUD panels (same as the character creator's)
+        this.load.image('ui-leather', '/ui/creator/art/leather.png');
         
         // Load placeholder map background
         this.load.image('placeholder-map', '/ui/PlaceHolder_Map.png');
+
+        // Load arrow projectile spritesheet (13 cols x 4 rows of 64x64, directions: up/left/down/right)
+        this.load.spritesheet('arrow-projectile', '/spritesheets/weapon/ranged/bow/arrow/shoot/arrow.png', {
+            frameWidth: 64,
+            frameHeight: 64
+        });
+
+        // Load rock projectile for slingshot
+        this.load.image('rock-projectile', '/projectiles/rock.png');
     }
 
     create() {
-        const networkManager = this.game.registry.get('networkManager');
-        
-        // Wait a bit for initial data to arrive
-        this.time.delayedCall(100, () => {
-            this.scene.start('GameScene');
-            this.scene.start('UIScene');
-            
-            // Re-emit connected event for UIScene
-            if (networkManager && networkManager.connected) {
-                networkManager.emit('connected', {});
-            }
-        });
+        // Every session starts in character creation; it enters the world on Play.
+        this.scene.start('CreateScene');
     }
 }

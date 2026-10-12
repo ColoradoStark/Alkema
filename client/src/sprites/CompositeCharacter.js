@@ -1,205 +1,200 @@
+import { loadCharacterSpritesheet, SPRITE_FRAME_SIZE } from './SpritesheetLoader.js';
+import {
+    createStandardAnimations,
+    updateIdleFrames,
+    createOversizedAnimations,
+    resolveAnimationKey
+} from './AnimationFactory.js';
+
 export class CompositeCharacter extends Phaser.GameObjects.Container {
     constructor(scene, x, y, characterData) {
         super(scene, x, y);
-        
+
         this.scene = scene;
         this.characterData = characterData || {};
-        this.layers = {};
+        this.sprite = null;
         this.animationKey = null;
         this.currentDirection = 'down';
-        
+        this.sheetCols = 13;
+        this.onLoaded = null;
+        this.spriteMeta = null;
+        this.oversizedSprite = null;
+        this.usingOversized = false;
+        // Animation requests that arrive before the spritesheet finishes loading
+        // are stored here and replayed from onTextureReady. Without this, remote
+        // players can stay stuck on idle because their first walk calls land in
+        // the async-load window and get silently dropped.
+        this._pendingAnimation = null;
+
         scene.add.existing(this);
         scene.physics.add.existing(this);
-        
-        // Set physics body size
         this.body.setSize(32, 48);
-        
-        // Keep container visible for physics, but alpha 0 until loaded
-        this.setAlpha(0);
-        
-        // Load character layers
-        this.loadCharacterLayers().then(() => {
-            this.setAlpha(1);
-        }).catch(err => {
-            this.setAlpha(1); // Show anyway
-        });
+
+        this.loadSpritesheet();
     }
-    
-    async loadCharacterLayers() {
-        const bodyType = this.characterData.body_type || 'male';
-        const skinColor = this.characterData.skin_color || 'light';
-        const hairStyle = this.characterData.hair_style || 'plain';
-        let hairColor = this.characterData.hair_color || 'brown';
-        const shirtColor = this.characterData.shirt_color || 'blue';
-        const pantsColor = this.characterData.pants_color || 'brown';
-        
-        // Map hair colors to actual file names - many styles use different color naming
-        const hairColorMap = {
-            'brown': 'dark_brown',
-            'blonde': 'blonde',
-            'black': 'black',
-            'red': 'red',
-            'gray': 'gray',
-            'grey': 'gray',
-            'white': 'white'
-        };
-        
-        // Apply color mapping for styles that need it
-        const mappedHairColor = hairColorMap[hairColor] || hairColor;
-        
-        // Define layer URLs in order (bottom to top)
-        // Use shirt_type from character data if available, otherwise default based on gender
-        const shirtType = this.characterData.shirt_type || (bodyType === 'female' ? 'tunic' : 'vest');
-        
-        
-        // Base layer configs
-        const layerConfigs = [
-            { name: 'body', url: `http://localhost:8080/spritesheets/body/bodies/${bodyType}/walk/${skinColor}.png` },
-            { name: 'pants', url: `http://localhost:8080/spritesheets/legs/pants/${bodyType}/walk/${pantsColor}.png`, optional: true },
-            { name: 'shirt', url: `http://localhost:8080/spritesheets/torso/clothes/${shirtType}/${bodyType}/walk/${shirtColor}.png`, optional: false }, // Made required for debugging
-            { name: 'head', url: `http://localhost:8080/spritesheets/head/heads/human/${bodyType}/walk/${skinColor}.png` }
-        ];
-        
-        // Handle special hair styles that have bg/fg structure
-        // These hairstyles need both background and foreground layers
-        const twoLayerHairStyles = ['ponytail', 'ponytail2', 'princess', 'shoulderl', 'shoulderr', 'pigtails'];
-        
-        if (twoLayerHairStyles.includes(hairStyle)) {
-            // These styles have background (behind head) and foreground (the actual detail)
-            // Note: fg layer doesn't have color variants - it's just the shape overlay
-            layerConfigs.push(
-                { name: 'hair_bg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/bg/walk/${mappedHairColor}.png`, optional: true },
-                { name: 'hair_fg', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/fg/walk.png`, optional: true }
-            );
-        } else {
-            // Regular hair styles just have one layer
-            layerConfigs.push(
-                { name: 'hair', url: `http://localhost:8080/spritesheets/hair/${hairStyle}/adult/walk/${mappedHairColor}.png`, optional: true }
-            );
-        }
-        
-        // Load each layer
-        for (const config of layerConfigs) {
-            await this.loadLayer(config.name, config.url, config.optional);
-        }
-        
-        this.createAnimations();
-        this.playAnimation('idle', 'down');
-    }
-    
-    async loadLayer(layerName, url, optional = false) {
-        const layerKey = `${this.characterData.id}_${layerName}`;
-        
-        // Check if already loaded
-        if (this.scene.textures.exists(layerKey)) {
-            this.addLayerSprite(layerName, layerKey);
+
+    loadSpritesheet() {
+        const spriteUrl = this.characterData.spriteUrl;
+        const textureKey = `sprite_${this.characterData.id}`;
+
+        if (this.scene.textures.exists(textureKey)) {
+            // Sheets with oversized animations are wider than 13 columns; read the
+            // real width or every animation indexes the wrong (often blank) frames.
+            const source = this.scene.textures.get(textureKey).getSourceImage();
+            this.sheetCols = Math.floor(source.width / SPRITE_FRAME_SIZE);
+            this.onTextureReady(textureKey);
             return;
         }
-        
-        // Load image
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            
-            img.onload = () => {
-                this.scene.textures.addSpriteSheet(layerKey, img, {
-                    frameWidth: 64,
-                    frameHeight: 64
-                });
-                this.addLayerSprite(layerName, layerKey);
-                resolve();
-            };
-            
-            img.onerror = () => {
-                // Silently handle missing optional layers
-                resolve();
-            };
-            
-            img.src = url;
-        });
+
+        loadCharacterSpritesheet(this.scene, spriteUrl, textureKey)
+            .then(({ cols }) => {
+                if (cols) this.sheetCols = cols;
+                this.onTextureReady(textureKey);
+            })
+            .catch(() => { /* loader already logged */ });
     }
-    
-    addLayerSprite(layerName, textureKey) {
-        // Create sprite for this layer
-        const sprite = this.scene.add.sprite(0, 0, textureKey, 0);
-        
-        // Add to container
-        this.add(sprite);
-        
-        // Store reference
-        this.layers[layerName] = sprite;
-        
-    }
-    
-    createAnimations() {
-        if (Object.keys(this.layers).length === 0) return;
-        
-        this.animationKey = `${this.characterData.id}_anims`;
-        
-        // LPC spritesheet layout (rows):
-        // 0: Walk up, 1: Walk left, 2: Walk down, 3: Walk right
-        const directions = {
-            'up': { row: 0, frames: 9 },
-            'left': { row: 1, frames: 9 },
-            'down': { row: 2, frames: 9 },
-            'right': { row: 3, frames: 9 }
-        };
-        
-        // Create animations for each layer and direction
-        Object.entries(this.layers).forEach(([layerName, sprite]) => {
-            Object.entries(directions).forEach(([direction, config]) => {
-                const walkKey = `${this.animationKey}_${layerName}_walk_${direction}`;
-                const idleKey = `${this.animationKey}_${layerName}_idle_${direction}`;
-                
-                if (!this.scene.anims.exists(walkKey)) {
-                    const startFrame = config.row * 9;
-                    
-                    // Walk animation
-                    this.scene.anims.create({
-                        key: walkKey,
-                        frames: this.scene.anims.generateFrameNumbers(sprite.texture.key, { 
-                            start: startFrame, 
-                            end: startFrame + config.frames - 1
-                        }),
-                        frameRate: 10,
-                        repeat: -1
-                    });
-                    
-                    // Idle animation (first frame of walk)
-                    this.scene.anims.create({
-                        key: idleKey,
-                        frames: [ { key: sprite.texture.key, frame: startFrame } ],
-                        frameRate: 1,
-                        repeat: 0
-                    });
-                }
-            });
-        });
-    }
-    
-    playAnimation(animName, direction = null) {
-        if (Object.keys(this.layers).length === 0) return;
-        
-        const dir = direction || this.currentDirection || 'down';
-        
-        if (direction) {
-            this.currentDirection = direction;
+
+    onTextureReady(textureKey) {
+        this.sprite = this.scene.add.sprite(0, 0, textureKey, 0);
+        this.add(this.sprite);
+
+        this.animationKey = `anim_${this.characterData.id}`;
+        createStandardAnimations(this.scene, textureKey, this.animationKey, this.sheetCols);
+
+        // Replay any animation that was requested while the spritesheet was
+        // still loading (e.g. remote player moved before their sprite was ready).
+        if (this._pendingAnimation) {
+            const { animName, direction } = this._pendingAnimation;
+            this._pendingAnimation = null;
+            this.playAnimation(animName, direction);
+        } else {
+            this.playAnimation('idle', this.currentDirection || 'down');
         }
-        
-        // Play animation on all layers
-        Object.entries(this.layers).forEach(([layerName, sprite]) => {
-            const animKey = `${this.animationKey}_${layerName}_${animName}_${dir}`;
-            if (this.scene.anims.exists(animKey)) {
-                sprite.play(animKey, true);
-            }
-        });
+
+        if (this.onLoaded) this.onLoaded();
+
+        if (this._pendingMeta) {
+            const meta = this._pendingMeta;
+            this._pendingMeta = null;
+            this.applySpriteMeta(meta);
+        }
     }
-    
+
+    applySpriteMeta(meta) {
+        this.spriteMeta = meta;
+
+        if (meta?.custom_animations?.idle_frames && this.animationKey) {
+            const textureKey = `sprite_${this.characterData.id}`;
+            updateIdleFrames(this.scene, textureKey, this.animationKey, this.sheetCols, meta.custom_animations.idle_frames);
+            this.playAnimation('idle', this.currentDirection);
+        }
+
+        if (!meta?.custom_animations) return;
+
+        const customAnims = meta.custom_animations;
+        const hasOversized = Object.keys(customAnims).some(k => customAnims[k]?.frame_size);
+        if (!hasOversized) return;
+
+        if (!this.animationKey) {
+            this._pendingMeta = meta;
+            return;
+        }
+
+        const spriteUrl = this.characterData.spriteUrl;
+        if (!spriteUrl) return;
+
+        fetch(spriteUrl)
+            .then(r => r.blob())
+            .then(blob => createImageBitmap(blob))
+            .then(bitmap => {
+                createOversizedAnimations(this.scene, bitmap, customAnims, this.characterData.id, this.animationKey);
+                bitmap.close();
+
+                // Re-play current animation so it picks up oversized version
+                const currentAnim = this.sprite?.anims?.currentAnim;
+                if (currentAnim) {
+                    const parts = currentAnim.key.split('_');
+                    const dir = parts.pop();
+                    const prefix = this.animationKey + '_';
+                    const animName = currentAnim.key.slice(prefix.length, -(dir.length + 1));
+                    if (animName) this.playAnimation(animName, dir);
+                }
+            })
+            .catch(err => console.warn('Failed to load oversized animations:', err));
+    }
+
+    playAnimation(animName, direction = null) {
+        // Track direction even before the sprite loads so it's correct on replay.
+        if (direction) this.currentDirection = direction;
+
+        if (!this.sprite) {
+            // Keep only the latest request — there's no point replaying a stale walk
+            // once a newer attack or idle arrives.
+            this._pendingAnimation = { animName, direction: direction || this.currentDirection || 'down' };
+            return;
+        }
+
+        const dir = direction || this.currentDirection || 'down';
+
+        const result = resolveAnimationKey(this.scene, this.animationKey, animName, dir, this.spriteMeta);
+        if (!result) return;
+
+        if (result.oversized) {
+            if (!this.oversizedSprite) {
+                const anim = this.scene.anims.get(result.key);
+                if (!anim || !anim.frames.length) return;
+                const osTextureKey = anim.frames[0].textureKey;
+                this.oversizedSprite = this.scene.add.sprite(0, 0, osTextureKey, 0);
+                this.add(this.oversizedSprite);
+            }
+
+            this.oversizedSprite.setVisible(true);
+            this.sprite.setVisible(false);
+            this.oversizedSprite.play(result.key, true);
+            this.usingOversized = true;
+        } else {
+            if (this.oversizedSprite) this.oversizedSprite.setVisible(false);
+            this.sprite.setVisible(true);
+            this.sprite.play(result.key, true);
+            this.usingOversized = false;
+        }
+    }
+
+    getActiveSprite() {
+        return this.usingOversized ? this.oversizedSprite : this.sprite;
+    }
+
+    onAnimationComplete(callback) {
+        const active = this.getActiveSprite();
+        if (active) active.once('animationcomplete', callback);
+    }
+
     stopAnimation() {
         this.playAnimation('idle', this.currentDirection);
     }
-    
+
     setDirection(direction) {
         this.currentDirection = direction;
+    }
+
+    flashHit(duration = 300) {
+        const tintColor = 0xff0000;
+
+        if (this._hitFlashTimer) {
+            clearTimeout(this._hitFlashTimer);
+            if (this.sprite) this.sprite.clearTint();
+            if (this.oversizedSprite) this.oversizedSprite.clearTint();
+        }
+
+        this.scene?.time.delayedCall(30, () => {
+            if (this.sprite) this.sprite.setTint(tintColor);
+            if (this.oversizedSprite) this.oversizedSprite.setTint(tintColor);
+
+            this._hitFlashTimer = setTimeout(() => {
+                if (this.sprite) this.sprite.clearTint();
+                if (this.oversizedSprite) this.oversizedSprite.clearTint();
+                this._hitFlashTimer = null;
+            }, duration);
+        });
     }
 }

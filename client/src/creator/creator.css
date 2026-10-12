@@ -1,0 +1,665 @@
+/* Character creator overlay. Laid out in the game's 352×640 logical pixels and
+   scaled with the canvas (see CreatorPanel.fitToCanvas), so it lines up with the
+   Phaser stage exactly. All pixel art is drawn at 2×, except the class lineup,
+   which shows the heroes at their true in-game size.
+
+   Palette: DawnBringer-32, the palette the Golden UI pieces are drawn in. */
+
+@font-face {
+    font-family: 'Romulus';
+    src: url('/fonts/romulus.ttf') format('truetype');
+}
+
+.creator {
+    --ink: #222034;
+    --leather: #3d2510;
+    --leather-deep: #2b1a0e;
+    --brass: #d27d2c;
+    --brass-dark: #8f563b;
+    --gold: #fbf236;
+    --gold-soft: #dad45e;
+    --parchment: #eec39a;
+    --text: #fff6e0;
+    --muted: #a8886a;
+
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 352px;
+    height: 640px;
+    transform-origin: 0 0;
+    z-index: 50;
+    pointer-events: none;
+    font-family: 'Alagard', monospace;
+    color: var(--text);
+    image-rendering: pixelated;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 400ms ease;
+}
+
+.creator.is-leaving { opacity: 0; }
+
+/* :where keeps these resets low-specificity so component colours win */
+.creator :where(button, input) {
+    font: inherit;
+    color: inherit;
+    pointer-events: auto;
+}
+
+.creator :where(button) {
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+}
+
+.creator :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+/* Simple buttons, matching the in-game tabs (Map / Equip / Stats / Items) */
+.cc-hud-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000;
+    background: #291709;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px #c8a04a;
+}
+.cc-hud-btn:hover { box-shadow: inset 0 0 0 1px #8a6030; }
+.cc-hud-btn.is-current {
+    color: #ffe060;
+    background: #6a4a18;
+    box-shadow: inset 0 0 0 2px #dab040;
+}
+.cc-hud-btn:active { transform: translateY(1px); }
+
+/* Frames live on a pseudo-element layer so content lays out normally. */
+.cc-turn,
+.cc-tile,
+.cc-btn {
+    position: relative;
+    isolation: isolate;
+}
+.cc-turn::before,
+.cc-card::before,
+.cc-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-style: solid;
+    border-width: 12px;
+    border-image: url('/ui/creator/art/card.png') 6 fill / 12px;
+}
+
+.px-icon {
+    position: relative; /* above frame layers */
+    z-index: 1;
+    display: block;
+    image-rendering: pixelated;
+}
+
+/* Ink outline for text drawn over the world */
+.cc-outlined {
+    text-shadow:
+        2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink),
+        2px 2px var(--ink), -2px 2px var(--ink), 2px -2px var(--ink), -2px -2px var(--ink),
+        0 4px var(--ink);
+}
+
+/* ---------- Stage chrome (over the Phaser preview) ---------- */
+
+.cc-logo {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    right: 0;
+    margin: 0;
+    text-align: center;
+    font-size: 32px;
+    font-weight: normal;
+    letter-spacing: 1px;
+    line-height: 40px;
+    /* Stepped gold, like a cast metal sign */
+    background: linear-gradient(to bottom, #fbf236 0 14px, #dad45e 14px 20px, #d27d2c 20px 28px, #8f563b 28px);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter:
+        drop-shadow(2px 0 0 var(--ink)) drop-shadow(-2px 0 0 var(--ink))
+        drop-shadow(0 2px 0 var(--ink)) drop-shadow(0 -2px 0 var(--ink))
+        drop-shadow(0 3px 0 rgba(34, 32, 52, 0.6));
+}
+
+.cc-stage-hit {
+    position: absolute;
+    left: 52px;
+    right: 52px;
+    top: 52px;
+    height: 180px;
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+}
+
+/* Side controls on the stage: rotate on the left, New hero on the right */
+.cc-turn-wrap,
+.cc-roll {
+    position: absolute;
+    top: 110px;
+    width: 66px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    z-index: 3;
+}
+.cc-turn-wrap { left: 4px; }
+.cc-roll { right: 4px; }
+
+.cc-turn {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+}
+.cc-turn:hover .px-icon { transform: rotate(30deg); }
+.cc-turn .px-icon { transition: transform 160ms; }
+.cc-turn:hover::before { border-image-source: url('/ui/creator/art/card_on.png'); }
+.cc-turn:active { transform: translateY(1px); }
+
+/* New hero: the big die on the stage */
+.cc-roll-die {
+    position: relative;
+    isolation: isolate;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+}
+.cc-roll-die::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-style: solid;
+    border-width: 12px;
+    border-image: url('/ui/creator/art/card_on.png') 6 fill / 12px;
+    box-shadow: 0 3px 0 rgba(34, 32, 52, 0.55);
+}
+.cc-roll-die .px-icon { transition: transform 120ms; }
+.cc-roll:hover .cc-roll-die .px-icon { transform: rotate(-10deg) translateY(-1px); }
+.cc-roll:active .cc-roll-die { transform: translateY(2px); }
+.cc-roll-die.is-rolling .px-icon { animation: cc-roll 520ms steps(8) both; }
+@keyframes cc-roll {
+    0% { transform: rotate(0) translateY(0); }
+    25% { transform: rotate(-90deg) translateY(-10px); }
+    50% { transform: rotate(-180deg) translateY(-14px); }
+    75% { transform: rotate(-270deg) translateY(-6px); }
+    100% { transform: rotate(-360deg) translateY(0); }
+}
+.cc-side-label {
+    font-family: 'Romulus', monospace;
+    font-size: 16px;
+    line-height: 15px;
+    text-align: center;
+    color: var(--gold);
+    text-shadow: 1px 0 var(--ink), -1px 0 var(--ink), 0 1px var(--ink), 0 -1px var(--ink), 0 2px var(--ink);
+    white-space: nowrap;
+    pointer-events: none;
+}
+.cc-side-label > span { display: block; }
+
+.cc-move {
+    position: absolute;
+    top: 224px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Romulus', monospace;
+    font-size: 16px;
+    color: var(--parchment);
+    text-shadow: 1px 0 var(--ink), -1px 0 var(--ink), 0 1px var(--ink), 0 -1px var(--ink);
+}
+
+/* Name on a pixel ribbon banner */
+.cc-namebar {
+    position: absolute;
+    top: 248px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 22px;
+    background: var(--ink);
+    box-shadow: inset 0 2px 0 var(--brass), inset 0 -2px 0 var(--brass-dark), inset 0 4px 0 #45283c;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%, 10px 50%);
+    white-space: nowrap;
+}
+
+.cc-name {
+    pointer-events: auto;
+    min-width: 60px;
+    max-width: 250px;
+    height: 28px;
+    padding: 0 4px;
+    text-align: center;
+    font-size: 19px;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    caret-color: var(--gold);
+}
+.cc-name:focus { outline: none; color: var(--gold); }
+
+/* Pencil to edit; while editing, the pencil gives way to a random-name die */
+.cc-namebar .cc-name-dice { display: none; }
+.cc-namebar.is-editing .cc-name-edit { display: none; }
+.cc-namebar.is-editing .cc-name-dice { display: grid; }
+
+.cc-icon-btn {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    flex: none;
+}
+.cc-icon-btn:hover .px-icon { transform: rotate(-12deg); }
+.cc-icon-btn:active .px-icon { transform: rotate(20deg); }
+
+/* ---------- Choice panel ---------- */
+
+.cc-panel {
+    position: absolute;
+    /* Reach the game's edges when it's wider than the 352 column (--side), with
+       the same thin gold border as the in-game panels */
+    left: calc(-1 * var(--side, 0px));
+    right: calc(-1 * var(--side, 0px));
+    top: 296px;
+    bottom: 0;
+    padding: 16px calc(10px + var(--side, 0px)) 0;
+    box-shadow: inset 0 0 0 1px #c8a04a;
+    background: url('/ui/creator/art/leather.png') 0 0 / 32px 32px repeat, var(--leather);
+    pointer-events: auto;
+    isolation: isolate; /* keep the caret's z-index inside the panel */
+}
+
+.cc-row {
+    position: relative;
+    display: grid;
+    margin-bottom: 8px;
+}
+
+/* Body: two simple buttons */
+.cc-row--sex {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    width: 196px;
+    height: 28px;
+    margin: 0 auto 6px;
+}
+
+/* Race: portrait cards; the head pops above the frame */
+.cc-row--race {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 18px;
+}
+.cc-card {
+    height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 6px;
+    font-size: 14px;
+    color: var(--muted);
+}
+.cc-card.is-current::before { border-image-source: url('/ui/creator/art/card_on.png'); }
+.cc-card.is-current { color: var(--text); }
+.cc-portrait {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    transform: translateX(-50%);
+    image-rendering: pixelated;
+    filter: saturate(0.7) brightness(0.85);
+    transition: filter 160ms;
+    pointer-events: none;
+}
+.cc-card:hover .cc-portrait,
+.cc-card.is-current .cc-portrait { filter: none; }
+/* Label plate over the portrait's shoulders */
+.cc-card > span {
+    position: relative;
+    z-index: 1;
+    align-self: stretch;
+    margin: 0 6px;
+    padding: 2px 0 1px;
+    text-align: center;
+    background: rgba(34, 32, 52, 0.85);
+    box-shadow: 0 -1px 0 rgba(143, 86, 59, 0.6);
+}
+
+/* Class: a lineup of heroes at true in-game size, standing on a ledge */
+.cc-row--class {
+    grid-template-columns: repeat(5, 1fr);
+    height: 78px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    background:
+        linear-gradient(to bottom, transparent 54px, #5b3a1e 54px 56px, var(--leather-deep) 56px 60px, transparent 60px);
+}
+.cc-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+}
+.cc-hero-figure {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 2px;
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 576px 64px;
+    filter: saturate(0.5) brightness(0.75);
+    transition: filter 160ms;
+}
+.cc-hero:hover .cc-hero-figure { filter: none; }
+.cc-hero.is-current { color: var(--text); }
+.cc-hero.is-current .cc-hero-figure {
+    filter: drop-shadow(0 0 3px rgba(251, 242, 54, 0.35));
+    animation: cc-walk 900ms steps(9) infinite;
+}
+@keyframes cc-walk { to { background-position: -576px 0; } }
+
+/* Player's own pick: a small gold gem beside the label */
+.cc-tile.is-picked > span:last-child::after {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-left: 4px;
+    vertical-align: 3px;
+    background: var(--gold);
+    box-shadow: 0 0 0 1px var(--ink);
+}
+
+/* Gold caret that slides to the current choice */
+.cc-caret {
+    position: absolute;
+    top: -22px;
+    width: 24px;
+    height: 17px;
+    margin-left: -12px;
+    background: url('/ui/creator/art/caret.png') 0 0 / 24px 17px no-repeat;
+    transition: left 180ms ease-out;
+    animation: cc-bob 1100ms ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+}
+.cc-row--class .cc-caret { top: -6px; }
+@keyframes cc-bob { 50% { transform: translateY(3px); } }
+
+.cc-tile:active { transform: translateY(1px); }
+
+/* Customize look: simple button with its palette icon */
+.cc-customize-toggle {
+    gap: 6px;
+    height: 32px;
+    margin: 6px auto 0;
+    padding: 0 14px 0 8px;
+}
+
+/* ---------- Account (placeholder until log in exists) ---------- */
+
+.cc-account-wrap {
+    position: absolute;
+    top: 10px;
+    right: 8px;
+    z-index: 4;
+    pointer-events: auto;
+}
+.cc-account {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 30px;
+    padding: 0 10px 0 4px;
+    font-size: 14px;
+    color: var(--parchment);
+    background: rgba(34, 32, 52, 0.8);
+    box-shadow: 0 0 0 1px #c8a04a; /* same thin gold border as the game's panels */
+}
+.cc-account::after {
+    content: '';
+    margin-left: 4px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--parchment);
+}
+.cc-account:hover { color: var(--gold); }
+.cc-account-wrap .cc-account-menu {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    width: 150px;
+    padding: 8px 10px 10px;
+    background: var(--ink);
+    box-shadow: 0 0 0 2px var(--brass), 0 4px 0 rgba(0, 0, 0, 0.4);
+    display: none;
+}
+.cc-account-wrap.is-open .cc-account-menu { display: block; }
+.cc-account-menu p {
+    margin: 0 0 8px;
+    font-family: 'Romulus', monospace;
+    font-size: 16px;
+    color: var(--muted);
+}
+.cc-account-menu button {
+    width: 100%;
+    height: 28px;
+    font-size: 14px;
+    color: var(--ink);
+    background: linear-gradient(to bottom, #fbf236 0 2px, #dad45e 2px 4px, #d27d2c 4px calc(100% - 4px), #8f563b calc(100% - 4px));
+    box-shadow: 0 0 0 2px #000;
+}
+
+/* ---------- Footer: randomize + play, always reachable ---------- */
+
+.cc-footer {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 14px;
+    display: grid;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.cc-btn {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 18px;
+    text-shadow: 1px 1px var(--ink);
+}
+.cc-btn::before {
+    border-width: 0 26px 0 80px;
+    border-image: url('/ui/creator/btn_brown.png') 0 13 0 40 fill / 0 26px 0 80px stretch;
+}
+.cc-btn--play::before { border-image-source: url('/ui/creator/btn_green.png'); }
+.cc-btn--play:hover::before,
+.cc-btn--play:focus-visible::before { border-image-source: url('/ui/creator/btn_green_hi.png'); }
+.cc-btn .cc-btn-label { white-space: nowrap; }
+.cc-btn:active { transform: translateY(2px); }
+.cc-btn--play {
+    font-size: 24px;
+    color: #fff;
+    text-shadow: 2px 2px var(--ink);
+}
+.cc-btn--play:focus-visible { outline: none; }
+.cc-btn--play.is-joining { filter: brightness(0.85); pointer-events: none; }
+
+/* ---------- Customize sheet ---------- */
+
+.cc-sheet {
+    position: absolute;
+    left: calc(-1 * var(--side, 0px));
+    right: calc(-1 * var(--side, 0px));
+    top: 296px;
+    bottom: 72px;
+    padding: 14px calc(12px + var(--side, 0px)) 8px;
+    box-shadow: inset 0 0 0 1px #c8a04a;
+    background: url('/ui/creator/art/leather.png') 0 0 / 32px 32px repeat, var(--leather);
+    pointer-events: auto;
+    transform: translateY(110%);
+    visibility: hidden;
+    transition: transform 220ms ease-out, visibility 0s 220ms;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.cc-sheet.is-open {
+    transform: none;
+    visibility: visible;
+    transition: transform 220ms ease-out;
+}
+
+.cc-sheet-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    color: var(--parchment);
+}
+.cc-done {
+    font-size: 14px;
+    color: var(--gold-soft);
+    padding: 2px 6px;
+}
+.cc-done:hover { color: var(--gold); }
+
+.cc-field {
+    display: grid;
+    grid-template-columns: 58px 1fr 24px;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 3px 4px;
+    background: rgba(43, 26, 14, 0.75);
+    box-shadow: inset 0 0 0 1px rgba(34, 32, 52, 0.8), 0 1px 0 #5b3a1e;
+}
+.cc-field-label {
+    font-family: 'Romulus', monospace;
+    font-size: 16px;
+    color: var(--muted);
+}
+.cc-field .cc-icon-btn { width: 24px; height: 24px; }
+
+.cc-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+.cc-swatch {
+    width: 18px;
+    height: 18px;
+    box-shadow: inset 0 0 0 2px var(--ink), inset 2px 2px 0 2px rgba(255, 255, 255, 0.18);
+}
+.cc-swatch.is-current {
+    box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 2px var(--gold);
+}
+.cc-swatches--hair { gap: 2px; }
+.cc-swatches--hair .cc-swatch { width: 15px; height: 15px; }
+
+.cc-cycler {
+    display: grid;
+    grid-template-columns: 22px 1fr 22px;
+    align-items: center;
+    height: 26px;
+}
+.cc-cycler-value {
+    text-align: center;
+    font-size: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.cc-cycler-arrow {
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+}
+.cc-cycler-arrow::before {
+    content: '';
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+.cc-cycler-arrow--prev::before { border-right: 7px solid var(--parchment); }
+.cc-cycler-arrow--next::before { border-left: 7px solid var(--parchment); }
+.cc-cycler-arrow:hover::before { border-left-color: var(--gold); border-right-color: var(--gold); }
+.cc-palette-dots { display: inline-flex; gap: 1px; }
+.cc-palette-dots i {
+    display: block;
+    width: 8px;
+    height: 12px;
+    box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.cc-chips {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 3px;
+}
+.cc-chip {
+    height: 26px;
+    padding: 0 4px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* ---------- Status ---------- */
+
+.cc-toast {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 52px;
+    padding: 6px 8px;
+    text-align: center;
+    font-family: 'Romulus', monospace;
+    font-size: 16px;
+    background: var(--ink);
+    color: var(--parchment);
+    box-shadow: 0 0 0 2px var(--brass);
+    opacity: 0;
+    transition: opacity 200ms;
+}
+.cc-toast.is-visible { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .creator, .cc-sheet, .cc-toast, .cc-caret, .cc-portrait, .cc-hero-figure { transition: none; }
+    .cc-caret, .cc-hero.is-current .cc-hero-figure, .cc-roll-die.is-rolling .px-icon { animation: none; }
+}
