@@ -8,6 +8,9 @@ import { audio, modeLabel } from '../audio/audio.js';
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
 const ART = '/ui/creator/art';
+// Dust motes in the light: [x, y, animation offset in seconds]
+const MOTES = [[40, 70, 0], [96, 40, 3], [150, 95, 6], [210, 60, 1.5], [268, 110, 4.5], [318, 52, 7.5],
+    [74, 150, 2], [292, 170, 5], [120, 200, 8], [240, 210, 3.5], [30, 230, 6.5], [330, 240, 1]];
 
 function el(tag, className, attrs = {}) {
     const node = document.createElement(tag);
@@ -65,6 +68,17 @@ export class CreatorPanel {
     _build() {
         const h = this.handlers;
         const r = this.root;
+
+        // Golden-hour light over the stage, with motes drifting through it; a
+        // spotlight takes over while customizing
+        r.append(el('div', 'cc-light'));
+        const motes = el('div', 'cc-motes');
+        for (const [x, y, d] of MOTES) {
+            const m = el('i');
+            m.style.cssText = `left:${x}px;top:${y}px;animation-delay:${-d}s`;
+            motes.append(m);
+        }
+        r.append(motes, el('div', 'cc-spot'));
 
         r.append(el('h1', 'cc-logo', { text: 'Alkema' }));
 
@@ -355,6 +369,7 @@ export class CreatorPanel {
 
     toggleSheet(open) {
         this.sheet.classList.toggle('is-open', open);
+        this.root.classList.toggle('is-customizing', open);
         this.customizeToggle.setAttribute('aria-expanded', String(open));
     }
 

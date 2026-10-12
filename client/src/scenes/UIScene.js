@@ -1,6 +1,10 @@
-import { Scene } from 'phaser';
+import { Scene, BlendModes } from 'phaser';
 import { TopBar } from '../ui/TopBar.js';
 import { BottomControls } from '../ui/BottomControls.js';
+import { Minimap } from '../ui/Minimap.js';
+import { QuestTracker } from '../ui/QuestTracker.js';
+
+const ABILITY_COOLDOWN_MS = 3000;
 
 export class UIScene extends Scene {
     constructor() {
@@ -9,6 +13,9 @@ export class UIScene extends Scene {
 
     create() {
         this._addMapVignette();
+        this._addGoldenHour();
+        this.minimap = new Minimap(this, this.scale.width - 48, 80);
+        this.quests = new QuestTracker(this);
         this.topBar = new TopBar(this);
         this.bottomControls = new BottomControls(this, {
             onAttack: () => this.handleAttack(),
@@ -49,6 +56,31 @@ export class UIScene extends Scene {
             tex.refresh();
         }
         this.add.image(0, TOP, 'map-vignette').setOrigin(0, 0);
+    }
+
+    /** Warm late-afternoon light from the upper left, matching the creator's stage. */
+    _addGoldenHour() {
+        const W = this.scale.width, H = 448, TOP = 32;
+        if (!this.textures.exists('golden-hour')) {
+            const tex = this.textures.createCanvas('golden-hour', W, H);
+            const ctx = tex.getContext();
+            ctx.save();
+            ctx.translate(W * 0.1, 0);
+            ctx.scale(1, 0.75);
+            const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.9);
+            glow.addColorStop(0, 'rgba(255, 214, 120, 0.30)');
+            glow.addColorStop(1, 'rgba(255, 214, 120, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(-W, -H, W * 3, H * 3);
+            ctx.restore();
+            const tint = ctx.createLinearGradient(0, 0, 0, H);
+            tint.addColorStop(0, 'rgba(255, 170, 80, 0.06)');
+            tint.addColorStop(1, 'rgba(120, 60, 140, 0.10)');
+            ctx.fillStyle = tint;
+            ctx.fillRect(0, 0, W, H);
+            tex.refresh();
+        }
+        this.add.image(0, TOP, 'golden-hour').setOrigin(0, 0).setBlendMode(BlendModes.SCREEN);
     }
 
     _setupKeyboard() {
@@ -102,21 +134,30 @@ export class UIScene extends Scene {
         else if (this.cursors.down.isDown || this.wasd.S.isDown || keys.down) dy = 1;
 
         gameScene.handlePlayerMovement(dx, dy);
+
+        const me = gameScene.localPlayer.sprite;
+        const others = [];
+        for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
+        const quest = this.quests.current;
+        this.minimap.update(me, others, quest?.kind === 'visit' ? quest : null);
+        this.quests.updatePosition(me.x, me.y);
     }
 
     handleAttack() {
         const gameScene = this.scene.get('GameScene');
         if (gameScene?.localPlayer) {
             gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
+            this.quests.record('attack');
         }
     }
 
     handleAbility() {
         const gameScene = this.scene.get('GameScene');
-        if (gameScene?.localPlayer) {
-            gameScene.localPlayer.playCast();
-            gameScene.emitCast();
-        }
+        if (!gameScene?.localPlayer || this.bottomControls.coolingDown) return;
+        gameScene.localPlayer.playCast();
+        gameScene.emitCast();
+        this.bottomControls.startCooldown(ABILITY_COOLDOWN_MS);
+        this.quests.record('cast');
     }
 
     updatePlayerCount() {

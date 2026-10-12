@@ -126,6 +126,45 @@ export class BottomControls {
 
         this._createActionButton(btnX - spacing / 2, btnY, btnSize, 'sword', 0x8b0000, 0xff0000, () => this.onAttack?.());
         this._createActionButton(btnX + spacing / 2, btnY, btnSize, 'scroll', 0x00008b, 0x0000ff, () => this.onAbility?.());
+
+        // Cooldown on the ability: a shade sweeping away, a gold ring filling, seconds left
+        this._cooldown = { x: btnX + spacing / 2, y: btnY, r: btnSize / 2, until: 0, ms: 0 };
+        this._cooldownShade = this.scene.add.graphics();
+        this._cooldownRing = this.scene.add.graphics();
+        this._cooldownText = this.scene.add.text(btnX + spacing / 2, btnY, '', {
+            fontFamily: 'Alagard', fontSize: '24px', color: '#ffffff', stroke: '#222034', strokeThickness: 4,
+        }).setOrigin(0.5);
+        this.container.add([this._cooldownShade, this._cooldownRing, this._cooldownText]);
+        this.scene.events.on('update', () => this._drawCooldown());
+    }
+
+    /** Start the ability cooldown. */
+    startCooldown(ms) {
+        this._cooldown.ms = ms;
+        this._cooldown.until = this.scene.time.now + ms;
+    }
+
+    get coolingDown() {
+        return this.scene.time.now < this._cooldown.until;
+    }
+
+    _drawCooldown() {
+        const c = this._cooldown;
+        const left = c.until - this.scene.time.now;
+        this._cooldownShade.clear();
+        this._cooldownRing.clear();
+        if (left <= 0) {
+            this._cooldownText.setText('');
+            return;
+        }
+        const done = 1 - left / c.ms;
+        const start = -Math.PI / 2;
+        const end = start + done * Math.PI * 2;
+        this._cooldownShade.fillStyle(0x0a0614, 0.75);
+        this._cooldownShade.slice(c.x, c.y, c.r, end, start + Math.PI * 2, false).fillPath();
+        this._cooldownRing.lineStyle(3, 0xfbf236, 1);
+        this._cooldownRing.beginPath().arc(c.x, c.y, c.r + 3, start, end, false).strokePath();
+        this._cooldownText.setText(String(Math.ceil(left / 1000)));
     }
 
     _createActionButton(x, y, size, iconType, color1, color2, onPress) {
