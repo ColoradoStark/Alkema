@@ -46,6 +46,24 @@ class Audio {
     init(game) {
         this.game = game;
         game.sound.volume = MASTER_VOLUME;
+
+        // iOS: play like media (as video sites do), so the silent switch doesn't
+        // mute the game once headphones are out
+        try {
+            if (navigator.audioSession) navigator.audioSession.type = 'playback';
+        } catch { /* not supported */ }
+
+        // iOS pauses ("interrupts") web audio when the output changes, e.g.
+        // Bluetooth headphones disconnecting, and only lets it restart during a
+        // tap. Phaser retries every frame, outside any tap, so wake it here.
+        const wake = () => {
+            const ctx = this.sound?.context;
+            if (ctx && !this.sound.locked && ctx.state !== 'running') ctx.resume().catch(() => {});
+        };
+        for (const type of ['pointerdown', 'touchend', 'click', 'keydown']) {
+            document.addEventListener(type, wake, true);
+        }
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
         this._ramps = new Map(); // sound -> { from, to, ms, t, done }
         game.events.on('step', (_time, delta) => this._tickRamps(delta));
     }

@@ -76,6 +76,40 @@ test.describe('Sound', () => {
             .toEqual(expect.arrayContaining(['select', 'equip_ranger', 'dice', 'book_open']));
     });
 
+    test('audio paused by the system (e.g. headphones unplugged) comes back on the next tap', async ({ page }) => {
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.locator('.cc-tile[data-id="elf"]').click();
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.sound.context.state)).toBe('running');
+        // iOS suspends ("interrupts") the audio context when the output route changes,
+        // and only lets it resume from inside a tap/click/key event
+        await page.evaluate(async () => {
+            let inGesture = false;
+            for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
+                window.addEventListener(type, () => { inGesture = true; }, true); // capture: first in
+                window.addEventListener(type, () => { inGesture = false; });     // bubble: last out
+            }
+            const ctx = window.__PHASER_GAME.sound.context;
+            const resume = ctx.resume.bind(ctx);
+            ctx.resume = () => (inGesture ? resume() : Promise.reject(new Error('needs a gesture')));
+            await ctx.suspend();
+        });
+        await page.waitForTimeout(500); // Phaser's own per-frame retries can't revive it
+        expect(await page.evaluate(() => window.__PHASER_GAME.sound.context.state)).toBe('suspended');
+        await page.locator('.cc-tile[data-id="human"]').click();
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.sound.context.state), { timeout: 3000 }).toBe('running');
+    });
+
+    test('asks iOS to play game sound like media, even in silent mode', async ({ page }) => {
+        // Safari's Audio Session API; absent in Chromium, so stand one in
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true });
+        });
+        await page.goto('/');
+        await waitForPreview(page);
+        expect(await page.evaluate(() => navigator.audioSession.type)).toBe('playback');
+    });
+
     test('the speaker cycles sound on → music off → off, and is remembered', async ({ page }) => {
         test.setTimeout(90000);
         // Start from the default setting once (not again on the reload below)
