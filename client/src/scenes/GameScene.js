@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
+import { audio } from '../audio/audio.js';
 
 export class GameScene extends Scene {
     constructor() {
@@ -10,6 +11,7 @@ export class GameScene extends Scene {
     }
 
     create() {
+        audio.playMusic('world');
         this.networkManager = this.game.registry.get('networkManager');
         if (!this.networkManager) return;
 

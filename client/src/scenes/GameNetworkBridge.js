@@ -1,5 +1,7 @@
 // Wires network events to GameScene operations. One instance per GameScene.
 
+import { audio } from '../audio/audio.js';
+
 export class GameNetworkBridge {
     constructor(gameScene) {
         this.gameScene = gameScene;
@@ -34,6 +36,7 @@ export class GameNetworkBridge {
         });
 
         nm.on('player-joined', (data) => {
+            if (gs.localPlayer && data.id !== gs.localPlayer.id) audio.play('join', { volume: 0.6, drift: 0 });
             gs.addPlayer(data);
             gs.updatePlayerCount();
         });
@@ -63,7 +66,10 @@ export class GameNetworkBridge {
 
         nm.on('player-hit', (data) => {
             const target = gs.players.get(data.targetId);
-            if (target) target.sprite.flashHit();
+            if (target) {
+                target.sprite.flashHit();
+                target.playSound(target === gs.localPlayer ? 'hurt' : 'hit');
+            }
         });
 
         nm.on('sprite-meta', (data) => {
@@ -92,6 +98,7 @@ export class GameNetworkBridge {
 
         // Play the exact animation the attacker used
         player.sprite.playAnimation(data.attackType, dir);
+        player.playAttackSound(data.attackType);
         player.isAttacking = true;
         player._attackId = (player._attackId || 0) + 1;
         const attackId = player._attackId;

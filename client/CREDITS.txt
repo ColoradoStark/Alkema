@@ -15,6 +15,44 @@ https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-
 
 
 ======================================================================
+MUSIC AND SOUND
+======================================================================
+
+Music
+  "Enchanted Festival", "Pleasant Creek", "Woodland Fantasy"
+    by Matthew Pablo (http://www.matthewpablo.com)
+    License: CC-BY 3.0
+    https://opengameart.org/content/enchanted-festival
+    https://opengameart.org/content/pleasant-creek
+    https://opengameart.org/content/woodland-fantasy
+  "Town Theme RPG" by cynicmusic
+    License: CC0
+    https://opengameart.org/content/town-theme-rpg
+  "Medieval: Minstrel Dance", "Medieval: The Bard's Tale" by RandomMind
+    License: CC0
+    https://opengameart.org/content/medieval-minstrel-dance
+    https://opengameart.org/content/medieval-the-bards-tale
+
+Sound effects
+  Kenney (www.kenney.nl): Interface Sounds, RPG Audio, Impact Sounds,
+    Casino Audio, Music Jingles
+    License: CC0
+  artisticdude: RPG Sound Pack, Swishes Sound Pack
+    License: CC0
+    https://opengameart.org/content/rpg-sound-pack
+    https://opengameart.org/content/swishes-sound-pack
+  rubberduck: 80 CC0 RPG SFX, 80 CC0 creature SFX
+    License: CC0
+    https://opengameart.org/content/80-cc0-rpg-sfx
+    https://opengameart.org/content/80-cc0-creature-sfx
+  Remaining effects (summon shimmer, chimes, bow, spells, thunder,
+    shadow drone, fanfare) were synthesized for Alkema.
+
+Effects were trimmed, level-matched and combined into one audio file;
+music loops were crossfaded at the seam and loudness-matched.
+
+
+======================================================================
 CONTRIBUTING ARTISTS
 ======================================================================
 

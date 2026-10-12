@@ -1,6 +1,10 @@
 import { CompositeCharacter } from './CompositeCharacter.js';
 import { getWeaponItemKey, getWeaponType, getMeleeAnimation, getRangedAnimation } from './weaponTypes.js';
 import { spawnArrow, spawnRock } from './ProjectileSpawner.js';
+import { audio } from '../audio/audio.js';
+import { attackSound } from '../audio/combatSounds.js';
+
+const STEP_MS = 330; // footstep spacing while walking
 
 const WEAPON_COMBO_ATTACKS = {
     'weapon_sword_longsword':  ['slash', 'slash_reverse', 'thrust'],
@@ -55,6 +59,22 @@ export class Player {
         // Combo attack state
         this.comboIndex = 0;
         this.lastAttackTime = 0;
+        this._stepTimer = 0;
+    }
+
+    /** Play an effect from this player: full volume for you, by distance for others. */
+    playSound(name, opts) {
+        if (this.isLocal) return audio.play(name, opts);
+        const listener = this.scene.localPlayer?.sprite;
+        return audio.playAt(name, this.sprite.x, this.sprite.y, listener, opts);
+    }
+
+    /** The whoosh, twang or crackle of an attack animation. */
+    playAttackSound(anim) {
+        const ranged = getRangedAnimation(this.characterData);
+        if (ranged && getWeaponType(this.characterData) === 'slingshot') return this.playSound('rock');
+        const name = attackSound(anim, this.characterData?.character_class);
+        if (name) this.playSound(name);
     }
 
     playAttack(onAttackFired) {
@@ -86,6 +106,7 @@ export class Player {
         const rangedAnim = getRangedAnimation(this.characterData);
         if (rangedAnim) {
             this.sprite.playAnimation(rangedAnim, dir);
+            this.playAttackSound(rangedAnim);
             this.lastAttackType = rangedAnim;
             const weaponType = getWeaponType(this.characterData);
             if (weaponType === 'slingshot') {
@@ -106,6 +127,7 @@ export class Player {
             }
 
             this.sprite.playAnimation(meleeAnim, dir);
+            this.playAttackSound(meleeAnim);
             this.lastAttackType = meleeAnim;
         }
 
@@ -144,6 +166,7 @@ export class Player {
 
         const dir = this.sprite.currentDirection || 'down';
         this.sprite.playAnimation('spellcast', dir);
+        this.playAttackSound('spellcast');
 
         const finishCast = () => {
             if (this._attackId !== attackId) return;
@@ -233,6 +256,16 @@ export class Player {
     }
 
     update(delta) {
+        // Your own footsteps on the grass
+        if (this.isLocal && this.sprite?.body && !this.isAttacking) {
+            const moving = this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0;
+            this._stepTimer = moving ? this._stepTimer + delta : STEP_MS * 0.6;
+            if (this._stepTimer >= STEP_MS) {
+                this._stepTimer = 0;
+                audio.play('step_grass', { volume: 0.45 });
+            }
+        }
+
         if (!this.isLocal && this.sprite) {
             const dx = this.targetX - this.sprite.x;
             const dy = this.targetY - this.sprite.y;

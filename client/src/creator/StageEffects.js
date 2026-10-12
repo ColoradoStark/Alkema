@@ -2,6 +2,8 @@
 // sparks, damage numbers, coin bursts, arrows and magic bolts, fireflies, and
 // the treasure chest. Colours are from the DawnBringer-32 palette the UI uses.
 
+import { audio } from '../audio/audio.js';
+
 const SPARK = 'cc-spark';
 const CHEST_CLOSED = 'cc-chest-closed';
 const CHEST_OPEN = 'cc-chest-open';
@@ -109,9 +111,14 @@ export class StageEffects {
         const s = this.scene;
         const chest = s.add.image(x, y - 90, CHEST_CLOSED).setScale(2).setOrigin(0.5, 1).setDepth(4);
         this._chest = chest;
+        // Thud when it first touches down (Bounce.easeOut lands at ~36% of the tween)
+        s.time.delayedCall(150, () => audio.play('chest_drop'));
         await tween(s, { targets: chest, y, duration: 420, ease: 'Bounce.easeOut' });
         this.dust.emitParticleAt(x, y, 10);
+        audio.play('latch', { volume: 0.7 });
         await delay(s, 220);
+        audio.play('chest_open');
+        audio.play('coins');
         chest.setTexture(CHEST_OPEN);
         this.coinBurst(x, y - 22);
         this.sparks.explode(12, x, y - 22);

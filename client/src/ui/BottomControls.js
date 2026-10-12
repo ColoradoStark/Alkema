@@ -1,4 +1,5 @@
 import { addPanelBackground } from './panelBackground.js';
+import { audio } from '../audio/audio.js';
 
 // Bottom controls panel: D-pad (movement), action buttons (attack, ability), tab bar.
 // Exposes `movementKeys` state and `activeTab`, invokes callbacks for actions and tab switches.
@@ -193,7 +194,10 @@ export class BottomControls {
 
             container.add([bg, hitArea, text]);
 
-            hitArea.on('pointerdown', () => this.switchTab(tab.key));
+            hitArea.on('pointerdown', () => {
+                if (this.activeTab !== tab.key) audio.play('page', { volume: 0.8 });
+                this.switchTab(tab.key);
+            });
             hitArea.on('pointerover', () => {
                 if (this.activeTab !== tab.key) {
                     bg.clear();

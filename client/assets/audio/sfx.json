@@ -1,0 +1,543 @@
+{
+ "resources": [
+  "sfx.ogg",
+  "sfx.mp3"
+ ],
+ "spritemap": {
+  "tap_1": {
+   "start": 0.0,
+   "end": 0.1023,
+   "loop": false
+  },
+  "tap_2": {
+   "start": 0.4723,
+   "end": 0.5998,
+   "loop": false
+  },
+  "select_1": {
+   "start": 0.9698,
+   "end": 1.1837,
+   "loop": false
+  },
+  "select_2": {
+   "start": 1.5537,
+   "end": 1.7651,
+   "loop": false
+  },
+  "select_3": {
+   "start": 2.1351,
+   "end": 2.3534,
+   "loop": false
+  },
+  "toggle_1": {
+   "start": 2.7234,
+   "end": 2.8514,
+   "loop": false
+  },
+  "toggle_2": {
+   "start": 3.2214,
+   "end": 3.3468,
+   "loop": false
+  },
+  "toggle_3": {
+   "start": 3.7168,
+   "end": 3.8439,
+   "loop": false
+  },
+  "swatch_1": {
+   "start": 4.2139,
+   "end": 4.3322,
+   "loop": false
+  },
+  "swatch_2": {
+   "start": 4.7022,
+   "end": 4.8558,
+   "loop": false
+  },
+  "swatch_3": {
+   "start": 5.2258,
+   "end": 5.3058,
+   "loop": false
+  },
+  "swatch_4": {
+   "start": 5.6758,
+   "end": 5.7637,
+   "loop": false
+  },
+  "cycle_1": {
+   "start": 6.1337,
+   "end": 6.196,
+   "loop": false
+  },
+  "cycle_2": {
+   "start": 6.566,
+   "end": 6.639,
+   "loop": false
+  },
+  "cycle_3": {
+   "start": 7.009,
+   "end": 7.0838,
+   "loop": false
+  },
+  "book_open": {
+   "start": 7.4538,
+   "end": 7.6261,
+   "loop": false
+  },
+  "book_close": {
+   "start": 7.9961,
+   "end": 8.2269,
+   "loop": false
+  },
+  "page_1": {
+   "start": 8.5969,
+   "end": 8.8142,
+   "loop": false
+  },
+  "page_2": {
+   "start": 9.1842,
+   "end": 9.5893,
+   "loop": false
+  },
+  "pencil_1": {
+   "start": 9.9593,
+   "end": 10.1115,
+   "loop": false
+  },
+  "pencil_2": {
+   "start": 10.4815,
+   "end": 10.6334,
+   "loop": false
+  },
+  "dice_1": {
+   "start": 11.0034,
+   "end": 11.5024,
+   "loop": false
+  },
+  "dice_2": {
+   "start": 11.8724,
+   "end": 12.1109,
+   "loop": false
+  },
+  "dice_3": {
+   "start": 12.4809,
+   "end": 12.9983,
+   "loop": false
+  },
+  "die_1": {
+   "start": 13.3683,
+   "end": 13.6924,
+   "loop": false
+  },
+  "die_2": {
+   "start": 14.0624,
+   "end": 14.4113,
+   "loop": false
+  },
+  "error": {
+   "start": 14.7813,
+   "end": 14.914,
+   "loop": false
+  },
+  "confirm": {
+   "start": 15.284,
+   "end": 15.5984,
+   "loop": false
+  },
+  "menu_open": {
+   "start": 15.9684,
+   "end": 16.1462,
+   "loop": false
+  },
+  "menu_close": {
+   "start": 16.5162,
+   "end": 16.6909,
+   "loop": false
+  },
+  "equip_warrior_1": {
+   "start": 17.0609,
+   "end": 17.4159,
+   "loop": false
+  },
+  "equip_warrior_2": {
+   "start": 17.7859,
+   "end": 18.1176,
+   "loop": false
+  },
+  "equip_mage": {
+   "start": 18.4876,
+   "end": 19.0194,
+   "loop": false
+  },
+  "equip_ranger": {
+   "start": 19.3894,
+   "end": 19.8681,
+   "loop": false
+  },
+  "equip_thief_1": {
+   "start": 20.2381,
+   "end": 20.5488,
+   "loop": false
+  },
+  "equip_thief_2": {
+   "start": 20.9188,
+   "end": 21.2989,
+   "loop": false
+  },
+  "equip_cleric": {
+   "start": 21.6689,
+   "end": 23.2989,
+   "loop": false
+  },
+  "summon": {
+   "start": 23.6689,
+   "end": 25.8989,
+   "loop": false
+  },
+  "appear": {
+   "start": 26.2689,
+   "end": 28.2989,
+   "loop": false
+  },
+  "poof_1": {
+   "start": 28.6689,
+   "end": 28.9009,
+   "loop": false
+  },
+  "poof_2": {
+   "start": 29.2709,
+   "end": 29.4372,
+   "loop": false
+  },
+  "step_1": {
+   "start": 29.8072,
+   "end": 30.0054,
+   "loop": false
+  },
+  "step_2": {
+   "start": 30.3754,
+   "end": 30.5983,
+   "loop": false
+  },
+  "step_3": {
+   "start": 30.9683,
+   "end": 31.1853,
+   "loop": false
+  },
+  "step_4": {
+   "start": 31.5553,
+   "end": 31.8088,
+   "loop": false
+  },
+  "step_grass_1": {
+   "start": 32.1788,
+   "end": 32.3406,
+   "loop": false
+  },
+  "step_grass_2": {
+   "start": 32.7106,
+   "end": 32.8756,
+   "loop": false
+  },
+  "step_grass_3": {
+   "start": 33.2456,
+   "end": 33.37,
+   "loop": false
+  },
+  "step_grass_4": {
+   "start": 33.74,
+   "end": 33.8442,
+   "loop": false
+  },
+  "swing_1": {
+   "start": 34.2142,
+   "end": 34.3484,
+   "loop": false
+  },
+  "swing_2": {
+   "start": 34.7184,
+   "end": 34.8434,
+   "loop": false
+  },
+  "swing_3": {
+   "start": 35.2134,
+   "end": 35.3583,
+   "loop": false
+  },
+  "swing_4": {
+   "start": 35.7283,
+   "end": 35.8747,
+   "loop": false
+  },
+  "swing_5": {
+   "start": 36.2447,
+   "end": 36.3796,
+   "loop": false
+  },
+  "thrust_1": {
+   "start": 36.7496,
+   "end": 36.8522,
+   "loop": false
+  },
+  "thrust_2": {
+   "start": 37.2222,
+   "end": 37.3163,
+   "loop": false
+  },
+  "thrust_3": {
+   "start": 37.6863,
+   "end": 37.7803,
+   "loop": false
+  },
+  "hit_1": {
+   "start": 38.1503,
+   "end": 38.4071,
+   "loop": false
+  },
+  "hit_2": {
+   "start": 38.7771,
+   "end": 39.0208,
+   "loop": false
+  },
+  "hit_3": {
+   "start": 39.3908,
+   "end": 39.6872,
+   "loop": false
+  },
+  "hit_blade_1": {
+   "start": 40.0572,
+   "end": 40.2758,
+   "loop": false
+  },
+  "hit_blade_2": {
+   "start": 40.6458,
+   "end": 40.9225,
+   "loop": false
+  },
+  "hit_blade_3": {
+   "start": 41.2925,
+   "end": 41.5584,
+   "loop": false
+  },
+  "hit_bone_1": {
+   "start": 41.9284,
+   "end": 42.0391,
+   "loop": false
+  },
+  "hit_bone_2": {
+   "start": 42.4091,
+   "end": 42.5192,
+   "loop": false
+  },
+  "hit_bone_3": {
+   "start": 42.8892,
+   "end": 42.9998,
+   "loop": false
+  },
+  "block_1": {
+   "start": 43.3698,
+   "end": 43.5438,
+   "loop": false
+  },
+  "block_2": {
+   "start": 43.9138,
+   "end": 44.3958,
+   "loop": false
+  },
+  "bow": {
+   "start": 44.7658,
+   "end": 45.2446,
+   "loop": false
+  },
+  "arrow_hit_1": {
+   "start": 45.6146,
+   "end": 45.7253,
+   "loop": false
+  },
+  "arrow_hit_2": {
+   "start": 46.0953,
+   "end": 46.2058,
+   "loop": false
+  },
+  "cast": {
+   "start": 46.5758,
+   "end": 48.0058,
+   "loop": false
+  },
+  "holy": {
+   "start": 48.3758,
+   "end": 50.0058,
+   "loop": false
+  },
+  "zap": {
+   "start": 50.3758,
+   "end": 51.3058,
+   "loop": false
+  },
+  "foe_skeleton_1": {
+   "start": 51.6758,
+   "end": 51.9563,
+   "loop": false
+  },
+  "foe_skeleton_2": {
+   "start": 52.3263,
+   "end": 52.7356,
+   "loop": false
+  },
+  "foe_goblin_1": {
+   "start": 53.1056,
+   "end": 53.6535,
+   "loop": false
+  },
+  "foe_goblin_2": {
+   "start": 54.0235,
+   "end": 54.4768,
+   "loop": false
+  },
+  "foe_orc_1": {
+   "start": 54.8468,
+   "end": 55.1882,
+   "loop": false
+  },
+  "foe_orc_2": {
+   "start": 55.5582,
+   "end": 56.0501,
+   "loop": false
+  },
+  "foe_down_1": {
+   "start": 56.4201,
+   "end": 56.9017,
+   "loop": false
+  },
+  "foe_down_2": {
+   "start": 57.2717,
+   "end": 57.9908,
+   "loop": false
+  },
+  "bones_down_1": {
+   "start": 58.3608,
+   "end": 58.7306,
+   "loop": false
+  },
+  "bones_down_2": {
+   "start": 59.1006,
+   "end": 59.8181,
+   "loop": false
+  },
+  "victory_1": {
+   "start": 60.1881,
+   "end": 61.1663,
+   "loop": false
+  },
+  "victory_2": {
+   "start": 61.5363,
+   "end": 62.3324,
+   "loop": false
+  },
+  "victory_3": {
+   "start": 62.7024,
+   "end": 63.509,
+   "loop": false
+  },
+  "coins_1": {
+   "start": 63.879,
+   "end": 64.2321,
+   "loop": false
+  },
+  "coins_2": {
+   "start": 64.6021,
+   "end": 65.168,
+   "loop": false
+  },
+  "coins_3": {
+   "start": 65.538,
+   "end": 66.0126,
+   "loop": false
+  },
+  "rock_1": {
+   "start": 66.3826,
+   "end": 66.5124,
+   "loop": false
+  },
+  "rock_2": {
+   "start": 66.8824,
+   "end": 66.9887,
+   "loop": false
+  },
+  "hurt_1": {
+   "start": 67.3587,
+   "end": 67.6024,
+   "loop": false
+  },
+  "hurt_2": {
+   "start": 67.9724,
+   "end": 68.2688,
+   "loop": false
+  },
+  "chest_drop_1": {
+   "start": 68.6388,
+   "end": 68.8737,
+   "loop": false
+  },
+  "chest_drop_2": {
+   "start": 69.2437,
+   "end": 69.4787,
+   "loop": false
+  },
+  "chest_open": {
+   "start": 69.8487,
+   "end": 70.1411,
+   "loop": false
+  },
+  "latch": {
+   "start": 70.5111,
+   "end": 70.6581,
+   "loop": false
+  },
+  "reveal_1": {
+   "start": 71.0281,
+   "end": 72.6581,
+   "loop": false
+  },
+  "reveal_2": {
+   "start": 73.0281,
+   "end": 74.6581,
+   "loop": false
+  },
+  "reveal_3": {
+   "start": 75.0281,
+   "end": 76.6581,
+   "loop": false
+  },
+  "reveal_4": {
+   "start": 77.0281,
+   "end": 78.6581,
+   "loop": false
+  },
+  "enter": {
+   "start": 79.0281,
+   "end": 81.2581,
+   "loop": false
+  },
+  "drone": {
+   "start": 81.6281,
+   "end": 86.1509,
+   "loop": false
+  },
+  "roar": {
+   "start": 86.5209,
+   "end": 87.366,
+   "loop": false
+  },
+  "thunder": {
+   "start": 87.736,
+   "end": 90.766,
+   "loop": false
+  },
+  "join": {
+   "start": 91.136,
+   "end": 92.766,
+   "loop": false
+  }
+ }
+}

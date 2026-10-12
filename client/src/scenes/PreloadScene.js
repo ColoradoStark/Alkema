@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { audio } from '../audio/audio.js';
 
 export class PreloadScene extends Scene {
     constructor() {
@@ -86,9 +87,13 @@ export class PreloadScene extends Scene {
 
         // Load rock projectile for slingshot
         this.load.image('rock-projectile', '/projectiles/rock.png');
+
+        // Every sound effect, as one audio sprite (music streams in later, by mood)
+        this.load.audioSprite('sfx', '/audio/sfx.json', ['/audio/sfx.ogg', '/audio/sfx.mp3']);
     }
 
     create() {
+        audio.sfxLoaded();
         // Every session starts in character creation; it enters the world on Play.
         this.scene.start('CreateScene');
     }

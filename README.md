@@ -80,6 +80,14 @@ Every session opens in a character creator built for one-thumb play on a phone:
 
 Other races and classes are reserved for NPCs and enemies.
 
+## Sound and Music
+
+- Music that follows you: a festive theme in the character creator, then a rotating playlist of town and countryside tracks in the world, crossfading between moods
+- Every tap, pick and roll has a sound: dice rattle for **Random New Hero**, each class answers with its weapon (a sword drawn, a bow twang, a spell), pages turn in **Customize look**
+- The creator's sparring bouts and the world's fights are fully voiced: whooshes, bone clacks, blocks, monster cries, a victory jingle and coins
+- The starter chest thuds down, creaks open and chimes for each item
+- A speaker button cycles sound on, music off, or silent, and remembers your choice
+
 ## Multiplayer
 
 Real-time multiplayer via Socket.io. Players share a 4096×4096 tile map world with:
@@ -125,7 +133,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses.
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude and rubberduck (see CREDITS.txt).
 
 ## License
 

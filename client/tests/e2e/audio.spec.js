@@ -1,0 +1,108 @@
+// Sound: every effect the code asks for exists, music starts on the first tap
+// and changes to the world playlist on Play, and the speaker toggle works.
+import { test, expect } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+
+const SRC = path.resolve('src');
+const sprite = JSON.parse(fs.readFileSync(path.resolve('assets/audio/sfx.json'), 'utf8'));
+const clipNames = new Set(Object.keys(sprite.spritemap).map(k => k.replace(/_\d+$/, '')));
+
+function sourceFiles(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+        e.isDirectory() ? sourceFiles(path.join(dir, e.name)) : e.name.endsWith('.js') ? [path.join(dir, e.name)] : []);
+}
+
+async function waitForPreview(page) {
+    await page.waitForFunction(() => {
+        const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+        return s?.figure?.visible && !s._inFlight;
+    }, null, { timeout: 60000 });
+}
+
+const music = (page) => page.evaluate(() => window.__PHASER_GAME.sound.sounds
+    .filter(s => s.key.startsWith('music-') && s.isPlaying).map(s => s.key));
+
+test.describe('Sound', () => {
+    test('every sound the code plays is in the effects sprite', () => {
+        const used = new Set();
+        const literal = /(?:audio\.play|audio\.playAt|playSound|\.play)\(\s*'([a-z_]+)'/g;
+        const returned = /return '([a-z_]+)'|\b(?:appear|down): '([a-z_]+)'|(?:skeleton|goblin|orc): '([a-z_]+)'/g;
+        for (const file of sourceFiles(SRC)) {
+            if (!/audio|creator|scenes|sprites|ui/.test(file)) continue;
+            const text = fs.readFileSync(file, 'utf8');
+            if (!text.includes('audio')) continue;
+            for (const m of text.matchAll(literal)) used.add(m[1]);
+            if (file.endsWith('combatSounds.js')) for (const m of text.matchAll(returned)) used.add(m[1] || m[2] || m[3]);
+        }
+        for (const cls of ['warrior', 'mage', 'ranger', 'thief', 'cleric']) used.add(`equip_${cls}`);
+        // Phaser animation/tween .play('x') calls aren't sounds
+        for (const notSound of ['idle', 'walk']) used.delete(notSound);
+        const missing = [...used].filter(n => !clipNames.has(n));
+        expect(used.size).toBeGreaterThan(30);
+        expect(missing).toEqual([]);
+    });
+
+    test('creator music starts on the first tap and the world playlist takes over on Play', async ({ page }) => {
+        test.setTimeout(120000);
+        await page.addInitScript(() => localStorage.removeItem('alkema.audio'));
+        await page.goto('/');
+        await waitForPreview(page);
+        expect(await music(page)).toEqual([]); // browsers allow no sound before a gesture
+
+        await page.locator('.cc-tile[data-id="elf"]').click();
+        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-enchanted-festival']);
+
+        await page.locator('#cc-play').click();
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
+        // The creator theme faded out and was freed
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-enchanted-festival')), { timeout: 10000 }).toBe(false);
+    });
+
+    test('effects play on taps', async ({ page }) => {
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.evaluate(() => {
+            window.__played = [];
+            const a = window.__ALKEMA_AUDIO;
+            const play = a.play.bind(a);
+            a.play = (name, opts) => { const s = play(name, opts); if (s) window.__played.push(name); return s; };
+        });
+        await page.locator('.cc-tile[data-id="elf"]').click();
+        await page.locator('.cc-tile[data-id="ranger"]').click();
+        await page.locator('#cc-randomize').click();
+        await page.locator('.cc-customize-toggle').click();
+        await expect.poll(() => page.evaluate(() => window.__played), { timeout: 5000 })
+            .toEqual(expect.arrayContaining(['select', 'equip_ranger', 'dice', 'book_open']));
+    });
+
+    test('the speaker cycles sound on → music off → off, and is remembered', async ({ page }) => {
+        test.setTimeout(90000);
+        // Start from the default setting once (not again on the reload below)
+        await page.addInitScript(() => {
+            if (!sessionStorage.getItem('audio-test')) {
+                localStorage.removeItem('alkema.audio');
+                sessionStorage.setItem('audio-test', '1');
+            }
+        });
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.locator('.cc-tile[data-id="elf"]').click();
+        await expect.poll(() => music(page), { timeout: 15000 }).toHaveLength(1);
+
+        const speaker = page.locator('.cc-sound');
+        await speaker.click();
+        expect(await page.evaluate(() => window.__ALKEMA_AUDIO.mode)).toBe('sfx');
+        await expect.poll(() => music(page), { timeout: 5000 }).toEqual([]);
+        await speaker.click();
+        expect(await page.evaluate(() => window.__ALKEMA_AUDIO.mode)).toBe('off');
+        expect(await page.evaluate(() => window.__ALKEMA_AUDIO.play('tap'))).toBeNull();
+
+        await page.reload();
+        await waitForPreview(page);
+        expect(await page.evaluate(() => window.__ALKEMA_AUDIO.mode)).toBe('off');
+        await page.locator('.cc-sound').click();
+        await page.locator('.cc-tile[data-id="human"]').click();
+        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-enchanted-festival']);
+    });
+});

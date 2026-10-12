@@ -425,6 +425,24 @@
 
 /* ---------- Account (placeholder until log in exists) ---------- */
 
+/* Sound setting: mirrors the account chip, top left */
+.cc-sound {
+    position: absolute;
+    top: 10px;
+    left: 8px;
+    z-index: 4;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    background: rgba(34, 32, 52, 0.8);
+    box-shadow: 0 0 0 1px #c8a04a;
+}
+.cc-sound:hover { box-shadow: 0 0 0 1px var(--gold); }
+.cc-sound:active { transform: translateY(1px); }
+
 .cc-account-wrap {
     position: absolute;
     top: 10px;

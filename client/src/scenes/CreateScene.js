@@ -14,6 +14,7 @@ import { CreatorPanel } from '../creator/CreatorPanel.js';
 import { Showcase } from '../creator/Showcase.js';
 import { StageBackdrop } from '../creator/StageBackdrop.js';
 import { StageEffects, delay, tween } from '../creator/StageEffects.js';
+import { audio } from '../audio/audio.js';
 
 const FIGURE_Y = 160;
 const FIGURE_SCALE = 2;
@@ -52,6 +53,7 @@ export class CreateScene extends Scene {
         });
 
         this.events.once('shutdown', () => this._teardown());
+        audio.playMusic('creator');
         this._loadCast();
         this._loadOptions();
     }
@@ -124,6 +126,7 @@ export class CreateScene extends Scene {
                 this._endIntro();
             }
             this._setSummoning(false);
+            audio.play(identityChanged ? 'appear' : 'poof', { volume: identityChanged ? 0.75 : 0.6 });
             figure.setVisible(true);
             if (previous) this._disposeFigure(previous);
             this.loadingText?.destroy();
@@ -186,8 +189,10 @@ export class CreateScene extends Scene {
         this.loadingText?.setText('A shadow stirs…');
 
         this.tweens.add({ targets: dim, fillAlpha: 0.55, duration: 500 });
+        this._intro.drone = audio.play('drone', { volume: 0.8, drift: 0 });
         const appear = () => {
             if (this._intro?.shadow !== shadow) return;
+            audio.play('roar', { volume: 0.55, detune: -500 });
             const tint = (s) => s?.setTint(0x1a1420);
             tint(shadow.sprite); tint(shadow.oversizedSprite);
             shadow.playAnimation('walk', 'down');
@@ -202,6 +207,8 @@ export class CreateScene extends Scene {
         const intro = this._intro;
         this._intro = null;
         if (!intro) return;
+        intro.drone?.stop();
+        audio.play('thunder', { volume: 0.9, drift: 0 });
         this.cameras.main.flash(220, 255, 246, 200);
         this.effects.hit(this.figureX, FIGURE_Y - 30);
         this.effects.coinBurst(this.figureX, FIGURE_Y - 30);
@@ -301,7 +308,8 @@ export class CreateScene extends Scene {
             res = null;
         }
         this._inFlight = false;
-        if (!this.scene.isActive()) return;
+        // Play was pressed meanwhile: the creator is closing, the reply is moot
+        if (!this.scene.isActive() || this._joining) return;
 
         if (this._pending) {
             // Something changed while we waited; show the newest state instead.
@@ -314,7 +322,10 @@ export class CreateScene extends Scene {
             this._applyPreview(res, identity);
         } else {
             this._setSummoning(false);
-            if (res?.error !== 'busy') this.panel.toast('That one fizzled. Try again.');
+            if (res?.error !== 'busy') {
+                audio.play('error');
+                this.panel.toast('That one fizzled. Try again.');
+            }
         }
         this._startPrefetch();
     }
@@ -326,6 +337,8 @@ export class CreateScene extends Scene {
     _setSummoning(on) {
         this._summoning = on;
         if (on) {
+            // One shimmer at a time, however fast the dice are rolled
+            if (!this._summonSound?.isPlaying) this._summonSound = audio.play('summon', { volume: 0.55, drift: 0 });
             this.summon.start();
             this.panel?.setMove('Summoning…');
         } else {
@@ -366,7 +379,7 @@ export class CreateScene extends Scene {
                 kind: this.state.current('kind'),
                 body_type: this.state.current('body_type'),
             });
-            if (res?.ok) {
+            if (res?.ok && this.panel) {
                 this.state.setSuggestedName(res.name);
                 this.panel.render();
             }
@@ -415,6 +428,7 @@ export class CreateScene extends Scene {
         this.panel?.setMove('');
 
         const chestX = this.figureX + 30;
+        audio.duck(3200, 0.25);
         await this.effects.chest(chestX, FEET_Y - 4);
         if (figure.active) figure.playAnimation(figure.characterData.animations?.complete?.includes('emote') ? 'emote' : 'idle', 'down');
 
@@ -424,14 +438,17 @@ export class CreateScene extends Scene {
             }).setOrigin(0.5).setDepth(8).setAlpha(0).setScale(0.5);
             const y = FIGURE_Y - 80 + i * 20;
             tween(this, { targets: label, alpha: 1, scale: 1, y, duration: 280, ease: 'Back.easeOut' });
+            audio.play('reveal', { variant: i, drift: 0, volume: 0.8 });
             this.effects.hit(chestX, FEET_Y - 26);
             await delay(this, 300);
         }
+        audio.play('reveal', { variant: 3, drift: 0, volume: 0.6 });
         await delay(this, 700);
     }
 
     _enterWorld() {
         this.showcase.stop();
+        audio.play('enter', { drift: 0 });
         this.poof.explode(40);
         this.cameras.main.fadeOut(380, 0x22, 0x20, 0x34);
         const panelGone = this.panel ? this.panel.leave() : Promise.resolve();

@@ -1,4 +1,8 @@
 import { addPanelBackground } from './panelBackground.js';
+import { pixelIconTexture } from '../creator/pixelIcons.js';
+import { audio } from '../audio/audio.js';
+
+const SOUND_ICONS = { all: 'soundAll', sfx: 'soundSfx', off: 'soundOff' };
 
 // Top HUD: health bar, mana bar, connection orb, player count.
 // Owns a Phaser container; caller provides the UIScene.
@@ -53,6 +57,18 @@ export class TopBar {
         this.mpBar.fillStyle(0x3366ff, 1);
         this.mpBar.fillRoundedRect(130, 12, 80, 8, 2);
         this.container.add(this.mpBar);
+
+        // Sound setting: tap to cycle sound on → music off → sound off
+        const icon = mode => pixelIconTexture(s, SOUND_ICONS[mode]);
+        this.soundIcon = s.add.image(262, 16, icon(audio.mode)).setScale(2).setInteractive({ useHandCursor: true });
+        this.soundIcon.input.hitArea.setTo(-4, -4, 20, 20); // easier to tap than the 12px art
+        this.soundIcon.on('pointerdown', () => {
+            audio.cycleMode();
+            audio.play('tap');
+        });
+        this.container.add(this.soundIcon);
+        this._offSoundMode = audio.onModeChange(mode => this.soundIcon.setTexture(icon(mode)));
+        s.events.once('shutdown', () => this._offSoundMode());
     }
 
     setConnected(connected) {

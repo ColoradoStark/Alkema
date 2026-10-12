@@ -3,6 +3,7 @@
 
 import './creator.css';
 import { pixelIcon } from './pixelIcons.js';
+import { audio, modeLabel } from '../audio/audio.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -78,11 +79,12 @@ export class CreatorPanel {
         const turn = el('button', 'cc-turn', {
             'aria-label': 'Rotate character', type: 'button', html: pixelIcon('turnRight', 24),
         });
-        turn.addEventListener('click', () => h.onTurn(1));
+        turn.addEventListener('click', () => { audio.play('tap'); h.onTurn(1); });
         turnWrap.append(turn, el('span', 'cc-side-label', { html: '<span>Rotate</span> <span>character</span>' }));
         r.append(turnWrap);
 
         this._buildAccount();
+        this._buildSoundToggle();
 
         this.moveLabel = el('div', 'cc-move', { 'aria-live': 'polite' });
         r.append(this.moveLabel);
@@ -96,6 +98,7 @@ export class CreatorPanel {
             die.classList.remove('is-rolling');
             void die.offsetWidth; // restart the roll animation on rapid taps
             die.classList.add('is-rolling');
+            audio.play('dice');
             h.onRandomize();
         });
         r.append(this.diceBtn);
@@ -117,12 +120,13 @@ export class CreatorPanel {
         this.nameInput.addEventListener('blur', () => namebar.classList.remove('is-editing'));
         const nameEdit = el('button', 'cc-icon-btn cc-name-edit', { html: pixelIcon('pencil', 20), 'aria-label': 'Edit name', title: 'Edit name', type: 'button' });
         nameEdit.addEventListener('click', () => {
+            audio.play('pencil');
             this.nameInput.focus();
             this.nameInput.select();
         });
         const nameDice = el('button', 'cc-icon-btn cc-name-dice', { html: pixelIcon('dice', 20), 'aria-label': 'Random name', title: 'Random name', type: 'button' });
         nameDice.addEventListener('pointerdown', (e) => e.preventDefault()); // keep the name field focused
-        nameDice.addEventListener('click', () => h.onNameDice());
+        nameDice.addEventListener('click', () => { audio.play('die'); h.onNameDice(); });
         namebar.append(this.nameInput, nameEdit, nameDice);
         r.append(namebar);
 
@@ -134,17 +138,17 @@ export class CreatorPanel {
         this.customizeToggle = el('button', 'cc-hud-btn cc-customize-toggle', {
             type: 'button', html: `${pixelIcon('palette', 24)}<span>Customize look</span>`,
         });
-        this.customizeToggle.addEventListener('click', () => this.toggleSheet(true));
+        this.customizeToggle.addEventListener('click', () => { audio.play('book_open'); this.toggleSheet(true); });
         panel.append(this.sexRow, this.raceRow, this.classRow, this.customizeToggle);
         r.append(panel);
 
         const opts = this.state.options;
         this.sexTiles = opts.body_types.map(b =>
-            this._tile(this.sexRow, 'cc-hud-btn cc-switch-opt', `<span>${b.label}</span>`, () => h.onPickBody(b.id), b.id));
+            this._tile(this.sexRow, 'cc-hud-btn cc-switch-opt', `<span>${b.label}</span>`, () => { audio.play('toggle'); h.onPickBody(b.id); }, b.id));
         this.raceTiles = opts.races.map(rc =>
-            this._tile(this.raceRow, 'cc-card', `<img class="cc-portrait" alt=""><span>${rc.label}</span>`, () => h.onPickRace(rc.id), rc.id));
+            this._tile(this.raceRow, 'cc-card', `<img class="cc-portrait" alt=""><span>${rc.label}</span>`, () => { audio.play('select'); h.onPickRace(rc.id); }, rc.id));
         this.classTiles = opts.classes.map(c =>
-            this._tile(this.classRow, 'cc-hero', `<span class="cc-hero-figure"></span><span>${c.label}</span>`, () => h.onPickClass(c.id), c.id));
+            this._tile(this.classRow, 'cc-hero', `<span class="cc-hero-figure"></span><span>${c.label}</span>`, () => { audio.play(`equip_${c.id}`); h.onPickClass(c.id); }, c.id));
         this.classCaret = el('span', 'cc-caret', { 'aria-hidden': 'true' });
         this.classRow.append(this.classCaret);
 
@@ -154,7 +158,7 @@ export class CreatorPanel {
         const footer = el('div', 'cc-footer');
         this.playBtn = el('button', 'cc-btn cc-btn--play', { type: 'button', id: 'cc-play' });
         this.playBtn.innerHTML = '<span class="cc-btn-label">Play</span>';
-        this.playBtn.addEventListener('click', () => h.onPlay());
+        this.playBtn.addEventListener('click', () => { audio.play('confirm'); h.onPlay(); });
         footer.append(this.playBtn);
         r.append(footer);
 
@@ -183,13 +187,37 @@ export class CreatorPanel {
             wrap.classList.toggle('is-open', open);
             chip.setAttribute('aria-expanded', String(open));
         };
-        chip.addEventListener('click', () => setOpen(!wrap.classList.contains('is-open')));
+        chip.addEventListener('click', () => {
+            const open = !wrap.classList.contains('is-open');
+            audio.play(open ? 'menu_open' : 'menu_close');
+            setOpen(open);
+        });
         login.addEventListener('click', () => {
+            audio.play('tap');
             setOpen(false);
             this.toast("Accounts are coming soon. For now you're playing as a guest.");
         });
         this._closeAccount = (e) => { if (!wrap.contains(e.target)) setOpen(false); };
         document.addEventListener('pointerdown', this._closeAccount);
+    }
+
+    /** Speaker, top left: sound on → music off → sound off. */
+    _buildSoundToggle() {
+        const icon = { all: 'soundAll', sfx: 'soundSfx', off: 'soundOff' };
+        const btn = el('button', 'cc-sound', { type: 'button' });
+        const render = (mode) => {
+            btn.innerHTML = pixelIcon(icon[mode], 24);
+            btn.setAttribute('aria-label', `${modeLabel(mode)} (tap to change)`);
+            btn.title = modeLabel(mode);
+        };
+        render(audio.mode);
+        btn.addEventListener('click', () => {
+            const mode = audio.cycleMode();
+            audio.play('tap');
+            this.toast(modeLabel(mode), 1200);
+        });
+        this._offSoundMode = audio.onModeChange(render);
+        this.root.append(btn);
     }
 
     /** Hug the name text so the dice sits right beside it. */
@@ -216,6 +244,7 @@ export class CreatorPanel {
             const dx = (e.clientX - startX) / scale;
             if (Math.abs(dx) >= STEP_PX) {
                 // Dragging right spins the front of the hero toward the right
+                audio.play('cycle', { volume: 0.6 });
                 this.handlers.onTurn(dx > 0 ? -1 : 1);
                 startX = e.clientX;
                 dragged = true;
@@ -225,7 +254,10 @@ export class CreatorPanel {
         stage.addEventListener('pointerup', end);
         stage.addEventListener('pointercancel', end);
         stage.addEventListener('click', () => {
-            if (!dragged) this.handlers.onStageTap();
+            if (!dragged) {
+                audio.play('tap', { volume: 0.5 });
+                this.handlers.onStageTap();
+            }
             dragged = false;
         });
     }
@@ -245,7 +277,7 @@ export class CreatorPanel {
         const head = el('div', 'cc-sheet-head');
         head.append(el('span', '', { text: 'Customize look' }));
         const done = el('button', 'cc-done', { text: 'Done', type: 'button' });
-        done.addEventListener('click', () => this.toggleSheet(false));
+        done.addEventListener('click', () => { audio.play('book_close'); this.toggleSheet(false); });
         head.append(done);
         this.sheet.append(head);
 
@@ -254,7 +286,7 @@ export class CreatorPanel {
             row.append(el('span', 'cc-field-label', { text: label }), body);
             if (field) {
                 const dice = el('button', 'cc-icon-btn', { html: pixelIcon('dice', 16), 'aria-label': `Random ${label.toLowerCase()}`, type: 'button' });
-                dice.addEventListener('click', () => this._randomLook(field));
+                dice.addEventListener('click', () => { audio.play('die'); this._randomLook(field); });
                 row.append(dice);
             }
             this.sheet.append(row);
@@ -281,8 +313,8 @@ export class CreatorPanel {
         const prev = el('button', 'cc-cycler-arrow cc-cycler-arrow--prev', { 'aria-label': 'Previous', type: 'button' });
         const next = el('button', 'cc-cycler-arrow cc-cycler-arrow--next', { 'aria-label': 'Next', type: 'button' });
         const value = el('div', 'cc-cycler-value');
-        prev.addEventListener('click', () => onStep(-1));
-        next.addEventListener('click', () => onStep(1));
+        prev.addEventListener('click', () => { audio.play('cycle'); onStep(-1); });
+        next.addEventListener('click', () => { audio.play('cycle'); onStep(1); });
         root.append(prev, value, next);
         return { root, value };
     }
@@ -388,7 +420,7 @@ export class CreatorPanel {
         this.kindChips.replaceChildren(...(race?.kinds || []).map(k => {
             const chip = el('button', 'cc-hud-btn cc-chip', { text: k.label, type: 'button' });
             chip.classList.toggle('is-current', k.id === s.current('kind'));
-            chip.addEventListener('click', () => h.onPickKind(k.id));
+            chip.addEventListener('click', () => { audio.play('toggle'); h.onPickKind(k.id); });
             return chip;
         }));
 
@@ -400,7 +432,7 @@ export class CreatorPanel {
                 });
                 sw.style.background = item.swatch || '#777';
                 sw.classList.toggle('is-current', item.id === current);
-                sw.addEventListener('click', () => h.onLook(field, item.id));
+                sw.addEventListener('click', () => { audio.play('swatch'); h.onLook(field, item.id); });
                 return sw;
             }));
         };
@@ -448,6 +480,7 @@ export class CreatorPanel {
         window.removeEventListener('resize', this._fit);
         window.visualViewport?.removeEventListener('resize', this._fit);
         document.removeEventListener('pointerdown', this._closeAccount);
+        this._offSoundMode?.();
         this.root.remove();
     }
 }

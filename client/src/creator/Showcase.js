@@ -5,6 +5,8 @@
 // sprites for it and, for attacks, the weapon is actually visible.
 
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
+import { audio } from '../audio/audio.js';
+import { attackSound, impactSounds, foeSounds } from '../audio/combatSounds.js';
 
 const DIRECTIONS = ['down', 'left', 'up', 'right'];
 
@@ -184,6 +186,8 @@ export class Showcase {
         const figure = this.figure;
         this.onLabel(moveLabel(step.anim, this.character.character_class));
         if (step.once) {
+            const sound = attackSound(step.anim, this.character.character_class);
+            if (sound) audio.play(sound, { volume: 0.8 });
             await this._playOnce(figure, step.anim, this.facing());
             if (!alive()) return;
             figure.playAnimation('idle', this.facing());
@@ -218,7 +222,9 @@ export class Showcase {
 
         const foeHas = availableMoves(member.character);
         const foeAttack = ['slash', 'thrust'].find(foeHas);
+        const cries = foeSounds(member.character.race);
         this.onLabel(`${FOE_NAMES[member.character.race] || 'A foe'} appears!`);
+        audio.play(cries.appear, { volume: 0.7 });
 
         // Square up: hero steps aside, the foe walks in
         hero.playAnimation('walk', 'left');
@@ -235,19 +241,23 @@ export class Showcase {
             if (!alive()) return;
             const anim = this.attacks[round % this.attacks.length];
             this.onLabel(moveLabel(anim, this.character.character_class));
+            const sound = attackSound(anim, this.character.character_class);
+            if (sound) audio.play(sound);
             const swing = this._playOnce(hero, anim, 'right');
             await this._wait(anim === 'shoot' ? 380 : 230);
             if (!alive()) return;
-            await this._strike(anim, hero, foe, round === 2);
+            await this._strike(anim, hero, foe, round === 2, member.character.race);
             await swing;
             if (!alive()) return;
             hero.playAnimation('idle', 'right');
 
             if (round === 1 && foeAttack) {
                 const counter = this._playOnce(foe, foeAttack, 'left');
+                audio.play(foeAttack === 'thrust' ? 'thrust' : 'swing', { detune: -350, volume: 0.8 });
                 await this._wait(230);
                 if (!alive()) return;
                 const blocked = this.character.selections?.some(s => s.type === 'shield');
+                audio.play(blocked ? 'block' : 'swing', blocked ? {} : { volume: 0.5, detune: 400 });
                 effects.hit(hero.x + 10 * stage.scale, y + 2 * stage.scale);
                 effects.floatText(hero.x, y - 30 * stage.scale, blocked ? 'Blocked!' : 'Dodged!', '#cbdbfc', 15);
                 await counter;
@@ -261,6 +271,10 @@ export class Showcase {
         if (!alive()) return;
         this.onLabel('Victory!');
         if (foeHas('hurt')) foe.playAnimation('hurt', 'down');
+        audio.play(cries.down, { volume: 0.8 });
+        audio.duck(1600);
+        scene.time.delayedCall(250, () => audio.play('victory', { drift: 0 }));
+        scene.time.delayedCall(450, () => audio.play('coins'));
         effects.coinBurst(foe.x, y + 12 * stage.scale);
         scene.time.delayedCall(450, () => effects.floatText(foe.x, y + 6 * stage.scale, `+${10 + Math.floor(Math.random() * 15)} gold`, '#fbf236', 16));
         await this._wait(950);
@@ -278,11 +292,12 @@ export class Showcase {
     }
 
     /** Land a hit: arrows and spells fly first, melee lands at once. */
-    _strike(anim, hero, foe, crit) {
+    _strike(anim, hero, foe, crit, race) {
         const { effects, stage } = this;
         const y = this.stage.figureY;
         return new Promise(resolve => {
             const land = () => {
+                impactSounds(anim, race).forEach((name, i) => audio.play(name, { volume: i ? 0.6 : 1, detune: crit ? -200 : undefined }));
                 effects.hit(foe.x - 8 * stage.scale, y + 2 * stage.scale);
                 foe.flashHit(90);
                 this.scene.tweens.add({ targets: foe, x: foe.x + 4 * stage.scale, duration: 70, yoyo: true });
@@ -344,11 +359,14 @@ export class Showcase {
     }
 
     _dustTrail(getFigure) {
+        let step = 0;
         return this.scene.time.addEvent({
             delay: STEP_DUST_MS, loop: true,
             callback: () => {
                 const f = getFigure();
-                if (f?.active) this.effects.footstep(f.x + (Math.random() * 10 - 5), this.stage.feetY);
+                if (!f?.active) return;
+                this.effects.footstep(f.x + (Math.random() * 10 - 5), this.stage.feetY);
+                if (step++ % 2 === 0) audio.play('step', { volume: 0.16 });
             },
         });
     }

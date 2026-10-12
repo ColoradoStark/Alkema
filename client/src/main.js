@@ -4,6 +4,7 @@ import { PreloadScene } from './scenes/PreloadScene.js';
 import { CreateScene } from './scenes/CreateScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
+import { audio } from './audio/audio.js';
 
 // Handle uncaught errors
 window.addEventListener('error', (e) => {
@@ -76,12 +77,13 @@ const config = {
     },
     scene: [BootScene, PreloadScene, CreateScene, GameScene, UIScene],
     audio: {
-        noAudio: true
+        disableWebAudio: false
     }
 };
 
 const game = new Phaser.Game(config);
 window.__PHASER_GAME = game; // debug access for testing
+audio.init(game);
 
 // Try to lock orientation to portrait
 try {

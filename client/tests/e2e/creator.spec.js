@@ -105,6 +105,33 @@ test.describe('Character creator', () => {
         expect(after.name).toBe(before.name);
     });
 
+    test('a preview that arrives after Play is ignored', async ({ page }) => {
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
+        await page.goto('/');
+        await waitForPreview(page);
+        // Hold back preview replies until the creator is on its way out
+        await page.evaluate(() => {
+            const scene = window.__PHASER_GAME.scene.getScene('CreateScene');
+            const request = scene.network.request.bind(scene.network);
+            scene.network.request = async (event, data, timeout) => {
+                const res = await request(event, data, timeout);
+                if (event === 'preview-character') {
+                    await new Promise(resolve => {
+                        const check = () => (scene.panel === null ? resolve() : setTimeout(check, 5));
+                        check();
+                    });
+                }
+                return res;
+            };
+        });
+        await page.locator('.cc-tile[data-id="elf"]').click();
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer, null, { timeout: 30000 });
+        await page.waitForTimeout(1500);
+        expect(errors).toEqual([]);
+    });
+
     test('the preview only shows moves every layer and weapon supports', async ({ page }) => {
         test.setTimeout(120000);
         await page.goto('/');

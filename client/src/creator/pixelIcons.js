@@ -77,6 +77,49 @@ const ICONS = {
         '............',
         '............',
     ],
+    // Sound setting: speaker with two waves (all on), one wave (effects only), a red X (off)
+    soundAll: [
+        '............',
+        '....o.......',
+        '...ol...l...',
+        '..oll.l..l..',
+        'ooll...l..l.',
+        'olll...l..l.',
+        'olll...l..l.',
+        'ooll...l..l.',
+        '..oll.l..l..',
+        '...ol...l...',
+        '....o.......',
+        '............',
+    ],
+    soundSfx: [
+        '............',
+        '....o.......',
+        '...ol.......',
+        '..oll.l.....',
+        'ooll...l....',
+        'olll...l....',
+        'olll...l....',
+        'ooll...l....',
+        '..oll.l.....',
+        '...ol.......',
+        '....o.......',
+        '............',
+    ],
+    soundOff: [
+        '............',
+        '....o.......',
+        '...ol.......',
+        '..oll.r...r.',
+        'ooll...r.r..',
+        'olll....r...',
+        'olll...r.r..',
+        'ooll..r...r.',
+        '..oll.......',
+        '...ol.......',
+        '....o.......',
+        '............',
+    ],
     // Pencil, eraser at top right, point at bottom left.
     pencil: [
         '.........oo.',
@@ -107,4 +150,21 @@ export function pixelIcon(name, size = 24) {
         });
     });
     return `<svg class="px-icon" width="${size}" height="${size}" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${rects.join('')}</svg>`;
+}
+
+/** The same icon as a Phaser texture (1 texel per pixel; scale it up in the scene). */
+export function pixelIconTexture(scene, name, key = `px-${name}`) {
+    if (scene.textures.exists(key)) return key;
+    const rows = ICONS[name];
+    const canvas = scene.textures.createCanvas(key, 12, 12);
+    const ctx = canvas.getContext();
+    rows.forEach((row, y) => {
+        [...row].forEach((ch, x) => {
+            if (!PALETTE[ch]) return;
+            ctx.fillStyle = PALETTE[ch];
+            ctx.fillRect(x, y, 1, 1);
+        });
+    });
+    canvas.refresh();
+    return key;
 }
