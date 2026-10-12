@@ -137,7 +137,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude and rubberduck (see CREDITS.txt).
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
 
 ## License
 

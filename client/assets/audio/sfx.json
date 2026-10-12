@@ -171,357 +171,357 @@
   },
   "equip_ranger": {
    "start": 19.3894,
-   "end": 19.8681,
+   "end": 19.9561,
    "loop": false
   },
   "equip_thief_1": {
-   "start": 20.2381,
-   "end": 20.5488,
+   "start": 20.3261,
+   "end": 20.6368,
    "loop": false
   },
   "equip_thief_2": {
-   "start": 20.9188,
-   "end": 21.2989,
+   "start": 21.0068,
+   "end": 21.3869,
    "loop": false
   },
   "equip_cleric": {
-   "start": 21.6689,
-   "end": 23.2989,
+   "start": 21.7569,
+   "end": 23.3869,
    "loop": false
   },
   "summon": {
-   "start": 23.6689,
-   "end": 25.8989,
+   "start": 23.7569,
+   "end": 25.9869,
    "loop": false
   },
   "appear": {
-   "start": 26.2689,
-   "end": 28.2989,
+   "start": 26.3569,
+   "end": 28.3869,
    "loop": false
   },
   "poof_1": {
-   "start": 28.6689,
-   "end": 28.9009,
+   "start": 28.7569,
+   "end": 28.9889,
    "loop": false
   },
   "poof_2": {
-   "start": 29.2709,
-   "end": 29.4372,
+   "start": 29.3589,
+   "end": 29.5252,
    "loop": false
   },
   "step_1": {
-   "start": 29.8072,
-   "end": 30.0054,
+   "start": 29.8952,
+   "end": 30.0934,
    "loop": false
   },
   "step_2": {
-   "start": 30.3754,
-   "end": 30.5983,
+   "start": 30.4634,
+   "end": 30.6863,
    "loop": false
   },
   "step_3": {
-   "start": 30.9683,
-   "end": 31.1853,
+   "start": 31.0563,
+   "end": 31.2733,
    "loop": false
   },
   "step_4": {
-   "start": 31.5553,
-   "end": 31.8088,
+   "start": 31.6433,
+   "end": 31.8968,
    "loop": false
   },
   "step_grass_1": {
-   "start": 32.1788,
-   "end": 32.3406,
+   "start": 32.2668,
+   "end": 32.4286,
    "loop": false
   },
   "step_grass_2": {
-   "start": 32.7106,
-   "end": 32.8756,
+   "start": 32.7986,
+   "end": 32.9636,
    "loop": false
   },
   "step_grass_3": {
-   "start": 33.2456,
-   "end": 33.37,
+   "start": 33.3336,
+   "end": 33.458,
    "loop": false
   },
   "step_grass_4": {
-   "start": 33.74,
-   "end": 33.8442,
+   "start": 33.828,
+   "end": 33.9322,
    "loop": false
   },
   "swing_1": {
-   "start": 34.2142,
-   "end": 34.3484,
+   "start": 34.3022,
+   "end": 34.4363,
    "loop": false
   },
   "swing_2": {
-   "start": 34.7184,
-   "end": 34.8434,
+   "start": 34.8063,
+   "end": 34.9313,
    "loop": false
   },
   "swing_3": {
-   "start": 35.2134,
-   "end": 35.3583,
+   "start": 35.3013,
+   "end": 35.4463,
    "loop": false
   },
   "swing_4": {
-   "start": 35.7283,
-   "end": 35.8747,
+   "start": 35.8163,
+   "end": 35.9627,
    "loop": false
   },
   "swing_5": {
-   "start": 36.2447,
-   "end": 36.3796,
+   "start": 36.3327,
+   "end": 36.4676,
    "loop": false
   },
   "thrust_1": {
-   "start": 36.7496,
-   "end": 36.8522,
+   "start": 36.8376,
+   "end": 36.9402,
    "loop": false
   },
   "thrust_2": {
-   "start": 37.2222,
-   "end": 37.3163,
+   "start": 37.3102,
+   "end": 37.4043,
    "loop": false
   },
   "thrust_3": {
-   "start": 37.6863,
-   "end": 37.7803,
+   "start": 37.7743,
+   "end": 37.8683,
    "loop": false
   },
   "hit_1": {
-   "start": 38.1503,
-   "end": 38.4071,
+   "start": 38.2383,
+   "end": 38.4951,
    "loop": false
   },
   "hit_2": {
-   "start": 38.7771,
-   "end": 39.0208,
+   "start": 38.8651,
+   "end": 39.1088,
    "loop": false
   },
   "hit_3": {
-   "start": 39.3908,
-   "end": 39.6872,
+   "start": 39.4788,
+   "end": 39.7752,
    "loop": false
   },
   "hit_blade_1": {
-   "start": 40.0572,
-   "end": 40.2758,
+   "start": 40.1452,
+   "end": 40.3638,
    "loop": false
   },
   "hit_blade_2": {
-   "start": 40.6458,
-   "end": 40.9225,
+   "start": 40.7338,
+   "end": 41.0105,
    "loop": false
   },
   "hit_blade_3": {
-   "start": 41.2925,
-   "end": 41.5584,
+   "start": 41.3805,
+   "end": 41.6464,
    "loop": false
   },
   "hit_bone_1": {
-   "start": 41.9284,
-   "end": 42.0391,
+   "start": 42.0164,
+   "end": 42.1271,
    "loop": false
   },
   "hit_bone_2": {
-   "start": 42.4091,
-   "end": 42.5192,
+   "start": 42.4971,
+   "end": 42.6072,
    "loop": false
   },
   "hit_bone_3": {
-   "start": 42.8892,
-   "end": 42.9998,
+   "start": 42.9772,
+   "end": 43.0877,
    "loop": false
   },
   "block_1": {
-   "start": 43.3698,
-   "end": 43.5438,
+   "start": 43.4577,
+   "end": 43.6318,
    "loop": false
   },
   "block_2": {
-   "start": 43.9138,
-   "end": 44.3958,
+   "start": 44.0018,
+   "end": 44.4838,
    "loop": false
   },
   "bow": {
-   "start": 44.7658,
-   "end": 45.2446,
+   "start": 44.8538,
+   "end": 45.1183,
    "loop": false
   },
   "arrow_hit_1": {
-   "start": 45.6146,
-   "end": 45.7253,
+   "start": 45.4883,
+   "end": 45.599,
    "loop": false
   },
   "arrow_hit_2": {
-   "start": 46.0953,
-   "end": 46.2058,
+   "start": 45.969,
+   "end": 46.0795,
    "loop": false
   },
   "cast": {
-   "start": 46.5758,
-   "end": 48.0058,
+   "start": 46.4495,
+   "end": 47.8795,
    "loop": false
   },
   "holy": {
-   "start": 48.3758,
-   "end": 50.0058,
+   "start": 48.2495,
+   "end": 49.8795,
    "loop": false
   },
   "zap": {
-   "start": 50.3758,
-   "end": 51.3058,
+   "start": 50.2495,
+   "end": 51.1795,
    "loop": false
   },
   "foe_skeleton_1": {
-   "start": 51.6758,
-   "end": 51.9563,
+   "start": 51.5495,
+   "end": 51.83,
    "loop": false
   },
   "foe_skeleton_2": {
-   "start": 52.3263,
-   "end": 52.7356,
+   "start": 52.2,
+   "end": 52.6094,
    "loop": false
   },
   "foe_goblin_1": {
-   "start": 53.1056,
-   "end": 53.6535,
+   "start": 52.9794,
+   "end": 53.5272,
    "loop": false
   },
   "foe_goblin_2": {
-   "start": 54.0235,
-   "end": 54.4768,
+   "start": 53.8972,
+   "end": 54.3506,
    "loop": false
   },
   "foe_orc_1": {
-   "start": 54.8468,
-   "end": 55.1882,
+   "start": 54.7206,
+   "end": 55.0619,
    "loop": false
   },
   "foe_orc_2": {
-   "start": 55.5582,
-   "end": 56.0501,
+   "start": 55.4319,
+   "end": 55.9239,
    "loop": false
   },
   "foe_down_1": {
-   "start": 56.4201,
-   "end": 56.9017,
+   "start": 56.2939,
+   "end": 56.7754,
    "loop": false
   },
   "foe_down_2": {
-   "start": 57.2717,
-   "end": 57.9908,
+   "start": 57.1454,
+   "end": 57.8646,
    "loop": false
   },
   "bones_down_1": {
-   "start": 58.3608,
-   "end": 58.7306,
+   "start": 58.2346,
+   "end": 58.6044,
    "loop": false
   },
   "bones_down_2": {
-   "start": 59.1006,
-   "end": 59.8181,
+   "start": 58.9744,
+   "end": 59.6919,
    "loop": false
   },
   "victory_1": {
-   "start": 60.1881,
-   "end": 61.1663,
+   "start": 60.0619,
+   "end": 61.04,
    "loop": false
   },
   "victory_2": {
-   "start": 61.5363,
-   "end": 62.3324,
+   "start": 61.41,
+   "end": 62.2061,
    "loop": false
   },
   "victory_3": {
-   "start": 62.7024,
-   "end": 63.509,
+   "start": 62.5761,
+   "end": 63.3827,
    "loop": false
   },
   "coins_1": {
-   "start": 63.879,
-   "end": 64.2321,
+   "start": 63.7527,
+   "end": 64.1059,
    "loop": false
   },
   "coins_2": {
-   "start": 64.6021,
-   "end": 65.168,
+   "start": 64.4759,
+   "end": 65.0417,
    "loop": false
   },
   "coins_3": {
-   "start": 65.538,
-   "end": 66.0126,
+   "start": 65.4117,
+   "end": 65.8863,
    "loop": false
   },
   "rock_1": {
-   "start": 66.3826,
-   "end": 66.5124,
+   "start": 66.2563,
+   "end": 66.3862,
    "loop": false
   },
   "rock_2": {
-   "start": 66.8824,
-   "end": 66.9887,
+   "start": 66.7562,
+   "end": 66.8625,
    "loop": false
   },
   "hurt_1": {
-   "start": 67.3587,
-   "end": 67.6024,
+   "start": 67.2325,
+   "end": 67.4762,
    "loop": false
   },
   "hurt_2": {
-   "start": 67.9724,
-   "end": 68.2688,
+   "start": 67.8462,
+   "end": 68.1425,
    "loop": false
   },
   "chest_drop_1": {
-   "start": 68.6388,
-   "end": 68.8737,
+   "start": 68.5125,
+   "end": 68.7475,
    "loop": false
   },
   "chest_drop_2": {
-   "start": 69.2437,
-   "end": 69.4787,
+   "start": 69.1175,
+   "end": 69.3524,
    "loop": false
   },
   "chest_open": {
-   "start": 69.8487,
-   "end": 70.1411,
+   "start": 69.7224,
+   "end": 70.0148,
    "loop": false
   },
   "latch": {
-   "start": 70.5111,
-   "end": 70.6581,
+   "start": 70.3848,
+   "end": 70.5318,
    "loop": false
   },
   "reveal_1": {
-   "start": 71.0281,
-   "end": 72.6581,
+   "start": 70.9018,
+   "end": 72.5318,
    "loop": false
   },
   "reveal_2": {
-   "start": 73.0281,
-   "end": 74.6581,
+   "start": 72.9018,
+   "end": 74.5318,
    "loop": false
   },
   "reveal_3": {
-   "start": 75.0281,
-   "end": 76.6581,
+   "start": 74.9018,
+   "end": 76.5318,
    "loop": false
   },
   "reveal_4": {
-   "start": 77.0281,
-   "end": 78.6581,
+   "start": 76.9018,
+   "end": 78.5318,
    "loop": false
   },
   "enter": {
-   "start": 79.0281,
-   "end": 81.2581,
+   "start": 78.9018,
+   "end": 81.1318,
    "loop": false
   },
   "join": {
-   "start": 81.6281,
-   "end": 83.2581,
+   "start": 81.5018,
+   "end": 83.1318,
    "loop": false
   }
  }

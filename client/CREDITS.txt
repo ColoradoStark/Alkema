@@ -41,12 +41,18 @@ Sound effects
     License: CC0
     https://opengameart.org/content/rpg-sound-pack
     https://opengameart.org/content/swishes-sound-pack
+  Ogrebane: Battle Sound Effects (bow shot)
+    License: CC0 (one of the offered licenses)
+    https://opengameart.org/content/battle-sound-effects
+  Vehicle: Tinysized SFX (arrow drawn from the quiver)
+    License: CC0
+    https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx
   rubberduck: 80 CC0 RPG SFX, 80 CC0 creature SFX
     License: CC0
     https://opengameart.org/content/80-cc0-rpg-sfx
     https://opengameart.org/content/80-cc0-creature-sfx
-  Remaining effects (summon shimmer, chimes, bow, spells, thunder,
-    shadow drone, fanfare) were synthesized for Alkema.
+  Remaining effects (summon shimmer, chimes, spells, fanfare) were
+    synthesized for Alkema.
 
 Effects were trimmed, level-matched and combined into one audio file;
 music loops were crossfaded at the seam and loudness-matched.
