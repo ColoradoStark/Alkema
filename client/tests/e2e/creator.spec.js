@@ -106,6 +106,24 @@ test.describe('Character creator', () => {
         expect(after.name).toBe(before.name);
     });
 
+    test('a ready roll replaces the hero on screen even while another is still loading', async ({ page }) => {
+        // Live sequence: dice → that hero's sprite is still downloading → dice again
+        // with a pre-rolled hero ready. The instant swap removed the loading hero and
+        // left the visible one on stage, so two heroes stood on top of each other.
+        await page.route('**/sprites/never-loads.png', () => {}); // hangs forever
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.waitForFunction(() => Boolean(window.__PHASER_GAME.scene.getScene('CreateScene')._prefetch), null, { timeout: 45000 });
+        const visibleHeroes = await page.evaluate(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            const loading = { ...s.state.character, id: 'p999_loading', spriteUrl: '/sprites/never-loads.png' };
+            s._showCharacter(loading, { identityChanged: true });
+            s._randomize(); // uses the ready, pre-rolled hero
+            return s.children.list.filter(o => o.characterData && o.active && o.visible && !String(o.characterData.id).startsWith('cast')).length;
+        });
+        expect(visibleHeroes).toBe(1);
+    });
+
     test('a preview that arrives after Play is ignored', async ({ page }) => {
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));

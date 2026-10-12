@@ -112,7 +112,8 @@ export class CreateScene extends Scene {
 
     /** Swap the preview figure in, with a puff of sparks. */
     _showCharacter(character, { identityChanged }) {
-        const previous = this.figure;
+        // A hero still loading when a newer one arrives will never be shown
+        if (this.figure && this.figure !== this._shown) this._disposeFigure(this.figure);
         const figure = new CompositeCharacter(this, this.figureX, FIGURE_Y, character);
         figure.setScale(FIGURE_SCALE).setDepth(3).setVisible(false);
         if (figure.body) figure.body.enable = false;
@@ -128,7 +129,10 @@ export class CreateScene extends Scene {
             this._setSummoning(false);
             audio.play(identityChanged ? 'appear' : 'poof', { volume: identityChanged ? 0.75 : 0.6 });
             figure.setVisible(true);
-            if (previous) this._disposeFigure(previous);
+            // Replace whichever hero is on screen (not merely the last one requested)
+            const previous = this._shown;
+            if (previous && previous !== figure) this._disposeFigure(previous);
+            this._shown = figure;
             this.loadingText?.destroy();
             this.loadingText = null;
             this.poof.explode(identityChanged ? 36 : 14);
