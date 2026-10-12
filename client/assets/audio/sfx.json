@@ -519,24 +519,9 @@
    "end": 81.2581,
    "loop": false
   },
-  "drone": {
-   "start": 81.6281,
-   "end": 86.1509,
-   "loop": false
-  },
-  "roar": {
-   "start": 86.5209,
-   "end": 87.366,
-   "loop": false
-  },
-  "thunder": {
-   "start": 87.736,
-   "end": 90.766,
-   "loop": false
-  },
   "join": {
-   "start": 91.136,
-   "end": 92.766,
+   "start": 81.6281,
+   "end": 83.2581,
    "loop": false
   }
  }

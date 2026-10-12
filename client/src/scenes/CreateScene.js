@@ -20,7 +20,6 @@ const FIGURE_Y = 160;
 const FIGURE_SCALE = 2;
 const FEET_Y = FIGURE_Y + 28 * FIGURE_SCALE; // LPC feet sit ~28px below frame centre
 const STAGE_HEIGHT = 296;
-const INTRO_MIN_MS = 1400; // once the intro starts, let it land before the hero appears
 const CHEST_MAX_MS = 4000;
 // A cobblestone plaza just south of the park fountain (map pixels).
 const MAP_SPOT = { x: 3440, y: 2835 };
@@ -121,11 +120,6 @@ export class CreateScene extends Scene {
 
         const reveal = () => {
             if (this.figure !== figure) return;
-            if (this._intro) {
-                const wait = this._intro.startedAt + INTRO_MIN_MS - this.time.now;
-                if (wait > 0) { this.time.delayedCall(wait, reveal); return; }
-                this._endIntro();
-            }
             this._setSummoning(false);
             audio.play(identityChanged ? 'appear' : 'poof', { volume: identityChanged ? 0.75 : 0.6 });
             figure.setVisible(true);
@@ -159,69 +153,16 @@ export class CreateScene extends Scene {
         }
     }
 
-    // ------------------------------------------------------- cast and intro
+    // ------------------------------------------------------------------ cast
 
-    /** Sparring partners for the showcase, and the intro's demon. Best-effort. */
+    /** Sparring partners for the showcase. Best-effort. */
     async _loadCast() {
         let res = null;
         try {
             res = await this.network.request('creator-cast', null, 30000);
         } catch { /* the showcase works without sparring */ }
         if (!res?.ok || !this.scene.isActive()) return;
-        this.showcase.setCast(res.cast.filter(m => m.role === 'enemy'));
-        const demon = res.cast.find(m => m.role === 'intro');
-        if (demon && !this.figure?.visible && !this._joining) this._startIntro(demon.character);
-    }
-
-    /**
-     * While the first hero is being summoned: a winged shadow looms over the
-     * plaza amid embers. The hero's arrival banishes it.
-     */
-    _startIntro(character) {
-        const shadow = new CompositeCharacter(this, this.figureX, FIGURE_Y - 26, character);
-        shadow.setScale(FIGURE_SCALE * 1.5).setDepth(2).setAlpha(0);
-        if (shadow.body) shadow.body.enable = false;
-        if (character.spriteMeta) shadow.applySpriteMeta(character.spriteMeta);
-        const embers = this.add.particles(0, 0, 'cc-spark', {
-            x: { min: 0, max: this.scale.width }, y: STAGE_HEIGHT - 20,
-            speedY: { min: -90, max: -40 }, speedX: { min: -15, max: 15 },
-            lifespan: { min: 1400, max: 2400 }, scale: { start: 2, end: 0 },
-            tint: [0xdf7126, 0xac3232, 0xfbf236], blendMode: 'ADD', frequency: 30,
-        }).setDepth(1);
-        const dim = this.add.rectangle(0, 0, this.scale.width, STAGE_HEIGHT, 0x222034, 0).setOrigin(0).setDepth(1);
-        this._intro = { shadow, embers, dim, startedAt: this.time.now };
-        this.loadingText?.setText('A shadow stirs…');
-
-        this.tweens.add({ targets: dim, fillAlpha: 0.55, duration: 500 });
-        this._intro.drone = audio.play('drone', { volume: 0.8, drift: 0 });
-        const appear = () => {
-            if (this._intro?.shadow !== shadow) return;
-            audio.play('roar', { volume: 0.55, detune: -500 });
-            const tint = (s) => s?.setTint(0x1a1420);
-            tint(shadow.sprite); tint(shadow.oversizedSprite);
-            shadow.playAnimation('walk', 'down');
-            this.tweens.add({ targets: shadow, alpha: 0.95, duration: 450 });
-            this.tweens.add({ targets: shadow, y: shadow.y - 6, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        };
-        if (shadow.sprite) appear();
-        else shadow.onLoaded = appear;
-    }
-
-    _endIntro() {
-        const intro = this._intro;
-        this._intro = null;
-        if (!intro) return;
-        intro.drone?.stop();
-        audio.play('thunder', { volume: 0.9, drift: 0 });
-        this.cameras.main.flash(220, 255, 246, 200);
-        this.effects.hit(this.figureX, FIGURE_Y - 30);
-        this.effects.coinBurst(this.figureX, FIGURE_Y - 30);
-        intro.embers.stop();
-        this.tweens.killTweensOf(intro.shadow);
-        this.tweens.add({ targets: intro.shadow, alpha: 0, y: intro.shadow.y - 30, scale: intro.shadow.scale * 1.2, duration: 380,
-            onComplete: () => intro.shadow.destroy() });
-        this.tweens.add({ targets: intro.dim, fillAlpha: 0, duration: 450, onComplete: () => intro.dim.destroy() });
-        this.time.delayedCall(2600, () => intro.embers.destroy());
+        this.showcase.setCast(res.cast);
     }
 
     // --------------------------------------------------------------- creator
@@ -418,7 +359,6 @@ export class CreateScene extends Scene {
     async _openChest() {
         if (!this.figure?.visible) return;
         this.showcase.stop();
-        this._endIntro();
         const figure = this.figure;
         const items = this.state?.options.classes.find(c => c.id === this.state.current('character_class'))?.starter_items || [];
         figure.x = this.figureX - 26;

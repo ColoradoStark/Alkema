@@ -33,6 +33,22 @@ function hairOf(character) {
 }
 
 test.describe('Character creator', () => {
+    test('no shadow intro: the first hero is simply summoned', async ({ page }) => {
+        const texts = [];
+        await page.goto('/');
+        await page.waitForFunction(() => window.__PHASER_GAME?.scene.getScene('CreateScene')?.loadingText, null, { timeout: 30000 });
+        for (let i = 0; i < 15; i++) {
+            const t = await page.evaluate(() => {
+                const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+                return { text: s.loadingText?.text || '', intro: Boolean(s._intro) };
+            });
+            texts.push(t);
+            if (await page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').figure?.visible)) break;
+            await page.waitForTimeout(200);
+        }
+        expect(texts.some(t => t.intro || /shadow/i.test(t.text))).toBe(false);
+    });
+
     test('opens before the world, with choices and a Play button', async ({ page }) => {
         await page.goto('/');
         await expect(page.locator('#cc-play')).toBeVisible({ timeout: 20000 });

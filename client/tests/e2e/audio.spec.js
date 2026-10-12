@@ -39,7 +39,7 @@ test.describe('Sound', () => {
         // Phaser animation/tween .play('x') calls aren't sounds
         for (const notSound of ['idle', 'walk']) used.delete(notSound);
         const missing = [...used].filter(n => !clipNames.has(n));
-        expect(used.size).toBeGreaterThan(30);
+        expect(used.size).toBeGreaterThan(20); // sanity: the scan found the game's sounds
         expect(missing).toEqual([]);
     });
 

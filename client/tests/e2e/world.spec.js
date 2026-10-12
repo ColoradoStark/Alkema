@@ -23,12 +23,6 @@ const quest = (page) => page.evaluate(() => {
 });
 
 test.describe('Living world', () => {
-    test.beforeEach(async ({ page }) => {
-        await page.addInitScript(() => {
-            if (!sessionStorage.getItem('keep-quests')) localStorage.removeItem('alkema.quests');
-        });
-    });
-
     test('creator stage has golden-hour light; customizing turns it into a spotlight', async ({ page }) => {
         await page.goto('/');
         await waitForPreview(page);
@@ -44,7 +38,7 @@ test.describe('Living world', () => {
         await expect.poll(() => opacity('.cc-light')).toBe('1');
     });
 
-    test('starter quests: swing five times, then cast; progress is remembered', async ({ page }) => {
+    test('starter quests: swing five times, then cast; a new hero starts over', async ({ page }) => {
         await enterWorld(page);
         expect(await quest(page)).toEqual({ id: 'swing', progress: 0 });
         for (let i = 0; i < 5; i++) await page.keyboard.press('Space');
@@ -53,16 +47,16 @@ test.describe('Living world', () => {
         await page.keyboard.press('KeyE');
         expect(await quest(page)).toEqual({ id: 'maze', progress: 0 });
 
-        await page.evaluate(() => sessionStorage.setItem('keep-quests', '1'));
+        // Every visit is a new hero, with the quests from the start
         await page.reload();
         await page.locator('#cc-play').click({ timeout: 60000 });
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.quests, null, { timeout: 30000 });
-        expect(await quest(page)).toEqual({ id: 'maze', progress: 0 });
+        expect(await quest(page)).toEqual({ id: 'swing', progress: 0 });
     });
 
     test('walking to a landmark completes its quest', async ({ page }) => {
-        await page.addInitScript(() => localStorage.setItem('alkema.quests', JSON.stringify({ index: 2, progress: 0 })));
         await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').quests.index = 2; });
         expect((await quest(page)).id).toBe('maze');
         await page.evaluate(() => {
             const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;

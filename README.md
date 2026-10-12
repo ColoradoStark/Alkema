@@ -98,7 +98,7 @@ Real-time multiplayer via Socket.io. Players share a 4096×4096 tile map world w
 - Player join/leave events
 - Mobile-responsive layout with touch controls
 - A round minimap showing the town around you, other players, and the way to your current quest
-- Starter quests that teach the controls and tour the town's landmarks (hedge maze, clock tower, park fountain, market); progress is saved
+- Starter quests that teach the controls and tour the town's landmarks (hedge maze, clock tower, park fountain, market); every new hero starts them fresh
 - A short cooldown on the ability button, shown as a filling gold ring
 - Warm golden-hour light over the world, matching the character creator's stage, where motes drift in the light and a spotlight falls on your hero while you customize
 

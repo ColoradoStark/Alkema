@@ -1,10 +1,8 @@
 // Starter quests and the tracker card in the top-left of the map view.
 // A short chain that teaches the controls, then tours the town's landmarks.
-// Progress is kept per browser.
+// Quests belong to the hero: every new hero (every visit) starts them over.
 
 import { audio } from '../audio/audio.js';
-
-const STORAGE_KEY = 'alkema.quests';
 
 /**
  * kind 'count': `goal` events of `event` ('attack' | 'cast').
@@ -26,7 +24,6 @@ export class QuestTracker {
         this.scene = scene;
         this.index = 0;
         this.progress = 0;
-        this._load();
 
         this.container = scene.add.container(CARD.x, CARD.y).setDepth(20);
         this.bg = scene.add.graphics();
@@ -58,7 +55,6 @@ export class QuestTracker {
             this._complete();
             return;
         }
-        this._save();
         this._render();
     }
 
@@ -76,7 +72,6 @@ export class QuestTracker {
         this.scene.time.delayedCall(250, () => audio.play('coins'));
         this.index++;
         this.progress = 0;
-        this._save();
         // Show the finished quest ticked off for a moment, then the next one
         this._render({ finished: done });
         this.scene.time.delayedCall(1800, () => this._render());
@@ -107,21 +102,5 @@ export class QuestTracker {
             this.container.setScale(1.06);
             this.scene.tweens.add({ targets: this.container, scale: 1, duration: 300, ease: 'Back.easeOut' });
         }
-    }
-
-    _load() {
-        try {
-            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            if (saved && Number.isInteger(saved.index)) {
-                this.index = Math.max(0, Math.min(QUESTS.length, saved.index));
-                this.progress = Number.isInteger(saved.progress) ? saved.progress : 0;
-            }
-        } catch { /* storage unavailable: start fresh */ }
-    }
-
-    _save() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ index: this.index, progress: this.progress }));
-        } catch { /* not persisted */ }
     }
 }
