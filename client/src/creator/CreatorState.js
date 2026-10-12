@@ -1,11 +1,9 @@
 // Character-creator state: what the player picked vs. what the dice rolled.
 //
-// Identity (body type, race, class) starts fully random. Each one the player
-// taps becomes "picked" and survives the dice; the dice re-rolls whatever is
-// still unpicked plus the whole look. Look overrides (skin, hair, colours) are
-// explicit customizations layered on a seed, so tweaking one keeps the rest.
-
-const STORAGE_KEY = 'alkema.character';
+// Every visit starts with a fully random hero, and the dice rolls a whole new
+// one: body, race, class, look and name. Picks and look overrides (skin, hair,
+// colours) shape the hero on screen until the next roll; overrides are layered
+// on a seed, so tweaking one keeps the rest.
 const LOOK_FIELDS = ['skin', 'hair', 'hair_color', 'palette'];
 
 export class CreatorState {
@@ -24,16 +22,12 @@ export class CreatorState {
     current(field) {
         if (this.picked[field]) return this.picked[field];
         const map = { body_type: 'body_type', kind: 'race', character_class: 'character_class' };
-        return this.character?.[map[field]] ?? this.restored?.[field] ?? null;
+        return this.character?.[map[field]] ?? null;
     }
 
     currentRaceGroup() {
         const kind = this.current('kind');
         return this.options.races.find(r => r.kinds.some(k => k.id === kind))?.id || null;
-    }
-
-    allPicked() {
-        return Object.values(this.picked).every(Boolean);
     }
 
     pickBodyType(id) {
@@ -65,10 +59,12 @@ export class CreatorState {
         this.look[field] = value;
     }
 
-    /** Dice: forget the look and roll a new seed; unpicked identity rolls server-side. */
+    /** Dice: forget every pick and the look; the server rolls a whole new hero. */
     randomize() {
+        for (const f of Object.keys(this.picked)) this.picked[f] = null;
         for (const f of LOOK_FIELDS) this.look[f] = null;
         this.seed = null;
+        this.nameEdited = false;
         this.rolling = true;
     }
 
@@ -89,18 +85,9 @@ export class CreatorState {
         return req;
     }
 
-    /** What the dice would request right now (picked identity, fresh everything else). */
+    /** The dice asks for nothing: everything is rolled. */
     diceRequest() {
-        const req = {};
-        for (const [field, value] of Object.entries(this.picked)) {
-            if (value) req[field] = value;
-        }
-        return req;
-    }
-
-    /** Identity signature a prefetched dice roll must match to be reused. */
-    diceKey() {
-        return JSON.stringify(this.diceRequest());
+        return {};
     }
 
     /** Adopt a preview result. `identityChanged` lets a new name come along. */
@@ -111,10 +98,6 @@ export class CreatorState {
         this.character = character;
         this.seed = character.seed;
         const nameFitsOld = prev && prev.race === character.race && prev.body_type === character.body_type;
-        if (this._keepRestoredName) {
-            this._keepRestoredName = false;
-            return;
-        }
         if (!this.nameEdited && (identityChanged || !this.name || !nameFitsOld)) {
             this.name = character.name;
         }
@@ -148,53 +131,5 @@ export class CreatorState {
     palettes() {
         const allowed = this.appearanceOptions()?.palettes || [];
         return this.options.palettes.filter(p => allowed.includes(p.id));
-    }
-
-    // --- Persistence: returning players start as the hero they last played ---
-
-    save() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                picked: this.picked,
-                shown: {
-                    body_type: this.current('body_type'),
-                    kind: this.current('kind'),
-                    character_class: this.current('character_class'),
-                },
-                look: this.look,
-                seed: this.seed,
-                name: this.name,
-                nameEdited: this.nameEdited,
-            }));
-        } catch { /* storage unavailable: nothing to remember */ }
-    }
-
-    restore() {
-        let saved;
-        try {
-            saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-        } catch {
-            return false;
-        }
-        if (!saved?.shown) return false;
-        const ids = list => list.map(x => x.id);
-        const valid = {
-            body_type: id => ids(this.options.body_types).includes(id),
-            kind: id => Boolean(this.options.appearance[id]),
-            character_class: id => ids(this.options.classes).includes(id),
-        };
-        this.restored = {};
-        for (const field of Object.keys(valid)) {
-            if (valid[field](saved.shown[field])) this.restored[field] = saved.shown[field];
-            if (valid[field](saved.picked?.[field])) this.picked[field] = saved.picked[field];
-        }
-        for (const f of LOOK_FIELDS) this.look[f] = saved.look?.[f] || null;
-        this.seed = Number.isInteger(saved.seed) ? saved.seed : null;
-        if (saved.name) {
-            this.name = saved.name;
-            this.nameEdited = Boolean(saved.nameEdited);
-            this._keepRestoredName = true;
-        }
-        return true;
     }
 }

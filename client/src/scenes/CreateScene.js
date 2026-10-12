@@ -237,7 +237,6 @@ export class CreateScene extends Scene {
         }
 
         this.state = new CreatorState(res.options);
-        const returning = this.state.restore();
         this.panel = new CreatorPanel(this.state, this.scale.width, {
             onPickBody: id => this._changeIdentity(() => this.state.pickBodyType(id)),
             onPickRace: id => this._changeIdentity(() => this.state.pickRace(id)),
@@ -252,7 +251,6 @@ export class CreateScene extends Scene {
             onNameDice: () => this._suggestName(),
         });
         this.panel.render();
-        if (returning) this.panel.toast('Welcome back. Press Play to jump in.');
 
         this._onKey = (e) => {
             if (e.target instanceof HTMLInputElement) return;
@@ -280,7 +278,7 @@ export class CreateScene extends Scene {
         if (!this.state || this._joining) return;
         this.state.randomize();
         const ready = this._prefetch;
-        if (ready && ready.key === this.state.diceKey() && this._previewCount - ready.count < MAX_PREFETCH_AGE && !this._inFlight) {
+        if (ready && this._previewCount - ready.count < MAX_PREFETCH_AGE && !this._inFlight) {
             this._prefetch = null;
             this._applyPreview(ready.res, true);
             this._startPrefetch();
@@ -356,8 +354,7 @@ export class CreateScene extends Scene {
     /** Roll the next dice result in the background so Randomize is instant. */
     async _startPrefetch() {
         if (this._prefetching || this._joining) return;
-        const key = this.state.diceKey();
-        if (this._prefetch?.key === key && this._previewCount - this._prefetch.count < MAX_PREFETCH_AGE) return;
+        if (this._prefetch && this._previewCount - this._prefetch.count < MAX_PREFETCH_AGE) return;
         this._prefetching = true;
         try {
             const res = await this.network.request('preview-character', this.state.diceRequest());
@@ -365,12 +362,10 @@ export class CreateScene extends Scene {
                 // Warm the texture cache so the swap needs no download.
                 const c = res.character;
                 await loadCharacterSpritesheet(this, c.spriteUrl, `sprite_${c.id}`).catch(() => {});
-                this._prefetch = { key, res, count: this._previewCount };
+                this._prefetch = { res, count: this._previewCount };
             }
         } catch { /* prefetch is best-effort */ }
         this._prefetching = false;
-        // The player changed their picks while this was rolling: roll for the new picks.
-        if (this.scene.isActive() && this.state.diceKey() !== key && !this._inFlight) this._startPrefetch();
     }
 
     async _suggestName() {
@@ -407,7 +402,6 @@ export class CreateScene extends Scene {
             this.panel?.toast('Couldn\'t reach the realm. Try again.');
             return;
         }
-        this.state?.save();
         // The chest is a flourish: never let it hold up entering the world. Hidden
         // tabs barely advance animations, so skip it there.
         if (!document.hidden) {

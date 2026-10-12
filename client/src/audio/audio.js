@@ -18,7 +18,7 @@ const HEARING_RANGE = 520; // world px beyond which other players' fights are si
 
 /** Music, by mood. The world plays its tracks in turn, crossfading between them. */
 export const MUSIC = {
-    creator: [{ id: 'enchanted-festival', loop: true }],
+    creator: [{ id: 'grassy-world' }], // replays, fading back in, when it ends
     world: [
         { id: 'town-theme', plays: 1 },
         { id: 'pleasant-creek', plays: 2 },

@@ -19,10 +19,10 @@ MUSIC AND SOUND
 ======================================================================
 
 Music
-  "Enchanted Festival", "Pleasant Creek", "Woodland Fantasy"
+  "Grassy World Overture", "Pleasant Creek", "Woodland Fantasy"
     by Matthew Pablo (http://www.matthewpablo.com)
     License: CC-BY 3.0
-    https://opengameart.org/content/enchanted-festival
+    https://opengameart.org/content/grassy-world-overture-8bitorchestral
     https://opengameart.org/content/pleasant-creek
     https://opengameart.org/content/woodland-fantasy
   "Town Theme RPG" by cynicmusic

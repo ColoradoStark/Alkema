@@ -51,12 +51,12 @@ test.describe('Sound', () => {
         expect(await music(page)).toEqual([]); // browsers allow no sound before a gesture
 
         await page.locator('.cc-tile[data-id="elf"]').click();
-        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-enchanted-festival']);
+        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-grassy-world']);
 
         await page.locator('#cc-play').click();
         await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
         // The creator theme faded out and was freed
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-enchanted-festival')), { timeout: 10000 }).toBe(false);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-grassy-world')), { timeout: 10000 }).toBe(false);
     });
 
     test('effects play on taps', async ({ page }) => {
@@ -103,6 +103,6 @@ test.describe('Sound', () => {
         expect(await page.evaluate(() => window.__ALKEMA_AUDIO.mode)).toBe('off');
         await page.locator('.cc-sound').click();
         await page.locator('.cc-tile[data-id="human"]').click();
-        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-enchanted-festival']);
+        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-grassy-world']);
     });
 });

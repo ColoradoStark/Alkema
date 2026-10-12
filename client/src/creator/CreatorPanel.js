@@ -395,9 +395,7 @@ export class CreatorPanel {
             if (rolled) this.nameInput.select();
         }
 
-        this.diceBtn.title = s.allPicked()
-            ? 'Keep race, body and class; roll a new look'
-            : 'Roll everything you haven\'t picked';
+        this.diceBtn.title = 'Roll a whole new hero';
 
         this._renderSheet();
     }

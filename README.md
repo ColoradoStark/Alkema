@@ -71,18 +71,18 @@ Walk, Run, Idle, Combat Idle, Slash, Thrust, Spellcast, Shoot, Backslash, Halfsl
 Every session opens in a character creator built for one-thumb play on a phone:
 
 - Pick a body (Male / Female), a race (Human, Elf, Furry, Fey) and a class (Warrior, Mage, Ranger, Thief, Cleric), or tap the **Random New Hero** die
-- The die re-rolls everything you haven't picked yourself, so you can lock in a race and keep rolling looks
+- The die rolls a whole new hero every time (body, race, class, look and name), and so does every visit
 - Random heroes get natural skin tones; fur, lavender and other race colors are yours to choose in **Customize look**, along with race kind (e.g. Cat, Fox, Wolf, Bunny), hair style, hair color and outfit colors
 - A live preview walks your hero through the town and shows off only the moves their gear fully supports; rotate them to see every side
 - Between walks, your hero spars a skeleton, goblin or orc with their class's real attacks: sword swings, arrows, magic bolts, with hit sparks, damage numbers and a gold drop on victory
 - Each class starts with a humble kit (e.g. a warrior gets legion armor, an arming sword and a wooden shield), revealed from a treasure chest when you press **Play**
-- **Play** is always one tap away; returning players start as the hero they last played
+- **Play** is always one tap away
 
 Other races and classes are reserved for NPCs and enemies.
 
 ## Sound and Music
 
-- Music that follows you: a festive theme in the character creator, then a rotating playlist of town and countryside tracks in the world, crossfading between moods
+- Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world, crossfading between moods
 - Every tap, pick and roll has a sound: dice rattle for **Random New Hero**, each class answers with its weapon (a sword drawn, a bow twang, a spell), pages turn in **Customize look**
 - The creator's sparring bouts and the world's fights are fully voiced: whooshes, bone clacks, blocks, monster cries, a victory jingle and coins
 - The starter chest thuds down, creaks open and chimes for each item

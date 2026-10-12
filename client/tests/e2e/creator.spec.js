@@ -33,13 +33,6 @@ function hairOf(character) {
 }
 
 test.describe('Character creator', () => {
-    test.beforeEach(async ({ page }) => {
-        // Start every test as a brand-new player.
-        await page.addInitScript(() => {
-            if (!sessionStorage.getItem('keep')) localStorage.removeItem('alkema.character');
-        });
-    });
-
     test('opens before the world, with choices and a Play button', async ({ page }) => {
         await page.goto('/');
         await expect(page.locator('#cc-play')).toBeVisible({ timeout: 20000 });
@@ -76,16 +69,24 @@ test.describe('Character creator', () => {
         expect(weapon).toBe(target === 'ranger' ? 'weapon_ranged_bow_normal' : 'weapon_sword_arming');
     });
 
-    test('randomize keeps what the player picked', async ({ page }) => {
+    test('the dice forgets every pick and rolls a whole new hero', async ({ page }) => {
+        test.setTimeout(150000);
         await page.goto('/');
         await waitForPreview(page);
+        await page.locator('.cc-tile[data-id="female"]').click();
+        await page.locator('.cc-tile[data-id="elf"]').click();
         await page.locator('.cc-tile[data-id="cleric"]').click();
-        const first = await waitForPreview(page, "c.character_class === 'cleric'");
+        let last = await waitForPreview(page, "c.character_class === 'cleric' && c.body_type === 'female'");
 
-        await page.locator('#cc-randomize').click();
-        const rolled = await waitForPreview(page, `c.seed !== ${first.character.seed}`);
-        expect(rolled.character.character_class).toBe('cleric');
-        expect(rolled.picked.character_class).toBe('cleric');
+        const classes = new Set();
+        for (let roll = 0; roll < 6; roll++) {
+            await page.locator('#cc-randomize').click();
+            last = await waitForPreview(page, `c.seed !== ${last.character.seed}`);
+            expect(last.picked).toEqual({ body_type: null, kind: null, character_class: null });
+            classes.add(last.character.character_class);
+        }
+        // Six fully random rolls all landing on the old pick would be a 1-in-15,625 fluke
+        expect(classes.size).toBeGreaterThan(1);
     });
 
     test('changing hair color keeps the rest of the look', async ({ page }) => {
@@ -171,7 +172,7 @@ test.describe('Character creator', () => {
             await waitForPreview(page, `c.character_class === '${cls}'`);
             await page.waitForFunction(() => {
                 const s = window.__PHASER_GAME.scene.getScene('CreateScene');
-                return s._prefetch?.key === s.state.diceKey();
+                return Boolean(s._prefetch);
             }, null, { timeout: 45000 });
             await page.locator('#cc-randomize').click();
 
@@ -209,21 +210,6 @@ test.describe('Character creator', () => {
         const panel = await page.locator('.cc-panel').boundingBox();
         expect(random.y + random.height).toBeLessThanOrEqual(panel.y);
         await expect(page.locator('#cc-randomize .px-icon')).toBeVisible();
-    });
-
-    test('welcome-back message does not cover the New hero die', async ({ page }) => {
-        await page.goto('/');
-        await waitForPreview(page);
-        // Become a returning player, then come back
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').state.save());
-        await page.evaluate(() => sessionStorage.setItem('keep', '1'));
-        await page.reload();
-        await expect(page.locator('.cc-toast.is-visible')).toBeVisible({ timeout: 20000 });
-        const toast = await page.locator('.cc-toast').boundingBox();
-        const die = await page.locator('#cc-randomize').boundingBox();
-        const overlaps = toast.x < die.x + die.width && die.x < toast.x + toast.width
-            && toast.y < die.y + die.height && die.y < toast.y + toast.height;
-        expect(overlaps).toBe(false);
     });
 
     test('one rotate control, labelled, steps the hero round all four facings', async ({ page }) => {
@@ -297,9 +283,7 @@ test.describe('Character creator', () => {
         await expect(page.locator('#creator')).toHaveCount(0);
     });
 
-    test('a returning player starts as their last hero', async ({ browser }) => {
-        const context = await browser.newContext();
-        const page = await context.newPage();
+    test('every reload rolls a new random hero', async ({ page }) => {
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });
         const played = await waitForPreview(page, "c.character_class === 'thief'");
@@ -308,11 +292,9 @@ test.describe('Character creator', () => {
 
         await page.reload();
         const back = await waitForPreview(page);
-        expect(back.character.character_class).toBe('thief');
-        expect(back.character.race).toBe(played.character.race);
-        expect(back.character.body_type).toBe(played.character.body_type);
-        expect(back.name).toBe(played.name);
-        await context.close();
+        expect(back.picked).toEqual({ body_type: null, kind: null, character_class: null });
+        expect(back.character.seed).not.toBe(played.character.seed);
+        await expect(page.locator('.cc-toast.is-visible')).toHaveCount(0);
     });
 });
 
@@ -323,7 +305,6 @@ test.describe('Character creator on a phone', () => {
     test.use(PHONE);
 
     test('fits the portrait screen and lines up with the game canvas', async ({ page }, testInfo) => {
-        await page.addInitScript(() => localStorage.removeItem('alkema.character'));
         await page.goto('/');
         await waitForPreview(page);
 
@@ -357,7 +338,6 @@ test.describe('Character creator on a phone', () => {
     test('opening the keyboard to edit the name does not shrink the game', async ({ page }) => {
         // The on-screen keyboard shrinks the visual viewport; the game used to
         // rescale itself to fit, becoming too small to see while typing.
-        await page.addInitScript(() => localStorage.removeItem('alkema.character'));
         await page.goto('/');
         await waitForPreview(page);
         const canvasSize = () => page.evaluate(() => {
@@ -428,7 +408,6 @@ test.describe('Character creator on an iPhone-shaped screen', () => {
     test.use(IPHONE);
 
     test('scene runs edge to edge and nothing of the game shows below the panel', async ({ page }) => {
-        await page.addInitScript(() => localStorage.removeItem('alkema.character'));
         await page.goto('/');
         await waitForPreview(page);
         const m = await page.evaluate(() => {
@@ -449,7 +428,6 @@ test.describe('Character creator on an iPhone-shaped screen', () => {
     });
 
     test('game fills the screen width and keeps it when Play is pressed', async ({ page }) => {
-        await page.addInitScript(() => localStorage.removeItem('alkema.character'));
         await page.goto('/');
         await waitForPreview(page);
         const width = () => page.evaluate(() => ({
