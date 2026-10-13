@@ -592,6 +592,29 @@ See the individual asset pages linked above for specific terms.
 
 
 ======================================================================
+WORLD MAP TILES
+======================================================================
+
+The overworld (assets/world/) is assembled by tools/worldgen.py from
+these LPC tiles (the source sheets and their full credit files are in
+tools/worldgen-sources/). Its mountains, place icons, bridges and ship are
+drawn for Alkema in tools/worldart.py, in colours sampled from the LPC art.
+
+LPC Base Assets (grass, water, river banks, trees)
+  Lanea Zimmerman (AKA Sharm)
+  License(s): CC-BY-SA 3.0, GPL 3.0, OGA-BY 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+
+LPC Tile Atlas (sand beaches)
+  Lanea Zimmerman (AKA Sharm), Casper Nilsson, Daniel Eddeland,
+  Johann Charlot, Skyler Robert Colladay, Stephen Challener (AKA Redshrike),
+  Charles Sanchez (AKA CharlesGabriel), Manuel Riecke (AKA MrBeast),
+  Daniel Armstrong (AKA HughSpectrum)
+  License(s): CC-BY-SA 3.0, GPL 3.0
+  https://opengameart.org/content/lpc-tile-atlas
+
+
+======================================================================
 INTERFACE ART
 ======================================================================
 

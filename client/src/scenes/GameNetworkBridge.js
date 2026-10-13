@@ -47,7 +47,7 @@ export class GameNetworkBridge {
         });
 
         nm.on('player-moved', (data) => {
-            gs.updatePlayerPosition(data.id, data.x, data.y, data.direction, data.vx, data.vy);
+            gs.updatePlayerPosition(data.id, data.x, data.y, data.direction, data.vx, data.vy, data.sailing, data.heading);
         });
 
         nm.on('player-updated', (data) => {

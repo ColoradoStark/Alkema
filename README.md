@@ -98,15 +98,26 @@ Other races and classes are reserved for NPCs and enemies.
 
 ## Multiplayer
 
-Real-time multiplayer via Socket.io. Players share a 4096×4096 tile map world with:
+Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles:
+
+- A 256×256-tile map in the spirit of the classic Ultima games: a continent, one large island and three small isles in an animated ocean
+- A great range of snow-capped peaks walls off the north, crossed by a single pass; more ranges run along the west coast, the south-east and the big island
+- Two rivers that meet and run to the sea, with three bridges
+- Cities, villages, castles and dungeons shown as hand-drawn map icons in the LPC style, a little bigger than a hero (a walled city, a village among its fields, a castle with a moat, a mine in a mountainside), each placed for a reason: a city where the rivers meet, a port at the river mouth, towns beside the bridges, a castle guarding the pass, caves in the mountain walls. 8 cities, 4 villages, 4 castles and 8 dungeons in all
+- Walk up to a place and you're asked whether to enter it
+- A galleon waits at anchor off the port: walk into it to board and it sails like a ship, turning toward where you steer, gathering speed slowly, coasting, riding the swell (it yaws, surges and pitches, so it never runs ruler-straight), with a V of foam behind it. Sail the sea to reach the islands and steer into land to step ashore; the ship waits where you leave it. Other players see your ship
+- Mountains, place icons and water block your way on foot; you can walk through the trees
+- The world wraps around: walk off the east edge and you arrive at the west, and north joins south
+
+Also in the world:
 
 - Live character movement and animation sync
 - Attack and spellcast broadcasting
 - Equipment changes reflected in real time
 - Player join/leave events
 - Mobile-responsive layout with touch controls
-- A round minimap showing the town around you, other players, and the way to your current quest
-- Starter quests that teach the controls and tour the town's landmarks (hedge maze, clock tower, park fountain, market); every new hero starts them fresh
+- A round minimap showing the land around you, other players, and the way to your current quest
+- Starter quests that teach the controls, then lead you to a river bridge, a village, a castle and a dungeon's mouth; every new hero starts them fresh
 - A short cooldown on the ability button, shown as a filling gold ring
 - Warm golden-hour light over the world, matching the character creator's stage, where motes drift in the light and a spotlight falls on your hero while you customize
 

@@ -3,6 +3,12 @@ import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
 import { audio } from '../audio/audio.js';
 import { StageEffects } from '../creator/StageEffects.js';
+import { Overworld, wrap, wrapDelta } from '../world/Overworld.js';
+import { WORLD } from '../world/places.js';
+import { Ship } from '../world/Ship.js';
+
+const WALK_SPEED = 160;
+const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
 
 export class GameScene extends Scene {
     constructor() {
@@ -17,9 +23,9 @@ export class GameScene extends Scene {
         if (!this.networkManager) return;
 
         // Set camera to only show the game area (excluding UI bars)
-        this.cameras.main.setBackgroundColor('#3a3a3a');
+        this.cameras.main.setBackgroundColor('#1d5d8c');
         this.cameras.main.setViewport(0, 32, this.scale.width, 448);
-        this.cameras.main.centerOn(512, 384);
+        this.cameras.main.centerOn(WORLD.spawn.x, WORLD.spawn.y);
 
         this.createWorld();
         // Impacts and sparkles in the world, drawn above the players
@@ -51,28 +57,15 @@ export class GameScene extends Scene {
     }
 
     createWorld() {
-        const mapBackground = this.add.image(0, 0, 'placeholder-map');
-        mapBackground.setOrigin(0, 0);
-        mapBackground.setDepth(-10);
-
-        this.physics.world.setBounds(0, 0, 4096, 4096);
-        this.cameras.main.setBounds(0, 0, 4096, 4096);
-
-        // Subtle grid overlay for the starting area
-        const gridSize = 32;
-        const gridArea = 1024;
-        const graphics = this.add.graphics();
-        graphics.lineStyle(1, 0xffffff, 0.05);
-        graphics.setDepth(-5);
-        for (let x = 0; x <= gridArea; x += gridSize) {
-            graphics.moveTo(x, 0);
-            graphics.lineTo(x, gridArea);
-        }
-        for (let y = 0; y <= gridArea; y += gridSize) {
-            graphics.moveTo(0, y);
-            graphics.lineTo(gridArea, y);
-        }
-        graphics.strokePath();
+        this.world = new Overworld(this);
+        // Your ship, at anchor off the port of Saltmere, bow out to sea
+        this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
+        // Ships follow their captains after the physics step, so they never lag a frame
+        this.events.on('postupdate', (time, delta) => {
+            const dt = delta / 1000;
+            this.players.forEach(p => p.ship?.follow(p.sprite.x, p.sprite.y + FEET, dt));
+            if (this.mooredShip.sprite.visible) this.mooredShip.follow(this.mooredShip.x, this.mooredShip.y, dt);
+        });
     }
 
     applyPendingSpriteMeta() {
@@ -85,19 +78,121 @@ export class GameScene extends Scene {
     }
 
     update(time, delta) {
+        this.world?.update(delta, this.localPlayer?.sprite);
+        this.wrapLocalPlayer();
+        this.updateSailing();
+        this.updatePlaceVisit();
         this.players.forEach(player => {
+            if (player !== this.localPlayer) this.keepNearby(player);
             if (player && player.update) player.update(delta);
         });
+    }
+
+    /** Off one edge of the world, on at the other; the camera comes along. */
+    wrapLocalPlayer() {
+        const sprite = this.localPlayer?.sprite;
+        if (!sprite || !this.world) return;
+        const { dx, dy } = this.world.wrapObject(sprite);
+        if (dx || dy) {
+            const cam = this.cameras.main;
+            cam.setScroll(cam.scrollX + dx, cam.scrollY + dy);
+        }
+    }
+
+    /**
+     * Board the ship by walking into it; while sailing, steer into land to step
+     * ashore. The ship stays at anchor where you leave it.
+     */
+    updateSailing() {
+        const player = this.localPlayer;
+        const me = player?.sprite;
+        if (!me || !this.world || !this.mooredShip) return;
+        const intent = this._intent || { dx: 0, dy: 0 };
+        if (!player.sailing) {
+            const ship = this.mooredShip;
+            ship.setPosition(me.x + wrapDelta(me.x, ship.x), me.y + wrapDelta(me.y, ship.y));
+            const toShip = { x: ship.x - me.x, y: ship.y - (me.y + FEET) };
+            const towards = intent.dx * toShip.x + intent.dy * toShip.y > 0;
+            if (towards && Math.hypot(toShip.x, toShip.y) < 60) this.setSailing(true);
+            return;
+        }
+        if (!intent.dx && !intent.dy) return;
+        const len = Math.hypot(intent.dx, intent.dy);
+        const ahead = { x: me.x + intent.dx / len * 30, y: me.y + FEET + intent.dy / len * 30 };
+        if (this.world.isWalkable(ahead.x, ahead.y) && !this.world.isSailable(ahead.x, ahead.y)) {
+            this.setSailing(false, ahead);
+        }
+    }
+
+    /** Go aboard (true), or step ashore onto the tile at `shore`. */
+    setSailing(on, shore = null) {
+        const player = this.localPlayer;
+        const me = player.sprite;
+        if (on) {
+            me.setPosition(this.mooredShip.x, this.mooredShip.y - FEET);
+            this.mooredShip.setVisible(false);
+            me.body.setSize(26, 26, false).setOffset(-13, FEET - 13);
+            player.setSailing(true, this.mooredShip.heading);
+        } else {
+            const ship = player.ship;
+            this.mooredShip.heading = this.mooredShip.targetHeading = ship.heading;
+            this.mooredShip.setPosition(ship.x, ship.y).setVisible(true);
+            this.mooredShip.sprite.setRotation(ship.heading);
+            const tile = this.world.map.tileWidth;
+            me.setPosition(Math.floor(shore.x / tile) * tile + tile / 2, Math.floor(shore.y / tile) * tile + tile / 2 - FEET + 6);
+            me.body.setSize(18, 10, false).setOffset(-9, 18);
+            player.setSailing(false);
+        }
+        me.body.reset(me.x, me.y);
+        this.collision?.setSailing(on);
+        this._sendMove(0, 0);
+    }
+
+    /** Walk up to a place's icon and you're asked whether to go in. */
+    updatePlaceVisit() {
+        const player = this.localPlayer;
+        if (!player?.sprite || !this.world) return;
+        const place = player.sailing ? null : this.world.placeAt(player.sprite.x, player.sprite.y + FEET);
+        if (place === this._place) return;
+        this._place = place;
+        const prompt = this.scene.get('UIScene')?.enterPrompt;
+        if (!prompt) return;
+        if (place) prompt.show(place);
+        else prompt.hide();
+    }
+
+    /** Draw another player on whichever side of the seam is nearest to you. */
+    keepNearby(player) {
+        const me = this.localPlayer?.sprite;
+        const sprite = player.sprite;
+        if (!me || !sprite || player.targetX === undefined) return;
+        const tx = me.x + wrapDelta(me.x, player.targetX);
+        const ty = me.y + wrapDelta(me.y, player.targetY);
+        // Keep the gap between sprite and target, so walking across the seam stays smooth
+        sprite.x = tx + wrapDelta(tx, sprite.x);
+        sprite.y = ty + wrapDelta(ty, sprite.y);
+        player.targetX = tx;
+        player.targetY = ty;
     }
 
     handlePlayerMovement(dx, dy) {
         if (!this.localPlayer) return;
 
-        const speed = 160;
-        const vx = dx * speed;
-        const vy = dy * speed;
-
-        this.localPlayer.setVelocity(vx, vy);
+        this._intent = { dx, dy };
+        let vx, vy;
+        if (this.localPlayer.sailing) {
+            // At sea the ship does the moving: momentum, turning, drift
+            const ship = this.localPlayer.ship;
+            const body = this.localPlayer.sprite.body;
+            if (body.blocked.none === false) ship.bump();
+            ({ vx, vy } = ship.steer(dx, dy, this.game.loop.delta / 1000));
+            body.setVelocity(vx, vy);
+            if (Math.abs(vx) < 2 && Math.abs(vy) < 2) vx = vy = 0;
+        } else {
+            vx = dx * WALK_SPEED;
+            vy = dy * WALK_SPEED;
+            this.localPlayer.setVelocity(vx, vy);
+        }
 
         if (!this.networkManager?.socket?.connected) return;
 
@@ -110,23 +205,24 @@ export class GameScene extends Scene {
         // less than the distance-snap threshold.
         if (moving) {
             this._wasMoving = true;
-            this.networkManager.socket.emit('player-move', {
-                x: this.localPlayer.sprite.x,
-                y: this.localPlayer.sprite.y,
-                vx,
-                vy,
-                direction: this.localPlayer.sprite.currentDirection
-            });
+            this._sendMove(vx, vy);
         } else if (this._wasMoving) {
             this._wasMoving = false;
-            this.networkManager.socket.emit('player-move', {
-                x: this.localPlayer.sprite.x,
-                y: this.localPlayer.sprite.y,
-                vx: 0,
-                vy: 0,
-                direction: this.localPlayer.sprite.currentDirection
-            });
+            this._sendMove(0, 0);
         }
+    }
+
+    _sendMove(vx, vy) {
+        if (!this.networkManager?.socket?.connected || !this.localPlayer) return;
+        this.networkManager.socket.emit('player-move', {
+            x: wrap(this.localPlayer.sprite.x),
+            y: wrap(this.localPlayer.sprite.y),
+            vx,
+            vy,
+            direction: this.localPlayer.sprite.currentDirection,
+            sailing: this.localPlayer.sailing,
+            heading: this.localPlayer.ship?.heading ?? 0,
+        });
     }
 
     addPlayer(playerData) {
@@ -136,8 +232,8 @@ export class GameScene extends Scene {
 
         const player = new Player(
             this,
-            playerData.x || 2048,
-            playerData.y || 2048,
+            playerData.x ?? WORLD.spawn.x,
+            playerData.y ?? WORLD.spawn.y,
             playerData.id,
             playerData.character,
             playerData.isLocal || false
@@ -145,9 +241,16 @@ export class GameScene extends Scene {
 
         this.players.set(playerData.id, player);
 
+        if (player.isLocal && this.world) {
+            // Bump into things with the feet, not the whole 64px frame
+            player.sprite.body.setSize(18, 10, false).setOffset(-9, 18);
+            this.collision = this.world.collide(player.sprite);
+        }
+
         const meta = playerData.character?.spriteMeta
             || this.networkManager.spriteMetaMap?.[playerData.id];
         if (meta) player.applySpriteMeta(meta);
+        if (playerData.sailing) player.setSailing(true, playerData.heading);
 
         return player;
     }
@@ -160,10 +263,11 @@ export class GameScene extends Scene {
         }
     }
 
-    updatePlayerPosition(playerId, x, y, direction, vx = 0, vy = 0) {
+    updatePlayerPosition(playerId, x, y, direction, vx = 0, vy = 0, sailing = false, heading = 0) {
         const player = this.players.get(playerId);
         if (player && player !== this.localPlayer) {
             player.setTargetPosition(x, y, vx, vy);
+            player.setSailing(sailing, heading);
             if (direction) player.sprite.setDirection(direction);
         }
     }

@@ -3,6 +3,7 @@ import { TopBar } from '../ui/TopBar.js';
 import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
+import { EnterPrompt } from '../ui/EnterPrompt.js';
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -24,6 +25,9 @@ export class UIScene extends Scene {
             onAbility: () => this.handleAbility(),
             onTabChange: (key) => console.log('Switched to tab:', key)
         });
+
+        // Asks before taking you into a city, village, castle or dungeon
+        this.enterPrompt = new EnterPrompt(this, this.scale.width / 2, 32 + 448 - 70);   // low, clear of the hero
 
         this._setupKeyboard();
         this._setupNetworkHandlers();
@@ -147,7 +151,7 @@ export class UIScene extends Scene {
 
     handleAttack() {
         const gameScene = this.scene.get('GameScene');
-        if (gameScene?.localPlayer) {
+        if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
             gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');
         }
@@ -155,7 +159,7 @@ export class UIScene extends Scene {
 
     handleAbility() {
         const gameScene = this.scene.get('GameScene');
-        if (!gameScene?.localPlayer || this.bottomControls.coolingDown) return;
+        if (!gameScene?.localPlayer || gameScene.localPlayer.sailing || this.bottomControls.coolingDown) return;
         gameScene.localPlayer.playCast();
         gameScene.emitCast();
         this.bottomControls.startCooldown(ABILITY_COOLDOWN_MS);

@@ -3,6 +3,7 @@ import { getWeaponItemKey, getWeaponType, getMeleeAnimation, getRangedAnimation 
 import { spawnArrow, spawnRock } from './ProjectileSpawner.js';
 import { audio } from '../audio/audio.js';
 import { attackSound } from '../audio/combatSounds.js';
+import { Ship } from '../world/Ship.js';
 
 const STEP_MS = 330; // footstep spacing while walking
 
@@ -234,6 +235,32 @@ export class Player {
         }
     }
 
+    /**
+     * Aboard ship (the hero is below decks, so only the ship shows) or on foot.
+     * @param {boolean} on
+     * @param {number} [heading]  which way the ship points, radians
+     */
+    setSailing(on, heading = 0) {
+        on = !!on;
+        if (on && this.ship) {
+            this.ship.targetHeading = heading;
+            return;
+        }
+        if (on === !!this.ship) return;
+        if (on) {
+            this.ship = new Ship(this.scene, this.sprite.x, this.sprite.y + Ship.BELOW_HERO, this.sprite.depth, heading);
+            this.sprite.stopAnimation();
+        } else {
+            this.ship.destroy();
+            this.ship = null;
+        }
+        this.sprite.setVisible(!on);
+    }
+
+    get sailing() {
+        return !!this.ship;
+    }
+
     setTargetPosition(x, y, vx = 0, vy = 0) {
         this.targetX = x;
         this.targetY = y;
@@ -257,7 +284,7 @@ export class Player {
 
     update(delta) {
         // Your own footsteps on the grass
-        if (this.isLocal && this.sprite?.body && !this.isAttacking) {
+        if (this.isLocal && this.sprite?.body && !this.isAttacking && !this.sailing) {
             const moving = this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0;
             this._stepTimer = moving ? this._stepTimer + delta : STEP_MS * 0.6;
             if (this._stepTimer >= STEP_MS) {
@@ -306,6 +333,7 @@ export class Player {
     }
 
     destroy() {
+        this.ship?.destroy();
         if (this.sprite) {
             this.sprite.destroy();
         }

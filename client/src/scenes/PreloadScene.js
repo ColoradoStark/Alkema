@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { audio } from '../audio/audio.js';
+import { preloadOverworld } from '../world/Overworld.js';
 
 export class PreloadScene extends Scene {
     constructor() {
@@ -76,8 +77,8 @@ export class PreloadScene extends Scene {
         // Leather tile for the HUD panels (same as the character creator's)
         this.load.image('ui-leather', '/ui/creator/art/leather.png');
         
-        // Load placeholder map background
-        this.load.image('placeholder-map', '/ui/PlaceHolder_Map.png');
+        // The overworld: tiles, collision, water and the minimap
+        preloadOverworld(this.load);
 
         // Load arrow projectile spritesheet (13 cols x 4 rows of 64x64, directions: up/left/down/right)
         this.load.spritesheet('arrow-projectile', '/spritesheets/weapon/ranged/bow/arrow/shoot/arrow.png', {

@@ -1,8 +1,12 @@
-// Round minimap in the top-right of the map view: the town around you, you at
+// Round minimap in the top-right of the map view: the land around you, you at
 // the centre, other players as dots, and a marker toward the current quest.
+// The map wraps like the world does.
+
+import { WORLD } from '../world/places.js';
+import { wrapDelta } from '../world/Overworld.js';
 
 const RADIUS = 38;
-const SCALE = 0.07; // world px → minimap px
+const SCALE = 2 / WORLD.tileSize; // world px → minimap px (minimap.png is 2px per tile)
 const INK = 0x222034;
 
 export class Minimap {
@@ -16,7 +20,8 @@ export class Minimap {
         this.cx = cx;
         this.cy = cy;
 
-        this.map = scene.add.image(cx, cy, 'placeholder-map').setOrigin(0, 0).setScale(SCALE).setDepth(20);
+        this.map = scene.add.tileSprite(cx - RADIUS, cy - RADIUS, RADIUS * 2, RADIUS * 2, 'world-minimap')
+            .setOrigin(0, 0).setDepth(20);
         const shape = scene.make.graphics({ x: 0, y: 0 }, false);
         shape.fillStyle(0xffffff).fillCircle(cx, cy, RADIUS);
         this.map.setMask(shape.createGeometryMask());
@@ -47,12 +52,12 @@ export class Minimap {
      * @param {{x: number, y: number}|null} target  current quest location
      */
     update(me, others, target) {
-        this.map.setPosition(this.cx - me.x * SCALE, this.cy - me.y * SCALE);
+        this.map.setTilePosition(Math.round(me.x * SCALE) - RADIUS, Math.round(me.y * SCALE) - RADIUS);
 
         const g = this.dots;
         g.clear();
         for (const o of others) {
-            const dx = (o.x - me.x) * SCALE, dy = (o.y - me.y) * SCALE;
+            const dx = wrapDelta(me.x, o.x) * SCALE, dy = wrapDelta(me.y, o.y) * SCALE;
             if (dx * dx + dy * dy > (RADIUS - 3) ** 2) continue;
             g.fillStyle(INK).fillRect(this.cx + dx - 2.5, this.cy + dy - 2.5, 5, 5);
             g.fillStyle(0xcbdbfc).fillRect(this.cx + dx - 1.5, this.cy + dy - 1.5, 3, 3);
@@ -60,7 +65,7 @@ export class Minimap {
 
         if (target) {
             // On the map when close; pinned to the rim, pointing the way, when far
-            let dx = (target.x - me.x) * SCALE, dy = (target.y - me.y) * SCALE;
+            let dx = wrapDelta(me.x, target.x) * SCALE, dy = wrapDelta(me.y, target.y) * SCALE;
             const d = Math.hypot(dx, dy);
             const max = RADIUS - 6;
             if (d > max) { dx = dx / d * max; dy = dy / d * max; }

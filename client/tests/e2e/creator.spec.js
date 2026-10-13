@@ -311,11 +311,12 @@ test.describe('Character creator', () => {
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer, null, { timeout: 20000 });
 
         await page.reload();
+        // The greeting shows as the creator opens (it fades before a slow preview arrives)
+        await expect(page.locator('.cc-toast.is-visible')).toContainText('Welcome back');
         const back = await waitForPreview(page);
         expect(back.character.seed).toBe(played.character.seed);
         expect(back.character.character_class).toBe('thief');
         expect(back.name).toBe(played.name);
-        await expect(page.locator('.cc-toast.is-visible')).toContainText('Welcome back');
 
         await page.locator('#cc-randomize').click();
         const rolled = await waitForPreview(page, `c.seed !== ${played.character.seed}`);

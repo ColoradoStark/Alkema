@@ -1,8 +1,26 @@
 // Starter quests and the tracker card in the top-left of the map view.
-// A short chain that teaches the controls, then tours the town's landmarks.
+// A short chain that teaches the controls, then tours the places nearest the
+// starting town: a bridge, a village, a castle and a dungeon's mouth.
 // Quests belong to the hero: progress is kept in that hero's save.
 
 import { audio } from '../audio/audio.js';
+import { WORLD } from '../world/places.js';
+import { wrapDelta } from '../world/Overworld.js';
+
+function distance(a, b) {
+    return Math.hypot(wrapDelta(a.x, b.x), wrapDelta(a.y, b.y));
+}
+
+/** The place of a type (or bridge) closest to the starting town. */
+function nearest(list) {
+    return list.reduce((best, p) => (distance(WORLD.spawn, p) < distance(WORLD.spawn, best) ? p : best));
+}
+
+const ofType = type => nearest(WORLD.places.filter(p => p.type === type));
+const bridge = nearest(WORLD.bridges);
+const village = ofType('village');
+const castle = ofType('castle');
+const dungeon = ofType('dungeon');
 
 /**
  * kind 'count': `goal` events of `event` ('attack' | 'cast').
@@ -11,10 +29,10 @@ import { audio } from '../audio/audio.js';
 export const QUESTS = [
     { id: 'swing', text: 'Swing your weapon', kind: 'count', event: 'attack', goal: 5 },
     { id: 'cast', text: 'Cast a spell', kind: 'count', event: 'cast', goal: 1 },
-    { id: 'maze', text: 'Find the hedge maze', kind: 'visit', x: 240, y: 747, radius: 140 },
-    { id: 'clock', text: 'Visit the clock tower', kind: 'visit', x: 1829, y: 1400, radius: 170 },
-    { id: 'fountain', text: 'Rest by the park fountain', kind: 'visit', x: 3456, y: 2757, radius: 170 },
-    { id: 'market', text: 'Browse the market', kind: 'visit', x: 2347, y: 3253, radius: 190 },
+    { id: 'bridge', text: 'Cross the river bridge', kind: 'visit', x: bridge.x, y: bridge.y, radius: 64 },
+    { id: 'village', text: `Find the village of ${village.name}`, kind: 'visit', x: village.x, y: village.y, radius: 140 },
+    { id: 'castle', text: `Visit ${castle.name}`, kind: 'visit', x: castle.x, y: castle.y, radius: 120 },
+    { id: 'dungeon', text: `Find the mouth of ${dungeon.name}`, kind: 'visit', x: dungeon.x, y: dungeon.y, radius: 100 },
 ];
 
 const CARD = { x: 8, y: 42, width: 160 };
@@ -69,7 +87,7 @@ export class QuestTracker {
     updatePosition(x, y) {
         const q = this.current;
         if (q?.kind !== 'visit') return;
-        if (Math.hypot(x - q.x, y - q.y) <= q.radius) this._complete();
+        if (distance({ x, y }, q) <= q.radius) this._complete();
     }
 
     _complete() {
