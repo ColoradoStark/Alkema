@@ -5,7 +5,7 @@ export default defineConfig({
     timeout: 30000,
     // One local API container serves every browser; Playwright's default (half the
     // CPU cores, 32 here) swamps it and tests time out waiting for heroes
-    workers: 8,
+    workers: 4,
     retries: 1,
     use: {
         baseURL: 'http://localhost:3000',
