@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
 import { audio } from '../audio/audio.js';
+import { StageEffects } from '../creator/StageEffects.js';
 
 export class GameScene extends Scene {
     constructor() {
@@ -21,6 +22,8 @@ export class GameScene extends Scene {
         this.cameras.main.centerOn(512, 384);
 
         this.createWorld();
+        // Impacts and sparkles in the world, drawn above the players
+        this.effects = new StageEffects(this, null, { depth: 30 });
 
         this.networkBridge = new GameNetworkBridge(this);
         this.networkBridge.setup();

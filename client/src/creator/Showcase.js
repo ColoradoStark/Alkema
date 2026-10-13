@@ -258,7 +258,8 @@ export class Showcase {
                 if (!alive()) return;
                 const blocked = this.character.selections?.some(s => s.type === 'shield');
                 audio.play(blocked ? 'block' : 'swing', blocked ? {} : { volume: 0.5, detune: 400 });
-                effects.hit(hero.x + 10 * stage.scale, y + 2 * stage.scale);
+                if (blocked) effects.impact('metal', hero.x + 10 * stage.scale, y + 2 * stage.scale, stage.feetY);
+                else effects.dust.explode(3, hero.x, stage.feetY); // a quick sidestep
                 effects.floatText(hero.x, y - 30 * stage.scale, blocked ? 'Blocked!' : 'Dodged!', '#cbdbfc', 15);
                 await counter;
                 if (!alive()) return;
@@ -274,9 +275,11 @@ export class Showcase {
         audio.play(cries.down, { volume: 0.8 });
         audio.duck(1600);
         scene.time.delayedCall(250, () => audio.play('victory', { drift: 0 }));
-        scene.time.delayedCall(450, () => audio.play('coins'));
-        effects.coinBurst(foe.x, y + 12 * stage.scale);
-        scene.time.delayedCall(450, () => effects.floatText(foe.x, y + 6 * stage.scale, `+${10 + Math.floor(Math.random() * 15)} gold`, '#fbf236', 16));
+        // Coins spill out, bounce, settle, and fly into the purse
+        scene.time.delayedCall(300, () => {
+            audio.play('coins');
+            effects.collectCoins(foe.x, y + 4 * stage.scale, stage.feetY, 10 + Math.floor(Math.random() * 15));
+        });
         await this._wait(950);
         if (!alive()) return;
         await new Promise(resolve => scene.tweens.add({ targets: foe, alpha: 0, duration: 300, onComplete: resolve }));
@@ -298,9 +301,14 @@ export class Showcase {
         return new Promise(resolve => {
             const land = () => {
                 impactSounds(anim, race).forEach((name, i) => audio.play(name, { volume: i ? 0.6 : 1, detune: crit ? -200 : undefined }));
-                effects.hit(foe.x - 8 * stage.scale, y + 2 * stage.scale);
+                const at = { x: foe.x - 8 * stage.scale, y: y + 2 * stage.scale };
+                if (anim === 'shoot') effects.impact('wood', at.x, at.y, stage.feetY);
+                else if (anim === 'spellcast') effects.impact('magic', at.x, at.y, stage.feetY, this._spellColor());
+                else effects.impact(race === 'skeleton' ? 'bone' : 'flesh', at.x, at.y, stage.feetY);
                 foe.flashHit(90);
                 this.scene.tweens.add({ targets: foe, x: foe.x + 4 * stage.scale, duration: 70, yoyo: true });
+                // The blow lands: a quick squash
+                this.scene.tweens.add({ targets: foe, scaleX: stage.scale * 1.1, scaleY: stage.scale * 0.9, duration: 70, yoyo: true });
                 const dmg = (crit ? 24 : 9) + Math.floor(Math.random() * 10);
                 effects.floatText(foe.x, y - 30 * stage.scale, `${dmg}`, crit ? '#fbf236' : '#fff6e0', crit ? 24 : 18);
                 resolve();
@@ -308,11 +316,13 @@ export class Showcase {
             const fromX = hero.x + 12 * stage.scale;
             const toX = foe.x - 8 * stage.scale;
             if (anim === 'shoot') effects.arrow(fromX, y + 3 * stage.scale, toX, y + 3 * stage.scale, land);
-            else if (anim === 'spellcast') {
-                const holy = this.character.character_class === 'cleric';
-                effects.bolt(fromX, y - 4 * stage.scale, toX, y, land, holy ? 0xfbf236 : 0x639bff);
-            } else land();
+            else if (anim === 'spellcast') effects.bolt(fromX, y - 4 * stage.scale, toX, y, land, this._spellColor());
+            else land();
         });
+    }
+
+    _spellColor() {
+        return this.character.character_class === 'cleric' ? 0xfbf236 : 0x639bff;
     }
 
     // ---------------------------------------------------------------- helpers

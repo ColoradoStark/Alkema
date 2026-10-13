@@ -69,6 +69,8 @@ export class GameNetworkBridge {
             if (target) {
                 target.sprite.flashHit();
                 target.playSound(target === gs.localPlayer ? 'hurt' : 'hit');
+                const { x, y } = target.sprite;
+                gs.effects?.impact('flesh', x, y - 6, y + 28);
             }
         });
 

@@ -439,89 +439,94 @@
    "end": 63.3827,
    "loop": false
   },
-  "coins_1": {
+  "ting": {
    "start": 63.7527,
-   "end": 64.1059,
+   "end": 64.1827,
+   "loop": false
+  },
+  "coins_1": {
+   "start": 64.5527,
+   "end": 64.9059,
    "loop": false
   },
   "coins_2": {
-   "start": 64.4759,
-   "end": 65.0417,
+   "start": 65.2759,
+   "end": 65.8417,
    "loop": false
   },
   "coins_3": {
-   "start": 65.4117,
-   "end": 65.8863,
+   "start": 66.2117,
+   "end": 66.6863,
    "loop": false
   },
   "rock_1": {
-   "start": 66.2563,
-   "end": 66.3862,
+   "start": 67.0563,
+   "end": 67.1862,
    "loop": false
   },
   "rock_2": {
-   "start": 66.7562,
-   "end": 66.8625,
+   "start": 67.5562,
+   "end": 67.6625,
    "loop": false
   },
   "hurt_1": {
-   "start": 67.2325,
-   "end": 67.4762,
+   "start": 68.0325,
+   "end": 68.2762,
    "loop": false
   },
   "hurt_2": {
-   "start": 67.8462,
-   "end": 68.1425,
+   "start": 68.6462,
+   "end": 68.9425,
    "loop": false
   },
   "chest_drop_1": {
-   "start": 68.5125,
-   "end": 68.7475,
+   "start": 69.3125,
+   "end": 69.5475,
    "loop": false
   },
   "chest_drop_2": {
-   "start": 69.1175,
-   "end": 69.3524,
+   "start": 69.9175,
+   "end": 70.1524,
    "loop": false
   },
   "chest_open": {
-   "start": 69.7224,
-   "end": 70.0148,
+   "start": 70.5224,
+   "end": 70.8148,
    "loop": false
   },
   "latch": {
-   "start": 70.3848,
-   "end": 70.5318,
+   "start": 71.1848,
+   "end": 71.3318,
    "loop": false
   },
   "reveal_1": {
-   "start": 70.9018,
-   "end": 72.5318,
+   "start": 71.7018,
+   "end": 73.3318,
    "loop": false
   },
   "reveal_2": {
-   "start": 72.9018,
-   "end": 74.5318,
+   "start": 73.7018,
+   "end": 75.3318,
    "loop": false
   },
   "reveal_3": {
-   "start": 74.9018,
-   "end": 76.5318,
+   "start": 75.7018,
+   "end": 77.3318,
    "loop": false
   },
   "reveal_4": {
-   "start": 76.9018,
-   "end": 78.5318,
+   "start": 77.7018,
+   "end": 79.3318,
    "loop": false
   },
   "enter": {
-   "start": 78.9018,
-   "end": 81.1318,
+   "start": 79.7018,
+   "end": 81.9318,
    "loop": false
   },
   "join": {
-   "start": 81.5018,
-   "end": 83.1318,
+   "start": 82.3018,
+   "end": 83.9318,
    "loop": false
   }
  }

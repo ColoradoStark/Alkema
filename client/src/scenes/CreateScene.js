@@ -67,23 +67,31 @@ export class CreateScene extends Scene {
         this.mapPos = { ...MAP_SPOT };
         this._placeBackdrop();
 
-        this.effects = new StageEffects(this, { width: this.scale.width, top: 0, bottom: STAGE_HEIGHT });
-        this.poof = this.add.particles(this.figureX, FIGURE_Y + 10, 'cc-spark', {
+        // Gold won sparring is counted in a purse under the account chip
+        this.effects = new StageEffects(this, { width: this.scale.width, top: 0, bottom: STAGE_HEIGHT }, {
+            purse: { x: this.figureX + 176 - 8, y: 58 },
+        });
+        // A hero appears in a burst of twinkling stars...
+        this.poof = this.add.particles(this.figureX, FIGURE_Y + 10, 'fx-star', {
+            anim: { anims: ['fx-twinkle'], randomFrame: true },
             speed: { min: 60, max: 180 },
             angle: { min: 0, max: 360 },
-            lifespan: { min: 300, max: 650 },
-            scale: { start: 2, end: 0 },
-            tint: [0xfbf236, 0xdad45e, 0xffffff, 0xeec39a],
+            lifespan: { min: 320, max: 700 },
+            scale: { start: 2, end: 1 },
+            alpha: { start: 1, end: 0, ease: 'Quad.easeIn' },
             emitting: false,
         }).setDepth(4);
-        this.summon = this.add.particles(this.figureX, FEET_Y, 'cc-spark', {
+        // ...after glints rise around the spot while they're summoned
+        this.summon = this.add.particles(this.figureX, FEET_Y, 'fx-glint', {
+            anim: { anims: ['fx-glint-twinkle'], randomFrame: true },
             x: { min: -28, max: 28 },
             speedY: { min: -70, max: -30 },
             lifespan: 900,
-            alpha: { start: 0.9, end: 0 },
+            alpha: { start: 0.95, end: 0 },
             scale: { start: 1.5, end: 0.5 },
-            tint: [0xfbf236, 0xcbdbfc],
-            frequency: 45,
+            tint: [0xfbf236, 0xcbdbfc, 0xffffff],
+            blendMode: 'ADD',
+            frequency: 55,
             emitting: false,
         }).setDepth(4);
 
