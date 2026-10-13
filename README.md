@@ -74,7 +74,7 @@ Every session opens in a character creator built for one-thumb play on a phone:
 - The die rolls a whole new hero every time (body, race, class, look and name), and so does every visit
 - Random heroes get natural skin tones; fur, lavender and other race colors are yours to choose in **Customize look**, along with race kind (e.g. Cat, Fox, Wolf, Bunny), hair style, hair color and outfit colors
 - A live preview walks your hero through the town and shows off only the moves their gear fully supports; rotate them to see every side
-- Between walks, your hero spars a skeleton, goblin or orc with their class's real attacks: sword swings, arrows, magic bolts. Hits throw debris that matches what was struck (bone chips off skeletons, splinters and a drifting feather from arrows, sparks off a shield, glints from spells), and the gold won spills out as spinning coins that bounce, settle and fly into your purse, each with a rising chime
+- Between walks, your hero spars a skeleton, goblin or orc with their class's real attacks: sword swings, arrows, magic bolts. Hits match what was struck (skeletons rattle, arrows throw splinters and a drifting feather, shields spark, spells scatter glints), and the gold won spills out as spinning coins that bounce, settle and fly into your purse, each with a rising chime
 - Each class starts with a humble kit (e.g. a warrior gets legion armor, an arming sword and a wooden shield), revealed from a treasure chest when you press **Play**
 - **Play** is always one tap away
 

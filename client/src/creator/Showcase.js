@@ -306,9 +306,13 @@ export class Showcase {
                 else if (anim === 'spellcast') effects.impact('magic', at.x, at.y, stage.feetY, this._spellColor());
                 else effects.impact(race === 'skeleton' ? 'bone' : 'flesh', at.x, at.y, stage.feetY);
                 foe.flashHit(90);
-                this.scene.tweens.add({ targets: foe, x: foe.x + 4 * stage.scale, duration: 70, yoyo: true });
-                // The blow lands: a quick squash
-                this.scene.tweens.add({ targets: foe, scaleX: stage.scale * 1.1, scaleY: stage.scale * 0.9, duration: 70, yoyo: true });
+                if (race === 'skeleton' && anim !== 'shoot' && anim !== 'spellcast') {
+                    this._rattle(foe); // bones rattle instead of a knock-back
+                } else {
+                    this.scene.tweens.add({ targets: foe, x: foe.x + 4 * stage.scale, duration: 70, yoyo: true });
+                    // The blow lands: a quick squash
+                    this.scene.tweens.add({ targets: foe, scaleX: stage.scale * 1.1, scaleY: stage.scale * 0.9, duration: 70, yoyo: true });
+                }
                 const dmg = (crit ? 24 : 9) + Math.floor(Math.random() * 10);
                 effects.floatText(foe.x, y - 30 * stage.scale, `${dmg}`, crit ? '#fbf236' : '#fff6e0', crit ? 24 : 18);
                 resolve();
@@ -318,6 +322,20 @@ export class Showcase {
             if (anim === 'shoot') effects.arrow(fromX, y + 3 * stage.scale, toX, y + 3 * stage.scale, land);
             else if (anim === 'spellcast') effects.bolt(fromX, y - 4 * stage.scale, toX, y, land, this._spellColor());
             else land();
+        });
+    }
+
+    /** A skeleton's rattle: a fast, shrinking side-to-side shudder. */
+    _rattle(target) {
+        const x = target.x;
+        const amp = 2.5 * target.scaleX;
+        this.scene.tweens.addCounter({
+            from: 0, to: 1, duration: 260,
+            onUpdate: tw => {
+                const t = tw.getValue();
+                target.x = x + Math.sin(t * Math.PI * 10) * amp * (1 - t);
+            },
+            onComplete: () => { target.x = x; },
         });
     }
 

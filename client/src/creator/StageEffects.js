@@ -1,6 +1,6 @@
 // Particles and little flourishes for the creator stage and the world: dust,
-// impacts that match what was struck (bone chips, wood splinters, metal sparks,
-// spell glints), coins that bounce, settle and fly into a purse, damage numbers,
+// impacts that match what was struck (wood splinters, metal sparks, spell
+// glints; skeletons just rattle), coins that bounce, settle and fly into a purse, damage numbers,
 // arrows and magic bolts, fireflies, and the treasure chest. Particles are small
 // hand-drawn pixel sprites in the DawnBringer-32 palette the UI uses.
 
@@ -56,9 +56,8 @@ export class StageEffects {
         }).setDepth(depth);
 
         // Debris that falls, bounces on the ground, rests a moment, then fades:
-        // bone chips, wood splinters, and coins from the chest
+        // wood splinters, and coins from the chest
         this.ground = new Ground();
-        this.chips = this._debris('fx-bits', { frame: [0, 1, 2], gravityY: 900, speed: { min: 90, max: 200 }, lifespan: 1300 });
         this.splinters = this._debris('fx-splinter', { frame: [0, 1], gravityY: 900, speed: { min: 80, max: 170 }, lifespan: 1100 });
         this.coins = this._debris('fx-coin', { anim: { anims: ['fx-coin-spin'], randomFrame: true }, gravityY: 1000, speed: { min: 140, max: 240 }, lifespan: 1600 });
 
@@ -109,16 +108,13 @@ export class StageEffects {
 
     /**
      * An impact that matches what was struck. `groundY` is where debris lands.
-     * material: 'bone' (skeletons), 'flesh', 'metal' (a block), 'wood' (an
-     * arrow), or 'magic' (a spell, in `color`).
+     * material: 'bone' (skeletons: no debris, they rattle instead), 'flesh',
+     * 'metal' (a block), 'wood' (an arrow), or 'magic' (a spell, in `color`).
      */
     impact(material, x, y, groundY = y + 40, color = 0x639bff) {
         this.ground.y = groundY;
         switch (material) {
             case 'bone':
-                this.chips.explode(10, x, y);
-                this.sparks.explode(4, x, y);
-                this.dust.explode(2, x, groundY);
                 break;
             case 'metal':
                 this.sparks.explode(18, x, y);
@@ -449,12 +445,6 @@ const SPRITES = {
         ['...aa..', '..ayya.', '..awya.', '..ayya.', '..ayga.', '..agga.', '...aa..'],
         ['...a...', '...g...', '...y...', '...y...', '...y...', '...g...', '...a...'],
         ['..aa...', '.ayya..', '.aywa..', '.ayya..', '.agya..', '.agga..', '..aa...'],
-    ],
-    // Bone chips
-    'fx-bits': [
-        ['.....', '.ww..', '.wcw.', '..ws.', '.....'],
-        ['.....', '..w..', '.wws.', '.....', '.....'],
-        ['.....', 'w...w', '.wcw.', 'w...s', '.....'],
     ],
     // Wood splinters
     'fx-splinter': [
