@@ -82,6 +82,31 @@
 }
 .acct-item:hover { color: #ffe060; background: #6a4a18; }
 
+/* Quiet footer link at the bottom of the menu */
+.acct-about-link {
+    justify-self: center;
+    margin-top: 2px;
+    font-family: 'Romulus', monospace;
+    font-size: 15px;
+    color: var(--muted);
+    text-decoration: underline;
+}
+.acct-about-link:hover { color: var(--gold); }
+
+/* About sheet: the site's pages */
+.acct-pages { display: grid; gap: 6px; }
+.acct-page {
+    display: block;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: var(--text);
+    text-decoration: none;
+    background: rgba(26, 14, 6, 0.75);
+    box-shadow: inset 0 0 0 1px rgba(200, 160, 74, 0.45);
+}
+.acct-page::after { content: ' ↗'; color: var(--muted); }
+.acct-page:hover { color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-line); }
+
 /* ---------- Sheets (log in, my heroes) ---------- */
 .acct-sheet {
     position: absolute;

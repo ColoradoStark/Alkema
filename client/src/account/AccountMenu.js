@@ -123,6 +123,10 @@ export class AccountMenu {
         if (user) item('Log out', () => this._logout());
         else item('Log in / Create account', () => this.openLogin('login'));
 
+        const about = el('button', 'acct-about-link', { type: 'button', text: 'About' });
+        about.addEventListener('click', () => { audio.play('tap'); this._setOpen(false); this.openAbout(); });
+        this.menu.append(about);
+
         if (this.sheet.classList.contains('is-open') && this._sheetKind === 'saves') this._renderSaves();
     }
 
@@ -200,6 +204,19 @@ export class AccountMenu {
         swap.addEventListener('click', () => this.openLogin(mode === 'login' ? 'register' : 'login'));
         body.append(swap);
         this._openSheet('login');
+    }
+
+    /** About Alkema: links to the site's pages (they open in a new tab, so the game keeps running). */
+    openAbout() {
+        audio.play('book_open');
+        const body = this.sheetBody;
+        body.replaceChildren(this._head('About Alkema'));
+        const links = el('nav', 'acct-pages');
+        for (const [href, label] of [['/about/', 'About us'], ['/contact/', 'Contact'], ['/terms/', 'Terms of service'], ['/privacy/', 'Privacy policy']]) {
+            links.append(el('a', 'acct-page', { href, target: '_blank', rel: 'noopener', text: label }));
+        }
+        body.append(links);
+        this._openSheet('about');
     }
 
     openSaves() {

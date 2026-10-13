@@ -86,6 +86,7 @@ Other races and classes are reserved for NPCs and enemies.
 - Every hero you play is saved, with their look, name, quest progress and gold: up to 10 heroes, listed under **My heroes**, where you can switch hero or delete one
 - Guests' heroes are saved in the browser; create an account with your email and a password to keep them, and your guest heroes come with you
 - Coming back shows the hero you last played, with **Random New Hero** still one tap away
+- **About** at the bottom of the account menu links to the About us, Contact, Terms of service and Privacy policy pages
 
 ## Sound and Music
 

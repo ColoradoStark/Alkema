@@ -114,6 +114,25 @@ test.describe('Accounts and saved heroes', () => {
         expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.user?.email)).toBe(email); // ...still signed in
     });
 
+    test('About, at the bottom of the account menu, links to the site pages', async ({ page }) => {
+        await page.goto('/');
+        await creator(page);
+        await page.locator('.acct-chip').click();
+        await page.locator('.acct-about-link').click();
+        const links = page.locator('.acct-page');
+        await expect(links).toHaveText(['About us', 'Contact', 'Terms of service', 'Privacy policy']);
+        for (const a of await links.all()) expect(await a.getAttribute('target')).toBe('_blank');
+
+        await page.goto('/privacy/');
+        await expect(page.locator('h1')).toHaveText('Privacy Policy');
+        await expect(page.locator('main')).toContainText('alkema_session');
+        for (const path of ['/about/', '/contact/', '/terms/']) {
+            await page.goto(path);
+            await expect(page.locator('h1')).toBeVisible();
+            await expect(page.locator('nav.legal a')).toHaveCount(4);
+        }
+    });
+
     test('a wrong password says so', async ({ page }) => {
         await page.goto('/');
         await creator(page);
