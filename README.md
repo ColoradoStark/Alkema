@@ -80,6 +80,13 @@ Every session opens in a character creator built for one-thumb play on a phone:
 
 Other races and classes are reserved for NPCs and enemies.
 
+## Accounts and Saved Heroes
+
+- Play straight away as a guest; a user icon in the corner (top right in the creator, at the end of the top bar in the world) opens your account menu
+- Every hero you play is saved, with their look, name, quest progress and gold: up to 10 heroes, listed under **My heroes**, where you can switch hero or delete one
+- Guests' heroes are saved in the browser; create an account with your email and a password to keep them, and your guest heroes come with you
+- Coming back shows the hero you last played, with **Random New Hero** still one tap away
+
 ## Sound and Music
 
 - Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world, crossfading between moods
@@ -124,6 +131,9 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 | `GET /player-options` | Races, classes and looks available to players, with color swatches |
 | `GET /random-name` | A race-appropriate fantasy name |
 | `GET /weapon-hitboxes` | Weapon hitbox data for all melee weapons |
+| `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` | Player accounts (email and password; session cookie) |
+| `GET /auth/providers` | Which sign-in options are available |
+| `GET /saves`, `PUT /saves/{id}`, `DELETE /saves/{id}`, `POST /saves/import` | A signed-in player's saved heroes (up to 10) |
 
 ## Tech Stack
 

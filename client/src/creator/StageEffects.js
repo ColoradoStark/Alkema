@@ -300,6 +300,14 @@ class Purse {
         return { x: this.container.x + this.icon.x, y: this.container.y };
     }
 
+    /** Show a hero's saved gold (hidden at zero). */
+    set(total) {
+        this.total = total;
+        this.text.setText(String(total));
+        this._layout();
+        this.container.setAlpha(total > 0 ? 1 : 0);
+    }
+
     add(value) {
         if (this.total === 0) this.scene.tweens.add({ targets: this.container, alpha: 1, duration: 200 });
         this.total += value;

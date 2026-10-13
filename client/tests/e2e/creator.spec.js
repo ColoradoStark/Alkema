@@ -259,20 +259,6 @@ test.describe('Character creator', () => {
         expect(new Set(facings).size).toBe(4);
     });
 
-    test('account chip shows Guest with a placeholder log in', async ({ page }) => {
-        await page.goto('/');
-        await waitForPreview(page);
-        const chip = page.locator('.cc-account');
-        await expect(chip).toContainText('Guest');
-        const login = page.locator('.cc-account-menu button', { hasText: 'Log in' });
-        await expect(login).toBeHidden();
-        await chip.click();
-        await expect(page.locator('.cc-account-menu')).toContainText('Playing as guest');
-        await login.click();
-        await expect(page.locator('.cc-toast.is-visible')).toContainText('coming soon');
-        await expect(page.locator('.cc-account-menu')).toBeHidden();
-    });
-
     test('stage die reads Random New Hero; no class description line; customize is a button', async ({ page }) => {
         await page.goto('/');
         await waitForPreview(page);
@@ -317,7 +303,7 @@ test.describe('Character creator', () => {
         await expect(page.locator('#creator')).toHaveCount(0);
     });
 
-    test('every reload rolls a new random hero', async ({ page }) => {
+    test('after playing a hero, coming back shows that hero; the dice still rolls a new one', async ({ page }) => {
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });
         const played = await waitForPreview(page, "c.character_class === 'thief'");
@@ -326,9 +312,14 @@ test.describe('Character creator', () => {
 
         await page.reload();
         const back = await waitForPreview(page);
-        expect(back.picked).toEqual({ body_type: null, kind: null, character_class: null });
-        expect(back.character.seed).not.toBe(played.character.seed);
-        await expect(page.locator('.cc-toast.is-visible')).toHaveCount(0);
+        expect(back.character.seed).toBe(played.character.seed);
+        expect(back.character.character_class).toBe('thief');
+        expect(back.name).toBe(played.name);
+        await expect(page.locator('.cc-toast.is-visible')).toContainText('Welcome back');
+
+        await page.locator('#cc-randomize').click();
+        const rolled = await waitForPreview(page, `c.seed !== ${played.character.seed}`);
+        expect(rolled.picked).toEqual({ body_type: null, kind: null, character_class: null });
     });
 });
 

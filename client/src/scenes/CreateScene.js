@@ -15,6 +15,8 @@ import { Showcase } from '../creator/Showcase.js';
 import { StageBackdrop } from '../creator/StageBackdrop.js';
 import { StageEffects, delay, tween } from '../creator/StageEffects.js';
 import { audio } from '../audio/audio.js';
+import { account } from '../account/account.js';
+import { AccountMenu } from '../account/AccountMenu.js';
 
 const FIGURE_Y = 160;
 const FIGURE_SCALE = 2;
@@ -53,6 +55,8 @@ export class CreateScene extends Scene {
 
         this.events.once('shutdown', () => this._teardown());
         audio.playMusic('creator');
+        account.init();
+        this._setupAccountMenu();
         this._loadCast();
         this._loadOptions();
     }
@@ -190,6 +194,20 @@ export class CreateScene extends Scene {
         }
 
         this.state = new CreatorState(res.options);
+        // A returning player sees the hero they last played (the dice is still one
+        // tap away). First-time players never wait on the account check.
+        // A guest's last hero is already known (saved in this browser); a signed-in
+        // player's comes from the server, so wait for it briefly.
+        if (account.hasPlayedBefore && !account.lastSave) {
+            await Promise.race([account.init(), new Promise(resolve => setTimeout(resolve, 4000))]);
+            if (!this.scene.isActive()) return;
+        }
+        const last = account.lastSave;
+        if (last?.data?.hero) {
+            this.state.loadHero(last.data.hero);
+            account.currentId = last.id;
+            this.effects.purse?.set(last.data.gold || 0);
+        }
         this.panel = new CreatorPanel(this.state, this.scale.width, {
             onPickBody: id => this._changeIdentity(() => this.state.pickBodyType(id)),
             onPickRace: id => this._changeIdentity(() => this.state.pickRace(id)),
@@ -204,6 +222,10 @@ export class CreateScene extends Scene {
             onNameDice: () => this._suggestName(),
         });
         this.panel.render();
+        if (account.loginResult === 'ok' && account.user) this.panel.toast(`Welcome, ${account.user.name}! Your heroes are saved to your account.`);
+        else if (account.loginResult === 'failed') this.panel.toast("That sign-in didn't work. Try again, or keep playing as a guest.");
+        else if (last?.data?.hero) this.panel.toast(`Welcome back, ${this.state.name}.`);
+        account.loginResult = null;
 
         this._onKey = (e) => {
             if (e.target instanceof HTMLInputElement) return;
@@ -229,6 +251,9 @@ export class CreateScene extends Scene {
 
     _randomize() {
         if (!this.state || this._joining) return;
+        // A whole new hero: no longer the saved one (that save is kept)
+        account.currentId = null;
+        this.effects.purse?.set(0);
         this.state.randomize();
         const ready = this._prefetch;
         if (ready && this._previewCount - ready.count < MAX_PREFETCH_AGE && !this._inFlight) {
@@ -355,6 +380,13 @@ export class CreateScene extends Scene {
             this.panel?.toast('Couldn\'t reach the realm. Try again.');
             return;
         }
+        // Save this hero (a new slot, or the one they loaded) before setting off
+        const saved = await account.saveHero({
+            hero: this.state.heroData(),
+            summary: this.state.summary(),
+            gold: this.effects.purse?.total || 0,
+        }).catch(() => undefined);
+        if (saved === null) this.accountMenu.toast('All 10 hero slots are full. Free one in My heroes to save this hero.');
         // The chest is a flourish: never let it hold up entering the world. Hidden
         // tabs barely advance animations, so skip it there.
         if (!document.hidden) {
@@ -394,6 +426,11 @@ export class CreateScene extends Scene {
 
     _enterWorld() {
         this.showcase.stop();
+        // In the world, switching hero reloads into the creator with that hero
+        this.accountMenu.setMode('game', {
+            onPlaySave: save => { account.markPlayed(save.id); location.reload(); },
+            onNewHero: () => { account.markPlayed(null); location.reload(); },
+        });
         audio.play('enter', { drift: 0 });
         this.poof.explode(40);
         this.cameras.main.fadeOut(380, 0x22, 0x20, 0x34);
@@ -405,6 +442,32 @@ export class CreateScene extends Scene {
             this.scene.start('UIScene');
             if (this.network?.connected) this.network.emit('connected', {});
         });
+    }
+
+    /** The account chip in the corner; it stays for the whole session. */
+    _setupAccountMenu() {
+        let menu = this.game.registry.get('accountMenu');
+        if (!menu) {
+            menu = new AccountMenu({ gameWidth: this.scale.width, mode: 'creator' });
+            this.game.registry.set('accountMenu', menu);
+        }
+        menu.setMode('creator', {
+            onPlaySave: save => this._loadSave(save),
+            onNewHero: () => this._randomize(),
+            toast: msg => this.panel?.toast(msg),
+        });
+        this.accountMenu = menu;
+    }
+
+    /** Put a saved hero on the stage, ready to play. */
+    _loadSave(save) {
+        if (!this.state || this._joining || !save?.data?.hero) return;
+        this.state.loadHero(save.data.hero);
+        account.currentId = save.id;
+        this.effects.purse?.set(save.data.gold || 0);
+        this.panel.render();
+        this.panel.toast(`${this.state.name} is ready.`);
+        this._requestPreview({ identityChanged: true });
     }
 
     _teardown() {

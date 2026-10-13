@@ -1,6 +1,6 @@
 // Starter quests and the tracker card in the top-left of the map view.
 // A short chain that teaches the controls, then tours the town's landmarks.
-// Quests belong to the hero: every new hero (every visit) starts them over.
+// Quests belong to the hero: progress is kept in that hero's save.
 
 import { audio } from '../audio/audio.js';
 
@@ -20,10 +20,16 @@ export const QUESTS = [
 const CARD = { x: 8, y: 42, width: 160 };
 
 export class QuestTracker {
-    constructor(scene) {
+    /**
+     * @param {Phaser.Scene} scene
+     * @param {{index: number, progress: number}} [saved]  where this hero left off
+     * @param {(state: {index: number, progress: number}) => void} [onChange]  to save progress
+     */
+    constructor(scene, saved = null, onChange = () => {}) {
         this.scene = scene;
-        this.index = 0;
-        this.progress = 0;
+        this.index = Math.max(0, Math.min(QUESTS.length, saved?.index || 0));
+        this.progress = saved?.progress || 0;
+        this.onChange = onChange;
 
         this.container = scene.add.container(CARD.x, CARD.y).setDepth(20);
         this.bg = scene.add.graphics();
@@ -55,6 +61,7 @@ export class QuestTracker {
             this._complete();
             return;
         }
+        this.onChange({ index: this.index, progress: this.progress });
         this._render();
     }
 
@@ -72,6 +79,7 @@ export class QuestTracker {
         this.scene.time.delayedCall(250, () => audio.play('coins'));
         this.index++;
         this.progress = 0;
+        this.onChange({ index: this.index, progress: this.progress });
         // Show the finished quest ticked off for a moment, then the next one
         this._render({ finished: done });
         this.scene.time.delayedCall(1800, () => this._render());

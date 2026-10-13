@@ -113,6 +113,56 @@ export class CreatorState {
         this.nameEdited = false;
     }
 
+    /** Everything needed to bring this exact hero back later (a save). */
+    heroData() {
+        return {
+            identity: {
+                body_type: this.current('body_type'),
+                kind: this.current('kind'),
+                character_class: this.current('character_class'),
+            },
+            look: { ...this.look },
+            seed: this.seed,
+            name: this.name,
+        };
+    }
+
+    /** Show a saved hero: their identity, look and name, re-rendered from the seed. */
+    loadHero(hero) {
+        const ids = list => list.map(x => x.id);
+        const valid = {
+            body_type: id => ids(this.options.body_types).includes(id),
+            kind: id => Boolean(this.options.appearance[id]),
+            character_class: id => ids(this.options.classes).includes(id),
+        };
+        for (const field of Object.keys(this.picked)) {
+            const value = hero?.identity?.[field];
+            this.picked[field] = valid[field](value) ? value : null;
+        }
+        for (const f of LOOK_FIELDS) this.look[f] = hero?.look?.[f] || null;
+        this.seed = Number.isInteger(hero?.seed) ? hero.seed : null;
+        this.rolling = false;
+        if (hero?.name) {
+            this.name = hero.name;
+            this.nameEdited = true; // keep the hero's name
+        }
+    }
+
+    /** What the save list shows for this hero. */
+    summary() {
+        const kind = this.current('kind');
+        const race = this.currentRaceGroup();
+        const cls = this.current('character_class');
+        return {
+            name: this.name,
+            race,
+            kind,
+            body: this.current('body_type'),
+            raceLabel: this.options.races.find(r => r.id === race)?.label || '',
+            classLabel: this.options.classes.find(c => c.id === cls)?.label || '',
+        };
+    }
+
     /** Value shown for an appearance field: explicit override, else what was rolled. */
     lookValue(field) {
         return this.look[field] || this.character?.appearance?.[field] || null;

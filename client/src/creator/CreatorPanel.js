@@ -97,7 +97,6 @@ export class CreatorPanel {
         turnWrap.append(turn, el('span', 'cc-side-label', { html: '<span>Rotate</span> <span>character</span>' }));
         r.append(turnWrap);
 
-        this._buildAccount();
         this._buildSoundToggle();
 
         this.moveLabel = el('div', 'cc-move', { 'aria-live': 'polite' });
@@ -178,41 +177,6 @@ export class CreatorPanel {
 
         this.toastEl = el('div', 'cc-toast', { role: 'status' });
         r.append(this.toastEl);
-    }
-
-    /**
-     * Account placeholder: everyone plays as a guest for now. "Log in" is shown
-     * so the layout is settled, but accounts aren't built yet.
-     */
-    _buildAccount() {
-        const wrap = el('div', 'cc-account-wrap');
-        const chip = el('button', 'cc-account', {
-            type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false',
-            html: `${pixelIcon('user', 24)}<span>Guest</span>`,
-        });
-        const menu = el('div', 'cc-account-menu', { role: 'menu' });
-        menu.append(el('p', '', { text: 'Playing as guest' }));
-        const login = el('button', '', { type: 'button', role: 'menuitem', text: 'Log in' });
-        menu.append(login);
-        wrap.append(chip, menu);
-        this.root.append(wrap);
-
-        const setOpen = (open) => {
-            wrap.classList.toggle('is-open', open);
-            chip.setAttribute('aria-expanded', String(open));
-        };
-        chip.addEventListener('click', () => {
-            const open = !wrap.classList.contains('is-open');
-            audio.play(open ? 'menu_open' : 'menu_close');
-            setOpen(open);
-        });
-        login.addEventListener('click', () => {
-            audio.play('tap');
-            setOpen(false);
-            this.toast("Accounts are coming soon. For now you're playing as a guest.");
-        });
-        this._closeAccount = (e) => { if (!wrap.contains(e.target)) setOpen(false); };
-        document.addEventListener('pointerdown', this._closeAccount);
     }
 
     /** Speaker, top left: sound on → music off → sound off. */
@@ -492,7 +456,6 @@ export class CreatorPanel {
         clearInterval(this._fitTimer);
         window.removeEventListener('resize', this._fit);
         window.visualViewport?.removeEventListener('resize', this._fit);
-        document.removeEventListener('pointerdown', this._closeAccount);
         this._offSoundMode?.();
         this.root.remove();
     }

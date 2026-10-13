@@ -38,7 +38,8 @@ test.describe('Living world', () => {
         await expect.poll(() => opacity('.cc-light')).toBe('1');
     });
 
-    test('starter quests: swing five times, then cast; a new hero starts over', async ({ page }) => {
+    test('starter quests: swing five times, then cast; the hero keeps their progress', async ({ page }) => {
+        test.setTimeout(90000); // three trips into the world
         await enterWorld(page);
         expect(await quest(page)).toEqual({ id: 'swing', progress: 0 });
         for (let i = 0; i < 5; i++) await page.keyboard.press('Space');
@@ -47,9 +48,18 @@ test.describe('Living world', () => {
         await page.keyboard.press('KeyE');
         expect(await quest(page)).toEqual({ id: 'maze', progress: 0 });
 
-        // Every visit is a new hero, with the quests from the start
+        // Coming back as the same hero picks up where they left off...
         await page.reload();
         await page.locator('#cc-play').click({ timeout: 60000 });
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.quests, null, { timeout: 30000 });
+        expect(await quest(page)).toEqual({ id: 'maze', progress: 0 });
+
+        // ...and a brand-new hero starts from the beginning
+        await page.reload();
+        await page.waitForFunction(() => window.__PHASER_GAME?.scene.getScene('CreateScene')?.figure?.visible, null, { timeout: 60000 });
+        await page.locator('#cc-randomize').click();
+        await page.waitForFunction(() => { const s = window.__PHASER_GAME.scene.getScene('CreateScene'); return !s._inFlight && s.state.picked.kind === null; }, null, { timeout: 30000 });
+        await page.locator('#cc-play').click();
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.quests, null, { timeout: 30000 });
         expect(await quest(page)).toEqual({ id: 'swing', progress: 0 });
     });

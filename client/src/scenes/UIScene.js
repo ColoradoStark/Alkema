@@ -3,6 +3,7 @@ import { TopBar } from '../ui/TopBar.js';
 import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
+import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
 
@@ -15,7 +16,8 @@ export class UIScene extends Scene {
         this._addMapVignette();
         this._addGoldenHour();
         this.minimap = new Minimap(this, this.scale.width - 48, 80);
-        this.quests = new QuestTracker(this);
+        // Quests pick up where this hero left off, and their progress is saved
+        this.quests = new QuestTracker(this, account.current?.data?.quests, quests => account.updateProgress({ quests }));
         this.topBar = new TopBar(this);
         this.bottomControls = new BottomControls(this, {
             onAttack: () => this.handleAttack(),
