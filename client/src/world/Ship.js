@@ -59,15 +59,17 @@ export class Ship {
         this.vy = 0;
         this._time = Math.random() * 10;
         this._last = { x, y };
+        this._at = { x, y };       // where she is; the sprite adds the swell's bob to it
         this._trail = 0;
         this._ripple = 0;
     }
 
-    get x() { return this.sprite.x; }
-    get y() { return this.sprite.y; }
+    get x() { return this._at.x; }
+    get y() { return this._at.y; }
 
     setPosition(x, y) {
         this.sprite.setPosition(x, y);
+        this._at = { x, y };
         this._last = { x, y };
         return this;
     }
@@ -135,6 +137,7 @@ export class Ship {
         const way = Math.min(1, moved / Math.max(dt, 0.001) / MAX_SPEED);
         const yaw = this._swell() * (0.4 + 0.6 * way) + Math.sin(this._time * 2.3) * 0.02;
         const pitch = Math.sin(this._time * 2.1) * (0.025 + 0.02 * way);
+        this._at = { x, y };
         this.sprite.setPosition(x, y + Math.sin(this._time * 1.7) * 0.8)
             .setRotation(this.heading + yaw)
             .setScale(1 + pitch, 1 - pitch * 0.5);

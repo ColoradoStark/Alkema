@@ -146,6 +146,7 @@ export class UIScene extends Scene {
         for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
         const quest = this.quests.current;
         this.minimap.update(me, others, quest?.kind === 'visit' ? quest : null);
+        this.minimap.setLost(gameScene.world?.forest.lost ?? 0);
         this.quests.updatePosition(me.x, me.y);
     }
 

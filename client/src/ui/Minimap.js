@@ -27,6 +27,9 @@ export class Minimap {
         this.map.setMask(shape.createGeometryMask());
 
         this.dots = scene.add.graphics().setDepth(21);
+        // Lost in the woods, the map is no help: it darkens with the forest
+        this.dark = scene.add.graphics().setDepth(21.5).setAlpha(0);
+        this.dark.fillStyle(0x08100c).fillCircle(cx, cy, RADIUS + 1);
 
         // Inner shade and the gold rim (same rings as the creator's frames)
         const rim = scene.add.graphics().setDepth(22);
@@ -51,6 +54,11 @@ export class Minimap {
      * @param {Iterable<{x: number, y: number}>} others
      * @param {{x: number, y: number}|null} target  current quest location
      */
+    /** @param {number} lost  0 (in the open) to 1 (lost deep in a forest) */
+    setLost(lost) {
+        this.dark.setAlpha(lost * 0.88);
+    }
+
     update(me, others, target) {
         this.map.setTilePosition(Math.round(me.x * SCALE) - RADIUS, Math.round(me.y * SCALE) - RADIUS);
 

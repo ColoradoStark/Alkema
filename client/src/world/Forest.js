@@ -33,7 +33,8 @@ function gloomTexture(scene) {
     const ctx = tex.getContext();
     const h = GLOOM_TEX / 2;
     const g = ctx.createRadialGradient(h, h, 0, h, h, h);
-    g.addColorStop(GLOOM_CLEAR, 'rgba(8, 16, 12, 0)');
+    g.addColorStop(0, 'rgba(8, 16, 12, 0.22)');           // even where you stand, the light is dim
+    g.addColorStop(GLOOM_CLEAR, 'rgba(8, 16, 12, 0.3)');
     g.addColorStop(0.33, 'rgba(8, 16, 12, 0.75)');
     g.addColorStop(0.42, 'rgba(8, 16, 12, 1)');
     ctx.fillStyle = g;
@@ -120,11 +121,16 @@ export class Forest {
         this._updateGloom(delta, feet);
     }
 
+    /** How lost you are in the woods, 0 (in the open) to 1 (the dark has closed in). */
+    get lost() {
+        return this.gloom.visible ? this._gloomAlpha : 0;
+    }
+
     _updateGloom(delta, feet) {
         const deep = feet ? this.depthAt(feet.x, feet.y) : 0;
         // Gloom falls a couple of tiles in and is near black a few tiles further, the clear circle closing fast
-        const alpha = Math.min(0.94, Math.max(0, (deep - 1) * 0.45));
-        const radius = Math.max(2.5, 7 - Math.max(0, deep - 1) * 1.5) * this.tile;
+        const alpha = Math.min(1, Math.max(0, (deep - 1) * 0.45));
+        const radius = Math.max(2, 7 - Math.max(0, deep - 1) * 1.5) * this.tile;
         const k = 1 - Math.exp(-delta / 400);
         this._gloomAlpha += (alpha - this._gloomAlpha) * k;
         this._gloomRadius += (radius - this._gloomRadius) * k;

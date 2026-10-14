@@ -133,7 +133,8 @@ test.describe('Living world', () => {
             await new Promise(r => setTimeout(r, 2000));
             const { gloom } = gs.world.forest;
             const label = gs.world.labels.find(l => l.getData('hidden'));
-            return { gloom: gloom.visible ? gloom.alpha : 0, label: label.alpha };
+            const minimap = window.__PHASER_GAME.scene.getScene('UIScene').minimap.dark.alpha;
+            return { gloom: gloom.visible ? gloom.alpha : 0, label: label.alpha, minimap };
         }, [x, y]);
         const spots = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -146,10 +147,13 @@ test.describe('Living world', () => {
                 four: [(four % forest.n) * 32 + 16, Math.floor(four / forest.n) * 32 + 16],
                 near: [label.x, label.y + 150],
                 far: [label.x, label.y + 400],
+                open: [gs.cameras.main.midPoint.x, gs.cameras.main.midPoint.y + 23],   // where heroes start, on the road below Riverhold
             };
         });
         const deep = await at(...spots.deep);
-        expect(deep.gloom).toBeGreaterThan(0.8);
+        expect(deep.gloom).toBeGreaterThan(0.97);                         // lost: black beyond a step or two
+        expect(deep.minimap).toBeGreaterThan(0.75);                       // and the map is no help
+        expect((await at(...spots.open)).minimap).toBeLessThan(0.05);     // out in the open it's clear
         expect((await at(...spots.four)).gloom).toBeGreaterThan(0.8);   // dark soon after you go in
         expect((await at(...spots.far)).label).toBe(0);
         expect((await at(...spots.near)).label).toBe(1);
@@ -254,8 +258,8 @@ test.describe('Living world', () => {
             const atLookout = { morvath: inView(), hero: cam.worldView.contains(me.x, me.y) };
             await stand(vista.x, vista.y + 400);
             const away = { recentred: Math.abs(cam.followOffset.y) < 8 };
-            // and no way across on foot: search every tile you can walk to from the lookout
-            const { n, blocked } = gs.world, T = 32;
+            // and no way across on foot: search every cell you can walk to from the lookout
+            const { cn: n, blocked, k } = gs.world, T = 32 / k;
             const seen = new Uint8Array(n * n), start = Math.floor(vista.y / T) * n + Math.floor(vista.x / T);
             const queue = [start];
             seen[start] = 1;
@@ -276,7 +280,8 @@ test.describe('Living world', () => {
         await enterWorld(page);
         const result = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const { n, blocked, sail } = gs.world, T = 32;
+            const { cn: n, blocked, k } = gs.world, T = 32 / k;
+            const sail = Uint8Array.from({ length: n * n }, (_, i) => gs.world.sail[Math.floor(Math.floor(i / n) / k) * gs.world.n + Math.floor((i % n) / k)]);
             const { WORLD } = await import('/src/world/places.js');
             const flood = (start, open) => {
                 const seen = new Uint8Array(n * n), queue = [start];
@@ -296,10 +301,25 @@ test.describe('Living world', () => {
             const mainland = flood(start, j => !sail[j]);          // all the land joined to the start, rock and all
             const stranded = WORLD.places.filter(p => mainland[tile(p)] && !onFoot[tile(p)]).map(p => p.name);
             const port = WORLD.places.find(p => p.name === 'Saltmere');
-            const boatFromPort = Math.round(Math.hypot(WORLD.boat.x - port.x, WORLD.boat.y - port.y) / T);
+            const boatFromPort = Math.round(Math.hypot(WORLD.boat.x - port.x, WORLD.boat.y - port.y) / 32);
             return { stranded, boatByThePort: boatFromPort <= 6 };
         });
         expect(result).toEqual({ stranded: [], boatByThePort: true });
+    });
+
+    test('a moored ship rides at anchor: she bobs, but stays where she was left', async ({ page }) => {
+        await enterWorld(page);
+        const drift = await page.evaluate(async () => {
+            const ship = window.__PHASER_GAME.scene.getScene('GameScene').mooredShip;
+            const ys = [], xs = [];
+            for (let t = 0; t < 60; t++) {
+                xs.push(ship.sprite.x);
+                ys.push(ship.sprite.y);
+                await new Promise(r => setTimeout(r, 50));
+            }
+            return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+        });
+        expect(drift).toBeLessThan(3);
     });
 
     test('the ability has a cooldown', async ({ page }) => {

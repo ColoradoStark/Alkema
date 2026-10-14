@@ -64,7 +64,12 @@ export class Overworld {
         const ground = decodeU16(data.layers.ground);
         const features = decodeU16(data.layers.features);
         const canopy = decodeU16(data.layers.canopy);
-        this.blocked = decodeBits(data.collision, n * n);
+        // Walking collision is finer than the tiles (k x k cells a tile), so it
+        // follows the drawn rock and walls rather than whole squares
+        this.k = data.collisionScale || 1;
+        this.cn = n * this.k;
+        this.cell = TILE / this.k;
+        this.blocked = decodeBits(data.collision, this.cn * this.cn);
         this.sail = decodeBits(data.sail, n * n);
         const groundCount = data.tilesets.ground.count;
 
@@ -97,12 +102,8 @@ export class Overworld {
         this.canopyLayer = map.createBlankLayer('canopy', featureSet, origin, origin).setDepth(DEPTH.canopy);
         this.canopyLayer.putTilesAt(grid(gid(canopy, groundCount)), 0, 0, false);
 
-        // Collision lives in invisible layers: on foot a bridge over a river is
-        // open even though its ground is water, and open sea has no ground tile;
-        // aboard ship everything but open water blocks.
-        this.collisionLayer = map.createBlankLayer('collision', groundSet, origin, origin).setVisible(false);
-        this.collisionLayer.putTilesAt(grid(i => (this.blocked[i] ? 0 : -1)), 0, 0, false);
-        this.collisionLayer.setCollision(0);
+        // Aboard ship everything but open water blocks: an invisible tile layer.
+        // (On foot, collide() checks the finer walking cells itself.)
         this.sailLayer = map.createBlankLayer('sail', groundSet, origin, origin).setVisible(false);
         this.sailLayer.putTilesAt(grid(i => (this.sail[i] ? -1 : 0)), 0, 0, false);
         this.sailLayer.setCollision(0);
@@ -119,10 +120,21 @@ export class Overworld {
         }).setOrigin(0.5, 1).setDepth(DEPTH.labels).setData('hidden', !!p.hidden).setAlpha(p.hidden ? 0 : 1));
     }
 
-    /** Is the world tile under this world point blocked? */
+    /** Is the walking cell under this world point blocked? */
     isBlocked(x, y) {
-        const tx = Math.floor(wrap(x) / TILE), ty = Math.floor(wrap(y) / TILE);
-        return !!this.blocked[ty * this.n + tx];
+        const cx = Math.floor(wrap(x) / this.cell), cy = Math.floor(wrap(y) / this.cell);
+        return !!this.blocked[cy * this.cn + cx];
+    }
+
+    /** Does any blocked cell lie under this box (world px, top-left and size)? */
+    boxBlocked(x, y, w, h) {
+        const c = this.cell;
+        for (let cy = Math.floor(y / c); cy <= Math.floor((y + h - 0.01) / c); cy++) {
+            for (let cx = Math.floor(x / c); cx <= Math.floor((x + w - 0.01) / c); cx++) {
+                if (this.isBlocked(cx * c + 1, cy * c + 1)) return true;
+            }
+        }
+        return false;
     }
 
     /** Can you walk on the tile under this point? */
@@ -136,14 +148,29 @@ export class Overworld {
         return !!this.sail[ty * this.n + tx];
     }
 
-    /** Let a character bump into blocked tiles: on foot, or (sailing) into anything but open water. */
+    /**
+     * Let a character bump into what's in the way: on foot, the walking cells
+     * (after each physics step a move onto a blocked cell is taken back, keeping
+     * whichever half of it is clear, so you slide along walls); sailing, anything
+     * but open water.
+     */
     collide(gameObject) {
-        const walk = this.scene.physics.add.collider(gameObject, this.collisionLayer);
+        const body = gameObject.body;
+        let walking = true;
+        this.scene.physics.world.on('worldstep', () => {
+            if (!walking || !body.enable) return;
+            const { position: pos, prev, width: w, height: h } = body;
+            if (!this.boxBlocked(pos.x, pos.y, w, h)) return;
+            if (!this.boxBlocked(pos.x, prev.y, w, h)) pos.y = prev.y;
+            else if (!this.boxBlocked(prev.x, pos.y, w, h)) pos.x = prev.x;
+            else pos.set(prev.x, prev.y);
+            body.updateCenter();
+        });
         const sail = this.scene.physics.add.collider(gameObject, this.sailLayer);
         sail.active = false;
         return {
             setSailing(on) {
-                walk.active = !on;
+                walking = !on;
                 sail.active = on;
             },
         };
