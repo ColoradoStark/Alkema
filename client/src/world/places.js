@@ -5,199 +5,200 @@ export const WORLD = {
  "tileSize": 32,
  "spawn": {
   "x": 2800,
-  "y": 5296
+  "y": 5360
  },
  "places": [
   {
    "name": "Riverhold",
    "type": "city",
-   "x": 2816,
-   "y": 5292,
+   "x": 2800,
+   "y": 5356,
    "rect": [
-    2752,
-    5184,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Saltmere",
-   "type": "city",
-   "x": 2624,
-   "y": 6444,
-   "rect": [
-    2560,
-    6336,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Stonebridge",
-   "type": "city",
-   "x": 2208,
-   "y": 4396,
-   "rect": [
-    2144,
-    4288,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Highmarket",
-   "type": "city",
-   "x": 4064,
-   "y": 4428,
-   "rect": [
-    4000,
-    4320,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Brightwater",
-   "type": "city",
-   "x": 5920,
-   "y": 3948,
-   "rect": [
-    5856,
-    3840,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Ravenford",
-   "type": "city",
-   "x": 3200,
-   "y": 2060,
-   "rect": [
-    3136,
-    1952,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Goldvale",
-   "type": "city",
-   "x": 5632,
-   "y": 4172,
-   "rect": [
-    5568,
-    4064,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Thornwall",
-   "type": "city",
-   "x": 6304,
-   "y": 2124,
-   "rect": [
-    6240,
-    2016,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Millbrook",
-   "type": "village",
-   "x": 2688,
-   "y": 5676,
-   "rect": [
-    2624,
-    5600,
-    128,
-    64
-   ]
-  },
-  {
-   "name": "Ashby",
-   "type": "village",
-   "x": 1856,
-   "y": 3724,
-   "rect": [
-    1792,
-    3648,
-    128,
-    64
-   ]
-  },
-  {
-   "name": "Fernwick",
-   "type": "village",
-   "x": 1504,
-   "y": 6060,
-   "rect": [
-    1440,
-    5984,
-    128,
-    64
-   ]
-  },
-  {
-   "name": "Tumbledown",
-   "type": "village",
-   "x": 7104,
-   "y": 6284,
-   "rect": [
-    7040,
-    6208,
-    128,
-    64
-   ]
-  },
-  {
-   "name": "Castle Aldmoor",
-   "type": "castle",
-   "x": 3200,
-   "y": 3404,
-   "rect": [
-    3136,
-    3296,
-    128,
-    96
-   ]
-  },
-  {
-   "name": "Castle Wyvernreach",
-   "type": "castle",
-   "x": 4256,
-   "y": 1932,
-   "rect": [
-    4192,
-    1824,
-    128,
-    96
+    2688,
+    5152,
+    224,
+    192
    ]
   },
   {
    "name": "Castle Dunmere",
    "type": "castle",
-   "x": 3904,
-   "y": 5580,
+   "x": 3984,
+   "y": 4748,
    "rect": [
-    3840,
-    5472,
-    128,
-    96
+    3872,
+    4512,
+    224,
+    224
    ]
   },
   {
-   "name": "Castle Starhold",
-   "type": "castle",
-   "x": 7104,
-   "y": 1996,
+   "name": "Saltmere",
+   "type": "city",
+   "x": 2512,
+   "y": 6412,
    "rect": [
-    7040,
-    1888,
-    128,
-    96
+    2400,
+    6208,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Highmarket",
+   "type": "city",
+   "x": 3696,
+   "y": 4140,
+   "rect": [
+    3584,
+    3936,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Goldvale",
+   "type": "city",
+   "x": 5136,
+   "y": 4460,
+   "rect": [
+    5024,
+    4256,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Stonebridge",
+   "type": "city",
+   "x": 2512,
+   "y": 4108,
+   "rect": [
+    2400,
+    3904,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Castle Grimhold",
+   "type": "castle",
+   "x": 3216,
+   "y": 3500,
+   "rect": [
+    3104,
+    3264,
+    224,
+    224
+   ]
+  },
+  {
+   "name": "Duskmere",
+   "type": "city",
+   "x": 6000,
+   "y": 4044,
+   "rect": [
+    5888,
+    3840,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Ravenford",
+   "type": "city",
+   "x": 3216,
+   "y": 2124,
+   "rect": [
+    3104,
+    1920,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Castle Nightspire",
+   "type": "castle",
+   "x": 4192,
+   "y": 2092,
+   "rect": [
+    4064,
+    1824,
+    256,
+    256
+   ]
+  },
+  {
+   "name": "Morvath",
+   "type": "city",
+   "x": 6352,
+   "y": 2124,
+   "rect": [
+    6240,
+    1952,
+    224,
+    160
+   ]
+  },
+  {
+   "name": "Castle Gloomhold",
+   "type": "castle",
+   "x": 7072,
+   "y": 2028,
+   "rect": [
+    6944,
+    1824,
+    256,
+    192
+   ]
+  },
+  {
+   "name": "Millbrook",
+   "type": "village",
+   "x": 2672,
+   "y": 5804,
+   "rect": [
+    2560,
+    5632,
+    224,
+    160
+   ]
+  },
+  {
+   "name": "Ashby",
+   "type": "village",
+   "x": 1808,
+   "y": 3788,
+   "rect": [
+    1696,
+    3616,
+    224,
+    160
+   ]
+  },
+  {
+   "name": "Fernwick",
+   "type": "village",
+   "hidden": true,
+   "x": 3728,
+   "y": 5356,
+   "rect": [
+    3616,
+    5184,
+    224,
+    160
+   ]
+  },
+  {
+   "name": "Tumbledown",
+   "type": "village",
+   "x": 7120,
+   "y": 6316,
+   "rect": [
+    7008,
+    6144,
+    224,
+    160
    ]
   },
   {
@@ -287,12 +288,12 @@ export const WORLD = {
   {
    "name": "The Frozen Vault",
    "type": "dungeon",
-   "x": 1056,
+   "x": 1040,
    "y": 7500,
    "rect": [
-    1024,
+    992,
     7424,
-    64,
+    96,
     64
    ]
   }
@@ -312,7 +313,7 @@ export const WORLD = {
   }
  ],
  "boat": {
-  "x": 2576,
-  "y": 6512
+  "x": 2512,
+  "y": 6480
  }
 };

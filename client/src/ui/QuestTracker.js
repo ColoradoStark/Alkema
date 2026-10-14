@@ -16,7 +16,7 @@ function nearest(list) {
     return list.reduce((best, p) => (distance(WORLD.spawn, p) < distance(WORLD.spawn, best) ? p : best));
 }
 
-const ofType = type => nearest(WORLD.places.filter(p => p.type === type));
+const ofType = type => nearest(WORLD.places.filter(p => p.type === type && !p.hidden));
 const bridge = nearest(WORLD.bridges);
 const village = ofType('village');
 const castle = ofType('castle');

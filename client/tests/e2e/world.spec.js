@@ -102,27 +102,54 @@ test.describe('Living world', () => {
 
     test('trees never block: you can walk through a forest', async ({ page }) => {
         await enterWorld(page);
-        const blockedTrunks = await page.evaluate(() => {
+        const result = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const world = gs.world, canopy = world.canopyLayer;
+            const { world } = gs, { forest } = world;
             const me = gs.localPlayer.sprite;
-            // Trees are the only things with canopies; a trunk stands in the tile below
-            // the bottom of its canopy. Check every tree within 40 tiles of the start.
-            const cx = canopy.worldToTileX(me.x), cy = canopy.worldToTileY(me.y);
-            const found = [];
-            let trees = 0;
-            for (let y = cy - 40; y < cy + 40; y++) {
-                for (let x = cx - 40; x < cx + 40; x++) {
-                    if (!canopy.getTileAt(x, y) || canopy.getTileAt(x, y + 1)) continue;
+            // Trees are sprites standing on their feet: check every one within 40 tiles of the start
+            let trees = 0, blocked = 0;
+            for (const bucket of forest.buckets) {
+                for (let i = 0; i < bucket.length; i += 3) {
+                    const x = bucket[i], y = bucket[i + 1];
+                    if (Math.abs(x - me.x) > 40 * 32 || Math.abs(y - me.y) > 40 * 32) continue;
                     trees++;
-                    const wx = canopy.tileToWorldX(x) + 16, wy = canopy.tileToWorldY(y + 1) + 16;
-                    if (world.isBlocked(wx, wy) && !world.isSailable(wx, wy)) found.push([x, y + 1]);
+                    if (world.isBlocked(x, y) && !world.isSailable(x, y)) blocked++;
                 }
             }
-            return { trees, found: found.length };
+            return { trees, blocked, sprites: forest.pool.filter(s => s.visible).length };
         });
-        expect(blockedTrunks.trees).toBeGreaterThan(20);
-        expect(blockedTrunks.found).toBe(0);
+        expect(result.trees).toBeGreaterThan(20);
+        expect(result.blocked).toBe(0);
+        expect(result.sprites).toBeGreaterThan(0);
+    });
+
+    test('deep in the woods the dark closes in; the hidden village is named only up close', async ({ page }) => {
+        await enterWorld(page);
+        const at = (x, y) => page.evaluate(async ([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(x, y - 23);
+            me.body.reset(x, y - 23);
+            await new Promise(r => setTimeout(r, 2000));
+            const { gloom } = gs.world.forest;
+            const label = gs.world.labels.find(l => l.getData('hidden'));
+            return { gloom: gloom.visible ? gloom.alpha : 0, label: label.alpha };
+        }, [x, y]);
+        const spots = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { forest } = gs.world;
+            const deepest = forest.woods.reduce((best, v, i) => (v > forest.woods[best] ? i : best), 0);
+            const label = gs.world.labels.find(l => l.getData('hidden'));
+            return {
+                deep: [(deepest % forest.n) * 32 + 16, Math.floor(deepest / forest.n) * 32 + 16],
+                near: [label.x, label.y + 150],
+                far: [label.x, label.y + 400],
+            };
+        });
+        const deep = await at(...spots.deep);
+        expect(deep.gloom).toBeGreaterThan(0.8);
+        expect((await at(...spots.far)).label).toBe(0);
+        expect((await at(...spots.near)).label).toBe(1);
     });
 
     test('walking up to a place asks whether to enter; No closes it', async ({ page }) => {

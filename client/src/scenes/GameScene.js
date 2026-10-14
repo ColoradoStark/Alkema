@@ -4,6 +4,7 @@ import { GameNetworkBridge } from './GameNetworkBridge.js';
 import { audio } from '../audio/audio.js';
 import { StageEffects } from '../creator/StageEffects.js';
 import { Overworld, wrap, wrapDelta } from '../world/Overworld.js';
+import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
 import { Ship } from '../world/Ship.js';
 
@@ -78,13 +79,16 @@ export class GameScene extends Scene {
     }
 
     update(time, delta) {
-        this.world?.update(delta, this.localPlayer?.sprite);
         this.wrapLocalPlayer();
+        const me = this.localPlayer?.sprite;
+        this.world?.update(delta, me ? { x: me.x, y: me.y + FEET } : null);
         this.updateSailing();
         this.updatePlaceVisit();
         this.players.forEach(player => {
             if (player !== this.localPlayer) this.keepNearby(player);
             if (player && player.update) player.update(delta);
+            // Heroes and trees sort by where they stand, so you pass in front of and behind each other
+            if (player?.sprite && !player.sailing) player.sprite.setDepth(sortDepth(this, player.sprite.y + FEET));
         });
     }
 

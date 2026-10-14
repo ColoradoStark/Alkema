@@ -101,9 +101,13 @@ Other races and classes are reserved for NPCs and enemies.
 Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles:
 
 - A 256×256-tile map in the spirit of the classic Ultima games: a continent, one large island and three small isles in an animated ocean
-- A great range of snow-capped peaks walls off the north, crossed by a single pass; more ranges run along the west coast, the south-east and the big island
+- A great range of snow-capped peaks with ragged, natural feet walls off the north, crossed by a single pass; more ranges run along the west coast, the south-east and the big island
 - Two rivers that meet and run to the sea, with three bridges
-- Cities, villages, castles and dungeons shown as hand-drawn map icons in the LPC style, a little bigger than a hero (a walled city, a village among its fields, a castle with a moat, a mine in a mountainside), each placed for a reason: a city where the rivers meet, a port at the river mouth, towns beside the bridges, a castle guarding the pass, caves in the mountain walls. 8 cities, 4 villages, 4 castles and 8 dungeons in all
+- Cities, villages, castles and dungeons shown as hand-drawn map icons in the LPC style (a walled city with its cathedral spire, a village among its fields, a castle with a moat, a portal in a rocky hillside), each placed for a reason: a city where the rivers meet, a port at the river mouth, towns right on the river bank by the bridges, a castle guarding the pass, caves in the mountain walls. 8 cities, 4 villages, 4 castles and 8 dungeons in all
+- The further a city or castle lies off the beaten track, the darker it is: those near the start are bright and bannered, then plain and grey, then grim with blood-red banners and few lights, and the most remote (beyond the northern range and on the great island) are black, broken ruins with a sickly light in their windows and a mist creeping through their streets
+- Forests of many kinds of tree (oak, elm, linden, pine, fir, bushes), in several sizes and shades with a touch of autumn; you pass in front of and behind them, and a tree you stand behind thins so you can still see yourself
+- Deep in a forest the light fails: the further in you go, the closer the dark comes, until you can see only a few steps around you
+- One village lies hidden in a clearing at the heart of the great wood; it isn't on the minimap and its name appears only once you find it
 - Walk up to a place and you're asked whether to enter it
 - A galleon waits at anchor off the port: walk into it to board and it sails like a ship, turning toward where you steer, gathering speed slowly, coasting, riding the swell (it yaws, surges and pitches, so it never runs ruler-straight), with a V of foam behind it. Sail the sea to reach the islands and steer into land to step ashore; the ship waits where you leave it. Other players see your ship
 - Mountains, place icons and water block your way on foot; you can walk through the trees

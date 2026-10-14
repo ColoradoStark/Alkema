@@ -8,11 +8,13 @@
 // camera moves with you, so nothing on screen jumps.
 
 import { WORLD } from './places.js';
+import { Forest } from './Forest.js';
 
 export const SIZE = WORLD.size;
 const TILE = WORLD.tileSize;
 const PAD = 14;                 // tiles copied around the edge (> half the view)
 const WATER_FRAME_MS = 260;
+const HIDDEN_REVEAL = 200;      // a hidden place's name shows once you're this close
 
 export const DEPTH = { water: -20, ground: -10, features: -5, canopy: 26, labels: 27 };
 
@@ -36,6 +38,7 @@ export function preloadOverworld(load) {
     load.image('world-minimap', '/world/minimap.png');
     load.spritesheet('world-water', '/world/water.png', { frameWidth: 64, frameHeight: 64 });
     load.image('ship', '/world/ship.png');
+    load.spritesheet('world-trees', '/world/trees.png', { frameWidth: 64, frameHeight: 96 });
 }
 
 function decodeU16(b64) {
@@ -105,14 +108,15 @@ export class Overworld {
         this.sailLayer.setCollision(0);
 
         this.map = map;
+        this.forest = new Forest(scene, data);
         this._waterFrame = 0;
         this._waterTime = 0;
 
-        // Names over every entrance, like a cloth map
+        // Names over every entrance, like a cloth map; a hidden place's only once you've found it
         this.labels = WORLD.places.map(p => scene.add.text(p.rect[0] + p.rect[2] / 2, p.rect[1] - 6, p.name, {
             fontFamily: 'Alagard, monospace', fontSize: '12px', color: '#fff6e0',
             stroke: '#222034', strokeThickness: 3,
-        }).setOrigin(0.5, 1).setDepth(DEPTH.labels));
+        }).setOrigin(0.5, 1).setDepth(DEPTH.labels).setData('hidden', !!p.hidden).setAlpha(p.hidden ? 0 : 1));
     }
 
     /** Is the world tile under this world point blocked? */
@@ -166,15 +170,18 @@ export class Overworld {
         return { dx, dy };
     }
 
-    /** @param {{x: number, y: number}|null} me  the local hero: labels step aside for them */
-    update(delta, me = null) {
+    /** @param {{x: number, y: number}|null} feet  where the local hero stands: labels step aside for them */
+    update(delta, feet = null) {
         const cam = this.scene.cameras.main;
-        if (me) {
+        if (feet) {
             for (const label of this.labels) {
-                const near = Math.abs(label.x - me.x) < 90 && Math.abs(label.y - me.y) < 70;
-                label.setAlpha(near ? 0 : 1);
+                const dx = wrapDelta(feet.x, label.x), dy = wrapDelta(feet.y, label.y);
+                const near = Math.abs(dx) < 90 && Math.abs(dy + 23) < 70;
+                const unseen = label.getData('hidden') && Math.hypot(dx, dy) > HIDDEN_REVEAL;
+                label.setAlpha(near || unseen ? 0 : 1);
             }
         }
+        this.forest.update(delta, feet);
         this._waterTime += delta;
         if (this._waterTime >= WATER_FRAME_MS) {
             this._waterTime -= WATER_FRAME_MS;
