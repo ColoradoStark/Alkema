@@ -180,11 +180,11 @@ export const WORLD = {
    "name": "Fernwick",
    "type": "village",
    "hidden": true,
-   "x": 3824,
-   "y": 5356,
+   "x": 2640,
+   "y": 3084,
    "rect": [
-    3712,
-    5184,
+    2528,
+    2912,
     224,
     160
    ]
@@ -276,10 +276,10 @@ export const WORLD = {
   {
    "name": "Gloomwater Grotto",
    "type": "dungeon",
-   "x": 4848,
+   "x": 4880,
    "y": 5996,
    "rect": [
-    4800,
+    4832,
     5920,
     96,
     64
@@ -336,7 +336,7 @@ export const WORLD = {
   }
  ],
  "boat": {
-  "x": 2224,
-  "y": 6672
+  "x": 2640,
+  "y": 6896
  }
 };

@@ -122,9 +122,9 @@ export class Forest {
 
     _updateGloom(delta, feet) {
         const deep = feet ? this.depthAt(feet.x, feet.y) : 0;
-        // Gloom starts a few tiles in, and the clear circle shrinks to a few tiles at the heart
-        const alpha = Math.min(0.94, Math.max(0, (deep - 2) * 0.3));
-        const radius = Math.max(2.5, 8 - Math.max(0, deep - 2) * 0.8) * this.tile;
+        // Gloom falls a couple of tiles in and is near black a few tiles further, the clear circle closing fast
+        const alpha = Math.min(0.94, Math.max(0, (deep - 1) * 0.45));
+        const radius = Math.max(2.5, 7 - Math.max(0, deep - 1) * 1.5) * this.tile;
         const k = 1 - Math.exp(-delta / 400);
         this._gloomAlpha += (alpha - this._gloomAlpha) * k;
         this._gloomRadius += (radius - this._gloomRadius) * k;

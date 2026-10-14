@@ -140,14 +140,17 @@ test.describe('Living world', () => {
             const { forest } = gs.world;
             const deepest = forest.woods.reduce((best, v, i) => (v > forest.woods[best] ? i : best), 0);
             const label = gs.world.labels.find(l => l.getData('hidden'));
+            const four = forest.woods.indexOf(4);
             return {
                 deep: [(deepest % forest.n) * 32 + 16, Math.floor(deepest / forest.n) * 32 + 16],
+                four: [(four % forest.n) * 32 + 16, Math.floor(four / forest.n) * 32 + 16],
                 near: [label.x, label.y + 150],
                 far: [label.x, label.y + 400],
             };
         });
         const deep = await at(...spots.deep);
         expect(deep.gloom).toBeGreaterThan(0.8);
+        expect((await at(...spots.four)).gloom).toBeGreaterThan(0.8);   // dark soon after you go in
         expect((await at(...spots.far)).label).toBe(0);
         expect((await at(...spots.near)).label).toBe(1);
     });
@@ -267,6 +270,36 @@ test.describe('Living world', () => {
             return { atLookout, away, walkToMorvath: !!seen[Math.floor(place.y / T) * n + Math.floor(place.x / T)] };
         });
         expect(result).toEqual({ atLookout: { morvath: true, hero: true }, away: { recentred: true }, walkToMorvath: false });
+    });
+
+    test('every place on the mainland can be walked to, and the boat waits by the port', async ({ page }) => {
+        await enterWorld(page);
+        const result = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { n, blocked, sail } = gs.world, T = 32;
+            const { WORLD } = await import('/src/world/places.js');
+            const flood = (start, open) => {
+                const seen = new Uint8Array(n * n), queue = [start];
+                seen[start] = 1;
+                while (queue.length) {
+                    const i = queue.pop(), x = i % n, y = (i - x) / n;
+                    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                        const j = ((y + dy + n) % n) * n + ((x + dx + n) % n);
+                        if (open(j) && !seen[j]) { seen[j] = 1; queue.push(j); }
+                    }
+                }
+                return seen;
+            };
+            const tile = p => Math.floor(p.y / T) * n + Math.floor(p.x / T);
+            const start = tile(WORLD.spawn);
+            const onFoot = flood(start, j => !blocked[j]);
+            const mainland = flood(start, j => !sail[j]);          // all the land joined to the start, rock and all
+            const stranded = WORLD.places.filter(p => mainland[tile(p)] && !onFoot[tile(p)]).map(p => p.name);
+            const port = WORLD.places.find(p => p.name === 'Saltmere');
+            const boatFromPort = Math.round(Math.hypot(WORLD.boat.x - port.x, WORLD.boat.y - port.y) / T);
+            return { stranded, boatByThePort: boatFromPort <= 6 };
+        });
+        expect(result).toEqual({ stranded: [], boatByThePort: true });
     });
 
     test('the ability has a cooldown', async ({ page }) => {
