@@ -10,6 +10,9 @@ import { Ship } from '../world/Ship.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
+const HULL_HALF = 13;           // half the ship's collision box (26 x 26)
+const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
+const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 
 export class GameScene extends Scene {
     constructor() {
@@ -84,6 +87,7 @@ export class GameScene extends Scene {
         this.world?.update(delta, me ? { x: me.x, y: me.y + FEET } : null);
         this.updateSailing();
         this.updatePlaceVisit();
+        this.updateLookout(delta);
         this.players.forEach(player => {
             if (player !== this.localPlayer) this.keepNearby(player);
             if (player && player.update) player.update(delta);
@@ -122,9 +126,15 @@ export class GameScene extends Scene {
         }
         if (!intent.dx && !intent.dy) return;
         const len = Math.hypot(intent.dx, intent.dy);
-        const ahead = { x: me.x + intent.dx / len * 30, y: me.y + FEET + intent.dy / len * 30 };
-        if (this.world.isWalkable(ahead.x, ahead.y) && !this.world.isSailable(ahead.x, ahead.y)) {
-            this.setSailing(false, ahead);
+        const ux = intent.dx / len, uy = intent.dy / len;
+        // Dead ahead, or either side of the bow: on a slanting shore the hull
+        // runs aground on land beside the bow while the water straight ahead is open
+        for (const side of [0, -HULL_HALF, HULL_HALF]) {
+            const ahead = { x: me.x + ux * 30 - uy * side, y: me.y + FEET + uy * 30 + ux * side };
+            if (this.world.isWalkable(ahead.x, ahead.y) && !this.world.isSailable(ahead.x, ahead.y)) {
+                this.setSailing(false, ahead);
+                return;
+            }
         }
     }
 
@@ -135,7 +145,7 @@ export class GameScene extends Scene {
         if (on) {
             me.setPosition(this.mooredShip.x, this.mooredShip.y - FEET);
             this.mooredShip.setVisible(false);
-            me.body.setSize(26, 26, false).setOffset(-13, FEET - 13);
+            me.body.setSize(HULL_HALF * 2, HULL_HALF * 2, false).setOffset(-HULL_HALF, FEET - HULL_HALF);
             player.setSailing(true, this.mooredShip.heading);
         } else {
             const ship = player.ship;
@@ -150,6 +160,28 @@ export class GameScene extends Scene {
         me.body.reset(me.x, me.y);
         this.collision?.setSailing(on);
         this._sendMove(0, 0);
+    }
+
+    /**
+     * At a lookout (the tip of the Watch, across the strait from Morvath) the
+     * view pans over the water to what it looks on; walk away and it comes back.
+     */
+    updateLookout(delta) {
+        const player = this.localPlayer;
+        const me = player?.sprite;
+        if (!me) return;
+        let ox = 0, oy = 0;
+        const vista = player.sailing ? null : (WORLD.vistas || []).find(v =>
+            Math.hypot(wrapDelta(me.x, v.x), wrapDelta(me.y + FEET, v.y)) < LOOKOUT_REACH);
+        if (vista) {
+            const lx = wrapDelta(me.x, vista.look.x), ly = wrapDelta(me.y, vista.look.y);
+            const k = Math.min(1, LOOK_MAX.x / Math.abs(lx || 1), LOOK_MAX.y / Math.abs(ly || 1));
+            ox = -lx * k;
+            oy = -ly * k;
+        }
+        const offset = this.cameras.main.followOffset;
+        const ease = 1 - Math.exp(-delta / 500);
+        offset.set(offset.x + (ox - offset.x) * ease, offset.y + (oy - offset.y) * ease);
     }
 
     /** Walk up to a place's icon and you're asked whether to go in. */

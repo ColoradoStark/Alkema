@@ -4,18 +4,18 @@ export const WORLD = {
  "size": 8192,
  "tileSize": 32,
  "spawn": {
-  "x": 2800,
-  "y": 5360
+  "x": 3216,
+  "y": 5712
  },
  "places": [
   {
    "name": "Riverhold",
    "type": "city",
-   "x": 2800,
-   "y": 5356,
+   "x": 3216,
+   "y": 5708,
    "rect": [
-    2688,
-    5152,
+    3104,
+    5504,
     224,
     192
    ]
@@ -23,23 +23,23 @@ export const WORLD = {
   {
    "name": "Castle Dunmere",
    "type": "castle",
-   "x": 3984,
-   "y": 4748,
+   "x": 3184,
+   "y": 6732,
    "rect": [
-    3872,
-    4512,
+    3072,
+    6464,
     224,
-    224
+    256
    ]
   },
   {
    "name": "Saltmere",
    "type": "city",
-   "x": 2512,
-   "y": 6412,
+   "x": 2576,
+   "y": 6828,
    "rect": [
-    2400,
-    6208,
+    2464,
+    6624,
     224,
     192
    ]
@@ -47,22 +47,10 @@ export const WORLD = {
   {
    "name": "Highmarket",
    "type": "city",
-   "x": 3696,
-   "y": 4140,
-   "rect": [
-    3584,
-    3936,
-    224,
-    192
-   ]
-  },
-  {
-   "name": "Goldvale",
-   "type": "city",
-   "x": 5136,
+   "x": 4048,
    "y": 4460,
    "rect": [
-    5024,
+    3936,
     4256,
     224,
     192
@@ -71,11 +59,23 @@ export const WORLD = {
   {
    "name": "Stonebridge",
    "type": "city",
-   "x": 2512,
-   "y": 4108,
+   "x": 2160,
+   "y": 4492,
    "rect": [
-    2400,
-    3904,
+    2048,
+    4288,
+    224,
+    192
+   ]
+  },
+  {
+   "name": "Goldvale",
+   "type": "city",
+   "x": 5584,
+   "y": 4492,
+   "rect": [
+    5472,
+    4288,
     224,
     192
    ]
@@ -83,23 +83,23 @@ export const WORLD = {
   {
    "name": "Castle Grimhold",
    "type": "castle",
-   "x": 3216,
-   "y": 3500,
+   "x": 3184,
+   "y": 2668,
    "rect": [
-    3104,
-    3264,
+    3072,
+    2400,
     224,
-    224
+    256
    ]
   },
   {
    "name": "Duskmere",
    "type": "city",
-   "x": 6000,
-   "y": 4044,
+   "x": 4976,
+   "y": 3244,
    "rect": [
-    5888,
-    3840,
+    4864,
+    3040,
     224,
     192
    ]
@@ -107,11 +107,11 @@ export const WORLD = {
   {
    "name": "Ravenford",
    "type": "city",
-   "x": 3216,
-   "y": 2124,
+   "x": 3376,
+   "y": 1228,
    "rect": [
-    3104,
-    1920,
+    3264,
+    1024,
     224,
     192
    ]
@@ -119,11 +119,11 @@ export const WORLD = {
   {
    "name": "Castle Nightspire",
    "type": "castle",
-   "x": 4192,
-   "y": 2092,
+   "x": 3776,
+   "y": 1516,
    "rect": [
-    4064,
-    1824,
+    3648,
+    1248,
     256,
     256
    ]
@@ -131,35 +131,35 @@ export const WORLD = {
   {
    "name": "Morvath",
    "type": "city",
-   "x": 6352,
+   "x": 6416,
    "y": 2124,
    "rect": [
-    6240,
-    1952,
+    6304,
+    1920,
     224,
-    160
+    192
    ]
   },
   {
    "name": "Castle Gloomhold",
    "type": "castle",
-   "x": 7072,
-   "y": 2028,
+   "x": 7008,
+   "y": 1996,
    "rect": [
-    6944,
-    1824,
+    6880,
+    1728,
     256,
-    192
+    256
    ]
   },
   {
    "name": "Millbrook",
    "type": "village",
    "x": 2672,
-   "y": 5804,
+   "y": 6316,
    "rect": [
     2560,
-    5632,
+    6144,
     224,
     160
    ]
@@ -168,10 +168,10 @@ export const WORLD = {
    "name": "Ashby",
    "type": "village",
    "x": 1808,
-   "y": 3788,
+   "y": 3628,
    "rect": [
     1696,
-    3616,
+    3456,
     224,
     160
    ]
@@ -180,10 +180,10 @@ export const WORLD = {
    "name": "Fernwick",
    "type": "village",
    "hidden": true,
-   "x": 3728,
+   "x": 3824,
    "y": 5356,
    "rect": [
-    3616,
+    3712,
     5184,
     224,
     160
@@ -202,13 +202,25 @@ export const WORLD = {
    ]
   },
   {
+   "name": "Gull's Rest",
+   "type": "village",
+   "x": 6064,
+   "y": 2700,
+   "rect": [
+    5952,
+    2528,
+    224,
+    160
+   ]
+  },
+  {
    "name": "The Hollow Deep",
    "type": "dungeon",
-   "x": 1232,
-   "y": 3148,
+   "x": 1104,
+   "y": 2796,
    "rect": [
-    1184,
-    3072,
+    1056,
+    2720,
     96,
     64
    ]
@@ -216,11 +228,11 @@ export const WORLD = {
   {
    "name": "Wyrmrest Caverns",
    "type": "dungeon",
-   "x": 2320,
-   "y": 2956,
+   "x": 2224,
+   "y": 2540,
    "rect": [
-    2272,
-    2880,
+    2176,
+    2464,
     96,
     64
    ]
@@ -228,11 +240,11 @@ export const WORLD = {
   {
    "name": "The Sunken Crypt",
    "type": "dungeon",
-   "x": 3888,
-   "y": 2988,
+   "x": 3760,
+   "y": 2476,
    "rect": [
-    3840,
-    2912,
+    3712,
+    2400,
     96,
     64
    ]
@@ -240,11 +252,11 @@ export const WORLD = {
   {
    "name": "Shadowmaw",
    "type": "dungeon",
-   "x": 4688,
-   "y": 2828,
+   "x": 4336,
+   "y": 2220,
    "rect": [
-    4640,
-    2752,
+    4288,
+    2144,
     96,
     64
    ]
@@ -252,11 +264,11 @@ export const WORLD = {
   {
    "name": "The Old Mine",
    "type": "dungeon",
-   "x": 944,
-   "y": 4684,
+   "x": 1232,
+   "y": 5964,
    "rect": [
-    896,
-    4608,
+    1184,
+    5888,
     96,
     64
    ]
@@ -264,11 +276,11 @@ export const WORLD = {
   {
    "name": "Gloomwater Grotto",
    "type": "dungeon",
-   "x": 4880,
-   "y": 5708,
+   "x": 4848,
+   "y": 5996,
    "rect": [
-    4832,
-    5632,
+    4800,
+    5920,
     96,
     64
    ]
@@ -276,11 +288,11 @@ export const WORLD = {
   {
    "name": "Skullkeep Pit",
    "type": "dungeon",
-   "x": 6864,
-   "y": 1804,
+   "x": 6800,
+   "y": 1740,
    "rect": [
-    6816,
-    1728,
+    6752,
+    1664,
     96,
     64
    ]
@@ -301,19 +313,30 @@ export const WORLD = {
  "bridges": [
   {
    "x": 2448,
-   "y": 4304
+   "y": 4368
   },
   {
    "x": 3760,
-   "y": 4304
+   "y": 4368
   },
   {
    "x": 2928,
-   "y": 5648
+   "y": 6096
+  }
+ ],
+ "vistas": [
+  {
+   "name": "Morvath",
+   "x": 6352,
+   "y": 2288,
+   "look": {
+    "x": 6416,
+    "y": 2016
+   }
   }
  ],
  "boat": {
-  "x": 2512,
-  "y": 6480
+  "x": 2224,
+  "y": 6672
  }
 };

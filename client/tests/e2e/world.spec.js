@@ -206,6 +206,69 @@ test.describe('Living world', () => {
         expect(result).toEqual({ shore: true, boarded: true, atSea: true, coasts: true, ashore: true, heroBack: true, shipAtAnchor: true });
     });
 
+    test('the ship lands on a slanting shore: land beside the bow counts, not only dead ahead', async ({ page }) => {
+        await enterWorld(page);
+        const result = await page.evaluate(async () => {
+            const game = window.__PHASER_GAME;
+            const gs = game.scene.getScene('GameScene');
+            const { world } = gs;
+            const keys = game.scene.getScene('UIScene').bottomControls.movementKeys;
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            const T = 32, n = world.n;
+            const sea = (tx, ty) => world.isSailable(tx * T + 16, ty * T + 16);
+            const land = (tx, ty) => world.isWalkable(tx * T + 16, ty * T + 16) && !sea(tx, ty);
+            // Open water dead ahead (north), but the shore slants in from the north-east
+            let spot = null;
+            for (let ty = 2; ty < n - 2 && !spot; ty++) {
+                for (let tx = 2; tx < n - 2 && !spot; tx++) {
+                    if (sea(tx, ty) && sea(tx, ty - 1) && sea(tx, ty - 2) && sea(tx - 1, ty) && sea(tx - 1, ty - 1)
+                        && sea(tx + 1, ty) && land(tx + 1, ty - 1)) spot = { tx, ty };
+                }
+            }
+            // Moor the ship at the tile's right edge, so her hull overlaps the shore's column, and sail north
+            const x = spot.tx * T + 26, y = spot.ty * T + 16;
+            gs.mooredShip.setPosition(x, y);
+            gs.setSailing(true);
+            keys.up = true;
+            for (let t = 0; t < 40 && gs.localPlayer.sailing; t++) await wait(100);
+            keys.up = false;
+            return { found: !!spot, ashore: !gs.localPlayer.sailing };
+        });
+        expect(result).toEqual({ found: true, ashore: true });
+    });
+
+    test('from the tip of the Watch the view pans across the strait to Morvath, out of reach on foot', async ({ page }) => {
+        await enterWorld(page);
+        const result = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const cam = gs.cameras.main, me = gs.localPlayer.sprite;
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            const vista = (await import('/src/world/places.js')).WORLD.vistas.find(v => v.name === 'Morvath');
+            const label = gs.world.labels.find(l => l.text === 'Morvath');
+            const inView = () => cam.worldView.contains(label.x, label.y) && cam.worldView.contains(vista.look.x, vista.look.y + 90);
+            const stand = async (x, y) => { me.setPosition(x, y - 23); me.body.reset(x, y - 23); await wait(2500); };
+            await stand(vista.x, vista.y);
+            const atLookout = { morvath: inView(), hero: cam.worldView.contains(me.x, me.y) };
+            await stand(vista.x, vista.y + 400);
+            const away = { recentred: Math.abs(cam.followOffset.y) < 8 };
+            // and no way across on foot: search every tile you can walk to from the lookout
+            const { n, blocked } = gs.world, T = 32;
+            const seen = new Uint8Array(n * n), start = Math.floor(vista.y / T) * n + Math.floor(vista.x / T);
+            const queue = [start];
+            seen[start] = 1;
+            while (queue.length) {
+                const i = queue.pop(), x = i % n, y = (i - x) / n;
+                for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const j = ((y + dy + n) % n) * n + ((x + dx + n) % n);
+                    if (!blocked[j] && !seen[j]) { seen[j] = 1; queue.push(j); }
+                }
+            }
+            const place = (await import('/src/world/places.js')).WORLD.places.find(p => p.name === 'Morvath');
+            return { atLookout, away, walkToMorvath: !!seen[Math.floor(place.y / T) * n + Math.floor(place.x / T)] };
+        });
+        expect(result).toEqual({ atLookout: { morvath: true, hero: true }, away: { recentred: true }, walkToMorvath: false });
+    });
+
     test('the ability has a cooldown', async ({ page }) => {
         await enterWorld(page);
         const casts = await page.evaluate(async () => {
