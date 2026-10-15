@@ -102,4 +102,48 @@ test.describe('Riverhold', () => {
         const y = (await where(page)).y;
         expect(y + 23).toBeGreaterThan(14 * 32);     // stopped at the inn's front wall
     });
+
+    test('wandering townsfolk walk a leg at a time, not flickering between directions', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.length > 15, null, { timeout: 120000 });
+        // Watch every wanderer's animation for ten seconds: a switch straight back (left, up, left...) is a flicker
+        const flips = await page.evaluate(() => new Promise(resolve => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const seen = new Map();
+            let frames = 0;
+            const tick = () => {
+                for (const f of gs.town.folk.filter(f => f.plan.wander)) {
+                    const key = f.sprite.getActiveSprite()?.anims?.currentAnim?.key;
+                    const h = seen.get(f.plan.id) || { keys: [], flips: 0 };
+                    const k = h.keys;
+                    if (key !== k[k.length - 1]) {
+                        if (k.length >= 2 && key === k[k.length - 2] && frames - h.at < 6) h.flips++;
+                        k.push(key);
+                        h.at = frames;
+                    }
+                    seen.set(f.plan.id, h);
+                }
+                if (++frames < 600) requestAnimationFrame(tick);
+                else resolve(Object.fromEntries([...seen].map(([id, h]) => [id, h.flips])));
+            };
+            requestAnimationFrame(tick);
+        }));
+        for (const n of Object.values(flips)) expect(n).toBeLessThanOrEqual(2);
+    });
+
+    test('the footbridge takes you over the creek to the hermit and the fisherwoman', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold');
+        await page.evaluate(() => {
+            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            me.setPosition(42 * 32, 23 * 32 - 23);   // on the high street, west of the creek
+            me.body.reset(me.x, me.y);
+        });
+        await hold(page, 'right', 2600);
+        expect((await where(page)).x).toBeGreaterThan(51 * 32);   // over on the far bank
+    });
 });

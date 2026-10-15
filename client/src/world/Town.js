@@ -197,17 +197,26 @@ export class Town {
             s.stopAnimation();
             return;
         }
-        // Walk one axis at a time, like townsfolk in the old games; around whatever's in the way
-        const horizontal = Math.abs(dx) > Math.abs(dy) ? !f.stuckX : !!f.stuckY;
-        const nx = horizontal ? s.x + Math.sign(dx) * stepLen : s.x;
-        const ny = horizontal ? s.y : s.y + Math.sign(dy) * stepLen;
-        if (this.boxBlocked(nx - 9, ny + FEET - 5, 18, 10)) {
-            if (horizontal) f.stuckX = true; else f.stuckY = true;
-            if (++f.stuck > 30) { f.target = null; f.wait = 800; f.stuckX = f.stuckY = false; s.stopAnimation(); }
-            return;
+        // Walk one leg at a time, like townsfolk in the old games: the longer leg
+        // first, turning only when it's done or something's in the way
+        if (!f.axis || (f.axis === 'x' ? Math.abs(dx) : Math.abs(dy)) < stepLen) f.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        let horizontal = f.axis === 'x';
+        const blocked = (h) => this.boxBlocked(h ? s.x + Math.sign(dx) * stepLen - 9 : s.x - 9,
+            (h ? s.y : s.y + Math.sign(dy) * stepLen) + FEET - 5, 18, 10);
+        if (blocked(horizontal)) {
+            const other = !horizontal;
+            if ((other ? Math.abs(dx) : Math.abs(dy)) < stepLen || blocked(other) || ++f.stuck > 120) {
+                // Nowhere to go from here: stop and choose somewhere else
+                f.target = null;
+                f.axis = null;
+                f.wait = 800;
+                s.stopAnimation();
+                return;
+            }
+            horizontal = other;
+            f.axis = other ? 'x' : 'y';
         }
-        f.stuckX = f.stuckY = false;
-        s.setPosition(nx, ny);
+        s.setPosition(horizontal ? s.x + Math.sign(dx) * stepLen : s.x, horizontal ? s.y : s.y + Math.sign(dy) * stepLen);
         s.playAnimation('walk', horizontal ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
     }
 
