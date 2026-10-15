@@ -144,9 +144,13 @@ export class UIScene extends Scene {
         const me = gameScene.localPlayer.sprite;
         const others = [];
         for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
+        // In town the overworld's minimap and quests wait for you outside
+        const outside = !gameScene.town;
+        this.minimap.setVisible(outside);
+        if (!outside) return;
         const quest = this.quests.current;
         this.minimap.update(me, others, quest?.kind === 'visit' ? quest : null);
-        this.minimap.setLost(gameScene.world?.forest.lost ?? 0);
+        this.minimap.setLost(gameScene.world?.forest?.lost ?? 0);
         this.quests.updatePosition(me.x, me.y);
     }
 

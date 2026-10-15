@@ -188,7 +188,7 @@ export class Overworld {
     collide(gameObject) {
         const body = gameObject.body;
         let walking = true;
-        this.scene.physics.world.on('worldstep', () => {
+        const step = () => {
             if (!walking || !body.enable) return;
             const { position: pos, prev, width: w, height: h } = body;
             if (!this.boxBlocked(pos.x, pos.y, w, h)) return;
@@ -196,7 +196,8 @@ export class Overworld {
             else if (!this.boxBlocked(prev.x, pos.y, w, h)) pos.x = prev.x;
             else pos.set(prev.x, prev.y);
             body.updateCenter();
-        });
+        };
+        this.scene.physics.world.on('worldstep', step);
         const sail = this.scene.physics.add.collider(gameObject, this.sailLayer);
         sail.active = false;
         return {
@@ -204,7 +205,17 @@ export class Overworld {
                 walking = !on;
                 sail.active = on;
             },
+            destroy: () => {
+                this.scene.physics.world.off('worldstep', step);
+                sail.destroy();
+            },
         };
+    }
+
+    /** Hide the whole map while you're inside a town, and show it again when you come out. */
+    setVisible(on) {
+        [this.groundLayer, this.featureLayer, this.canopyLayer, this.water, ...this.labels].forEach(o => o.setVisible(on));
+        if (!on) this.forest.hide();
     }
 
     /** The place whose icon the point (a hero's feet) is touching, if any. */

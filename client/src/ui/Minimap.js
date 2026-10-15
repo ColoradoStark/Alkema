@@ -32,7 +32,7 @@ export class Minimap {
         this.dark.fillStyle(0x08100c).fillCircle(cx, cy, RADIUS + 1);
 
         // Inner shade and the gold rim (same rings as the creator's frames)
-        const rim = scene.add.graphics().setDepth(22);
+        const rim = this.rim = scene.add.graphics().setDepth(22);
         for (let i = 0; i < 8; i++) rim.lineStyle(2, 0x000000, 0.06 * (8 - i)).strokeCircle(cx, cy, RADIUS - 1 - i);
         rim.lineStyle(2, INK).strokeCircle(cx, cy, RADIUS + 1);
         rim.lineStyle(2, 0xfbf236).strokeCircle(cx, cy, RADIUS + 3);
@@ -57,6 +57,10 @@ export class Minimap {
     /** @param {number} lost  0 (in the open) to 1 (lost deep in a forest) */
     setLost(lost) {
         this.dark.setAlpha(lost * 0.88);
+    }
+
+    setVisible(on) {
+        [this.map, this.dots, this.dark, this.rim, this.north].forEach(o => o.setVisible(on));
     }
 
     update(me, others, target) {

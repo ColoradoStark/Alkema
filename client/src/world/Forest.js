@@ -121,6 +121,12 @@ export class Forest {
         this._updateGloom(delta, feet);
     }
 
+    hide() {
+        this.pool.forEach(s => s.setVisible(false));
+        this.gloom.setVisible(false);
+        this._gloomAlpha = 0;
+    }
+
     /** How lost you are in the woods, 0 (in the open) to 1 (the dark has closed in). */
     get lost() {
         return this.gloom.visible ? this._gloomAlpha : 0;

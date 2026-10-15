@@ -1,0 +1,221 @@
+// A town you've walked into from the overworld (built by tools/towngen.py into
+// /towns/): the ground, the buildings and everything else that stands up, which
+// sort with the heroes by where they meet the ground, walking collision, and
+// the townsfolk. The river shows the overworld's animated water through the
+// ground's transparent parts. Walk out through the gate to leave.
+
+import { sortDepth } from './Forest.js';
+import { DEPTH } from './Overworld.js';
+import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
+
+const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
+const TALK_REACH = 64;         // stand this close to someone and they speak
+const WANDER_SPEED = 46;
+const WATER_FRAME_MS = 260;
+
+/** The places on the overworld you can go into, and their maps. */
+export const TOWNS = { Riverhold: 'riverhold' };
+
+/** Queue a town's files on a loader. */
+export function preloadTown(load, key) {
+    load.json(`town-${key}`, `/towns/${key}.json`);
+    load.image(`town-${key}`, `/towns/${key}.png`);
+    load.image(`town-${key}-things`, `/towns/${key}-things.png`);
+}
+
+export class Town {
+    /**
+     * @param {Phaser.Scene} scene
+     * @param {string} key  e.g. 'riverhold'
+     */
+    constructor(scene, key) {
+        this.scene = scene;
+        this.key = key;
+        const data = scene.cache.json.get(`town-${key}`);
+        this.data = data;
+        this.width = data.width;
+        this.height = data.height;
+        this.cell = data.cell;
+        this.cols = data.width / data.cell;
+        const bytes = Uint8Array.from(atob(data.collision), c => c.charCodeAt(0));
+        this.blocked = new Uint8Array(this.cols * (data.height / data.cell));
+        for (let i = 0; i < this.blocked.length; i++) this.blocked[i] = (bytes[i >> 3] >> (7 - (i & 7))) & 1;
+
+        this.water = scene.add.tileSprite(0, 0, scene.scale.width, scene.scale.height, 'world-water', 0)
+            .setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.water);
+        this.ground = scene.add.image(0, 0, `town-${key}`).setOrigin(0, 0).setDepth(DEPTH.ground);
+
+        const tex = scene.textures.get(`town-${key}-things`);
+        data.frames.forEach(([x, y, w, h], i) => tex.has(String(i)) || tex.add(String(i), 0, x, y, w, h));
+        this.things = data.things.map(([frame, left, top, foot]) =>
+            scene.add.image(left, top, `town-${key}-things`, String(frame)).setOrigin(0, 0).setData('foot', foot));
+
+        this.folk = [];
+        this._waterFrame = 0;
+        this._waterTime = 0;
+    }
+
+    /** The townsfolk, as the server made them: [{ id, role, character }]. */
+    populate(made) {
+        for (const plan of this.data.folk) {
+            const who = made.find(f => f.id === plan.id);
+            if (!who) continue;
+            const [x, y] = plan.post || this._randomSpot(plan.wander);
+            const sprite = new CompositeCharacter(this.scene, x, y - FEET, who.character);
+            sprite.body.enable = false;
+            if (who.character.spriteMeta) sprite.applySpriteMeta(who.character.spriteMeta);
+            sprite.setDirection(plan.facing || 'down');
+            sprite.stopAnimation();
+            const name = who.character.name?.split(' ')[0];
+            const label = this.scene.add.text(0, -40, `${name}, ${who.role}`, {
+                fontFamily: 'Alagard', fontSize: '12px', color: '#fbf236',
+                backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
+            }).setOrigin(0.5).setVisible(false);
+            sprite.add(label);
+            const bubble = plan.says ? this.scene.add.text(0, 0, plan.says, {
+                fontFamily: 'Romulus, monospace', fontSize: '14px', color: '#222034',
+                backgroundColor: '#f4ecd8', padding: { x: 6, y: 4 }, wordWrap: { width: 200 },
+            }).setOrigin(0.5, 1).setDepth(DEPTH.labels).setVisible(false) : null;
+            this.folk.push({ plan, sprite, label, bubble, wait: 500 + Math.random() * 2000, target: null });
+        }
+    }
+
+    _randomSpot([x0, y0, x1, y1]) {
+        for (let i = 0; i < 40; i++) {
+            const x = x0 + Math.random() * (x1 - x0), y = y0 + Math.random() * (y1 - y0);
+            if (!this.boxBlocked(x - 9, y - 5, 18, 10)) return [x, y];
+        }
+        return [(x0 + x1) / 2, (y0 + y1) / 2];
+    }
+
+    isBlocked(x, y) {
+        if (x < 0 || y < 0 || x >= this.width || y >= this.height) return true;
+        return !!this.blocked[Math.floor(y / this.cell) * this.cols + Math.floor(x / this.cell)];
+    }
+
+    boxBlocked(x, y, w, h) {
+        const c = this.cell;
+        for (let cy = Math.floor(y / c); cy <= Math.floor((y + h - 0.01) / c); cy++) {
+            for (let cx = Math.floor(x / c); cx <= Math.floor((x + w - 0.01) / c); cx++) {
+                if (this.isBlocked(cx * c + 1, cy * c + 1)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** Is the point (a hero's feet) in the gate, where the town lets out? */
+    atGate(x, y) {
+        const [x0, y0, x1, y1] = this.data.gate;
+        return x < x0 + 24 && y >= y0 && y <= y1;
+    }
+
+    get arrival() {
+        return { x: this.data.arrive[0], y: this.data.arrive[1] };
+    }
+
+    /** Bump into walls, water and props, sliding along them (as on the overworld). */
+    collide(gameObject) {
+        const body = gameObject.body;
+        const step = () => {
+            if (!body.enable) return;
+            const { position: pos, prev, width: w, height: h } = body;
+            if (!this.boxBlocked(pos.x, pos.y, w, h)) return;
+            if (!this.boxBlocked(pos.x, prev.y, w, h)) pos.y = prev.y;
+            else if (!this.boxBlocked(prev.x, pos.y, w, h)) pos.x = prev.x;
+            else pos.set(prev.x, prev.y);
+            body.updateCenter();
+        };
+        this.scene.physics.world.on('worldstep', step);
+        return {
+            setSailing() {},
+            destroy: () => this.scene.physics.world.off('worldstep', step),
+        };
+    }
+
+    wrapObject() {
+        return { dx: 0, dy: 0 };
+    }
+
+    placeAt() {
+        return null;
+    }
+
+    /** @param {{x: number, y: number}|null} feet  where the local hero stands */
+    update(delta, feet = null) {
+        for (const t of this.things) t.setDepth(sortDepth(this.scene, t.getData('foot')));
+        for (const f of this.folk) {
+            if (f.plan.wander) this._wander(f, delta);
+            const s = f.sprite;
+            s.setDepth(sortDepth(this.scene, s.y + FEET));
+            const near = feet && Math.hypot(feet.x - s.x, feet.y - (s.y + FEET)) < TALK_REACH;
+            f.label.setVisible(!!near);
+            if (f.bubble) {
+                f.bubble.setVisible(!!near).setPosition(s.x, s.y - 52);
+                if (near && !f.talking && f.plan.post) {
+                    // Turn to face whoever came to talk
+                    const dx = feet.x - s.x, dy = feet.y - (s.y + FEET);
+                    s.setDirection(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
+                    s.stopAnimation();
+                } else if (!near && f.talking && f.plan.post) {
+                    s.setDirection(f.plan.facing || 'down');
+                    s.stopAnimation();
+                }
+            }
+            f.talking = !!near;
+        }
+        this._waterTime += delta;
+        if (this._waterTime >= WATER_FRAME_MS) {
+            this._waterTime -= WATER_FRAME_MS;
+            this._waterFrame = (this._waterFrame + 1) % 4;
+            this.water.setFrame(this._waterFrame);
+        }
+        const cam = this.scene.cameras.main;
+        const drift = this.scene.time.now / 220;
+        this.water.setTilePosition(cam.scrollX + drift, cam.scrollY + drift * 0.35);
+    }
+
+    /** Stroll to a spot in their part of town, stop a while, pick another. */
+    _wander(f, delta) {
+        const s = f.sprite;
+        if (f.talking) {
+            if (f.target) { f.target = null; s.stopAnimation(); }
+            return;
+        }
+        if (!f.target) {
+            f.wait -= delta;
+            if (f.wait > 0) return;
+            const [x, y] = this._randomSpot(f.plan.wander);
+            f.target = { x, y: y - FEET };
+            f.stuck = 0;
+        }
+        const dx = f.target.x - s.x, dy = f.target.y - s.y;
+        const d = Math.hypot(dx, dy);
+        const stepLen = WANDER_SPEED * delta / 1000;
+        if (d < stepLen + 1) {
+            f.target = null;
+            f.wait = 1500 + Math.random() * 4000;
+            s.stopAnimation();
+            return;
+        }
+        // Walk one axis at a time, like townsfolk in the old games; around whatever's in the way
+        const horizontal = Math.abs(dx) > Math.abs(dy) ? !f.stuckX : !!f.stuckY;
+        const nx = horizontal ? s.x + Math.sign(dx) * stepLen : s.x;
+        const ny = horizontal ? s.y : s.y + Math.sign(dy) * stepLen;
+        if (this.boxBlocked(nx - 9, ny + FEET - 5, 18, 10)) {
+            if (horizontal) f.stuckX = true; else f.stuckY = true;
+            if (++f.stuck > 30) { f.target = null; f.wait = 800; f.stuckX = f.stuckY = false; s.stopAnimation(); }
+            return;
+        }
+        f.stuckX = f.stuckY = false;
+        s.setPosition(nx, ny);
+        s.playAnimation('walk', horizontal ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
+    }
+
+    destroy() {
+        this.water.destroy();
+        this.ground.destroy();
+        this.things.forEach(t => t.destroy());
+        this.folk.forEach(f => { f.sprite.destroy(); f.bubble?.destroy(); });
+        this.folk = [];
+    }
+}

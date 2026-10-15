@@ -1,5 +1,6 @@
 // "Enter Riverhold?" — shown when you walk up to a place on the overworld.
-// The places' own maps don't exist yet, so Yes and No both just close it.
+// Yes takes you in where the place has a map of its own (Riverhold so far);
+// elsewhere, and on No, it just closes.
 
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
@@ -81,10 +82,11 @@ export class EnterPrompt {
         this.container.setVisible(false);
     }
 
-    /** Yes would take you inside; until the places are built, both answers just close the prompt. */
     answer(yes) {
         if (!this.visible) return;
+        const place = this.place;
         audio.play(yes ? 'confirm' : 'menu_close', { volume: 0.6 });
         this.hide();
+        if (yes) this.scene.scene.get('GameScene')?.enterPlace(place);
     }
 }

@@ -109,7 +109,12 @@ Real-time multiplayer via Socket.io. Players share one overworld, built from LPC
 - Forests of The Battle for Wesnoth's painted trees, in the game's greens: broadleaf and pine woods, dense groves in their depths, great old trees, bushes and a touch of autumn, with pine woods thick at the foot of every range and climbing its lower slopes; you pass in front of and behind them, and a tree you stand behind thins so you can still see yourself
 - Deep in a forest the light fails: the further in you go, the closer the dark comes, until you can see only a few steps around you
 - One village lies hidden in a clearing at the heart of the great wood; it isn't on the minimap and its name appears only once you find it
-- Walk up to a place and you're asked whether to enter it
+- Walk up to a place and you're asked whether to enter it. Riverhold, where new heroes start, can be entered (the other places can't yet): a market town in the manner of Ultima III where the two rivers meet
+  - A cobbled square with a well and market stalls, ringed by shops of every size, each with its name painted over the door and a hanging sign: The Ferryman's Rest (inn), Riverhold Arms, the Armourer, Provisions, Herbs & Philtres, a jeweller, the Fishmonger, the Healer's stone hall and the stables, plus thatched cottages
+  - Built from LPC timber-framed walls, thatched and tiled roofs, doors, windows and town props, put together at whatever size each building needs
+  - Places off the main street to find: a back alley behind the smithy where a hooded stranger lurks, a graveyard behind the healer's hall, a riverside walk behind the shops, a pier out into the river, and a footbridge over the creek to a hermit's hut and a fisherwoman's shack on the outskirts
+  - Townsfolk made by the character generator (merchants, guards, nobles, peasants, a cleric, a pirate ferryman...): some keep their posts and greet you when you walk up, turning to face you; others wander the square and the streets
+  - Inside a town you see only the players who are in it with you; walk out through the gate and you're back on the overworld
 - A galleon waits at anchor off the port: walk into it to board and it sails like a ship, turning toward where you steer, gathering speed slowly, coasting, riding the swell (it yaws, surges and pitches, so it never runs ruler-straight), with a V of foam behind it. Sail the sea to reach the islands and steer into land to step ashore; the ship waits where you leave it. Other players see your ship
 - Mountains, place icons and water block your way on foot; you can walk through the trees
 - The world wraps around: walk off the east edge and you arrive at the west, and north joins south
@@ -164,7 +169,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. The world map's mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands. The world map's mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
 
 ## License
 

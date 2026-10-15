@@ -7,6 +7,7 @@ import { Overworld, wrap, wrapDelta } from '../world/Overworld.js';
 import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
 import { Ship } from '../world/Ship.js';
+import { Town, TOWNS, preloadTown } from '../world/Town.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -15,6 +16,7 @@ const BOARD_REACH = 96;         // walk towards the ship from this close to go a
 const SETTLE_MS = 600;          // just aboard, she won't put you ashore again (land right past her, in a narrow river)
 const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
+const FADE_MS = 260;            // going into a town or out again
 
 export class GameScene extends Scene {
     constructor() {
@@ -63,7 +65,8 @@ export class GameScene extends Scene {
     }
 
     createWorld() {
-        this.world = new Overworld(this);
+        this.world = this.overworld = new Overworld(this);
+        this.town = null;
         // Your ship, at anchor off the port of Saltmere, bow out to sea
         this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
         // Ships follow their captains after the physics step, so they never lag a frame
@@ -89,6 +92,7 @@ export class GameScene extends Scene {
         this.world?.update(delta, me ? { x: me.x, y: me.y + FEET } : null);
         this.updateSailing();
         this.updatePlaceVisit();
+        this.updateGate();
         this.updateLookout(delta);
         this.players.forEach(player => {
             if (player !== this.localPlayer) this.keepNearby(player);
@@ -116,7 +120,7 @@ export class GameScene extends Scene {
     updateSailing() {
         const player = this.localPlayer;
         const me = player?.sprite;
-        if (!me || !this.world || !this.mooredShip) return;
+        if (!me || !this.world || !this.mooredShip || this.town) return;
         const intent = this._intent || { dx: 0, dy: 0 };
         if (!player.sailing) {
             const ship = this.mooredShip;
@@ -178,7 +182,7 @@ export class GameScene extends Scene {
         const me = player?.sprite;
         if (!me) return;
         let ox = 0, oy = 0;
-        const vista = player.sailing ? null : (WORLD.vistas || []).find(v =>
+        const vista = player.sailing || this.town ? null : (WORLD.vistas || []).find(v =>
             Math.hypot(wrapDelta(me.x, v.x), wrapDelta(me.y + FEET, v.y)) < LOOKOUT_REACH);
         if (vista) {
             const lx = wrapDelta(me.x, vista.look.x), ly = wrapDelta(me.y, vista.look.y);
@@ -202,6 +206,111 @@ export class GameScene extends Scene {
         if (!prompt) return;
         if (place) prompt.show(place);
         else prompt.hide();
+    }
+
+    /** Answer "Enter Riverhold?" with yes. Places without a map of their own yet stay closed. */
+    enterPlace(place) {
+        const key = TOWNS[place?.name];
+        if (key && !this.town && !this._changingRoom) this.enterTown(place, key);
+    }
+
+    /** Walk out through a town's gate and you're back on the overworld, outside it. */
+    updateGate() {
+        const me = this.localPlayer?.sprite;
+        if (!this.town || !me || this._changingRoom) return;
+        if ((this._intent?.dx ?? 0) < 0 && this.town.atGate(me.x, me.y + FEET)) this.leaveTown();
+    }
+
+    async enterTown(place, key) {
+        this._changingRoom = true;
+        try {
+            await this._loadTown(key);
+            const town = this.cache.json.get(`town-${key}`);
+            const at = { x: town.arrive[0], y: town.arrive[1] - FEET };
+            const res = await this.networkManager.request('change-room', { town: key, ...at });
+            if (!res?.ok) return;
+            await this._fadeOut();
+            this.overworld.setVisible(false);
+            this.mooredShip.setVisible(false);
+            this.town = this.world = new Town(this, key);
+            this._townPlace = place;
+            this._arriveAt(at, 'right', res.players);
+            this.cameras.main.setBounds(0, 0, this.town.width, this.town.height);
+            this.cameras.main.centerOn(at.x, at.y);
+            this.cameras.main.fadeIn(FADE_MS);
+            this._loadFolk(this.town);
+        } catch (err) {
+            console.warn('Could not go into', place?.name, err);
+        } finally {
+            this._changingRoom = false;
+        }
+    }
+
+    async leaveTown() {
+        const place = this._townPlace;
+        this._changingRoom = true;
+        try {
+            const at = { x: place.x, y: place.y - FEET };
+            const res = await this.networkManager.request('change-room', { town: null, ...at });
+            if (!res?.ok) return;
+            await this._fadeOut();
+            this.town.destroy();
+            this.town = null;
+            this.world = this.overworld;
+            this.overworld.setVisible(true);
+            this.mooredShip.setVisible(true);
+            this.cameras.main.removeBounds();
+            this._arriveAt(at, 'down', res.players);
+            this.cameras.main.centerOn(at.x, at.y);
+            this._place = place;     // standing at the gate: don't ask to go straight back in
+            this.cameras.main.fadeIn(FADE_MS);
+        } catch (err) {
+            console.warn('Could not leave', place?.name, err);
+        } finally {
+            this._changingRoom = false;
+        }
+    }
+
+    _loadTown(key) {
+        if (this.cache.json.exists(`town-${key}`) && this.textures.exists(`town-${key}-things`)) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            preloadTown(this.load, key);
+            this.load.once('complete', resolve);
+            this.load.once('loaderror', reject);
+            this.load.start();
+        });
+    }
+
+    _fadeOut() {
+        return new Promise(resolve => {
+            this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', resolve);
+        });
+    }
+
+    /** Put yourself at `at` in the map now showing, with the players already there. */
+    _arriveAt(at, facing, players) {
+        const me = this.localPlayer.sprite;
+        me.setPosition(at.x, at.y);
+        me.body.reset(at.x, at.y);
+        me.setDirection(facing);
+        this.localPlayer.setVelocity(0, 0);
+        this.collision?.destroy?.();
+        this.collision = this.world.collide(me);
+        for (const id of [...this.players.keys()]) if (id !== this.localPlayer.id) this.removePlayer(id);
+        Object.values(players || {}).forEach(p => this.addPlayer(p));
+        this.updatePlayerCount();
+        this._sendMove(0, 0);
+    }
+
+    /** The townsfolk are made by the character generator on the server (once; then they're kept). */
+    async _loadFolk(town) {
+        try {
+            const res = await this.networkManager.request('town-folk', { town: town.key }, 90000);
+            if (res?.ok && this.town === town) town.populate(res.folk);
+        } catch (err) {
+            console.warn('No townsfolk today', err);
+        }
     }
 
     /** Draw another player on whichever side of the seam is nearest to you. */

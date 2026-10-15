@@ -78,6 +78,63 @@ palette.
 
 
 ======================================================================
+RIVERHOLD (THE TOWN)
+======================================================================
+
+The town of Riverhold is put together from these LPC sets:
+
+"[LPC] Thatched-roof Cottage" by bluecarrot16, based on the LPC Base
+Assets by Lanea Zimmerman (Sharm) and Daniel Armstrong (HughSpectrum),
+and the LPC art entry by Casper Nilsson.
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-thatched-roof-cottage
+
+"[LPC] Roofs" by bluecarrot16, Lanea Zimmerman (Sharm), Michele Bucelli
+(Buch), Casper Nilsson, Xenodora, keith karnage, NaRNeRZz, and Talon
+(Talosaurus).
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-roofs
+
+"LPC Windows & Doors" by bluecarrot16, Lanea Zimmerman (Sharm), Daniel
+Armstrong (HughSpectrum), Casper Nilsson, Anamaris, Krusmira, Keith
+Karnage, and Guido Bos.
+  License: CC-BY-SA 3.0 / GPL 3.0+
+  https://opengameart.org/content/lpc-windows-doors
+
+"[LPC] Terrains" by bluecarrot16, Lanea Zimmerman (Sharm), Daniel
+Eddeland (Daneeklu), Richard Kettering (Jetrel), Zachariah Husiar
+(Zabin), Hyptosis, Casper Nilsson, Buko Studios, Nushio, ZaPaper,
+billknye, William Thompson, caeles, Redshrike, Bertram, and Rayane
+Félix (RayaneFLX).
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-terrains
+
+"[LPC] Bricks" by bluecarrot16, Guido Bos, keith karnage, Lanea
+Zimmerman (Sharm), Casper Nilsson, Leonard Pabin, Buch, and ArMM1998.
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-bricks
+
+"[LPC] Medieval Village Decorations" by bluecarrot16, after Reemax
+([LPC] Hanging signs; Signposts, graves, line cloths and scare crow;
+City outside), Lanea Zimmerman (Sharm), Casper Nilsson, Xenodora (LPC
+Style Well), Johann C, Johannes Sjölund, Hyptosis, HughSpectrum,
+Redshrike, William.Thompsonj, wulax, Daniel Cook, Rayane Félix,
+Wolthera van Hövell tot Westerflier, mold, Zachariah Husiar, Clint
+Bellanger, Jetrel, Guido Bos, Nemisys and Curt.
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-medieval-village-decorations
+
+LPC tile atlas (trees, barrels, crates, the bridge and the pier's
+planks): see the LPC Tile Atlas credits (Lanea Zimmerman, Casper
+Nilsson, Daniel Eddeland, Johann Charlot and others).
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-tile-atlas
+
+The buildings were assembled from these parts at the sizes the town
+plan gives them; the shop names are lettered in Alagard by Hewett Tsoi.
+
+
+======================================================================
 CONTRIBUTING ARTISTS
 ======================================================================
 
