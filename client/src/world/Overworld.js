@@ -36,14 +36,16 @@ export function wrap(v) {
 export function preloadOverworld(load) {
     load.json('world', '/world/overworld.json');
     load.image('world-ground', '/world/ground.png');
-    // The feature tiles come in several sheets (phones can't load one huge texture): the map lists them
+    // The feature tiles come in several sheets (phones can't load one huge texture), and the
+    // trees in frames of a size: the map gives both
     load.once('filecomplete-json-world', (key, type, data) => {
         data.tilesets.features.images.forEach((name, i) => load.image(`world-features-${i}`, `/world/${name}`));
+        const { image, frameWidth, frameHeight } = data.trees;
+        load.spritesheet('world-trees', `/world/${image}`, { frameWidth, frameHeight });
     });
     load.image('world-minimap', '/world/minimap.png');
     load.spritesheet('world-water', '/world/water.png', { frameWidth: 64, frameHeight: 64 });
     load.image('ship', '/world/ship.png');
-    load.spritesheet('world-trees', '/world/trees.png', { frameWidth: 64, frameHeight: 96 });
 }
 
 function decodeU16(b64) {

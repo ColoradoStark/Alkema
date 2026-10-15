@@ -59,19 +59,22 @@ music loops were crossfaded at the seam and loudness-matched.
 
 
 ======================================================================
-OVERWORLD MOUNTAINS
+OVERWORLD MOUNTAINS AND FORESTS
 ======================================================================
 
-The mountains on the world map are the painted mountain terrain of
-The Battle for Wesnoth (https://www.wesnoth.org), by the Wesnoth
-terrain artists, chiefly Hogne Håskjold (frame), terrain art director,
-who made most of its mountains; the desert mountains are by doofus-01.
+The mountains and the forests on the world map are the painted
+terrain of The Battle for Wesnoth (https://www.wesnoth.org), by the
+Wesnoth terrain artists, chiefly Hogne Håskjold (frame), terrain art
+director, who made much of its terrain and especially the mountains;
+the desert mountains are by doofus-01.
   License: GNU GPL version 2 or later
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/terrain/mountains
+  https://github.com/wesnoth/wesnoth/tree/master/data/core/images/terrain/forest
 
-Each multi-hex mountain was reassembled from its per-hex slices, its
-hex-cut edges dissolved into the grass, and its colours mapped to the
-game's palette.
+Each multi-hex mountain was reassembled from its per-hex slices and
+its hex-cut edges dissolved into the grass; single trees were cut out
+of the sparse woods; and all their colours were mapped to the game's
+palette.
 
 
 ======================================================================

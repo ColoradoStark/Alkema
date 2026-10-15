@@ -100,6 +100,17 @@ test.describe('Living world', () => {
         expect(result.wrappedX).toBe(result.size - 20);
     });
 
+    test('trees are cut from their sheet at the frame size the map gives', async ({ page }) => {
+        await enterWorld(page);
+        const sizes = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { trees } = gs.cache.json.get('world');
+            const frame = gs.textures.get('world-trees').get(0);
+            return { sheet: [frame.width, frame.height], map: [trees.frameWidth, trees.frameHeight] };
+        });
+        expect(sizes.sheet).toEqual(sizes.map);
+    });
+
     test('trees never block: you can walk through a forest', async ({ page }) => {
         await enterWorld(page);
         const result = await page.evaluate(() => {
