@@ -264,10 +264,10 @@ export const WORLD = {
   {
    "name": "The Old Mine",
    "type": "dungeon",
-   "x": 2384,
+   "x": 2416,
    "y": 11948,
    "rect": [
-    2336,
+    2368,
     11872,
     96,
     64
@@ -276,11 +276,11 @@ export const WORLD = {
   {
    "name": "Gloomwater Grotto",
    "type": "dungeon",
-   "x": 9744,
-   "y": 12140,
+   "x": 9712,
+   "y": 12108,
    "rect": [
-    9696,
-    12064,
+    9664,
+    12032,
     96,
     64
    ]

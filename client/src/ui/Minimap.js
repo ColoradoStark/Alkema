@@ -6,7 +6,7 @@ import { WORLD } from '../world/places.js';
 import { wrapDelta } from '../world/Overworld.js';
 
 const RADIUS = 38;
-const SCALE = 2 / WORLD.tileSize; // world px → minimap px (minimap.png is 2px per tile)
+const SCALE = 1 / WORLD.tileSize; // world px → minimap px (minimap.png is a pixel per tile)
 const INK = 0x222034;
 
 export class Minimap {

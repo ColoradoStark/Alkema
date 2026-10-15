@@ -11,6 +11,8 @@ import { Ship } from '../world/Ship.js';
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
 const HULL_HALF = 13;           // half the ship's collision box (26 x 26)
+const BOARD_REACH = 96;         // walk towards the ship from this close to go aboard
+const SETTLE_MS = 600;          // just aboard, she won't put you ashore again (land right past her, in a narrow river)
 const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 
@@ -121,10 +123,11 @@ export class GameScene extends Scene {
             ship.setPosition(me.x + wrapDelta(me.x, ship.x), me.y + wrapDelta(me.y, ship.y));
             const toShip = { x: ship.x - me.x, y: ship.y - (me.y + FEET) };
             const towards = intent.dx * toShip.x + intent.dy * toShip.y > 0;
-            if (towards && Math.hypot(toShip.x, toShip.y) < 60) this.setSailing(true);
+            if (towards && Math.hypot(toShip.x, toShip.y) < BOARD_REACH) this.setSailing(true);
             return;
         }
         if (!intent.dx && !intent.dy) return;
+        if (this.time.now - this._boardedAt < SETTLE_MS) return;
         const len = Math.hypot(intent.dx, intent.dy);
         const ux = intent.dx / len, uy = intent.dy / len;
         // Dead ahead, or either side of the bow: on a slanting shore the hull
@@ -149,6 +152,7 @@ export class GameScene extends Scene {
         if (on) {
             me.setPosition(this.mooredShip.x, this.mooredShip.y - FEET);
             this.mooredShip.setVisible(false);
+            this._boardedAt = this.time.now;
             me.body.setSize(HULL_HALF * 2, HULL_HALF * 2, false).setOffset(-HULL_HALF, FEET - HULL_HALF);
             player.setSailing(true, this.mooredShip.heading);
         } else {

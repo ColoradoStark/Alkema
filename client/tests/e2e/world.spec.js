@@ -244,6 +244,50 @@ test.describe('Living world', () => {
         expect(result).toEqual({ found: true, ashore: true });
     });
 
+    test('after stepping ashore and wandering a few steps, walking back to the water takes you aboard', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const result = await page.evaluate(async () => {
+            const game = window.__PHASER_GAME, gs = game.scene.getScene('GameScene');
+            const keys = game.scene.getScene('UIScene').bottomControls.movementKeys;
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            const { world } = gs, me = gs.localPlayer.sprite, T = 32, n = world.n, FEET = 23;
+            const sea = (tx, ty) => world.isSailable(tx * T + 16, ty * T + 16);
+            const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+            // Shores all round the world, met from every side
+            const spots = [];
+            for (let ty = 7; ty < n - 7; ty += 11) for (let tx = 7; tx < n - 7; tx += 13)
+                for (const [name, [dx, dy]] of Object.entries(DIRS))
+                    if (sea(tx, ty) && sea(tx - dx, ty - dy) && !sea(tx + dx, ty + dy)) spots.push({ tx, ty, name });
+            const stuck = [];
+            let landings = 0;
+            for (let i = 0; i < spots.length; i += Math.max(1, Math.floor(spots.length / 40))) {
+                const { tx, ty, name } = spots[i];
+                if (gs.localPlayer.sailing) gs.setSailing(false, { x: me.x, y: me.y + FEET });
+                gs.mooredShip.setPosition(tx * T + 16, ty * T + 16);
+                gs.setSailing(true);
+                keys[name] = true;
+                for (let t = 0; t < 30 && gs.localPlayer.sailing; t++) await wait(50);
+                if (gs.localPlayer.sailing) { keys[name] = false; continue; }   // no room to land here
+                landings++;
+                // A few steps inland and a step along the shore, then back down to the water, heading for her
+                await wait(300);
+                keys[name] = false;
+                const side = name === 'up' || name === 'down' ? 'right' : 'down';
+                keys[side] = true; await wait(220); keys[side] = false;
+                for (let t = 0; t < 60 && !gs.localPlayer.sailing; t++) {
+                    const dx = gs.mooredShip.x - me.x, dy = gs.mooredShip.y - (me.y + FEET);
+                    Object.assign(keys, { left: dx < -8, right: dx > 8, up: dy < -8, down: dy > 8 });
+                    await wait(50);
+                }
+                Object.assign(keys, { left: false, right: false, up: false, down: false });
+                if (!gs.localPlayer.sailing) stuck.push({ tx, ty, name });
+            }
+            return { landings: landings >= 20, stuck };
+        });
+        expect(result).toEqual({ landings: true, stuck: [] });
+    });
+
     test('from the tip of the Watch the view pans across the strait to Morvath, out of reach on foot', async ({ page }) => {
         await enterWorld(page);
         const result = await page.evaluate(async () => {
@@ -346,8 +390,8 @@ test.describe('Living world', () => {
             const m = ui.minimap.map;
             return { tx: m.tilePositionX, ty: m.tilePositionY, r: m.width / 2, x: me.x, y: me.y };
         });
-        // The map scrolls so the player's spot (2px per 32px tile) sits at the minimap's centre
-        expect(Math.abs(pos.tx + pos.r - pos.x / 16)).toBeLessThan(1.5);
-        expect(Math.abs(pos.ty + pos.r - pos.y / 16)).toBeLessThan(1.5);
+        // The map scrolls so the player's spot (a pixel per 32px tile) sits at the minimap's centre
+        expect(Math.abs(pos.tx + pos.r - pos.x / 32)).toBeLessThan(1.5);
+        expect(Math.abs(pos.ty + pos.r - pos.y / 32)).toBeLessThan(1.5);
     });
 });
