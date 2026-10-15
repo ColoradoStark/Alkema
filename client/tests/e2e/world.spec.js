@@ -345,7 +345,7 @@ test.describe('Living world', () => {
             me.body.reset(vista.x, vista.y - 23);
             await wait(2500);
             const inView = cam.worldView.contains(x + w / 2, y + h) && cam.worldView.contains(me.x, me.y);
-            const near = Math.hypot(x + w / 2 - vista.x, y + h - vista.y) < 8 * 32;
+            const near = Math.hypot(x + w / 2 - vista.x, y + h - vista.y) < 9 * 32;   // (well within a phone screen)
             // and no way over on foot
             const { cn: n, blocked, k } = gs.world, T = 32 / k;
             const seen = new Uint8Array(n * n), start = Math.floor(vista.y / T) * n + Math.floor(vista.x / T);

@@ -216,97 +216,97 @@ export const WORLD = {
   {
    "name": "The Hollow Deep",
    "type": "dungeon",
-   "x": 2160,
-   "y": 5484,
+   "x": 2192,
+   "y": 5516,
    "rect": [
-    2112,
+    2144,
     5408,
     96,
-    64
+    96
    ]
   },
   {
    "name": "Wyrmrest Caverns",
    "type": "dungeon",
-   "x": 4336,
-   "y": 4940,
+   "x": 4368,
+   "y": 4972,
    "rect": [
-    4288,
+    4320,
     4864,
     96,
-    64
+    96
    ]
   },
   {
    "name": "The Sunken Crypt",
    "type": "dungeon",
    "x": 7472,
-   "y": 4812,
+   "y": 4844,
    "rect": [
     7424,
     4736,
     96,
-    64
+    96
    ]
   },
   {
    "name": "Shadowmaw",
    "type": "dungeon",
-   "x": 8080,
-   "y": 3756,
+   "x": 8112,
+   "y": 3788,
    "rect": [
-    8032,
+    8064,
     3680,
     96,
-    64
+    96
    ]
   },
   {
    "name": "The Old Mine",
    "type": "dungeon",
    "x": 2416,
-   "y": 11948,
+   "y": 11980,
    "rect": [
     2368,
     11872,
     96,
-    64
+    96
    ]
   },
   {
    "name": "Gloomwater Grotto",
    "type": "dungeon",
    "x": 9712,
-   "y": 12108,
+   "y": 12140,
    "rect": [
     9664,
     12032,
     96,
-    64
+    96
    ]
   },
   {
    "name": "Skullkeep Pit",
    "type": "dungeon",
    "x": 13776,
-   "y": 3468,
+   "y": 3500,
    "rect": [
     13728,
     3392,
     96,
-    64
+    96
    ]
   },
   {
    "name": "Wreckers' Cave",
    "type": "dungeon",
    "x": 2640,
-   "y": 12812,
+   "y": 12844,
    "rect": [
     2592,
     12736,
     96,
-    64
+    96
    ]
   }
  ],
@@ -340,7 +340,7 @@ export const WORLD = {
    "y": 12592,
    "look": {
     "x": 2640,
-    "y": 12768
+    "y": 12784
    }
   }
  ],
