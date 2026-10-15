@@ -100,7 +100,7 @@ Other races and classes are reserved for NPCs and enemies.
 
 Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles:
 
-- A 256×256-tile map in the spirit of the classic Ultima games: a continent, one large island and three small isles in an animated ocean
+- A 512×512-tile map in the spirit of the classic Ultima games: a continent, one large island and three small isles in an animated ocean
 - A great range of snow-capped peaks with ragged, natural feet walls off the north, crossed by a single pass; more ranges run along the west coast, the south-east and the big island
 - Two rivers that meet and run to the sea, with three bridges
 - A long, winding arm of the continent (a narrow neck, a wooded headland, a hooked spur round a bay with a fishing village) reaches out toward the big island and ends across a narrow strait from the cursed city of Morvath: stand at its tip and the view pans across the water to the city, but only a ship will take you there

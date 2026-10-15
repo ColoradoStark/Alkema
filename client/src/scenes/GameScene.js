@@ -129,16 +129,20 @@ export class GameScene extends Scene {
         const ux = intent.dx / len, uy = intent.dy / len;
         // Dead ahead, or either side of the bow: on a slanting shore the hull
         // runs aground on land beside the bow while the water straight ahead is open
-        for (const side of [0, -HULL_HALF, HULL_HALF]) {
-            const ahead = { x: me.x + ux * 30 - uy * side, y: me.y + FEET + uy * 30 + ux * side };
-            if (this.world.isWalkable(ahead.x, ahead.y) && !this.world.isSailable(ahead.x, ahead.y)) {
-                this.setSailing(false, ahead);
-                return;
+        // ...and a little further on, past a thin bank you couldn't stand on
+        for (const reach of [30, 46]) {
+            for (const side of [0, -HULL_HALF, HULL_HALF]) {
+                const ahead = { x: me.x + ux * reach - uy * side, y: me.y + FEET + uy * reach + ux * side };
+                const footing = this.world.isSailable(ahead.x, ahead.y) ? null : this.world.footing(ahead.x, ahead.y);
+                if (footing) {
+                    this.setSailing(false, footing);
+                    return;
+                }
             }
         }
     }
 
-    /** Go aboard (true), or step ashore onto the tile at `shore`. */
+    /** Go aboard (true), or step ashore with your feet at `shore`. */
     setSailing(on, shore = null) {
         const player = this.localPlayer;
         const me = player.sprite;
@@ -152,8 +156,7 @@ export class GameScene extends Scene {
             this.mooredShip.heading = this.mooredShip.targetHeading = ship.heading;
             this.mooredShip.setPosition(ship.x, ship.y).setVisible(true);
             this.mooredShip.sprite.setRotation(ship.heading);
-            const tile = this.world.map.tileWidth;
-            me.setPosition(Math.floor(shore.x / tile) * tile + tile / 2, Math.floor(shore.y / tile) * tile + tile / 2 - FEET + 6);
+            me.setPosition(shore.x, shore.y - FEET);
             me.body.setSize(18, 10, false).setOffset(-9, 18);
             player.setSailing(false);
         }

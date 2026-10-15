@@ -1,18 +1,20 @@
-// The overworld: a 256x256-tile map that wraps east-west and north-south.
+// The overworld: a big square map that wraps east-west and north-south.
 // Built by tools/worldgen.py into /world/: tile layers, collision and the
 // animated water that shows through the sea, rivers and lakes.
 //
-// Wrapping: positions live in [0, SIZE). The tilemap carries a border of
-// PAD tiles copied from the opposite edges, so the view never runs off the
-// map; when you step past an edge you're moved to the other side and the
-// camera moves with you, so nothing on screen jumps.
+// Only a window of WINDOW x WINDOW tiles around the camera is ever built as
+// tiles (the whole map would be millions of tile objects); it's refilled from
+// the map data as the camera moves, wrapping round the edges. Positions live
+// in [0, SIZE): when you step past an edge you're moved to the other side and
+// the camera moves with you, so nothing on screen jumps.
 
 import { WORLD } from './places.js';
 import { Forest } from './Forest.js';
 
 export const SIZE = WORLD.size;
 const TILE = WORLD.tileSize;
-const PAD = 14;                 // tiles copied around the edge (> half the view)
+const WINDOW = 48;              // tiles built around the camera (the view is about 11-15 x 14)
+const REFILL_AT = 10;           // refill once the camera is this many tiles from the window's centre
 const WATER_FRAME_MS = 260;
 const HIDDEN_REVEAL = 200;      // a hidden place's name shows once you're this close
 
@@ -34,7 +36,10 @@ export function wrap(v) {
 export function preloadOverworld(load) {
     load.json('world', '/world/overworld.json');
     load.image('world-ground', '/world/ground.png');
-    load.image('world-features', '/world/features.png');
+    // The feature tiles come in several sheets (phones can't load one huge texture): the map lists them
+    load.once('filecomplete-json-world', (key, type, data) => {
+        data.tilesets.features.images.forEach((name, i) => load.image(`world-features-${i}`, `/world/${name}`));
+    });
     load.image('world-minimap', '/world/minimap.png');
     load.spritesheet('world-water', '/world/water.png', { frameWidth: 64, frameHeight: 64 });
     load.image('ship', '/world/ship.png');
@@ -73,40 +78,33 @@ export class Overworld {
         this.sail = decodeBits(data.sail, n * n);
         const groundCount = data.tilesets.ground.count;
 
-        // Padded 2D grids: tile (x, y) of the padded map is world tile (x - PAD, y - PAD), wrapped
-        const size = n + PAD * 2;
-        const grid = (fn) => {
-            const rows = [];
-            for (let y = 0; y < size; y++) {
-                const wy = (y - PAD + n) % n;
-                const row = new Array(size);
-                for (let x = 0; x < size; x++) row[x] = fn(((x - PAD + n) % n) + wy * n);
-                rows.push(row);
-            }
-            return rows;
-        };
-        const gid = (arr, offset) => (i) => (arr[i] ? arr[i] + offset - 1 : -1);
-
-        const map = scene.make.tilemap({ tileWidth: TILE, tileHeight: TILE, width: size, height: size });
+        const map = scene.make.tilemap({ tileWidth: TILE, tileHeight: TILE, width: WINDOW, height: WINDOW });
         const groundSet = map.addTilesetImage('world-ground', 'world-ground', TILE, TILE, 0, 0, 0);
-        const featureSet = map.addTilesetImage('world-features', 'world-features', TILE, TILE, 0, 0, groundCount);
-        const origin = -PAD * TILE;
+        const { images, perImage } = data.tilesets.features;
+        const featureSets = images.map((_, i) =>
+            map.addTilesetImage(`world-features-${i}`, `world-features-${i}`, TILE, TILE, 0, 0, groundCount + i * perImage));
 
         this.water = scene.add.tileSprite(0, 0, scene.scale.width, scene.scale.height, 'world-water', 0)
             .setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.water);
 
-        this.groundLayer = map.createBlankLayer('ground', groundSet, origin, origin).setDepth(DEPTH.ground);
-        this.groundLayer.putTilesAt(grid(gid(ground, 0)), 0, 0, false);
-        this.featureLayer = map.createBlankLayer('features', featureSet, origin, origin).setDepth(DEPTH.features);
-        this.featureLayer.putTilesAt(grid(gid(features, groundCount)), 0, 0, false);
-        this.canopyLayer = map.createBlankLayer('canopy', featureSet, origin, origin).setDepth(DEPTH.canopy);
-        this.canopyLayer.putTilesAt(grid(gid(canopy, groundCount)), 0, 0, false);
-
-        // Aboard ship everything but open water blocks: an invisible tile layer.
+        // Each layer and the map data it shows (a tile index per world tile, -1 for none).
+        // Aboard ship everything but open water blocks: the invisible sail layer.
         // (On foot, collide() checks the finer walking cells itself.)
-        this.sailLayer = map.createBlankLayer('sail', groundSet, origin, origin).setVisible(false);
-        this.sailLayer.putTilesAt(grid(i => (this.sail[i] ? -1 : 0)), 0, 0, false);
+        const gid = (arr, offset) => (i) => (arr[i] ? arr[i] + offset - 1 : -1);
+        this.groundLayer = map.createBlankLayer('ground', groundSet).setDepth(DEPTH.ground);
+        this.featureLayer = map.createBlankLayer('features', featureSets).setDepth(DEPTH.features);
+        this.canopyLayer = map.createBlankLayer('canopy', featureSets).setDepth(DEPTH.canopy);
+        this.sailLayer = map.createBlankLayer('sail', groundSet).setVisible(false);
         this.sailLayer.setCollision(0);
+        this._layers = [
+            [this.groundLayer, gid(ground, 0)],
+            [this.featureLayer, gid(features, groundCount)],
+            [this.canopyLayer, gid(canopy, groundCount)],
+            [this.sailLayer, i => (this.sail[i] ? -1 : 0)],
+        ];
+        this._window = null;
+        const cam = scene.cameras.main;
+        this._fillAround(cam.midPoint.x, cam.midPoint.y);
 
         this.map = map;
         this.forest = new Forest(scene, data);
@@ -118,6 +116,24 @@ export class Overworld {
             fontFamily: 'Alagard, monospace', fontSize: '12px', color: '#fff6e0',
             stroke: '#222034', strokeThickness: 3,
         }).setOrigin(0.5, 1).setDepth(DEPTH.labels).setData('hidden', !!p.hidden).setAlpha(p.hidden ? 0 : 1));
+    }
+
+    /** Rebuild the window of tiles centred on world point (x, y) (any copy of it, off the edges or not). */
+    _fillAround(x, y) {
+        const n = this.n;
+        const ox = Math.floor(x / TILE) - WINDOW / 2, oy = Math.floor(y / TILE) - WINDOW / 2;
+        for (const [layer, tileAt] of this._layers) {
+            const rows = [];
+            for (let ty = 0; ty < WINDOW; ty++) {
+                const wy = (((oy + ty) % n) + n) % n;
+                const row = new Array(WINDOW);
+                for (let tx = 0; tx < WINDOW; tx++) row[tx] = tileAt(((((ox + tx) % n) + n) % n) + wy * n);
+                rows.push(row);
+            }
+            layer.putTilesAt(rows, 0, 0, false);
+            layer.setPosition(ox * TILE, oy * TILE);
+        }
+        this._window = { cx: (ox + WINDOW / 2) * TILE, cy: (oy + WINDOW / 2) * TILE };
     }
 
     /** Is the walking cell under this world point blocked? */
@@ -135,6 +151,19 @@ export class Overworld {
             }
         }
         return false;
+    }
+
+    /**
+     * Where on the tile under (x, y) a hero's feet (an 18 x 10 box) fit, or null:
+     * a shore tile can be half beach, half water.
+     */
+    footing(x, y) {
+        const tx = Math.floor(x / TILE) * TILE, ty = Math.floor(y / TILE) * TILE;
+        const spots = [[TILE / 2, TILE / 2], [TILE / 4, TILE / 4], [3 * TILE / 4, TILE / 4], [TILE / 4, 3 * TILE / 4], [3 * TILE / 4, 3 * TILE / 4]];
+        for (const [dx, dy] of spots) {
+            if (!this.boxBlocked(tx + dx - 9, ty + dy - 5, 18, 10)) return { x: tx + dx, y: ty + dy };
+        }
+        return null;
     }
 
     /** Can you walk on the tile under this point? */
@@ -200,6 +229,10 @@ export class Overworld {
     /** @param {{x: number, y: number}|null} feet  where the local hero stands: labels step aside for them */
     update(delta, feet = null) {
         const cam = this.scene.cameras.main;
+        const { cx, cy } = this._window;
+        if (Math.abs(cam.midPoint.x - cx) > REFILL_AT * TILE || Math.abs(cam.midPoint.y - cy) > REFILL_AT * TILE) {
+            this._fillAround(cam.midPoint.x, cam.midPoint.y);
+        }
         if (feet) {
             for (const label of this.labels) {
                 const dx = wrapDelta(feet.x, label.x), dy = wrapDelta(feet.y, label.y);
