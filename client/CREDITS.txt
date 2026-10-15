@@ -124,6 +124,14 @@ Bellanger, Jetrel, Guido Bos, Nemisys and Curt.
   License: CC-BY-SA 3.0 / GPL 3.0
   https://opengameart.org/content/lpc-medieval-village-decorations
 
+"[LPC] House interior and decorations" by Reemax (Tuomo Untinen), with Lanea Zimmerman (Sharm),
+Daniel Eddeland, Hyptosis, Matthew Krohn, Johannes Sjölund and
+William Thompson (wooden and stone floors, the wall-top trim, shelves,
+beds, the fireplace, weapon racks and armour shelves, the distiller,
+bottles, barrels and more).
+  License: CC-BY-SA 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-house-interior-and-decorations
+
 LPC tile atlas (trees, barrels, crates, the bridge and the pier's
 planks): see the LPC Tile Atlas credits (Lanea Zimmerman, Casper
 Nilsson, Daniel Eddeland, Johann Charlot and others).

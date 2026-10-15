@@ -209,38 +209,50 @@ export class GameScene extends Scene {
     }
 
     /** Answer "Enter Riverhold?" with yes. Places without a map of their own yet stay closed. */
-    enterPlace(place) {
+    async enterPlace(place) {
         const key = TOWNS[place?.name];
-        if (key && !this.town && !this._changingRoom) this.enterTown(place, key);
+        if (!key || this.town || this._changingRoom) return;
+        await this._loadTown(key).catch(() => null);
+        const arrive = this.cache.json.get(`town-${key}`)?.arrive;
+        if (!arrive) return;
+        this._townPlace = place;
+        await this.changeMap(key, arrive, 'right');
     }
 
-    /** Walk out through a town's gate and you're back on the overworld, outside it. */
+    /** Walk out through an exit (a town's gate, any door) and you're in the map it leads to. */
     updateGate() {
         const me = this.localPlayer?.sprite;
         if (!this.town || !me || this._changingRoom) return;
-        if ((this._intent?.dx ?? 0) < 0 && this.town.atGate(me.x, me.y + FEET)) this.leaveTown();
+        const exit = this.town.exitAt(me.x, me.y + FEET, this._intent || { dx: 0, dy: 0 });
+        if (!exit) return;
+        if (exit.to === null) this.leaveTown();
+        else this.changeMap(exit.to, exit.at, exit.dir === 'up' ? 'up' : 'down');
     }
 
-    async enterTown(place, key) {
+    /**
+     * Go to a town map or a room (`key`), feet at `feet` [x, y]: a room of its own
+     * on the server, so you see only who's there with you.
+     */
+    async changeMap(key, feet, facing) {
         this._changingRoom = true;
         try {
             await this._loadTown(key);
-            const town = this.cache.json.get(`town-${key}`);
-            const at = { x: town.arrive[0], y: town.arrive[1] - FEET };
+            const at = { x: feet[0], y: feet[1] - FEET };
             const res = await this.networkManager.request('change-room', { town: key, ...at });
             if (!res?.ok) return;
             await this._fadeOut();
+            this.town?.destroy();
             this.overworld.setVisible(false);
             this.mooredShip.setVisible(false);
             this.town = this.world = new Town(this, key);
-            this._townPlace = place;
-            this._arriveAt(at, 'right', res.players);
+            this.cameras.main.setBackgroundColor(this.town.indoors ? '#0c080e' : '#1d5d8c');
+            this._arriveAt(at, facing, res.players);
             this.cameras.main.setBounds(0, 0, this.town.width, this.town.height);
             this.cameras.main.centerOn(at.x, at.y);
             this.cameras.main.fadeIn(FADE_MS);
             this._loadFolk(this.town);
         } catch (err) {
-            console.warn('Could not go into', place?.name, err);
+            console.warn('Could not go to', key, err);
         } finally {
             this._changingRoom = false;
         }
@@ -259,6 +271,7 @@ export class GameScene extends Scene {
             this.world = this.overworld;
             this.overworld.setVisible(true);
             this.mooredShip.setVisible(true);
+            this.cameras.main.setBackgroundColor('#1d5d8c');
             this.cameras.main.removeBounds();
             this._arriveAt(at, 'down', res.players);
             this.cameras.main.centerOn(at.x, at.y);

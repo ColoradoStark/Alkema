@@ -47,7 +47,7 @@ test.describe('Riverhold', () => {
 
         // The townsfolk arrive from the character generator: posted ones and wanderers
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
-            { timeout: 120000, intervals: [1000] }).toBeGreaterThan(15);
+            { timeout: 120000, intervals: [1000] }).toBeGreaterThan(10);
         // The gate warden stands just inside and speaks when you come near
         const warden = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -107,7 +107,7 @@ test.describe('Riverhold', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.length > 15, null, { timeout: 120000 });
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.length > 10, null, { timeout: 120000 });
         // Watch every wanderer's animation for ten seconds: a switch straight back (left, up, left...) is a flicker
         const flips = await page.evaluate(() => new Promise(resolve => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -145,5 +145,45 @@ test.describe('Riverhold', () => {
         });
         await hold(page, 'right', 2600);
         expect((await where(page)).x).toBeGreaterThan(51 * 32);   // over on the far bank
+    });
+
+    test("walk up into the weaponsmith's door and you are inside, with the smith; walk down out of it and you are back in the street", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold');
+        // In front of the smithy's door, then walk up into it
+        const door = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const exit = gs.town.data.exits.find(e => e.to === 'riverhold-weapons');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(exit.rect[0] + exit.rect[2] / 2, exit.rect[1] + 40 - 23);
+            me.body.reset(me.x, me.y);
+            return exit.rect;
+        });
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            keys.up = true;
+            for (let i = 0; i < 60 && gs.town?.key === 'riverhold'; i++) await new Promise(r => setTimeout(r, 50));
+            keys.up = false;
+        });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold-weapons');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => f.plan.role)),
+            { timeout: 120000, intervals: [1000] }).toEqual(['Weaponsmith']);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.indoors)).toBe(true);
+
+        // Straight back down and out of the door
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            keys.down = true;
+            for (let i = 0; i < 60 && gs.town?.key !== 'riverhold'; i++) await new Promise(r => setTimeout(r, 50));
+            keys.down = false;
+        });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold');
+        const back = await where(page);
+        expect(Math.abs(back.x - (door[0] + door[2] / 2))).toBeLessThan(20);
+        expect(back.y + 23).toBeGreaterThan(door[1]);          // outside, below the door
     });
 });

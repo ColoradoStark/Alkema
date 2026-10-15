@@ -1,8 +1,9 @@
-// A town you've walked into from the overworld (built by tools/towngen.py into
-// /towns/): the ground, the buildings and everything else that stands up, which
-// sort with the heroes by where they meet the ground, walking collision, and
-// the townsfolk. The river shows the overworld's animated water through the
-// ground's transparent parts. Walk out through the gate to leave.
+// A town you've walked into from the overworld, or a room inside one of its
+// buildings (built by tools/towngen.py into /towns/): the ground, everything
+// that stands up (buildings, furniture...), which sorts with the heroes by
+// where it meets the ground, walking collision, and the people there. A
+// town's river shows the overworld's animated water through the ground's
+// transparent parts. Exits (the town gate, every door) lead to other maps.
 
 import { sortDepth } from './Forest.js';
 import { DEPTH } from './Overworld.js';
@@ -10,6 +11,7 @@ import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
 const TALK_REACH = 64;         // stand this close to someone and they speak
+const COUNTER_REACH = 104;     // ...indoors, across a shop counter
 const WANDER_SPEED = 46;
 const WATER_FRAME_MS = 260;
 
@@ -41,7 +43,8 @@ export class Town {
         this.blocked = new Uint8Array(this.cols * (data.height / data.cell));
         for (let i = 0; i < this.blocked.length; i++) this.blocked[i] = (bytes[i >> 3] >> (7 - (i & 7))) & 1;
 
-        this.water = scene.add.tileSprite(0, 0, scene.scale.width, scene.scale.height, 'world-water', 0)
+        this.indoors = !!data.indoors;
+        this.water = this.indoors ? null : scene.add.tileSprite(0, 0, scene.scale.width, scene.scale.height, 'world-water', 0)
             .setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.water);
         this.ground = scene.add.image(0, 0, `town-${key}`).setOrigin(0, 0).setDepth(DEPTH.ground);
 
@@ -103,10 +106,15 @@ export class Town {
         return false;
     }
 
-    /** Is the point (a hero's feet) in the gate, where the town lets out? */
-    atGate(x, y) {
-        const [x0, y0, x1, y1] = this.data.gate;
-        return x < x0 + 24 && y >= y0 && y <= y1;
+    /**
+     * The exit a hero's feet at (x, y) are walking out through, if any: into
+     * its box, heading its way (out of the gate, up into a door, down out of a room).
+     * @returns {{to: string|null, at?: number[], dir: string}|null}
+     */
+    exitAt(x, y, intent) {
+        const going = { left: intent.dx < 0, right: intent.dx > 0, up: intent.dy < 0, down: intent.dy > 0 };
+        return this.data.exits.find(({ rect: [ex, ey, ew, eh], dir }) => going[dir]
+            && x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
     }
 
     get arrival() {
@@ -147,7 +155,7 @@ export class Town {
             if (f.plan.wander) this._wander(f, delta);
             const s = f.sprite;
             s.setDepth(sortDepth(this.scene, s.y + FEET));
-            const near = feet && Math.hypot(feet.x - s.x, feet.y - (s.y + FEET)) < TALK_REACH;
+            const near = feet && Math.hypot(feet.x - s.x, feet.y - (s.y + FEET)) < (this.indoors ? COUNTER_REACH : TALK_REACH);
             f.label.setVisible(!!near);
             if (f.bubble) {
                 f.bubble.setVisible(!!near).setPosition(s.x, s.y - 52);
@@ -163,6 +171,7 @@ export class Town {
             }
             f.talking = !!near;
         }
+        if (!this.water) return;
         this._waterTime += delta;
         if (this._waterTime >= WATER_FRAME_MS) {
             this._waterTime -= WATER_FRAME_MS;
@@ -221,7 +230,7 @@ export class Town {
     }
 
     destroy() {
-        this.water.destroy();
+        this.water?.destroy();
         this.ground.destroy();
         this.things.forEach(t => t.destroy());
         this.folk.forEach(f => { f.sprite.destroy(); f.bubble?.destroy(); });
