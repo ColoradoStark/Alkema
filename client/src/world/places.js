@@ -21,18 +21,6 @@ export const WORLD = {
    ]
   },
   {
-   "name": "Castle Dunmere",
-   "type": "castle",
-   "x": 5968,
-   "y": 13452,
-   "rect": [
-    5856,
-    13184,
-    224,
-    256
-   ]
-  },
-  {
    "name": "Saltmere",
    "type": "city",
    "x": 5360,
@@ -78,6 +66,18 @@ export const WORLD = {
     8800,
     224,
     192
+   ]
+  },
+  {
+   "name": "Castle Dunmere",
+   "type": "castle",
+   "x": 10928,
+   "y": 10220,
+   "rect": [
+    10816,
+    9952,
+    224,
+    256
    ]
   },
   {
@@ -155,11 +155,11 @@ export const WORLD = {
   {
    "name": "Millbrook",
    "type": "village",
-   "x": 5648,
-   "y": 12140,
+   "x": 1232,
+   "y": 7820,
    "rect": [
-    5536,
-    11968,
+    1120,
+    7648,
     224,
     160
    ]
@@ -167,11 +167,11 @@ export const WORLD = {
   {
    "name": "Ashby",
    "type": "village",
-   "x": 3792,
-   "y": 7020,
+   "x": 1328,
+   "y": 5644,
    "rect": [
-    3680,
-    6848,
+    1216,
+    5472,
     224,
     160
    ]
@@ -192,11 +192,11 @@ export const WORLD = {
   {
    "name": "Tumbledown",
    "type": "village",
-   "x": 14224,
-   "y": 12524,
+   "x": 3792,
+   "y": 14732,
    "rect": [
-    14112,
-    12352,
+    3680,
+    14560,
     224,
     160
    ]
@@ -252,11 +252,11 @@ export const WORLD = {
   {
    "name": "Shadowmaw",
    "type": "dungeon",
-   "x": 8656,
-   "y": 4460,
+   "x": 8080,
+   "y": 3756,
    "rect": [
-    8608,
-    4384,
+    8032,
+    3680,
     96,
     64
    ]
@@ -298,13 +298,13 @@ export const WORLD = {
    ]
   },
   {
-   "name": "The Frozen Vault",
+   "name": "Wreckers' Cave",
    "type": "dungeon",
-   "x": 2064,
-   "y": 14924,
+   "x": 2640,
+   "y": 12812,
    "rect": [
-    2016,
-    14848,
+    2592,
+    12736,
     96,
     64
    ]
@@ -320,7 +320,7 @@ export const WORLD = {
    "y": 8688
   },
   {
-   "x": 5872,
+   "x": 5904,
    "y": 12208
   }
  ],
@@ -332,6 +332,15 @@ export const WORLD = {
    "look": {
     "x": 12880,
     "y": 4256
+   }
+  },
+  {
+   "name": "Wreckers' Cave",
+   "x": 2768,
+   "y": 12592,
+   "look": {
+    "x": 2640,
+    "y": 12768
    }
   }
  ],

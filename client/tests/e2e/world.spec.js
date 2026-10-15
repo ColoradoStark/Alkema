@@ -320,6 +320,38 @@ test.describe('Living world', () => {
         expect(result).toEqual({ atLookout: { morvath: true, hero: true }, away: { recentred: true }, walkToMorvath: false });
     });
 
+    test("across the channel from the south-west beach, Wreckers' Cave is in view but out of reach on foot", async ({ page }) => {
+        await enterWorld(page);
+        const result = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const cam = gs.cameras.main, me = gs.localPlayer.sprite;
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            const { WORLD } = await import('/src/world/places.js');
+            const vista = WORLD.vistas.find(v => v.name === "Wreckers' Cave");
+            const cave = WORLD.places.find(p => p.name === "Wreckers' Cave");
+            const [x, y, w, h] = cave.rect;
+            me.setPosition(vista.x, vista.y - 23);
+            me.body.reset(vista.x, vista.y - 23);
+            await wait(2500);
+            const inView = cam.worldView.contains(x + w / 2, y + h) && cam.worldView.contains(me.x, me.y);
+            const near = Math.hypot(x + w / 2 - vista.x, y + h - vista.y) < 8 * 32;
+            // and no way over on foot
+            const { cn: n, blocked, k } = gs.world, T = 32 / k;
+            const seen = new Uint8Array(n * n), start = Math.floor(vista.y / T) * n + Math.floor(vista.x / T);
+            const queue = [start];
+            seen[start] = 1;
+            while (queue.length) {
+                const i = queue.pop(), cx = i % n, cy = (i - cx) / n;
+                for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const j = ((cy + dy + n) % n) * n + ((cx + dx + n) % n);
+                    if (!blocked[j] && !seen[j]) { seen[j] = 1; queue.push(j); }
+                }
+            }
+            return { inView, near, walkToCave: !!seen[Math.floor((y + h + 8) / T) * n + Math.floor((x + w / 2) / T)] };
+        });
+        expect(result).toEqual({ inView: true, near: true, walkToCave: false });
+    });
+
     test('every place on the mainland can be walked to, and the boat waits by the port', async ({ page }) => {
         await enterWorld(page);
         const result = await page.evaluate(async () => {
