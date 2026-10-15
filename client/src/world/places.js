@@ -180,11 +180,11 @@ export const WORLD = {
    "name": "Fernwick",
    "type": "village",
    "hidden": true,
-   "x": 5264,
-   "y": 6092,
+   "x": 7600,
+   "y": 10540,
    "rect": [
-    5152,
-    5920,
+    7488,
+    10368,
     224,
     160
    ]
