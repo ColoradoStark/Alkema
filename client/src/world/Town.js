@@ -69,17 +69,13 @@ export class Town {
             if (who.character.spriteMeta) sprite.applySpriteMeta(who.character.spriteMeta);
             sprite.setDirection(plan.facing || 'down');
             sprite.stopAnimation();
-            const name = who.character.name?.split(' ')[0];
-            const label = this.scene.add.text(0, -40, `${name}, ${who.role}`, {
+            const name = who.character.name || '';
+            const label = this.scene.add.text(0, -40, `${name.split(' ')[0]}, ${who.role}`, {
                 fontFamily: 'Alagard', fontSize: '12px', color: '#fbf236',
                 backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
             }).setOrigin(0.5).setVisible(false);
             sprite.add(label);
-            const bubble = plan.says ? this.scene.add.text(0, 0, plan.says, {
-                fontFamily: 'Romulus, monospace', fontSize: '14px', color: '#222034',
-                backgroundColor: '#f4ecd8', padding: { x: 6, y: 4 }, wordWrap: { width: 200 },
-            }).setOrigin(0.5, 1).setDepth(DEPTH.labels).setVisible(false) : null;
-            this.folk.push({ plan, sprite, label, bubble, wait: 500 + Math.random() * 2000, target: null });
+            this.folk.push({ plan, sprite, label, name, wait: 500 + Math.random() * 2000, target: null });
         }
     }
 
@@ -121,15 +117,32 @@ export class Town {
         return { x: this.data.arrive[0], y: this.data.arrive[1] };
     }
 
-    /** Bump into walls, water and props, sliding along them (as on the overworld). */
+    /** Whoever's feet overlap this box (world px), except `skip`. */
+    folkAt(x, y, w, h, skip = null) {
+        return this.folk.find(f => {
+            if (f === skip) return false;
+            const fx = f.sprite.x - 10, fy = f.sprite.y + FEET - 6;
+            return x < fx + 20 && x + w > fx && y < fy + 12 && y + h > fy;
+        }) || null;
+    }
+
+    /**
+     * Bump into walls, water, props and people, sliding along them (as on the
+     * overworld). Walking into someone stops you and remembers who (`bumped`).
+     */
     collide(gameObject) {
         const body = gameObject.body;
         const step = () => {
             if (!body.enable) return;
             const { position: pos, prev, width: w, height: h } = body;
-            if (!this.boxBlocked(pos.x, pos.y, w, h)) return;
-            if (!this.boxBlocked(pos.x, prev.y, w, h)) pos.y = prev.y;
-            else if (!this.boxBlocked(prev.x, pos.y, w, h)) pos.x = prev.x;
+            const already = this.folkAt(prev.x, prev.y, w, h);   // someone walked into you: don't get stuck in them
+            const into = (x, y) => this.folkAt(x, y, w, h, already);
+            const blocked = (x, y) => this.boxBlocked(x, y, w, h) || !!into(x, y);
+            if (!blocked(pos.x, pos.y)) return;
+            const who = into(pos.x, pos.y);
+            if (who) this.bumped = who;
+            if (!blocked(pos.x, prev.y)) pos.y = prev.y;
+            else if (!blocked(prev.x, pos.y)) pos.x = prev.x;
             else pos.set(prev.x, prev.y);
             body.updateCenter();
         };
@@ -152,22 +165,19 @@ export class Town {
     update(delta, feet = null) {
         for (const t of this.things) t.setDepth(sortDepth(this.scene, t.getData('foot')));
         for (const f of this.folk) {
-            if (f.plan.wander) this._wander(f, delta);
+            if (f.plan.wander) this._wander(f, delta, feet);
             const s = f.sprite;
             s.setDepth(sortDepth(this.scene, s.y + FEET));
             const near = feet && Math.hypot(feet.x - s.x, feet.y - (s.y + FEET)) < (this.indoors ? COUNTER_REACH : TALK_REACH);
             f.label.setVisible(!!near);
-            if (f.bubble) {
-                f.bubble.setVisible(!!near).setPosition(s.x, s.y - 52);
-                if (near && !f.talking && f.plan.post) {
-                    // Turn to face whoever came to talk
-                    const dx = feet.x - s.x, dy = feet.y - (s.y + FEET);
-                    s.setDirection(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
-                    s.stopAnimation();
-                } else if (!near && f.talking && f.plan.post) {
-                    s.setDirection(f.plan.facing || 'down');
-                    s.stopAnimation();
-                }
+            if (near && !f.talking && f.plan.post) {
+                // Turn to face whoever came to talk
+                const dx = feet.x - s.x, dy = feet.y - (s.y + FEET);
+                s.setDirection(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
+                s.stopAnimation();
+            } else if (!near && f.talking && f.plan.post) {
+                s.setDirection(f.plan.facing || 'down');
+                s.stopAnimation();
             }
             f.talking = !!near;
         }
@@ -184,7 +194,7 @@ export class Town {
     }
 
     /** Stroll to a spot in their part of town, stop a while, pick another. */
-    _wander(f, delta) {
+    _wander(f, delta, feet) {
         const s = f.sprite;
         if (f.talking) {
             if (f.target) { f.target = null; s.stopAnimation(); }
@@ -210,8 +220,12 @@ export class Town {
         // first, turning only when it's done or something's in the way
         if (!f.axis || (f.axis === 'x' ? Math.abs(dx) : Math.abs(dy)) < stepLen) f.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
         let horizontal = f.axis === 'x';
-        const blocked = (h) => this.boxBlocked(h ? s.x + Math.sign(dx) * stepLen - 9 : s.x - 9,
-            (h ? s.y : s.y + Math.sign(dy) * stepLen) + FEET - 5, 18, 10);
+        const blocked = (h) => {
+            const bx = h ? s.x + Math.sign(dx) * stepLen - 9 : s.x - 9;
+            const by = (h ? s.y : s.y + Math.sign(dy) * stepLen) + FEET - 5;
+            return this.boxBlocked(bx, by, 18, 10)
+                || (feet && bx < feet.x + 9 && bx + 18 > feet.x - 9 && by < feet.y + 5 && by + 10 > feet.y - 5);
+        };
         if (blocked(horizontal)) {
             const other = !horizontal;
             if ((other ? Math.abs(dx) : Math.abs(dy)) < stepLen || blocked(other) || ++f.stuck > 120) {
@@ -233,7 +247,7 @@ export class Town {
         this.water?.destroy();
         this.ground.destroy();
         this.things.forEach(t => t.destroy());
-        this.folk.forEach(f => { f.sprite.destroy(); f.bubble?.destroy(); });
+        this.folk.forEach(f => f.sprite.destroy());
         this.folk = [];
     }
 }

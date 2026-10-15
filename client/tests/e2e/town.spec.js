@@ -48,20 +48,30 @@ test.describe('Riverhold', () => {
         // The townsfolk arrive from the character generator: posted ones and wanderers
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
             { timeout: 120000, intervals: [1000] }).toBeGreaterThan(10);
-        // The gate warden stands just inside and speaks when you come near
-        const warden = await page.evaluate(() => {
+        // Walk into the gate warden: story mode, with the warden's portrait and words
+        await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const f = gs.town.folk.find(f => f.plan.id === 'gatewarden');
+            const f = gs.town.folk.find(f => f.plan.id === 'guard1');
             const me = gs.localPlayer.sprite;
-            me.setPosition(f.sprite.x + 30, f.sprite.y);
+            me.setPosition(f.sprite.x + 34, f.sprite.y);
             me.body.reset(me.x, me.y);
-            return true;
         });
-        expect(warden).toBe(true);
-        await expect.poll(() => page.evaluate(() => {
-            const f = window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'gatewarden');
-            return f.bubble.visible && f.label.text.endsWith('Gate warden');
-        })).toBe(true);
+        await hold(page, 'left', 600);
+        const talk = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { open: d.visible, role: d.role.text, portrait: d.portraitLayer.length };
+        });
+        await expect.poll(talk).toEqual({ open: true, role: 'Gate warden', portrait: 1 });
+        // The world waits: you don't move while they talk
+        const before = await where(page);
+        await hold(page, 'right', 400);
+        expect((await where(page)).x).toBe(before.x);
+        // Space finishes the line, then closes the box
+        await page.keyboard.press('Space');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.text.text))
+            .toBe('Gate stays open till dusk. Keep your blade sheathed in town.');
+        await page.keyboard.press('Space');
+        expect((await talk()).open).toBe(false);
 
         // Back to the gate and out
         await page.evaluate(() => {
@@ -185,5 +195,41 @@ test.describe('Riverhold', () => {
         const back = await where(page);
         expect(Math.abs(back.x - (door[0] + door[2] / 2))).toBeLessThan(20);
         expect(back.y + 23).toBeGreaterThan(door[1]);          // outside, below the door
+    });
+
+    test('the town watch: twelve guards in one uniform, one of them off duty at the inn', async ({ page }) => {
+        test.setTimeout(200000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        const kit = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
+            .filter(f => f.plan.id.startsWith('guard'))
+            .map(f => f.sprite.characterData.selections.map(s => s.item)
+                .filter(i => !/^(body|heads_|face_|hair_|beards_|shadow)/.test(i)).sort().join(',')));
+        await expect.poll(() => kit().then(k => k.length), { timeout: 150000, intervals: [1000] }).toBe(11);
+        const outside = await kit();
+        expect(new Set(outside).size).toBe(1);
+        expect(outside[0]).toContain('weapon_polearm_spear');
+        // ...and the twelfth, at the inn, up the stairs from which are the guest rooms
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const e = gs.town.data.exits.find(e => e.to === 'riverhold-inn');
+            gs.changeMap(e.to, e.at, 'up');
+        });
+        await expect.poll(() => kit().catch(() => []), { timeout: 150000, intervals: [1000] }).toEqual([outside[0]]);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const up = gs.town.data.exits.find(e => e.to === 'riverhold-inn-rooms');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(up.rect[0] + up.rect[2] / 2, up.rect[1] + 70 - 23);
+            me.body.reset(me.x, me.y);
+        });
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            keys.up = true;
+            for (let i = 0; i < 60 && gs.town?.key === 'riverhold-inn'; i++) await new Promise(r => setTimeout(r, 50));
+            keys.up = false;
+        });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold-inn-rooms');
     });
 });

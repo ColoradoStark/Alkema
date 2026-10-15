@@ -4,6 +4,7 @@ import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
 import { EnterPrompt } from '../ui/EnterPrompt.js';
+import { Dialogue } from '../ui/Dialogue.js';
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -28,6 +29,9 @@ export class UIScene extends Scene {
 
         // Asks before taking you into a city, village, castle or dungeon
         this.enterPrompt = new EnterPrompt(this, this.scale.width / 2, 32 + 448 - 70);   // low, clear of the hero
+        // Story mode: what someone in town has to say, with their portrait
+        this.dialogue = new Dialogue(this, 32, 32 + 448);
+        this.dialogue.onClose = (who) => { this._lastTalk = who; };
 
         this._setupKeyboard();
         this._setupNetworkHandlers();
@@ -94,6 +98,7 @@ export class UIScene extends Scene {
         this.wasd = this.input.keyboard.addKeys('W,S,A,D');
 
         this.input.keyboard.on('keydown-SPACE', () => this.handleAttack());
+        this.input.keyboard.on('keydown-ENTER', () => this.dialogue.visible && this.dialogue.advance());
         this.input.keyboard.on('keydown-E', () => this.handleAbility());
 
         this.input.keyboard.on('keydown-ONE', () => this.bottomControls.switchTab('map'));
@@ -139,9 +144,18 @@ export class UIScene extends Scene {
         if (this.cursors.up.isDown || this.wasd.W.isDown || keys.up) dy = -1;
         else if (this.cursors.down.isDown || this.wasd.S.isDown || keys.down) dy = 1;
 
+        const me = gameScene.localPlayer.sprite;
+        if (this.dialogue.visible) {        // the world waits while someone's talking
+            gameScene.handlePlayerMovement(0, 0);
+            return;
+        }
+        // Once you've heard someone out, step away before they'll talk again
+        const last = this._lastTalk;
+        if (last && (!gameScene.town?.folk.includes(last) || Math.hypot(last.sprite.x - me.x, last.sprite.y - me.y) > 44)) {
+            this._lastTalk = null;
+        }
         gameScene.handlePlayerMovement(dx, dy);
 
-        const me = gameScene.localPlayer.sprite;
         const others = [];
         for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
         // In town the overworld's minimap and quests wait for you outside
@@ -154,7 +168,17 @@ export class UIScene extends Scene {
         this.quests.updatePosition(me.x, me.y);
     }
 
+    /** Story mode with someone you walked into (unless you've only just finished talking). */
+    talkTo(folk) {
+        if (this.dialogue.visible || this.enterPrompt.visible || folk === this._lastTalk) return;
+        this.dialogue.open(folk);
+    }
+
     handleAttack() {
+        if (this.dialogue.visible) {
+            this.dialogue.advance();
+            return;
+        }
         const gameScene = this.scene.get('GameScene');
         if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
             gameScene.localPlayer.playAttack(() => gameScene.emitAttack());

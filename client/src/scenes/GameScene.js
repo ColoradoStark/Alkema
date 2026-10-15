@@ -93,6 +93,11 @@ export class GameScene extends Scene {
         this.updateSailing();
         this.updatePlaceVisit();
         this.updateGate();
+        // Walked into someone: story mode
+        if (this.town?.bumped) {
+            this.scene.get('UIScene')?.talkTo(this.town.bumped);
+            this.town.bumped = null;
+        }
         this.updateLookout(delta);
         this.players.forEach(player => {
             if (player !== this.localPlayer) this.keepNearby(player);
