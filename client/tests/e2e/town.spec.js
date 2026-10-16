@@ -48,6 +48,9 @@ test.describe('Riverhold', () => {
         // The townsfolk arrive from the character generator: posted ones and wanderers
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
             { timeout: 120000, intervals: [1000] }).toBeGreaterThan(10);
+        // Their painted portraits come after them
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('portrait-riverhold-guard1')),
+            { timeout: 30000 }).toBe(true);
         // Walk into the gate warden: story mode, with the warden's portrait and words
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -59,9 +62,9 @@ test.describe('Riverhold', () => {
         await hold(page, 'left', 600);
         const talk = () => page.evaluate(() => {
             const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
-            return { open: d.visible, role: d.role.text, portrait: d.portraitLayer.length };
+            return { open: d.visible, role: d.role.text, portrait: d.portraitLayer.list[0]?.texture.key };
         });
-        await expect.poll(talk).toEqual({ open: true, role: 'Gate warden', portrait: 1 });
+        await expect.poll(talk).toEqual({ open: true, role: 'Gate warden', portrait: 'portrait-riverhold-guard1' });
         // The world waits: you don't move while they talk
         const before = await where(page);
         await hold(page, 'right', 400);

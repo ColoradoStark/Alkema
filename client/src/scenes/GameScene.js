@@ -8,6 +8,7 @@ import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
 import { Ship } from '../world/Ship.js';
 import { Town, TOWNS, preloadTown } from '../world/Town.js';
+import { loadPortraits } from '../ui/Dialogue.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -325,7 +326,10 @@ export class GameScene extends Scene {
     async _loadFolk(town) {
         try {
             const res = await this.networkManager.request('town-folk', { town: town.key }, 90000);
-            if (res?.ok && this.town === town) town.populate(res.folk);
+            if (res?.ok && this.town === town) {
+                town.populate(res.folk);
+                loadPortraits(this, res.folk.map(f => f.character?.id));
+            }
         } catch (err) {
             console.warn('No townsfolk today', err);
         }

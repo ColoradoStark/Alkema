@@ -2,8 +2,8 @@
 // bottom of the map view with their name and words (typed out), and above it a
 // large portrait: their own sprite, bust-high and scaled up crisp, on a
 // backdrop drawn from the colours they're wearing, in a gold frame.
-// A painted portrait can replace the sprite bust for anyone who has one: put
-// it at /portraits/<their sprite id>.png (see portraitUrl).
+// Anyone with a painted portrait (tools/portraits.py) shows that instead:
+// /portraits/<their sprite id>.webp, listed in /portraits/portraits.json.
 
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
@@ -19,7 +19,16 @@ const BUST = { x: 12, y: 6, w: 40, h: 40 };   // the part of a 64 px sprite fram
 const TYPE_MS = 18;            // per letter
 const PAGE = 150;              // letters per page, at most
 
-export const portraitUrl = (id) => `/portraits/${id}.png`;
+export const portraitUrl = (id) => `/portraits/${id}.webp`;
+
+/** Fetch the painted portraits of these people (sprite ids), for those who have one. */
+export function loadPortraits(scene, ids) {
+    const painted = new Set(scene.cache.json.get('portraits') || []);
+    const todo = ids.filter(id => id && painted.has(id) && !scene.textures.exists(`portrait-${id}`));
+    if (!todo.length) return;
+    for (const id of todo) scene.load.image(`portrait-${id}`, portraitUrl(id));
+    scene.load.start();
+}
 
 export class Dialogue {
     /**
