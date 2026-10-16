@@ -31,7 +31,10 @@ export class UIScene extends Scene {
         this.enterPrompt = new EnterPrompt(this, this.scale.width / 2, 32 + 448 - 70);   // low, clear of the hero
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
-        this.dialogue.onClose = (who) => { this._lastTalk = who; };
+        this.dialogue.onClose = (who) => {
+            this._lastTalk = who;
+            this.bottomControls.container.setVisible(true);
+        };
 
         this._setupKeyboard();
         this._setupNetworkHandlers();
@@ -171,6 +174,8 @@ export class UIScene extends Scene {
     /** Story mode with someone you walked into (unless you've only just finished talking). */
     talkTo(folk) {
         if (this.dialogue.visible || this.enterPrompt.visible || folk === this._lastTalk) return;
+        this.bottomControls.container.setVisible(false);     // the story box takes their place
+        for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
         this.dialogue.open(folk);
     }
 

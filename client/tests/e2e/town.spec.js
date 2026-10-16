@@ -63,14 +63,18 @@ test.describe('Riverhold', () => {
         });
         await expect.poll(talk, { timeout: 30000 })
             .toEqual({ open: true, role: 'Gate warden', portrait: expect.stringContaining('/portraits/riverhold-guard1.webp') });
-        // ...painted, filling the map view: the canvas's full width, down to the name plate
+        // ...painted, filling the screen from the top down to the name plate, the story box where the controls were
         const fit = await page.evaluate(() => {
             const view = document.querySelector('.story-portrait').getBoundingClientRect();
             const canvas = window.__PHASER_GAME.canvas.getBoundingClientRect();
-            return { width: Math.round(view.width - canvas.width), tall: view.height / canvas.height };
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return {
+                width: Math.round(view.width - canvas.width), top: Math.round(view.top - canvas.top),
+                tall: view.height / canvas.height, controls: ui.bottomControls.container.visible,
+            };
         });
-        expect(fit.width).toBe(0);
-        expect(fit.tall).toBeGreaterThan(0.5);
+        expect(fit).toEqual({ width: 0, top: 0, tall: expect.any(Number), controls: false });
+        expect(fit.tall).toBeGreaterThan(0.7);
         // The world waits: you don't move while they talk
         const before = await where(page);
         await hold(page, 'right', 400);
@@ -82,6 +86,7 @@ test.describe('Riverhold', () => {
         await page.keyboard.press('Space');
         expect((await talk()).open).toBe(false);
         expect(await page.locator('.story-portrait').isVisible()).toBe(false);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.container.visible)).toBe(true);
 
         // Back to the gate and out
         await page.evaluate(() => {

@@ -1,9 +1,9 @@
-// Story mode: walk into someone and the world pauses for them. A box along the
-// bottom of the map view with their name and words (typed out), and above it a
-// large portrait: their own sprite, bust-high and scaled up crisp, on a
-// backdrop drawn from the colours they're wearing, in a gold frame.
+// Story mode: walk into someone and the world pauses for them. Their name and
+// words (typed out) take the controls' place at the bottom of the screen, and
+// above it a large portrait: their own sprite, bust-high and scaled up crisp,
+// on a backdrop drawn from the colours they're wearing, in a gold frame.
 // Anyone with a painted portrait (tools/portraits.py) shows that instead,
-// filling the whole map view above the box: /portraits/<their sprite id>.webp,
+// filling the whole screen above the box: /portraits/<their sprite id>.webp,
 // listed in /portraits/portraits.json. It's drawn as a page layer over the
 // canvas, so it's sharp at the screen's own resolution rather than the
 // game's 352 px.
@@ -16,11 +16,10 @@ const INK = 0x222034;
 const GOLD = 0xfbf236;
 const GOLD_DARK = 0xd27d2c;
 const BROWN = 0x8f563b;
-const BOX_H = 104;
 const PORTRAIT = 152;          // the portrait's square, px
 const BUST = { x: 12, y: 6, w: 40, h: 40 };   // the part of a 64 px sprite frame the portrait shows
 const TYPE_MS = 18;            // per letter
-const PAGE = 150;              // letters per page, at most
+const PAGE = 80;               // letters per page, at most (two lines)
 
 export const portraitUrl = (id) => `/portraits/${id}.webp`;
 
@@ -42,7 +41,7 @@ export class Dialogue {
     /**
      * @param {Phaser.Scene} scene  the UI scene
      * @param {number} top  the map view's top edge (screen px)
-     * @param {number} bottom  the map view's bottom edge
+     * @param {number} bottom  the map view's bottom edge (the controls below it give way to the box)
      */
     constructor(scene, top, bottom) {
         this.scene = scene;
@@ -54,7 +53,8 @@ export class Dialogue {
         this.container.add(this.shade);
 
         // The portrait, in its frame, standing on the box's top edge at the left
-        const boxY = bottom - BOX_H - 6;
+        const boxH = (scene.scale.height - bottom) / 2;     // half the controls' height: the rest is portrait
+        const boxY = scene.scale.height - boxH;
         this.px = 10;
         this.py = boxY - PORTRAIT + 14;
         this.backdrop = scene.add.graphics();
@@ -64,17 +64,17 @@ export class Dialogue {
         this.container.add([this.backdrop, this.portraitLayer, this.frame]);
 
         // The box
-        this.box = scene.add.container(6, boxY);
-        addPanelBackground(scene, this.box, 0, W - 12, BOX_H);
-        this.text = scene.add.text(12, 26, '', {
+        this.box = scene.add.container(0, boxY);
+        addPanelBackground(scene, this.box, 0, W, boxH);
+        this.text = scene.add.text(16, 30, '', {
             fontFamily: 'Romulus, monospace', fontSize: '15px', color: '#fff6e0',
-            stroke: '#222034', strokeThickness: 2, lineSpacing: 2, wordWrap: { width: W - 12 - 24 },
+            stroke: '#222034', strokeThickness: 2, lineSpacing: 2, wordWrap: { width: W - 32 },
         });
-        this.more = scene.add.text(W - 12 - 14, BOX_H - 12, '▼', {
+        this.more = scene.add.text(W - 14, boxH - 10, '▼', {
             fontFamily: 'monospace', fontSize: '12px', color: '#fbf236',
         }).setOrigin(0.5);
         this.box.add([this.text, this.more]);
-        // Their name on a plate across the box's top edge, right of the portrait
+        // Their name on a plate at the top of the box
         this.plate = scene.add.container(this.px + PORTRAIT + 4, boxY - 12);
         this.plateBg = scene.add.graphics();
         this.name = scene.add.text(10, 3, '', {
@@ -86,14 +86,14 @@ export class Dialogue {
         });
         this.plate.add([this.plateBg, this.name, this.role]);
         this.container.add([this.box, this.plate]);
-        this.top = top;
 
-        // A painted portrait: over the canvas, filling the map view down to the name plate
+        // A painted portrait: over the canvas, filling the screen down to the box
         this.view = document.createElement('img');
         this.view.className = 'story-portrait';
         Object.assign(this.view.style, {
-            position: 'fixed', zIndex: '5', pointerEvents: 'none', display: 'none', objectFit: 'cover',
-            objectPosition: '50% 22%', boxSizing: 'border-box', borderBottom: '2px solid #c8a04a',
+            position: 'fixed', zIndex: '61',     // over the account button too: they have the whole screen
+            pointerEvents: 'none', display: 'none', objectFit: 'cover',
+            objectPosition: '50% 22%',
             opacity: '0', transition: 'opacity 160ms',
         });
         this.view.alt = '';
@@ -161,7 +161,9 @@ export class Dialogue {
         this.role.setPosition(oneLine ? this.name.width + 18 : 10, oneLine ? 6 : 22);
         const pw = Math.min(room, oneLine ? this.name.width + this.role.width + 30 : Math.max(this.name.width, this.role.width) + 20);
         const ph = oneLine ? 24 : 38;
-        this.plate.y = this.box.y - ph + 12;
+        // Inside the box, at its top, with their words under it
+        this.plate.y = this.box.y + 5;
+        this.text.y = ph + 8;
         this.plateBg.clear().fillStyle(INK, 0.92).fillRoundedRect(0, 0, pw, ph, 4)
             .lineStyle(1, 0xc8a04a, 1).strokeRoundedRect(0.5, 0.5, pw - 1, ph - 1, 4);
     }
@@ -181,8 +183,8 @@ export class Dialogue {
         const rect = canvas.getBoundingClientRect();
         const k = rect.width / this.scene.scale.width;
         Object.assign(this.view.style, {
-            left: `${rect.left}px`, top: `${rect.top + this.top * k}px`,
-            width: `${rect.width}px`, height: `${(this.plate.y - this.top) * k}px`,
+            left: `${rect.left}px`, top: `${rect.top}px`,
+            width: `${rect.width}px`, height: `${this.box.y * k}px`,
         });
     }
 
