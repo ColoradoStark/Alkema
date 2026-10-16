@@ -1,0 +1,277 @@
+[
+ {
+  "id": "herbalist",
+  "role": "Apothecary",
+  "character": {
+   "id": "riverhold-apothecary-herbalist",
+   "name": "Caeldana Swift",
+   "body_type": "female",
+   "race": "elf",
+   "character_class": "mage",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "bronze",
+     "sprite_path": "body/bodies/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "bronze",
+     "sprite_path": "head/heads/human/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "ears",
+     "item": "head_ears_long",
+     "variant": "bronze",
+     "sprite_path": "head/ears/long/adult/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "bronze",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "green",
+     "sprite_path": "torso/clothes/longsleeve/longsleeve2/female/walk/green.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal",
+     "sprite_path": "legs/pants/thin/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_pixie",
+     "variant": "purple",
+     "sprite_path": "hair/pixie/adult/walk/purple.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_solid",
+     "variant": "brown",
+     "sprite_path": "cape/solid/female/walk/brown.png",
+     "sprite_path_behind": "cape/solid_behind/walk/brown.png"
+    },
+    {
+     "type": "hat",
+     "item": "hat_hood_cloth",
+     "variant": "leather",
+     "sprite_path": "hat/cloth/hood/adult/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "bronze",
+     "sprite_path": "arms/armour/plate/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_loose",
+     "variant": "tan",
+     "sprite_path": "torso/waist/belt_loose/female/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "square",
+     "sprite_path": "backpack/basket/fg/walk/square.png",
+     "sprite_path_behind": "backpack/basket/bg/walk/square.png"
+    },
+    {
+     "type": "cargo",
+     "item": "backpack_contents_wood",
+     "variant": "3_logs",
+     "sprite_path": "backpack/basket_contents/wood/fg/walk/3_logs.png",
+     "sprite_path_behind": "backpack/basket_contents/wood/bg/walk/3_logs.png"
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_magic_simple",
+     "variant": "simple",
+     "sprite_path": "weapon/magic/simple/foreground/walk/simple.png",
+     "sprite_path_behind": "weapon/magic/simple/background/walk/simple.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-apothecary-herbalist.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

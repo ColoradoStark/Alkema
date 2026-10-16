@@ -1,0 +1,253 @@
+[
+ {
+  "id": "fence",
+  "role": "Fence",
+  "character": {
+   "id": "riverhold-den-fence",
+   "name": "Alana Stone",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "thief",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "black",
+     "sprite_path": "body/bodies/female/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "black",
+     "sprite_path": "head/heads/human/female/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "black",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_sleeveless2",
+     "variant": "maroon",
+     "sprite_path": "torso/clothes/sleeveless/sleeveless2/female/walk/maroon.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "leather",
+     "sprite_path": "legs/pants/thin/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_long",
+     "variant": "white",
+     "sprite_path": "hair/long/adult/walk/white.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_other_female",
+     "variant": "brown",
+     "sprite_path": "torso/waist/belt_other/female/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "orange",
+     "sprite_path": "feet/boots/basic/thin/walk/orange.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hat",
+     "item": "hat_hood_sack_cloth",
+     "variant": "forest",
+     "sprite_path": "hat/cloth/hood_sack/adult/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "tool_whip",
+     "variant": "whip",
+     "sprite_path": "tools/whip/walk/whip.png",
+     "sprite_path_behind": "tools/whip/background/walk/whip.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-den-fence.png",
+   "animations": {
+    "complete": [
+     "slash"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "tool_whip": {
+      "y_offset": 3392,
+      "frame_size": 192,
+      "num_frames": 8,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "tool_whip",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

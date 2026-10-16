@@ -1,0 +1,240 @@
+[
+ {
+  "id": "tanner",
+  "role": "Tanner",
+  "character": {
+   "id": "riverhold-tanners-tanner",
+   "name": "Evlin O'Mor",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber",
+     "sprite_path": "body/bodies/male/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_gaunt",
+     "variant": "amber",
+     "sprite_path": "head/heads/human/male_gaunt/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "sky",
+     "sprite_path": "torso/aprons/suspenders/male/walk/sky.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_shorts_short",
+     "variant": "tan",
+     "sprite_path": "legs/shorts/short_shorts/male/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_topknot_short",
+     "variant": "ginger",
+     "sprite_path": "hair/extensions/ponytails/topknot_short/adult/walk/ginger.png",
+     "sprite_path_behind": "hair/parted_side_bangs/adult/walk/ginger.png"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "navy",
+     "sprite_path": "feet/boots/basic/male/walk/navy.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hat",
+     "item": "hat_hood_sack_cloth",
+     "variant": "sky",
+     "sprite_path": "hat/cloth/hood_sack/adult/walk/sky.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel",
+     "sprite_path": "tools/thrust/foreground/walk/shovel.png",
+     "sprite_path_behind": "tools/thrust/background/walk/shovel.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-tanners-tanner.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

@@ -1,0 +1,513 @@
+[
+ {
+  "id": "healer",
+  "role": "Healer",
+  "character": {
+   "id": "riverhold-healer-healer",
+   "name": "Dunline Hunter",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "cleric",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "bronze",
+     "sprite_path": "body/bodies/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female_small",
+     "variant": "bronze",
+     "sprite_path": "head/heads/human/female_small/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "bronze",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_robe",
+     "variant": "black",
+     "sprite_path": "torso/clothes/robe/female/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirt_straight",
+     "variant": "tan",
+     "sprite_path": "legs/skirts/straight/female/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_topknot_long",
+     "variant": "purple",
+     "sprite_path": "hair/extensions/ponytails/topknot_long/adult/fg/walk/purple.png",
+     "sprite_path_behind": "hair/extensions/ponytails/topknot_long/adult/bg/walk/purple.png"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "necklace",
+     "item": "neck_necklace",
+     "variant": "iron",
+     "sprite_path": "neck/necklace/female/walk/iron.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_loose",
+     "variant": "leather",
+     "sprite_path": "torso/waist/belt_loose/female/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_slippers",
+     "variant": "black",
+     "sprite_path": "feet/slippers/thin/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_blunt_mace",
+     "variant": "mace",
+     "sprite_path": "weapon/blunt/mace/walk/mace.png",
+     "sprite_path_behind": "weapon/blunt/mace/universal_behind/walk/mace.png"
+    },
+    {
+     "type": "shield",
+     "item": "shield_heater_revised_wood",
+     "variant": "tan",
+     "sprite_path": "shield/heater/revised/wood/fg/walk/tan.png",
+     "sprite_path_behind": "shield/heater/revised/wood/bg/walk/tan.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-healer-healer.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "slash_oversize": {
+      "y_offset": 3392,
+      "frame_size": 192,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_oversize",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "patient",
+  "role": "Patient",
+  "character": {
+   "id": "riverhold-healer-patient",
+   "name": "Branric Finnegan",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "brown",
+     "sprite_path": "body/bodies/male/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_plump",
+     "variant": "brown",
+     "sprite_path": "head/heads/human/male_plump/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "brown",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "slate",
+     "sprite_path": "torso/aprons/overalls/male/walk/slate.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "maroon",
+     "sprite_path": "legs/pants/male/walk/maroon.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_parted_side_bangs2",
+     "variant": "dark brown",
+     "sprite_path": "hair/parted_side_bangs2/adult/walk/dark_brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "gray",
+     "sprite_path": "feet/shoes/basic/male/walk/gray.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_tattered",
+     "variant": "navy",
+     "sprite_path": "cape/tattered/female/walk/navy.png",
+     "sprite_path_behind": "cape/tattered_behind/walk/navy.png"
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "steel",
+     "sprite_path": "arms/armour/plate/male/walk/steel.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "hoe",
+     "sprite_path": "tools/thrust/foreground/walk/hoe.png",
+     "sprite_path_behind": "tools/thrust/background/walk/hoe.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-healer-patient.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

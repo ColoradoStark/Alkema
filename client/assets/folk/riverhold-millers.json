@@ -1,0 +1,275 @@
+[
+ {
+  "id": "miller",
+  "role": "Miller",
+  "character": {
+   "id": "riverhold-millers-miller",
+   "name": "Lororas Sharp",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "merchant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "black",
+     "sprite_path": "body/bodies/male/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_plump",
+     "variant": "black",
+     "sprite_path": "head/heads/human/male_plump/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "black",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2_cardigan",
+     "variant": "tan",
+     "sprite_path": "torso/clothes/longsleeve/longsleeve2_cardigan/male/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "maroon",
+     "sprite_path": "legs/pants/male/walk/maroon.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "platinum",
+     "sprite_path": "hair/plain/adult/walk/platinum.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "mustache",
+     "item": "beards_chevron",
+     "variant": "platinum",
+     "sprite_path": "beards/mustache/chevron/walk/platinum.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_belly",
+     "variant": "brown",
+     "sprite_path": "torso/waist/belt_belly/male/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "necklace",
+     "item": "neck_necklace_simple",
+     "variant": "copper",
+     "sprite_path": "neck/necklace/simple/male/walk/copper.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_revised",
+     "variant": "leather",
+     "sprite_path": "feet/shoes/revised/male/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hat",
+     "item": "hat_helmet_spangenhelm",
+     "variant": "iron",
+     "sprite_path": "hat/helmet/spangenhelm/adult/walk/iron.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_squarepack",
+     "variant": "forest",
+     "sprite_path": "backpack/squarepack/male/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "copper",
+     "sprite_path": "arms/armour/plate/male/walk/copper.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "backpack_straps",
+     "item": "backpack_straps",
+     "variant": "tan",
+     "sprite_path": "backpack/straps/male/walk/tan.png",
+     "sprite_path_behind": null
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-millers-miller.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

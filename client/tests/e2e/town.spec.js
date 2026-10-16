@@ -248,23 +248,47 @@ test.describe('Riverhold', () => {
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold-inn-rooms');
     });
 
-    test('Wren is there the moment Riverhold loads, before the server has made anyone else', async ({ page }) => {
+    test('everyone is there the moment Riverhold loads, and a room loads only its own people', async ({ page }) => {
         test.setTimeout(90000);
+        const fetched = [];
+        page.on('request', r => { if (r.url().includes('/folk/')) fetched.push(new URL(r.url()).pathname); });
         await enterWorld(page);
-        // The server never gets round to the townsfolk
+        // The server never gets round to making anyone
         await page.evaluate(() => {
             const net = window.__PHASER_GAME.scene.getScene('GameScene').networkManager;
             const request = net.request.bind(net);
             net.request = (event, ...rest) => (event === 'town-folk' ? new Promise(() => {}) : request(event, ...rest));
         });
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        const cast = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.data.folk.map(f => f.id));
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.map(f => f.plan.id)),
-            { timeout: 20000 }).toEqual(['wren']);
-        // Drawn in her own outfit, at her post
-        await expect.poll(() => page.evaluate(() => {
-            const wren = window.__PHASER_GAME.scene.getScene('GameScene').town.folk[0];
-            return { name: wren.name, drawn: !!wren.sprite.sprite?.texture && wren.sprite.sprite.texture.key !== '__MISSING' };
-        }), { timeout: 15000 }).toEqual({ name: 'Wren', drawn: true });
+            { timeout: 20000 }).toEqual(cast);
+        // Drawn, Wren in her own outfit
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
+            .filter(f => !f.sprite.sprite?.texture || f.sprite.sprite.texture.key === '__MISSING').length), { timeout: 15000 }).toBe(0);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'wren').name)).toBe('Wren');
+        // Only the town's own people came down, none of the rooms'
+        expect(fetched.filter(u => u.endsWith('.json'))).toEqual(['/folk/riverhold.json']);
+        expect(fetched.filter(u => u.includes('/folk/riverhold-weapons'))).toEqual([]);
+
+        // Into the smithy: the smith is there at once
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const exit = gs.town.data.exits.find(e => e.to === 'riverhold-weapons');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(exit.rect[0] + exit.rect[2] / 2, exit.rect[1] + 40 - 23);
+            me.body.reset(me.x, me.y);
+        });
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            keys.up = true;
+            for (let i = 0; i < 60 && gs.town?.key === 'riverhold'; i++) await new Promise(r => setTimeout(r, 50));
+            keys.up = false;
+        });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.map(f => f.plan.role)),
+            { timeout: 15000 }).toEqual(['Weaponsmith']);
+        expect(fetched.filter(u => u.endsWith('.json'))).toEqual(['/folk/riverhold.json', '/folk/riverhold-weapons.json']);
     });
 
     test("a long line of Wren's turns its page as she gets to its words, without a tap", async ({ page }) => {

@@ -1,0 +1,1348 @@
+[
+ {
+  "id": "guard12",
+  "role": "Off-duty guard",
+  "character": {
+   "id": "riverhold-inn-guard12",
+   "name": "Garel Turner",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "guard",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "bronze",
+     "sprite_path": "body/bodies/male/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_small",
+     "variant": "bronze",
+     "sprite_path": "head/heads/human/male_small/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "bronze",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "chainmail",
+     "item": "torso_chainmail",
+     "variant": "gray",
+     "sprite_path": "torso/chainmail/male/walk/gray.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "walnut",
+     "sprite_path": "legs/pants2/male/walk/walnut.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "raven",
+     "sprite_path": "hair/plain/adult/walk/raven.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hat",
+     "item": "hat_helmet_norman",
+     "variant": "iron",
+     "sprite_path": "hat/helmet/norman/adult/walk/iron.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_armour",
+     "variant": "gold",
+     "sprite_path": "feet/armour/plate/male/walk/gold.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoulders",
+     "item": "shoulders_leather",
+     "variant": "green",
+     "sprite_path": "shoulders/leather/male/walk/green.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "bronze",
+     "sprite_path": "arms/armour/plate/male/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_tattered",
+     "variant": "leather",
+     "sprite_path": "cape/tattered/female/walk/leather.png",
+     "sprite_path_behind": "cape/tattered_behind/walk/leather.png"
+    },
+    {
+     "type": "cape_trim",
+     "item": "cape_trim",
+     "variant": "maroon",
+     "sprite_path": "cape/trim/female/walk/maroon.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_polearm_spear",
+     "variant": "iron",
+     "sprite_path": "weapon/polearm/spear/foreground/walk/iron.png",
+     "sprite_path_behind": "weapon/polearm/spear/background/walk/iron.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-inn-guard12.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "innkeeper",
+  "role": "Innkeeper",
+  "character": {
+   "id": "riverhold-inn-innkeeper",
+   "name": "Orona Wright",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "merchant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "brown",
+     "sprite_path": "body/bodies/female/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female_small",
+     "variant": "brown",
+     "sprite_path": "head/heads/human/female_small/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "brown",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2_cardigan",
+     "variant": "navy",
+     "sprite_path": "torso/clothes/longsleeve/longsleeve2_cardigan/female/walk/navy.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal",
+     "sprite_path": "legs/pants/thin/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_straight",
+     "variant": "ash",
+     "sprite_path": "hair/long_straight/adult/walk/ash.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hairextl",
+     "item": "hairext_xlong_braidl",
+     "variant": "ash",
+     "sprite_path": "hair/extensions/bangs/xlong_braidl/adult/fg/walk/ash.png",
+     "sprite_path_behind": "hair/extensions/bangs/xlong_braidl/adult/bg/walk/ash.png"
+    },
+    {
+     "type": "hairextr",
+     "item": "hairext_xlong_braidr",
+     "variant": "ash",
+     "sprite_path": "hair/extensions/bangs/xlong_braidr/adult/fg/walk/ash.png",
+     "sprite_path_behind": "hair/extensions/bangs/xlong_braidr/adult/bg/walk/ash.png"
+    },
+    {
+     "type": "belt",
+     "item": "belt_other_female",
+     "variant": "black",
+     "sprite_path": "torso/waist/belt_other/female/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "necklace",
+     "item": "neck_necklace_chain",
+     "variant": "ceramic",
+     "sprite_path": "neck/necklace/chain/female/walk/ceramic.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "black",
+     "sprite_path": "feet/shoes/basic/thin/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "ceramic",
+     "sprite_path": "arms/armour/plate/female/walk/ceramic.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "square",
+     "sprite_path": "backpack/basket/fg/walk/square.png",
+     "sprite_path_behind": "backpack/basket/bg/walk/square.png"
+    },
+    {
+     "type": "backpack_straps",
+     "item": "backpack_straps",
+     "variant": "black",
+     "sprite_path": "backpack/straps/female/walk/black.png",
+     "sprite_path_behind": null
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-inn-innkeeper.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "patron",
+  "role": "Drover",
+  "character": {
+   "id": "riverhold-inn-patron",
+   "name": "Gwenonan Hunter",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "taupe",
+     "sprite_path": "body/bodies/male/walk/taupe.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_plump",
+     "variant": "taupe",
+     "sprite_path": "head/heads/human/male_plump/walk/taupe.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "taupe",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "tan",
+     "sprite_path": "torso/clothes/shortsleeve/tshirt/male/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_shorts",
+     "variant": "green",
+     "sprite_path": "legs/shorts/shorts/male/walk/green.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_buzzcut",
+     "variant": "rose",
+     "sprite_path": "hair/buzzcut/adult/walk/rose.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "charcoal",
+     "sprite_path": "feet/boots/basic/male/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_solid",
+     "variant": "forest",
+     "sprite_path": "cape/solid/female/walk/forest.png",
+     "sprite_path_behind": "cape/solid_behind/walk/forest.png"
+    },
+    {
+     "type": "cape_trim",
+     "item": "cape_trim",
+     "variant": "forest",
+     "sprite_path": "cape/trim/female/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_polearm_scythe",
+     "variant": "scythe",
+     "sprite_path": "weapon/polearm/scythe/walk/scythe.png",
+     "sprite_path_behind": "weapon/polearm/scythe/universal_behind/walk/scythe.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-inn-patron.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "slash_oversize": {
+      "y_offset": 3392,
+      "frame_size": 192,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_oversize",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "bard",
+  "role": "Bard",
+  "character": {
+   "id": "riverhold-inn-bard",
+   "name": "Dunara Porter",
+   "body_type": "female",
+   "race": "elf",
+   "character_class": "noble",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber",
+     "sprite_path": "body/bodies/female/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female_small",
+     "variant": "amber",
+     "sprite_path": "head/heads/human/female_small/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "ears",
+     "item": "head_ears_long",
+     "variant": "amber",
+     "sprite_path": "head/ears/long/adult/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2_buttoned",
+     "variant": "brown",
+     "sprite_path": "torso/clothes/longsleeve/longsleeve2_buttoned/female/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_formal_striped",
+     "variant": "brown",
+     "sprite_path": "legs/formal_striped/thin/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_bob",
+     "variant": "orange",
+     "sprite_path": "hair/bob/adult/walk/orange.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_solid",
+     "variant": "orange",
+     "sprite_path": "cape/solid/female/walk/orange.png",
+     "sprite_path_behind": "cape/solid_behind/walk/orange.png"
+    },
+    {
+     "type": "hat",
+     "item": "hat_formal_tiara",
+     "variant": "red",
+     "sprite_path": "hat/formal/tiara/adult/walk/red.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "necklace",
+     "item": "neck_necklace_chain",
+     "variant": "bronze",
+     "sprite_path": "neck/necklace/chain/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_sara",
+     "variant": "white",
+     "sprite_path": "feet/shoes/sara/thin/walk/white.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_leather",
+     "variant": "tan",
+     "sprite_path": "torso/waist/belt_leather/female/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoulders",
+     "item": "shoulders_legion",
+     "variant": "bronze",
+     "sprite_path": "shoulders/legion/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_sword_rapier",
+     "variant": "rapier",
+     "sprite_path": "weapon/sword/rapier/walk/rapier.png",
+     "sprite_path_behind": "weapon/sword/rapier/universal_behind/walk/rapier.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-inn-bard.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "slash_oversize": {
+      "y_offset": 3392,
+      "frame_size": 192,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_oversize",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "traveller",
+  "role": "Traveller",
+  "character": {
+   "id": "riverhold-inn-traveller",
+   "name": "Darellan Campbell",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "ranger",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "taupe",
+     "sprite_path": "body/bodies/male/walk/taupe.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "taupe",
+     "sprite_path": "head/heads/human/male/walk/taupe.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "taupe",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "armour",
+     "item": "torso_armour_leather",
+     "variant": "leather",
+     "sprite_path": "torso/armour/leather/male/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal",
+     "sprite_path": "legs/pants/male/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_parted3",
+     "variant": "green",
+     "sprite_path": "hair/parted3/adult/walk/green.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_tattered",
+     "variant": "forest",
+     "sprite_path": "cape/tattered/female/walk/forest.png",
+     "sprite_path_behind": "cape/tattered_behind/walk/forest.png"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_revised",
+     "variant": "forest",
+     "sprite_path": "feet/boots/revised/male/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hat",
+     "item": "hat_cap_leather",
+     "variant": "orange",
+     "sprite_path": "hat/cloth/leather_cap/adult/walk/orange.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape_trim",
+     "item": "cape_trim",
+     "variant": "forest",
+     "sprite_path": "cape/trim/female/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_ranged_bow_great",
+     "variant": "copper",
+     "sprite_path": "weapon/ranged/bow/great/walk/foreground/copper.png",
+     "sprite_path_behind": "weapon/ranged/bow/great/walk/background/copper.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-inn-traveller.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "walk_128": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 9,
+      "num_directions": 4,
+      "base_animation": "walk"
+     },
+     "blanked_animations": [
+      "thrust",
+      "slash",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": "walk_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

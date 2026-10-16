@@ -1,0 +1,282 @@
+[
+ {
+  "id": "armourer",
+  "role": "Armourer",
+  "character": {
+   "id": "riverhold-armour-armourer",
+   "name": "Rhiiel Carpenter",
+   "body_type": "male",
+   "race": "dwarf",
+   "character_class": "guard",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "fur_brown",
+     "sprite_path": "body/bodies/male/walk/fur_brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "chainmail",
+     "item": "torso_chainmail",
+     "variant": "gray",
+     "sprite_path": "torso/chainmail/male/walk/gray.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_legion",
+     "variant": "charcoal",
+     "sprite_path": "legs/skirts/legion/male/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_topknot_short",
+     "variant": "black",
+     "sprite_path": "hair/extensions/ponytails/topknot_short/adult/walk/black.png",
+     "sprite_path_behind": "hair/parted_side_bangs/adult/walk/black.png"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hat",
+     "item": "hat_helmet_pointed",
+     "variant": "silver",
+     "sprite_path": "hat/helmet/pointed/adult/walk/silver.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_armour",
+     "variant": "brass",
+     "sprite_path": "feet/armour/plate/male/walk/brass.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoulders",
+     "item": "shoulders_leather",
+     "variant": "forest",
+     "sprite_path": "shoulders/leather/male/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_tattered",
+     "variant": "brown",
+     "sprite_path": "cape/tattered/female/walk/brown.png",
+     "sprite_path_behind": "cape/tattered_behind/walk/brown.png"
+    },
+    {
+     "type": "cape_trim",
+     "item": "cape_trim",
+     "variant": "charcoal",
+     "sprite_path": "cape/trim/female/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_sword_arming",
+     "variant": "copper",
+     "sprite_path": "weapon/sword/arming/universal/fg/walk/copper.png",
+     "sprite_path_behind": "weapon/sword/arming/universal/bg/walk/copper.png"
+    },
+    {
+     "type": "shield",
+     "item": "shield_heater_revised_wood",
+     "variant": "brown",
+     "sprite_path": "shield/heater/revised/wood/fg/walk/brown.png",
+     "sprite_path_behind": "shield/heater/revised/wood/bg/walk/brown.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-armour-armourer.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "backslash_128": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 13,
+      "num_directions": 4,
+      "base_animation": "backslash"
+     },
+     "halfslash_128": {
+      "y_offset": 3904,
+      "frame_size": 128,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "halfslash"
+     },
+     "slash_128": {
+      "y_offset": 4416,
+      "frame_size": 128,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": "backslash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": "halfslash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     }
+    }
+   }
+  }
+ }
+]

@@ -1,0 +1,295 @@
+[
+ {
+  "id": "widow",
+  "role": "Widow",
+  "character": {
+   "id": "riverhold-rosecottage-widow",
+   "name": "Maroli Sharp",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "noble",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "bronze",
+     "sprite_path": "body/bodies/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female_small",
+     "variant": "bronze",
+     "sprite_path": "head/heads/human/female_small/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "bronze",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2_buttoned",
+     "variant": "tan",
+     "sprite_path": "torso/clothes/longsleeve/longsleeve2_buttoned/female/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_hose",
+     "variant": "charcoal",
+     "sprite_path": "legs/hose/thin/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_curtains_long",
+     "variant": "platinum",
+     "sprite_path": "hair/curtains_long/adult/walk/platinum.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_solid",
+     "variant": "maroon",
+     "sprite_path": "cape/solid/female/walk/maroon.png",
+     "sprite_path_behind": "cape/solid_behind/walk/maroon.png"
+    },
+    {
+     "type": "hat",
+     "item": "hat_formal_tiara",
+     "variant": "walnut",
+     "sprite_path": "hat/formal/tiara/adult/walk/walnut.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "necklace",
+     "item": "neck_necklace_beaded_large",
+     "variant": "bronze",
+     "sprite_path": "neck/necklace/beaded_large/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_ghillies",
+     "variant": "forest",
+     "sprite_path": "feet/shoes/ghillies/thin/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "bronze",
+     "sprite_path": "arms/armour/plate/female/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_belly",
+     "variant": "leather",
+     "sprite_path": "torso/waist/belt_belly/female/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoulders",
+     "item": "shoulders_legion",
+     "variant": "steel",
+     "sprite_path": "shoulders/legion/female/walk/steel.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_sword_arming",
+     "variant": "steel",
+     "sprite_path": "weapon/sword/arming/universal/fg/walk/steel.png",
+     "sprite_path_behind": "weapon/sword/arming/universal/bg/walk/steel.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-rosecottage-widow.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "backslash_128": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 13,
+      "num_directions": 4,
+      "base_animation": "backslash"
+     },
+     "halfslash_128": {
+      "y_offset": 3904,
+      "frame_size": 128,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "halfslash"
+     },
+     "slash_128": {
+      "y_offset": 4416,
+      "frame_size": 128,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": "backslash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": "halfslash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     }
+    }
+   }
+  }
+ }
+]

@@ -1,0 +1,269 @@
+[
+ {
+  "id": "guest",
+  "role": "Sleepy guest",
+  "character": {
+   "id": "riverhold-inn-rooms-guest",
+   "name": "Garel Gold",
+   "body_type": "male",
+   "race": "elf",
+   "character_class": "merchant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber",
+     "sprite_path": "body/bodies/male/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber",
+     "sprite_path": "head/heads/human/male/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "ears",
+     "item": "head_ears_long",
+     "variant": "amber",
+     "sprite_path": "head/ears/long/adult/walk/amber.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve_formal",
+     "variant": "white",
+     "sprite_path": "torso/clothes/longsleeve/formal/male/walk/white.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "tan",
+     "sprite_path": "legs/pants/male/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_spiked_liberty",
+     "variant": "pink",
+     "sprite_path": "hair/spiked_liberty/adult/walk/pink.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_belly",
+     "variant": "charcoal",
+     "sprite_path": "torso/waist/belt_belly/male/walk/charcoal.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "necklace",
+     "item": "neck_necklace_simple",
+     "variant": "bronze",
+     "sprite_path": "neck/necklace/simple/male/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_revised",
+     "variant": "green",
+     "sprite_path": "feet/shoes/revised/male/walk/green.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "copper",
+     "sprite_path": "arms/armour/plate/male/walk/copper.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round",
+     "sprite_path": "backpack/basket/fg/walk/round.png",
+     "sprite_path_behind": "backpack/basket/bg/walk/round.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-inn-rooms-guest.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

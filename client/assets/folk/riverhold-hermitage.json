@@ -1,0 +1,269 @@
+[
+ {
+  "id": "hermit",
+  "role": "Hermit",
+  "character": {
+   "id": "riverhold-hermitage-hermit",
+   "name": "Wyndan Hunter",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "mage",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light",
+     "sprite_path": "body/bodies/male/walk/light.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_plump",
+     "variant": "light",
+     "sprite_path": "head/heads/human/male_plump/walk/light.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "brown",
+     "sprite_path": "torso/clothes/longsleeve/longsleeve2/male/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "forest",
+     "sprite_path": "legs/pants/male/walk/forest.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_relm_xlong",
+     "variant": "sandy",
+     "sprite_path": "hair/relm_xlong/adult/fg/walk/sandy.png",
+     "sprite_path_behind": "hair/relm_xlong/adult/bg/walk/sandy.png"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "mustache",
+     "item": "beards_handlebar",
+     "variant": "sandy",
+     "sprite_path": "beards/mustache/handlebar/walk/sandy.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_solid",
+     "variant": "walnut",
+     "sprite_path": "cape/solid/female/walk/walnut.png",
+     "sprite_path_behind": "cape/solid_behind/walk/walnut.png"
+    },
+    {
+     "type": "hat",
+     "item": "hat_magic_celestial_moon",
+     "variant": "brown",
+     "sprite_path": "hat/magic/celestial_moon/adult/walk/brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_slippers",
+     "variant": "leather",
+     "sprite_path": "feet/slippers/male/walk/leather.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "belt",
+     "item": "belt_double",
+     "variant": "tan",
+     "sprite_path": "torso/waist/belt_double/male/walk/tan.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_magic_s",
+     "variant": "ceramic",
+     "sprite_path": "weapon/magic/s/universal/foreground/walk/ceramic.png",
+     "sprite_path_behind": "weapon/magic/s/universal/background/walk/ceramic.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-hermitage-hermit.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "thrust_oversize": {
+      "y_offset": 3392,
+      "frame_size": 192,
+      "num_frames": 8,
+      "num_directions": 4,
+      "base_animation": "thrust"
+     },
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": "thrust_oversize",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

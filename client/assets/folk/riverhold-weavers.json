@@ -1,0 +1,248 @@
+[
+ {
+  "id": "weaver",
+  "role": "Weaver",
+  "character": {
+   "id": "riverhold-weavers-weaver",
+   "name": "Raelina MacNiall",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "black",
+     "sprite_path": "body/bodies/female/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "black",
+     "sprite_path": "head/heads/human/female/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "black",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "maroon",
+     "sprite_path": "torso/aprons/suspenders/female/walk/maroon.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_shorts",
+     "variant": "white",
+     "sprite_path": "legs/shorts/shorts/thin/walk/white.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_loose",
+     "variant": "light brown",
+     "sprite_path": "hair/loose/adult/walk/light_brown.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "white",
+     "sprite_path": "feet/shoes/basic/thin/walk/white.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "cape",
+     "item": "cape_tattered",
+     "variant": "maroon",
+     "sprite_path": "cape/tattered/female/walk/maroon.png",
+     "sprite_path_behind": "cape/tattered_behind/walk/maroon.png"
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_polearm_scythe",
+     "variant": "scythe",
+     "sprite_path": "weapon/polearm/scythe/walk/scythe.png",
+     "sprite_path_behind": "weapon/polearm/scythe/universal_behind/walk/scythe.png"
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-weavers-weaver.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "slash_oversize": {
+      "y_offset": 3392,
+      "frame_size": 192,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_oversize",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

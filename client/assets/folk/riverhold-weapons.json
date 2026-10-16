@@ -1,0 +1,270 @@
+[
+ {
+  "id": "smith",
+  "role": "Weaponsmith",
+  "character": {
+   "id": "riverhold-weapons-smith",
+   "name": "Thalur Frost",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "warrior",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "black",
+     "sprite_path": "body/bodies/male/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_gaunt",
+     "variant": "black",
+     "sprite_path": "head/heads/human/male_gaunt/walk/black.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "black",
+     "sprite_path": null,
+     "sprite_path_behind": null
+    },
+    {
+     "type": "armour",
+     "item": "torso_armour_plate",
+     "variant": "copper",
+     "sprite_path": "torso/armour/plate/male/walk/copper.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "legs",
+     "item": "legs_armour",
+     "variant": "bronze",
+     "sprite_path": "legs/armour/plate/male/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "hair",
+     "item": "hair_spiked_liberty2",
+     "variant": "blonde",
+     "sprite_path": "hair/spiked_liberty2/adult/walk/blonde.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow",
+     "sprite_path": "shadow/adult/walk/shadow.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "blue",
+     "sprite_path": "feet/boots/basic/male/walk/blue.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "shoulders",
+     "item": "shoulders_legion",
+     "variant": "bronze",
+     "sprite_path": "shoulders/legion/male/walk/bronze.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "arms",
+     "item": "arms_armour",
+     "variant": "iron",
+     "sprite_path": "arms/armour/plate/male/walk/iron.png",
+     "sprite_path_behind": null
+    },
+    {
+     "type": "weapon",
+     "item": "weapon_sword_scimitar",
+     "variant": "scimitar",
+     "sprite_path": "weapon/sword/scimitar/walk/scimitar.png",
+     "sprite_path_behind": "weapon/sword/scimitar/walk/behind/scimitar.png"
+    },
+    {
+     "type": "shield",
+     "item": "shield_kite",
+     "variant": "kite orange",
+     "sprite_path": "shield/kite/male/walk/kite_orange.png",
+     "sprite_path_behind": null
+    }
+   ],
+   "spriteUrl": "/folk/riverhold-weapons-smith.png",
+   "animations": {
+    "complete": [
+     "slash",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "slash_128": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
+     "walk_128": {
+      "y_offset": 3904,
+      "frame_size": 128,
+      "num_frames": 9,
+      "num_directions": 4,
+      "base_animation": "walk"
+     },
+     "blanked_animations": [
+      "thrust",
+      "shoot",
+      "climb",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": "walk_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": "slash_128",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

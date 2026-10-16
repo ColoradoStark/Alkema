@@ -25,7 +25,7 @@ export function preloadTown(load, key) {
     load.image(`town-${key}-things`, `/towns/${key}-things.png`);
     if (!load.scene.cache.json.exists('portraits')) load.json('portraits', '/portraits/portraits.json');
     if (!load.scene.cache.json.exists('talk')) load.json('talk', '/portraits/talk.json');
-    if (!load.scene.cache.json.exists('folk')) load.json('folk', '/folk/folk.json');   // those kept ready-made (tools/bake_folk.py)
+    load.json(`folk-${key}`, `/folk/${key}.json`);   // the people there, ready-made (tools/bake_folk.py)
 }
 
 export class Town {
