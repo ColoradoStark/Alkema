@@ -2,8 +2,11 @@
 // bottom of the map view with their name and words (typed out), and above it a
 // large portrait: their own sprite, bust-high and scaled up crisp, on a
 // backdrop drawn from the colours they're wearing, in a gold frame.
-// Anyone with a painted portrait (tools/portraits.py) shows that instead:
-// /portraits/<their sprite id>.webp, listed in /portraits/portraits.json.
+// Anyone with a painted portrait (tools/portraits.py) shows that instead,
+// filling the whole map view above the box: /portraits/<their sprite id>.webp,
+// listed in /portraits/portraits.json. It's drawn as a page layer over the
+// canvas, so it's sharp at the screen's own resolution rather than the
+// game's 352 px.
 
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
@@ -21,13 +24,18 @@ const PAGE = 150;              // letters per page, at most
 
 export const portraitUrl = (id) => `/portraits/${id}.webp`;
 
+const painted = new Map();     // sprite id -> its painted portrait (an <img>), fetched with their town
+
 /** Fetch the painted portraits of these people (sprite ids), for those who have one. */
 export function loadPortraits(scene, ids) {
-    const painted = new Set(scene.cache.json.get('portraits') || []);
-    const todo = ids.filter(id => id && painted.has(id) && !scene.textures.exists(`portrait-${id}`));
-    if (!todo.length) return;
-    for (const id of todo) scene.load.image(`portrait-${id}`, portraitUrl(id));
-    scene.load.start();
+    const listed = new Set(scene.cache.json.get('portraits') || []);
+    for (const id of ids) {
+        if (!id || !listed.has(id) || painted.has(id)) continue;
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = portraitUrl(id);
+        painted.set(id, img);
+    }
 }
 
 export class Dialogue {
@@ -78,6 +86,27 @@ export class Dialogue {
         });
         this.plate.add([this.plateBg, this.name, this.role]);
         this.container.add([this.box, this.plate]);
+        this.top = top;
+
+        // A painted portrait: over the canvas, filling the map view down to the name plate
+        this.view = document.createElement('img');
+        this.view.className = 'story-portrait';
+        Object.assign(this.view.style, {
+            position: 'fixed', zIndex: '5', pointerEvents: 'none', display: 'none', objectFit: 'cover',
+            objectPosition: '50% 22%', boxSizing: 'border-box', borderBottom: '2px solid #c8a04a',
+            opacity: '0', transition: 'opacity 160ms',
+        });
+        this.view.alt = '';
+        document.body.appendChild(this.view);
+        this.showing = null;      // whose painting is up, or 'sprite'
+        this._onResize = () => this._placeView();
+        window.addEventListener('resize', this._onResize);
+        window.visualViewport?.addEventListener('resize', this._onResize);
+        scene.events.once('shutdown', () => {
+            window.removeEventListener('resize', this._onResize);
+            window.visualViewport?.removeEventListener('resize', this._onResize);
+            this.view.remove();
+        });
 
         // Anywhere on the screen moves the story on
         this.hit = scene.add.zone(0, 0, W, scene.scale.height).setOrigin(0, 0).setInteractive();
@@ -101,7 +130,32 @@ export class Dialogue {
         const name = folk.name || '';
         this.name.setText(name);
         this.role.setText(folk.plan.role || '');
-        // Name and role side by side if they fit beside the portrait, else the role underneath
+        const img = painted.get(folk.sprite?.characterData?.id);
+        this._layout(!!img?.naturalWidth);
+        this.pages = paginate(folk.plan.says || '...');
+        this.page = 0;
+        if (img?.naturalWidth) this._showPainted(img);
+        else {
+            this._portrait(folk);
+            // Still on its way: put it up when it comes, if they're still talking
+            img?.decode().then(() => {
+                if (this.who === folk && this.visible) {
+                    this._layout(true);
+                    this._showPainted(img);
+                }
+            }, () => {});
+        }
+        this.container.setVisible(true).setAlpha(0);
+        this.scene.tweens.add({ targets: this.container, alpha: 1, duration: 160 });
+        audio.play('menu_open', { volume: 0.5 });
+        this._type();
+    }
+
+    /** The name plate: at the box's left under a painting, else beside the sprite portrait. */
+    _layout(full) {
+        this.plate.x = full ? 12 : this.px + PORTRAIT + 4;
+        for (const o of [this.backdrop, this.portraitLayer, this.frame]) o.setVisible(!full);
+        // Name and role side by side if they fit, else the role underneath
         const room = this.scene.scale.width - this.plate.x - 8;
         const oneLine = this.name.width + this.role.width + 30 <= room;
         this.role.setPosition(oneLine ? this.name.width + 18 : 10, oneLine ? 6 : 22);
@@ -110,13 +164,26 @@ export class Dialogue {
         this.plate.y = this.box.y - ph + 12;
         this.plateBg.clear().fillStyle(INK, 0.92).fillRoundedRect(0, 0, pw, ph, 4)
             .lineStyle(1, 0xc8a04a, 1).strokeRoundedRect(0.5, 0.5, pw - 1, ph - 1, 4);
-        this.pages = paginate(folk.plan.says || '...');
-        this.page = 0;
-        this._portrait(folk);
-        this.container.setVisible(true).setAlpha(0);
-        this.scene.tweens.add({ targets: this.container, alpha: 1, duration: 160 });
-        audio.play('menu_open', { volume: 0.5 });
-        this._type();
+    }
+
+    _showPainted(img) {
+        this.view.src = img.src;
+        this.showing = img.src;
+        this._placeView();
+        this.view.style.display = 'block';
+        requestAnimationFrame(() => { this.view.style.opacity = '1'; });
+    }
+
+    /** Line the painting up with the map view on screen, wherever the canvas is. */
+    _placeView() {
+        const canvas = this.scene.game.canvas;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const k = rect.width / this.scene.scale.width;
+        Object.assign(this.view.style, {
+            left: `${rect.left}px`, top: `${rect.top + this.top * k}px`,
+            width: `${rect.width}px`, height: `${(this.plate.y - this.top) * k}px`,
+        });
     }
 
     /** Finish the line being typed, or turn the page, or close. */
@@ -140,6 +207,9 @@ export class Dialogue {
         this._typing?.remove();
         this._typing = null;
         this.container.setVisible(false);
+        this.view.style.display = 'none';
+        this.view.style.opacity = '0';
+        this.showing = null;
         audio.play('menu_close', { volume: 0.5 });
         this.onClose?.(this.who);
         this.who = null;
@@ -168,24 +238,19 @@ export class Dialogue {
         this.portraitLayer.removeAll(true);
         const scene = this.scene;
         const s = folk.sprite;
-        const painted = `portrait-${s.characterData?.id}`;
         let colour = 0x5b6ee1;
-        if (scene.textures.exists(painted)) {
-            const img = scene.add.image(this.px, this.py, painted).setOrigin(0, 0).setDisplaySize(PORTRAIT, PORTRAIT);
+        this.showing = 'sprite';
+        const frame = idleFrontFrame(s);
+        if (frame) {
+            colour = clothingColour(scene, frame) ?? colour;
+            const k = PORTRAIT / BUST.w;
+            const bx = BUST.x + frame.offset, by = BUST.y + frame.offset;
+            const img = scene.add.image(0, 0, frame.textureKey, frame.frame).setOrigin(0, 0).setScale(k)
+                .setCrop(bx, by, BUST.w, BUST.h);
+            img.setPosition(this.px - bx * k, this.py + 10 - by * k);
             this.portraitLayer.add(img);
-        } else {
-            const frame = idleFrontFrame(s);
-            if (frame) {
-                colour = clothingColour(scene, frame) ?? colour;
-                const k = PORTRAIT / BUST.w;
-                const bx = BUST.x + frame.offset, by = BUST.y + frame.offset;
-                const img = scene.add.image(0, 0, frame.textureKey, frame.frame).setOrigin(0, 0).setScale(k)
-                    .setCrop(bx, by, BUST.w, BUST.h);
-                img.setPosition(this.px - bx * k, this.py + 10 - by * k);
-                this.portraitLayer.add(img);
-                const mask = scene.make.graphics({}, false).fillRect(this.px + 3, this.py + 3, PORTRAIT - 6, PORTRAIT - 6);
-                img.setMask(mask.createGeometryMask());
-            }
+            const mask = scene.make.graphics({}, false).fillRect(this.px + 3, this.py + 3, PORTRAIT - 6, PORTRAIT - 6);
+            img.setMask(mask.createGeometryMask());
         }
         this._drawBackdrop(colour);
     }

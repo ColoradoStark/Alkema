@@ -48,9 +48,6 @@ test.describe('Riverhold', () => {
         // The townsfolk arrive from the character generator: posted ones and wanderers
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
             { timeout: 120000, intervals: [1000] }).toBeGreaterThan(10);
-        // Their painted portraits come after them
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('portrait-riverhold-guard1')),
-            { timeout: 30000 }).toBe(true);
         // Walk into the gate warden: story mode, with the warden's portrait and words
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -62,9 +59,18 @@ test.describe('Riverhold', () => {
         await hold(page, 'left', 600);
         const talk = () => page.evaluate(() => {
             const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
-            return { open: d.visible, role: d.role.text, portrait: d.portraitLayer.list[0]?.texture.key };
+            return { open: d.visible, role: d.role.text, portrait: d.showing };
         });
-        await expect.poll(talk).toEqual({ open: true, role: 'Gate warden', portrait: 'portrait-riverhold-guard1' });
+        await expect.poll(talk, { timeout: 30000 })
+            .toEqual({ open: true, role: 'Gate warden', portrait: expect.stringContaining('/portraits/riverhold-guard1.webp') });
+        // ...painted, filling the map view: the canvas's full width, down to the name plate
+        const fit = await page.evaluate(() => {
+            const view = document.querySelector('.story-portrait').getBoundingClientRect();
+            const canvas = window.__PHASER_GAME.canvas.getBoundingClientRect();
+            return { width: Math.round(view.width - canvas.width), tall: view.height / canvas.height };
+        });
+        expect(fit.width).toBe(0);
+        expect(fit.tall).toBeGreaterThan(0.5);
         // The world waits: you don't move while they talk
         const before = await where(page);
         await hold(page, 'right', 400);
@@ -75,6 +81,7 @@ test.describe('Riverhold', () => {
             .toBe('Gate stays open till dusk. Keep your blade sheathed in town.');
         await page.keyboard.press('Space');
         expect((await talk()).open).toBe(false);
+        expect(await page.locator('.story-portrait').isVisible()).toBe(false);
 
         // Back to the gate and out
         await page.evaluate(() => {
