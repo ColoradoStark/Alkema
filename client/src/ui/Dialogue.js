@@ -11,7 +11,8 @@
 // game's 352 px. Some also have a short voiced clip for each line
 // (tools/talkies.py, listed in /portraits/talk.json): it plays over the
 // painting, which is its first frame, while the line is up, and fades back
-// to the painting when it ends.
+// to the painting when it ends. A line too long for one page turns its pages
+// as it's said: talk.json has when each of its words is spoken.
 
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
@@ -180,6 +181,7 @@ export class Dialogue {
             this.history.remove();
         });
         this.answers = new Map();     // what you said to whoever asked you something (this visit)
+        scene.events.on('update', () => this._follow());
 
         // Anywhere on the screen moves the story on
         this.hit = scene.add.zone(0, 0, W, scene.scale.height).setOrigin(0, 0).setInteractive();
@@ -294,11 +296,11 @@ export class Dialogue {
     /** Play the clip of the line this page is from, from the start; a page further into the same line lets it play on. */
     _playClip(page) {
         const clip = page && this.clips.get(page.line);
-        if (clip && clip === this.clip && page.more) return;
+        if (clip && clip === this.clip && page.more && clip.currentTime < this._saidBy(this.page + 1)) return;   // saying it now
         this._stopClip();
         if (!clip || !this.painting || this.showing !== this.painting.src) return;
         this.clip = clip;
-        clip.currentTime = 0;
+        clip.currentTime = page.more ? Math.max(0, (clip.said[page.word] ?? 0) - 0.15) : 0;    // back to a later page: from its words
         clip.muted = audio.mode === 'off';
         clip.style.opacity = '0';
         this.stage.replaceChildren(this.still, clip);
@@ -315,6 +317,22 @@ export class Dialogue {
             clip.muted = true;
             clip.play().then(playing, () => {});
         });
+    }
+
+    /** When this page's words start in its line's clip (Infinity if it's another line's). */
+    _saidBy(i) {
+        const page = this.pages[i];
+        return page?.more && page.line === this.pages[i - 1]?.line ? (this.clips.get(page.line)?.said[page.word] ?? Infinity) : Infinity;
+    }
+
+    /** Turn the page when they get to its words (or finish the line when the clip ends). */
+    _follow() {
+        const clip = this.clip;
+        if (!clip || !this.visible || this.history.style.display !== 'none') return;
+        if (!clip.ended && (clip.paused || clip.currentTime < this._saidBy(this.page + 1) - 0.1)) return;
+        if (this._saidBy(this.page + 1) === Infinity) return;      // the line's last page
+        this.page++;
+        this._show(this.page > this.seen);
     }
 
     _stopClip() {
@@ -558,7 +576,14 @@ function clothingColour(scene, { textureKey, frame, offset }) {
 
 /** Lines into pages ({text}), each line starting a page of its own. */
 function pages(lines) {
-    return lines.flatMap(line => paginate(line).map((text, i) => ({ text, line, more: i > 0 })));   // more: the same line, run on
+    return lines.flatMap(line => {
+        let word = 0;     // the line's word each page starts at
+        return paginate(line).map((text, i) => {
+            const page = { text, line, word, more: i > 0 };     // more: the same line, run on
+            word += text.split(/\s+/).length;
+            return page;
+        });
+    });
 }
 
 /** Someone's clips, line by line (an empty Map if they have none). Made once, and fetched as soon as they're made. */
@@ -566,8 +591,9 @@ function clipsOf(scene, id) {
     const listed = id && scene.cache.json.get('talk')?.[id];
     if (!listed) return new Map();
     if (!voiced.has(id)) {
-        voiced.set(id, new Map(Object.entries(listed).map(([line, file]) => {
+        voiced.set(id, new Map(Object.entries(listed).map(([line, { clip: file, at }]) => {
             const v = document.createElement('video');
+            v.said = at || [];        // when each word of the line is said (s)
             v.playsInline = true;
             v.preload = 'auto';
             v.disablePictureInPicture = true;

@@ -267,6 +267,45 @@ test.describe('Riverhold', () => {
         }), { timeout: 15000 }).toEqual({ name: 'Wren', drawn: true });
     });
 
+    test("a long line of Wren's turns its page as she gets to its words, without a tap", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'wren')),
+            { timeout: 60000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === 'wren'));
+        });
+        const line = "But the road's crawling with bandits since the bridge washed out, and the wolves are bold enough to take a drover's cattle.";
+        const ui = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { page: d.page, more: !!d.pages[d.page].more, text: d.text.text, clip: d.clip?.dataset.line, t: d.clip?.currentTime ?? 0, playing: !!d.clip && !d.clip.paused };
+        });
+        await expect.poll(() => ui().then(u => u.playing), { timeout: 30000 }).toBe(true);
+        // Straight to the bandits line: two pages, and one clip saying both
+        const first = await page.evaluate((line) => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            d.page = d.pages.findIndex(p => p.line === line);
+            d._show(true);
+            return d.page;
+        }, line);
+        await expect.poll(ui, { timeout: 15000 }).toMatchObject({ page: first, more: false, clip: line, playing: true });
+        // No tap: the second page comes up when she says its first word, and she says it on, uninterrupted
+        await expect.poll(ui, { timeout: 15000, intervals: [100] }).toMatchObject({ page: first + 1, more: true });
+        const turned = await ui();
+        expect(turned.clip).toBe(line);
+        expect(turned.t).toBeGreaterThan(2);
+        await expect.poll(() => ui().then(u => u.text), { timeout: 5000 }).toBe(line.slice(line.indexOf(turned.text.split(' ')[0], 40)));
+        // She doesn't run on past her own line
+        await page.waitForTimeout(6000);
+        expect((await ui()).page).toBe(first + 1);
+        // Back to the line's first page: she says it again from the start
+        await page.keyboard.press('Backspace');
+        await expect.poll(ui).toMatchObject({ page: first, more: false, clip: line });
+        expect((await ui()).t).toBeLessThan(2);
+    });
+
     test('Wren, just inside the gate, talks a line at a time, with back, a log, and asks to come with you', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
