@@ -248,6 +248,25 @@ test.describe('Riverhold', () => {
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold-inn-rooms');
     });
 
+    test('Wren is there the moment Riverhold loads, before the server has made anyone else', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        // The server never gets round to the townsfolk
+        await page.evaluate(() => {
+            const net = window.__PHASER_GAME.scene.getScene('GameScene').networkManager;
+            const request = net.request.bind(net);
+            net.request = (event, ...rest) => (event === 'town-folk' ? new Promise(() => {}) : request(event, ...rest));
+        });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.map(f => f.plan.id)),
+            { timeout: 20000 }).toEqual(['wren']);
+        // Drawn in her own outfit, at her post
+        await expect.poll(() => page.evaluate(() => {
+            const wren = window.__PHASER_GAME.scene.getScene('GameScene').town.folk[0];
+            return { name: wren.name, drawn: !!wren.sprite.sprite?.texture && wren.sprite.sprite.texture.key !== '__MISSING' };
+        }), { timeout: 15000 }).toEqual({ name: 'Wren', drawn: true });
+    });
+
     test('Wren, just inside the gate, talks a line at a time, with back, a log, and asks to come with you', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

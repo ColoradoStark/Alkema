@@ -25,6 +25,7 @@ export function preloadTown(load, key) {
     load.image(`town-${key}-things`, `/towns/${key}-things.png`);
     if (!load.scene.cache.json.exists('portraits')) load.json('portraits', '/portraits/portraits.json');
     if (!load.scene.cache.json.exists('talk')) load.json('talk', '/portraits/talk.json');
+    if (!load.scene.cache.json.exists('folk')) load.json('folk', '/folk/folk.json');   // those kept ready-made (tools/bake_folk.py)
 }
 
 export class Town {
@@ -60,11 +61,11 @@ export class Town {
         this._waterTime = 0;
     }
 
-    /** The townsfolk, as the server made them: [{ id, role, character }]. */
+    /** The townsfolk, ready-made or as the server made them: [{ id, role, character }]. Anyone already here stays. */
     populate(made) {
         for (const plan of this.data.folk) {
             const who = made.find(f => f.id === plan.id);
-            if (!who) continue;
+            if (!who || this.folk.some(f => f.plan.id === plan.id)) continue;
             const [x, y] = plan.post || this._randomSpot(plan.wander);
             const sprite = new CompositeCharacter(this.scene, x, y - FEET, who.character);
             sprite.body.enable = false;

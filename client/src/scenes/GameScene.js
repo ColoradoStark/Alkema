@@ -322,8 +322,14 @@ export class GameScene extends Scene {
         this._sendMove(0, 0);
     }
 
-    /** The townsfolk are made by the character generator on the server (once; then they're kept). */
+    /**
+     * The townsfolk are made by the character generator on the server (once;
+     * then they're kept). Those kept ready-made in the client are there at once.
+     */
     async _loadFolk(town) {
+        const ready = this.cache.json.get('folk')?.[town.key] || [];
+        town.populate(ready);
+        loadPortraits(this, ready.map(f => f.character.id));
         try {
             const res = await this.networkManager.request('town-folk', { town: town.key }, 90000);
             if (res?.ok && this.town === town) {
