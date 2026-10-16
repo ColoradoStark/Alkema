@@ -8,7 +8,10 @@
 // filling the whole screen above the box: /portraits/<their sprite id>.webp,
 // listed in /portraits/portraits.json. It's drawn as a page layer over the
 // canvas, so it's sharp at the screen's own resolution rather than the
-// game's 352 px.
+// game's 352 px. Some also have a short voiced clip for each line
+// (tools/talkies.py, listed in /portraits/talk.json): it plays over the
+// painting, which is its first frame, while the line is up, and fades back
+// to the painting when it ends.
 
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
@@ -24,8 +27,10 @@ const TYPE_MS = 18;            // per letter
 const PAGE = 80;               // letters per page, at most (two lines)
 
 export const portraitUrl = (id) => `/portraits/${id}.webp`;
+const CLIP_FORMATS = [['webm', 'video/webm'], ['mp4', 'video/mp4']];
 
 const painted = new Map();     // sprite id -> its painted portrait (an <img>), fetched with their town
+const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>), made when you first talk to them
 
 /** Fetch the painted portraits of these people (sprite ids), for those who have one. */
 export function loadPortraits(scene, ids) {
@@ -115,6 +120,19 @@ export class Dialogue {
         });
         this.view.alt = '';
         document.body.appendChild(this.view);
+        // Their clip for the line, over the painting and cut to the same frame
+        this.stage = document.createElement('div');
+        this.stage.className = 'story-clip';
+        Object.assign(this.stage.style, {
+            position: 'fixed', zIndex: '61', pointerEvents: 'none', display: 'none', overflow: 'hidden',
+            opacity: '0', transition: 'opacity 160ms',
+        });
+        this.still = document.createElement('img');     // the painting, under the clips
+        this.still.alt = '';
+        this.still.style.position = 'absolute';
+        document.body.appendChild(this.stage);
+        this.clip = null;         // the one playing
+        this.clips = new Map();   // line -> clip, for whoever's talking
         // Yes or No, over the portrait, when they ask you something
         this.choices = document.createElement('div');
         this.choices.className = 'story-choices';
@@ -157,6 +175,7 @@ export class Dialogue {
             window.removeEventListener('resize', this._onResize);
             window.visualViewport?.removeEventListener('resize', this._onResize);
             this.view.remove();
+            this.stage.remove();
             this.choices.remove();
             this.history.remove();
         });
@@ -189,6 +208,7 @@ export class Dialogue {
         this.pages = this._script(folk);
         this.page = 0;
         this.seen = 0;
+        this.clips = clipsOf(this.scene, folk.sprite?.characterData?.id);
         if (img?.naturalWidth) this._showPainted(img);
         else {
             this._portrait(folk);
@@ -197,6 +217,7 @@ export class Dialogue {
                 if (this.who === folk && this.visible) {
                     this._layout(true);
                     this._showPainted(img);
+                    this._playClip(this.pages[this.page]);
                 }
             }, () => {});
         }
@@ -215,7 +236,7 @@ export class Dialogue {
         const { says, ask, id } = folk.plan;
         const lines = Array.isArray(says) ? says : [says || '...'];
         if (ask && this.answers.get(id) === 'yes') return pages(ask.yes.slice(-1));
-        return [...pages(lines), ...(ask ? [{ text: ask.q, ask }] : [])];
+        return [...pages(lines), ...(ask ? [{ text: ask.q, line: ask.q, ask }] : [])];
     }
 
     /** The name plate: at the box's left under a painting, else beside the sprite portrait. */
@@ -236,11 +257,17 @@ export class Dialogue {
     }
 
     _showPainted(img) {
-        this.view.src = img.src;
+        this.painting = img;
         this.showing = img.src;
+        // Someone with clips: the painting goes on the clips' stage, cut as they are (their top part)
+        const shown = this.clips.size ? this.stage : this.view;
+        if (this.clips.size) {
+            this.still.src = img.src;
+            this.stage.replaceChildren(this.still);
+        } else this.view.src = img.src;
         this._placeView();
-        this.view.style.display = 'block';
-        requestAnimationFrame(() => { this.view.style.opacity = '1'; });
+        shown.style.display = 'block';
+        requestAnimationFrame(() => { shown.style.opacity = '1'; });
     }
 
     /** Line the painting up with the map view on screen, wherever the canvas is. */
@@ -250,10 +277,52 @@ export class Dialogue {
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
         const k = rect.width / this.scene.scale.width;
-        Object.assign(this.view.style, {
-            left: `${rect.left}px`, top: `${rect.top}px`,
-            width: `${rect.width}px`, height: `${this.box.y * k}px`,
+        const W = rect.width, H = this.box.y * k;
+        const area = { left: `${rect.left}px`, top: `${rect.top}px`, width: `${W}px`, height: `${H}px` };
+        Object.assign(this.view.style, area);
+        Object.assign(this.stage.style, area);
+        // The clips are the painting's top part (3:4): that part covers the stage, and the painting lines up under it
+        const img = this.painting;
+        if (!this.clips.size || !img?.naturalWidth) return;
+        const aspect = 4 / 3;
+        const w = Math.max(W, H / aspect);
+        const at = { left: `${(W - w) / 2}px`, top: `${(H - w * aspect) * 0.22}px`, width: `${w}px` };
+        Object.assign(this.still.style, at, { height: `${w * img.naturalHeight / img.naturalWidth}px` });
+        if (this.clip) Object.assign(this.clip.style, at, { height: `${w * aspect}px` });
+    }
+
+    /** Play the clip of the line this page is from, from the start; a page further into the same line lets it play on. */
+    _playClip(page) {
+        const clip = page && this.clips.get(page.line);
+        if (clip && clip === this.clip && page.more) return;
+        this._stopClip();
+        if (!clip || !this.painting || this.showing !== this.painting.src) return;
+        this.clip = clip;
+        clip.currentTime = 0;
+        clip.muted = audio.mode === 'off';
+        clip.style.opacity = '0';
+        this.stage.replaceChildren(this.still, clip);
+        this._placeView();
+        const playing = () => {
+            if (this.clip !== clip) return;
+            this._placeView();
+            clip.style.opacity = '1';
+            audio.duck((Number.isFinite(clip.duration) ? clip.duration : 8) * 1000 + 300, 0.3);   // the music under her voice
+        };
+        clip.play().then(playing, () => {
+            // Not allowed to play with sound (no tap yet): play it silent rather than not at all
+            if (this.clip !== clip) return;
+            clip.muted = true;
+            clip.play().then(playing, () => {});
         });
+    }
+
+    _stopClip() {
+        const clip = this.clip;
+        if (!clip) return;
+        this.clip = null;
+        clip.pause();
+        clip.style.opacity = '0';
     }
 
     /** The Yes/No and the log over the portrait's part of the screen, sized to the game. */
@@ -331,6 +400,10 @@ export class Dialogue {
     close() {
         this._typing?.remove();
         this._typing = null;
+        this._stopClip();
+        this.stage.style.display = 'none';
+        this.stage.style.opacity = '0';
+        this.painting = null;
         this.container.setVisible(false);
         this.view.style.display = 'none';
         this.view.style.opacity = '0';
@@ -348,6 +421,7 @@ export class Dialogue {
         const page = this.pages[this.page];
         this.seen = Math.max(this.seen, this.page);
         this.backButton.setVisible(this.page > 0);
+        this._playClip(page);
         this.choices.style.display = 'none';
         this._typing?.remove();
         this._typing = null;
@@ -484,7 +558,37 @@ function clothingColour(scene, { textureKey, frame, offset }) {
 
 /** Lines into pages ({text}), each line starting a page of its own. */
 function pages(lines) {
-    return lines.flatMap(line => paginate(line).map((text, i) => ({ text, more: i > 0 })));   // more: the same line, run on
+    return lines.flatMap(line => paginate(line).map((text, i) => ({ text, line, more: i > 0 })));   // more: the same line, run on
+}
+
+/** Someone's clips, line by line (an empty Map if they have none). Made once, and fetched as soon as they're made. */
+function clipsOf(scene, id) {
+    const listed = id && scene.cache.json.get('talk')?.[id];
+    if (!listed) return new Map();
+    if (!voiced.has(id)) {
+        voiced.set(id, new Map(Object.entries(listed).map(([line, file]) => {
+            const v = document.createElement('video');
+            v.playsInline = true;
+            v.preload = 'auto';
+            v.disablePictureInPicture = true;
+            v.dataset.line = line;
+            for (const [ext, type] of CLIP_FORMATS) {
+                const src = document.createElement('source');
+                src.src = `/portraits/talk/${file}.${ext}`;
+                src.type = type;
+                v.appendChild(src);
+            }
+            Object.assign(v.style, { position: 'absolute', opacity: '0', transition: 'opacity 140ms' });
+            // Done: fade back to the painting (its first frame), ready for the next line's
+            v.addEventListener('ended', () => {
+                v.style.transition = 'opacity 450ms';
+                v.style.opacity = '0';
+                setTimeout(() => { v.style.transition = 'opacity 140ms'; }, 460);
+            });
+            return [line, v];
+        })));
+    }
+    return voiced.get(id);
 }
 
 /** One thing said, for the log. */

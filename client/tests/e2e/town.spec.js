@@ -268,7 +268,8 @@ test.describe('Riverhold', () => {
         const ui = () => page.evaluate(() => {
             const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
             return { open: d.visible, page: d.page, text: d.text.text, typing: !!d._typing, portrait: d.showing,
-                choices: d.choices.style.display !== 'none', log: d.history.style.display !== 'none' };
+                choices: d.choices.style.display !== 'none', log: d.history.style.display !== 'none',
+                clip: d.clip?.dataset.line, playing: !!d.clip && !d.clip.paused && d.clip.currentTime > 0 };
         });
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -277,14 +278,18 @@ test.describe('Riverhold', () => {
         await expect.poll(() => ui().then(u => u.portrait), { timeout: 30000 }).toContain('/portraits/riverhold-wren.webp');
         // Her first line types out; Enter goes on to the next, and Enter part way through a line finishes it
         await expect.poll(ui).toMatchObject({ page: 0, typing: false, text: "Oh! You startled me. Sorry. I'm Wren." });
+        // ...and she says it, in her clip over the painting
+        await expect.poll(ui, { timeout: 15000 }).toMatchObject({ clip: "Oh! You startled me. Sorry. I'm Wren.", playing: true });
         await page.keyboard.press('Enter');
         await expect.poll(ui).toMatchObject({ page: 1, typing: true });
         await page.keyboard.press('Enter');
         const second = "I've been sitting by this gate three days now, watching who comes and goes.";
         await expect.poll(ui).toMatchObject({ page: 1, typing: false, text: second });
         // Back: the line before, whole; and forward again, whole
+        await expect.poll(ui, { timeout: 15000 }).toMatchObject({ clip: second, playing: true });
         await page.keyboard.press('Backspace');
         await expect.poll(ui).toMatchObject({ page: 0, typing: false, text: "Oh! You startled me. Sorry. I'm Wren." });
+        await expect.poll(ui).toMatchObject({ clip: "Oh! You startled me. Sorry. I'm Wren.", playing: true });   // said again
         await page.keyboard.press('Enter');
         await expect.poll(ui).toMatchObject({ page: 1, typing: false, text: second });
         // The log: everything so far
@@ -307,6 +312,7 @@ test.describe('Riverhold', () => {
         await page.locator('.story-choices button', { hasText: 'Yes' }).click();
         await page.keyboard.press('Enter');
         await expect.poll(ui).toMatchObject({ choices: false, page: asked + 1, text: "Really? Ha! You won't regret it, I promise." });
+        await expect.poll(ui, { timeout: 15000 }).toMatchObject({ clip: "Really? Ha! You won't regret it, I promise.", playing: true });
         await page.keyboard.press('h');
         await expect(page.locator('.story-history')).toContainText('You: Yes.');
         await page.keyboard.press('Escape');
@@ -316,5 +322,7 @@ test.describe('Riverhold', () => {
             await page.waitForTimeout(150);
         }
         await expect.poll(() => ui().then(u => u.open)).toBe(false);
+        expect(await ui()).toMatchObject({ clip: undefined });
+        expect(await page.locator('.story-clip').isVisible()).toBe(false);
     });
 });
