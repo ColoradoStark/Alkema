@@ -247,4 +247,74 @@ test.describe('Riverhold', () => {
         });
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold-inn-rooms');
     });
+
+    test('Wren, just inside the gate, talks a line at a time, with back, a log, and asks to come with you', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'wren')),
+            { timeout: 120000, intervals: [1000] }).toBe(true);
+        // Close to where you come in, in her own outfit
+        const near = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const wren = gs.town.folk.find(f => f.plan.id === 'wren');
+            const { x, y } = gs.town.arrival;
+            return { far: Math.hypot(wren.sprite.x - x, wren.sprite.y - y), name: wren.name,
+                legs: wren.sprite.characterData.selections.find(s => s.type === 'legs').item };
+        });
+        expect(near.far).toBeLessThan(200);
+        expect(near).toMatchObject({ name: 'Wren', legs: 'legs_skirts_slit' });
+
+        const ui = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { open: d.visible, page: d.page, text: d.text.text, typing: !!d._typing, portrait: d.showing,
+                choices: d.choices.style.display !== 'none', log: d.history.style.display !== 'none' };
+        });
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === 'wren'));
+        });
+        await expect.poll(() => ui().then(u => u.portrait), { timeout: 30000 }).toContain('/portraits/riverhold-wren.webp');
+        // Her first line types out; Enter goes on to the next, and Enter part way through a line finishes it
+        await expect.poll(ui).toMatchObject({ page: 0, typing: false, text: "Oh! You startled me. Sorry. I'm Wren." });
+        await page.keyboard.press('Enter');
+        await expect.poll(ui).toMatchObject({ page: 1, typing: true });
+        await page.keyboard.press('Enter');
+        const second = "I've been sitting by this gate three days now, watching who comes and goes.";
+        await expect.poll(ui).toMatchObject({ page: 1, typing: false, text: second });
+        // Back: the line before, whole; and forward again, whole
+        await page.keyboard.press('Backspace');
+        await expect.poll(ui).toMatchObject({ page: 0, typing: false, text: "Oh! You startled me. Sorry. I'm Wren." });
+        await page.keyboard.press('Enter');
+        await expect.poll(ui).toMatchObject({ page: 1, typing: false, text: second });
+        // The log: everything so far
+        await page.keyboard.press('h');
+        await expect.poll(() => ui().then(u => u.log)).toBe(true);
+        expect(await page.locator('.story-history').innerText()).toContain("I'm Wren.");
+        expect(await page.locator('.story-history p').count()).toBe(3);   // two lines and "Tap to close"; a long line stays one entry
+        await page.keyboard.press('h');
+        await expect.poll(() => ui().then(u => u.log)).toBe(false);
+        // On to her question: Yes or No, and no going on without an answer
+        for (let i = 0; i < 20 && !(await ui()).choices; i++) {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(100);
+        }
+        await expect.poll(ui).toMatchObject({ choices: true, text: expect.stringContaining('Will you let me come with you?') });
+        const asked = (await ui()).page;
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(200);
+        expect((await ui()).page).toBe(asked);
+        await page.locator('.story-choices button', { hasText: 'Yes' }).click();
+        await page.keyboard.press('Enter');
+        await expect.poll(ui).toMatchObject({ choices: false, page: asked + 1, text: "Really? Ha! You won't regret it, I promise." });
+        await page.keyboard.press('h');
+        await expect(page.locator('.story-history')).toContainText('You: Yes.');
+        await page.keyboard.press('Escape');
+        await expect.poll(() => ui().then(u => u.log)).toBe(false);
+        for (let i = 0; i < 6 && (await ui()).open; i++) {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(150);
+        }
+        await expect.poll(() => ui().then(u => u.open)).toBe(false);
+    });
 });

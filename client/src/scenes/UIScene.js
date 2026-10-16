@@ -102,6 +102,13 @@ export class UIScene extends Scene {
 
         this.input.keyboard.on('keydown-SPACE', () => this.handleAttack());
         this.input.keyboard.on('keydown-ENTER', () => this.dialogue.visible && this.dialogue.advance());
+        // Story mode: back a line, the log, and answers
+        this.input.keyboard.on('keydown-BACKSPACE', () => this.dialogue.back());
+        this.input.keyboard.on('keydown-LEFT', () => this.dialogue.visible && this.dialogue.back());
+        this.input.keyboard.on('keydown-H', () => this.dialogue.toggleHistory());
+        this.input.keyboard.on('keydown-ESC', () => this.dialogue.visible && this.dialogue.toggleHistory(false));
+        this.input.keyboard.on('keydown-Y', () => this.dialogue.choose('yes'));
+        this.input.keyboard.on('keydown-N', () => this.dialogue.choose('no'));
         this.input.keyboard.on('keydown-E', () => this.handleAbility());
 
         this.input.keyboard.on('keydown-ONE', () => this.bottomControls.switchTab('map'));

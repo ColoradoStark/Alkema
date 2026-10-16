@@ -1,6 +1,8 @@
 // Story mode: walk into someone and the world pauses for them. Their name and
-// words (typed out) take the controls' place at the bottom of the screen, and
-// above it a large portrait: their own sprite, bust-high and scaled up crisp,
+// words take the controls' place at the bottom of the screen, a line at a time
+// like a visual novel: tap for the next, ◀ for the one before, LOG for all of
+// it so far; some ask you something, Yes or No. Above it,
+// a large portrait: their own sprite, bust-high and scaled up crisp,
 // on a backdrop drawn from the colours they're wearing, in a gold frame.
 // Anyone with a painted portrait (tools/portraits.py) shows that instead,
 // filling the whole screen above the box: /portraits/<their sprite id>.webp,
@@ -74,6 +76,21 @@ export class Dialogue {
             fontFamily: 'monospace', fontSize: '12px', color: '#fbf236',
         }).setOrigin(0.5);
         this.box.add([this.text, this.more]);
+        // Back a line, and the log of everything said so far, at the box's top right
+        const button = (label, x, act) => {
+            const b = scene.add.text(x, 8, label, {
+                fontFamily: 'Romulus, monospace', fontSize: '13px', color: '#fbf236',
+                backgroundColor: '#222034', padding: { x: 6, y: 3 },
+            }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+            b.on('pointerdown', (pointer, lx, ly, event) => {
+                event?.stopPropagation?.();
+                act();
+            });
+            this.box.add(b);
+            return b;
+        };
+        this.logButton = button('LOG', W - 8, () => this.toggleHistory());
+        this.backButton = button('◀', this.logButton.x - this.logButton.width - 6, () => this.back());
         // Their name on a plate at the top of the box
         this.plate = scene.add.container(this.px + PORTRAIT + 4, boxY - 12);
         this.plateBg = scene.add.graphics();
@@ -98,6 +115,40 @@ export class Dialogue {
         });
         this.view.alt = '';
         document.body.appendChild(this.view);
+        // Yes or No, over the portrait, when they ask you something
+        this.choices = document.createElement('div');
+        this.choices.className = 'story-choices';
+        Object.assign(this.choices.style, {
+            position: 'fixed', zIndex: '62', display: 'none', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'flex-end', gap: '0.6em', boxSizing: 'border-box',
+        });
+        for (const [answer, label] of [['yes', 'Yes'], ['no', 'No']]) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.dataset.answer = answer;
+            Object.assign(b.style, {
+                font: 'inherit', width: '70%', padding: '0.45em 0', cursor: 'pointer', color: '#fbf236',
+                background: 'rgba(34, 32, 52, 0.92)', border: '2px solid #c8a04a', borderRadius: '6px',
+                textShadow: '0 2px 0 #222034',
+            });
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.choose(answer);
+            });
+            this.choices.appendChild(b);
+        }
+        document.body.appendChild(this.choices);
+        // Everything said so far
+        this.history = document.createElement('div');
+        this.history.className = 'story-history';
+        Object.assign(this.history.style, {
+            position: 'fixed', zIndex: '63', display: 'none', overflowY: 'auto', boxSizing: 'border-box',
+            background: 'rgba(24, 20, 37, 0.94)', color: '#fff6e0', padding: '1em 1.2em',
+            fontFamily: 'Romulus, monospace', lineHeight: '1.45', border: '2px solid #c8a04a',
+        });
+        this.history.addEventListener('click', () => this.toggleHistory(false));
+        document.body.appendChild(this.history);
         this.showing = null;      // whose painting is up, or 'sprite'
         this._onResize = () => this._placeView();
         window.addEventListener('resize', this._onResize);
@@ -106,7 +157,10 @@ export class Dialogue {
             window.removeEventListener('resize', this._onResize);
             window.visualViewport?.removeEventListener('resize', this._onResize);
             this.view.remove();
+            this.choices.remove();
+            this.history.remove();
         });
+        this.answers = new Map();     // what you said to whoever asked you something (this visit)
 
         // Anywhere on the screen moves the story on
         this.hit = scene.add.zone(0, 0, W, scene.scale.height).setOrigin(0, 0).setInteractive();
@@ -132,8 +186,9 @@ export class Dialogue {
         this.role.setText(folk.plan.role || '');
         const img = painted.get(folk.sprite?.characterData?.id);
         this._layout(!!img?.naturalWidth);
-        this.pages = paginate(folk.plan.says || '...');
+        this.pages = this._script(folk);
         this.page = 0;
+        this.seen = 0;
         if (img?.naturalWidth) this._showPainted(img);
         else {
             this._portrait(folk);
@@ -148,7 +203,19 @@ export class Dialogue {
         this.container.setVisible(true).setAlpha(0);
         this.scene.tweens.add({ targets: this.container, alpha: 1, duration: 160 });
         audio.play('menu_open', { volume: 0.5 });
-        this._type();
+        this._show(true);
+    }
+
+    /**
+     * What they'll say, page by page: their lines (each line its own page or
+     * pages), then their question if they have one. Asked before and you said
+     * yes, they just pick up where you left it.
+     */
+    _script(folk) {
+        const { says, ask, id } = folk.plan;
+        const lines = Array.isArray(says) ? says : [says || '...'];
+        if (ask && this.answers.get(id) === 'yes') return pages(ask.yes.slice(-1));
+        return [...pages(lines), ...(ask ? [{ text: ask.q, ask }] : [])];
     }
 
     /** The name plate: at the box's left under a painting, else beside the sprite portrait. */
@@ -156,7 +223,7 @@ export class Dialogue {
         this.plate.x = full ? 12 : this.px + PORTRAIT + 4;
         for (const o of [this.backdrop, this.portraitLayer, this.frame]) o.setVisible(!full);
         // Name and role side by side if they fit, else the role underneath
-        const room = this.scene.scale.width - this.plate.x - 8;
+        const room = this.backButton.x - this.backButton.width - 8 - this.plate.x;     // clear of ◀ and LOG
         const oneLine = this.name.width + this.role.width + 30 <= room;
         this.role.setPosition(oneLine ? this.name.width + 18 : 10, oneLine ? 6 : 22);
         const pw = Math.min(room, oneLine ? this.name.width + this.role.width + 30 : Math.max(this.name.width, this.role.width) + 20);
@@ -178,6 +245,7 @@ export class Dialogue {
 
     /** Line the painting up with the map view on screen, wherever the canvas is. */
     _placeView() {
+        this._placeOverlays();
         const canvas = this.scene.game.canvas;
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
@@ -188,21 +256,76 @@ export class Dialogue {
         });
     }
 
-    /** Finish the line being typed, or turn the page, or close. */
+    /** The Yes/No and the log over the portrait's part of the screen, sized to the game. */
+    _placeOverlays() {
+        const canvas = this.scene.game.canvas;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const k = rect.width / this.scene.scale.width;
+        const area = { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${this.box.y * k}px` };
+        Object.assign(this.choices.style, area, { fontFamily: 'Alagard, monospace', fontSize: `${18 * k}px`, padding: `${18 * k}px` });
+        Object.assign(this.history.style, area, { fontSize: `${14 * k}px` });
+    }
+
+    /** Finish the line being typed, or go on to the next, or close. */
     advance() {
         if (!this.visible) return;
-        if (this._typing) {
-            this._typing.remove();
-            this._typing = null;
-            this.text.setText(this.pages[this.page]);
-            this.more.setVisible(true);
-            return;
-        }
-        if (++this.page < this.pages.length) {
-            this._type();
+        if (this.history.style.display !== 'none') return this.toggleHistory(false);
+        if (this._typing) return this._finishTyping();
+        const page = this.pages[this.page];
+        if (page.ask && !page.answer) return;       // waiting for Yes or No
+        if (this.page + 1 < this.pages.length) {
+            this.page++;
+            this._show(this.page > this.seen);
             return;
         }
         this.close();
+    }
+
+    /** The line before, shown whole. */
+    back() {
+        if (!this.visible || this.history.style.display !== 'none') return;
+        if (this._typing) this._finishTyping();
+        if (this.page === 0) return;
+        this.page--;
+        this._show(false);
+    }
+
+    /** Answer their question; they answer back. */
+    choose(answer) {
+        const page = this.pages[this.page];
+        if (!this.visible || !page?.ask || page.answer || this._typing) return;
+        page.answer = answer;
+        this.answers.set(this.who.plan.id, answer);
+        this.onChoice?.(this.who, answer);
+        audio.play('menu_open', { volume: 0.5 });
+        this.pages.splice(this.page + 1, Infinity, ...pages(page.ask[answer] || []));
+        this.choices.style.display = 'none';
+        this.advance();
+    }
+
+    /** Show or hide everything said so far. */
+    toggleHistory(show = this.history.style.display === 'none') {
+        if (!this.visible || show === (this.history.style.display !== 'none')) return;
+        if (show) {
+            if (this._typing) this._finishTyping();
+            const who = this.name.text || '...';
+            const said = [];
+            for (const p of this.pages.slice(0, this.seen + 1)) {
+                if (p.more && said.length) said.at(-1).append(` ${p.text}`);
+                else said.push(entry(who, p.text, '#fbf236'));
+                if (p.answer) said.push(entry('You', p.answer === 'yes' ? 'Yes.' : 'No.', '#9fd8ff'));
+            }
+            this.history.replaceChildren(...said, entry('', 'Tap to close.', '#a08a70'));
+            this.choices.style.visibility = 'hidden';
+            this._placeOverlays();
+            this.history.style.display = 'block';
+            this.history.scrollTop = this.history.scrollHeight;
+        } else {
+            this.history.style.display = 'none';
+            this.choices.style.visibility = '';
+        }
+        audio.play(show ? 'menu_open' : 'menu_close', { volume: 0.4 });
     }
 
     close() {
@@ -211,28 +334,59 @@ export class Dialogue {
         this.container.setVisible(false);
         this.view.style.display = 'none';
         this.view.style.opacity = '0';
+        this.choices.style.display = 'none';
+        this.choices.style.visibility = '';
+        this.history.style.display = 'none';
         this.showing = null;
         audio.play('menu_close', { volume: 0.5 });
         this.onClose?.(this.who);
         this.who = null;
     }
 
-    _type() {
-        const line = this.pages[this.page];
+    /** Put the current page up: typed out if it's new, else whole. */
+    _show(typed) {
+        const page = this.pages[this.page];
+        this.seen = Math.max(this.seen, this.page);
+        this.backButton.setVisible(this.page > 0);
+        this.choices.style.display = 'none';
+        this._typing?.remove();
+        this._typing = null;
+        if (!typed) {
+            this.text.setText(page.text);
+            this._shown();
+            return;
+        }
         let n = 0;
         this.text.setText('');
         this.more.setVisible(false);
-        this._typing?.remove();
         this._typing = this.scene.time.addEvent({
-            delay: TYPE_MS, repeat: line.length - 1,
+            delay: TYPE_MS, repeat: page.text.length - 1,
             callback: () => {
-                this.text.setText(line.slice(0, ++n));
-                if (n >= line.length) {
+                this.text.setText(page.text.slice(0, ++n));
+                if (n >= page.text.length) {
                     this._typing = null;
-                    this.more.setVisible(true);
+                    this._shown();
                 }
             },
         });
+    }
+
+    _finishTyping() {
+        this._typing.remove();
+        this._typing = null;
+        this.text.setText(this.pages[this.page].text);
+        this._shown();
+    }
+
+    /** The page is all there: the ▼, or their question's Yes and No. */
+    _shown() {
+        const page = this.pages[this.page];
+        const asking = !!page.ask && !page.answer;
+        this.more.setVisible(!asking);
+        if (asking) {
+            this._placeOverlays();
+            this.choices.style.display = 'flex';
+        }
     }
 
     /** Their bust from their own sprite, facing you, on a backdrop in their colours. */
@@ -326,6 +480,26 @@ function clothingColour(scene, { textureKey, frame, offset }) {
     for (const e of counts.values()) if (!best || e.n > best.n) best = e;
     if (!best || best.n < 12) return null;
     return Phaser.Display.Color.GetColor(best.r / best.n, best.g / best.n, best.b / best.n);
+}
+
+/** Lines into pages ({text}), each line starting a page of its own. */
+function pages(lines) {
+    return lines.flatMap(line => paginate(line).map((text, i) => ({ text, more: i > 0 })));   // more: the same line, run on
+}
+
+/** One thing said, for the log. */
+function entry(who, text, colour) {
+    const p = document.createElement('p');
+    p.style.margin = '0 0 0.7em';
+    if (who) {
+        const b = document.createElement('b');
+        b.textContent = `${who}: `;
+        b.style.color = colour;
+        b.style.fontFamily = 'Alagard, monospace';
+        p.append(b);
+    } else p.style.color = colour;
+    p.append(text);
+    return p;
 }
 
 /** Split words into pages that fit the box. */
