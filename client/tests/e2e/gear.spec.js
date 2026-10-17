@@ -83,6 +83,13 @@ test.describe('Gear', () => {
         await expect(page.locator('.gear-panel--shop .gear-row')).toHaveCount(6);
         const before = await inv(page);
         expect(before.gold).toBe(100);           // a purse to start with
+        // What a dagger costs this hero: its price, less (or more) for their charisma
+        const dagger = await page.evaluate(() => {
+            const i = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            return { paid: i.price('dagger'), rate: i.stats.trade.buy };
+        });
+        expect(dagger.paid).toBe(Math.max(1, Math.round(15 * dagger.rate)));
+        await expect(page.locator('.gear-row[data-item="dagger"] .gear-coins')).toHaveText(String(dagger.paid));
         expect(before.equipped.weapon).toBe('starter-weapon');
         // The world waits while you shop
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.visible)).toBe(true);
@@ -91,7 +98,7 @@ test.describe('Gear', () => {
         await expect(page.locator('.gear-detail-name')).toHaveText('Dagger');
         await page.locator('.gear-detail .gear-btn--go').click();
         await expect(page.locator('.gear-notice')).toHaveText('Bought: Dagger.');
-        expect(await inv(page)).toMatchObject({ gold: before.gold - 15, bag: ['dagger'] });
+        expect(await inv(page)).toMatchObject({ gold: before.gold - dagger.paid, bag: ['dagger'] });
 
         await page.locator('.gear-detail .gear-btn', { hasText: 'Wear it' }).click();
         await expect.poll(() => inv(page).then(i => i.equipped.weapon), { timeout: 30000 }).toBe('dagger');
@@ -104,9 +111,9 @@ test.describe('Gear', () => {
         await page.locator('.gear-tab', { hasText: 'Sell' }).click();
         await page.locator('.gear-row[data-item="starter-weapon"]').click();
         await page.locator('.gear-detail .gear-btn--go').click();
-        await expect.poll(() => inv(page)).toMatchObject({ gold: before.gold - 15 + 5, bag: [] });
+        await expect.poll(() => inv(page)).toMatchObject({ gold: before.gold - dagger.paid + 5, bag: [] });
         const saved = (await inv(page)).saved;
-        expect(saved).toMatchObject({ gold: before.gold - 10, bag: [], equipped: { weapon: 'dagger' } });
+        expect(saved).toMatchObject({ gold: before.gold - dagger.paid + 5, bag: [], equipped: { weapon: 'dagger' } });
 
         // Equip: the hero large on a stage, the dagger in the weapon slot
         await page.locator('.gear-close').click();
@@ -119,7 +126,7 @@ test.describe('Gear', () => {
         await page.reload();
         await enterWorld(page);
         await expect.poll(() => inv(page).then(i => [i.weapon, i.equipped.weapon, i.gold]), { timeout: 30000 })
-            .toEqual(['weapon_sword_dagger', 'dagger', before.gold - 10]);
+            .toEqual(['weapon_sword_dagger', 'dagger', before.gold - dagger.paid + 5]);
     });
 
     test('a crystal from the apothecary colours your spells, and others see your new look', async ({ browser }) => {
@@ -165,20 +172,24 @@ test.describe('Gear', () => {
         await expect.poll(() => them.evaluate(() => window.__GLOWS), { timeout: 5000 }).toEqual(['#ff6a3d']);
     });
 
-    test('Stats: level, hit points, the four attributes, and attack that goes up with a better weapon', async ({ page }) => {
+    test('Stats: level, hit points, the five attributes, and attack that goes up with a better weapon', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 20000 });
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
         await expect(page.locator('.gear-panel--stats canvas.gear-hero')).toBeVisible();
         await expect(page.locator('.gear-level')).toContainText('Level 1');
-        await expect(page.locator('.gear-attr')).toHaveCount(4);
+        await expect(page.locator('.gear-attr')).toHaveCount(5);
         await expect(page.locator('.gear-bar--hp .gear-bar-text')).toHaveText(/^\d+ \/ \d+$/);
         const stats = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats);
         await expect(page.locator('.gear-attr[data-attr="str"] .gear-attr-value')).toHaveText(String(stats.attributes.str));
         await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(stats.attack));
         await page.locator('.gear-attr[data-attr="dex"]').click();
         await expect(page.locator('.gear-notice')).toContainText('Dexterity');
+        // Charisma: what it does, and this hero's own deal in the shops
+        await expect(page.locator('.gear-attr[data-attr="cha"] .gear-attr-value')).toHaveText(String(stats.attributes.cha));
+        await page.locator('.gear-attr[data-attr="cha"]').click();
+        await expect(page.locator('.gear-notice')).toContainText(`You pay ${Math.round(stats.trade.buy * 100)}%`);
         await page.locator('.gear-close').click();
 
         // A spear from the smith: its card shows how much better it is, and Stats agrees

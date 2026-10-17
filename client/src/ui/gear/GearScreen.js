@@ -1,7 +1,7 @@
 // The hero's gear, over the map view: a shop (talk to a shopkeeper: buy what
 // they sell, sell them what you carry), Equip (the hero large on a stage, the
 // five slots, and what in your bag could go in each), Stats (level, hit and
-// magic points, the four attributes, and what their gear comes to) and Items
+// magic points, the five attributes, and what their gear comes to) and Items
 // (your bag).
 // A page layer like the character creator, laid out in the game's 352 px
 // column and scaled with the canvas so it's crisp at any size.
@@ -24,6 +24,7 @@ const ATTRIBUTES = [
     ['dex', 'DEX', 'Dexterity', 'Aim true with a bow, and slip past blows: a little armour of its own.'],
     ['int', 'INT', 'Intelligence', "The power of a mage's spells, and how many they can cast."],
     ['wis', 'WIS', 'Wisdom', "The power of a cleric's or ranger's spells, and how many they can cast."],
+    ['cha', 'CHA', 'Charisma', 'How people take to you. Shopkeepers ask less and pay more.'],
 ];
 const POWERS = [['attack', 'Attack'], ['defence', 'Defence'], ['spell', 'Spell']];
 const SAY = {
@@ -45,6 +46,7 @@ function el(tag, className, attrs = {}) {
 }
 
 const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
+const pct = (n) => `${Math.round(n * 100)}%`;
 
 function coins(n) {
     const span = el('span', 'gear-coins');
@@ -254,7 +256,7 @@ export class GearScreen {
         const list = el('div', 'gear-list');
         const ids = this.shopTab === 'buy' ? this.shop.sells : [...new Set(inv.bag)];
         for (const id of ids) {
-            const price = this.shopTab === 'buy' ? inv.item(id).price : inv.sellPrice(id);
+            const price = this.shopTab === 'buy' ? inv.price(id) : inv.sellPrice(id);
             const tag = coins(price);
             if (this.shopTab === 'buy' && price > inv.gold) tag.classList.add('is-dear');
             list.append(this._row(id, tag, pick => {
@@ -269,7 +271,7 @@ export class GearScreen {
         const id = this.selected;
         if (!id || !inv.item(id)) return;
         if (this.shopTab === 'buy') {
-            const price = inv.item(id).price;
+            const price = inv.price(id);
             const label = el('span', 'gear-btn-label');
             label.append('Buy ', coins(price));
             const actions = [{
@@ -464,7 +466,8 @@ export class GearScreen {
             b.addEventListener('click', () => {
                 audio.play('page', { volume: 0.6 });
                 this.selected = this.selected === key ? null : key;
-                this.notice = this.selected ? `${name}: ${about}` : '';
+                const deal = key === 'cha' ? ` You pay ${pct(stats.trade.buy)} and get ${pct(stats.trade.sell)} back.` : '';
+                this.notice = this.selected ? `${name}: ${about}${deal} Your race can raise it to ${max}.` : '';
                 this.render();
             });
             attrs.append(b);
@@ -477,7 +480,7 @@ export class GearScreen {
             tile.append(el('span', 'gear-power-value', { text: String(stats[key]) }), el('span', 'gear-power-name', { text: name }));
             powers.append(tile);
         }
-        panel.append(powers, el('div', 'gear-detail-note gear-sheet-note', { text: 'Gear adds to attack, defence and spell. Tap an attribute to see what it does. The number after the bar is as high as your race can raise it.' }));
+        panel.append(powers, el('div', 'gear-detail-note gear-sheet-note', { text: 'Gear adds to attack, defence and spell. Tap an attribute to learn more.' }));
     }
 
     _bar(label, now, max, kind, text = `${now} / ${max}`) {

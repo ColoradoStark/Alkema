@@ -14,10 +14,11 @@ export const SLOT_NAMES = { weapon: 'Weapon', body: 'Body', head: 'Head', shield
 export class Inventory {
     /**
      * @param {object} opts
-     * @param {object} opts.catalogue  { items, shops, startingGold, sellRate }
+     * @param {object} opts.catalogue  { items, shops, startingGold }
      * @param {object} opts.kit  { items, equipped }: this hero's own starting gear
      * @param {object} opts.equipped  what they're wearing now (as the server dressed them)
      * @param {object} opts.stats  their stats as the server reckons them, with that on
+     *   (their charisma's `trade` sets what they pay and are paid in the shops)
      * @param {(event: string, data: object, timeout?: number) => Promise<object>} opts.request
      */
     constructor({ catalogue, kit, equipped, stats, request }) {
@@ -49,10 +50,18 @@ export class Inventory {
         return shop && shop.keeper === keeperId ? shop : null;
     }
 
+    /** What this hero pays for `id` in a shop, charm and all. */
+    price(id) {
+        const item = this.catalogue.items[id];
+        if (!item) return 0;
+        return Math.max(1, Math.round(item.price * (this.stats?.trade?.buy ?? 1)));
+    }
+
+    /** What a shop pays this hero for `id`. */
     sellPrice(id) {
         const item = this.item(id);
         if (!item) return 0;
-        return item.sell ?? Math.max(1, Math.floor(item.price * (this.catalogue.sellRate ?? 0.5)));
+        return item.sell ?? Math.max(1, Math.floor(item.price * (this.stats?.trade?.sell ?? 0.5)));
     }
 
     /** Items in the bag that go in `slot` (each once). */
@@ -67,8 +76,9 @@ export class Inventory {
     buy(id) {
         const item = this.catalogue.items[id];
         if (!item) return { ok: false, error: 'no-such-item' };
-        if (this.gold < item.price) return { ok: false, error: 'poor' };
-        this.gold -= item.price;
+        const price = this.price(id);
+        if (this.gold < price) return { ok: false, error: 'poor' };
+        this.gold -= price;
         this.bag.push(id);
         this._save();
         return { ok: true };
