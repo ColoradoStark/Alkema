@@ -1,39 +1,50 @@
 // Starter quests and the tracker card in the top-left of the map view.
 // A short chain that teaches the controls, then tours the places nearest the
-// starting town: a bridge, a village, a castle and a dungeon's mouth.
+// starting town that you can walk to: a bridge, a village, a castle and a
+// dungeon's mouth (an island village waits until there's a boat).
 // Quests belong to the hero: progress is kept in that hero's save.
 
 import { audio } from '../audio/audio.js';
 import { WORLD } from '../world/places.js';
 import { wrapDelta } from '../world/Overworld.js';
+import { walkingFrom } from '../world/walking.js';
 
 function distance(a, b) {
     return Math.hypot(wrapDelta(a.x, b.x), wrapDelta(a.y, b.y));
 }
 
-/** The place of a type (or bridge) closest to the starting town. */
+/** Of these places, the one closest to the starting town. */
 function nearest(list) {
     return list.reduce((best, p) => (distance(WORLD.spawn, p) < distance(WORLD.spawn, best) ? p : best));
 }
 
-const ofType = type => nearest(WORLD.places.filter(p => p.type === type && !p.hidden));
-const bridge = nearest(WORLD.bridges);
-const village = ofType('village');
-const castle = ofType('castle');
-const dungeon = ofType('dungeon');
+const ofType = type => WORLD.places.filter(p => p.type === type && !p.hidden);
 
 /**
  * kind 'count': `goal` events of `event` ('attack' | 'cast').
- * kind 'visit': come within `radius` of world point (x, y).
+ * kind 'visit': come within `radius` of world point (x, y): the nearest of
+ * `among` you can walk to (placed when the world is loaded: placeQuests).
  */
 export const QUESTS = [
     { id: 'swing', text: 'Swing your weapon', kind: 'count', event: 'attack', goal: 5 },
     { id: 'cast', text: 'Cast a spell', kind: 'count', event: 'cast', goal: 1 },
-    { id: 'bridge', text: 'Cross the river bridge', kind: 'visit', x: bridge.x, y: bridge.y, radius: 64 },
-    { id: 'village', text: `Find the village of ${village.name}`, kind: 'visit', x: village.x, y: village.y, radius: 140 },
-    { id: 'castle', text: `Visit ${castle.name}`, kind: 'visit', x: castle.x, y: castle.y, radius: 120 },
-    { id: 'dungeon', text: `Find the mouth of ${dungeon.name}`, kind: 'visit', x: dungeon.x, y: dungeon.y, radius: 100 },
+    { id: 'bridge', kind: 'visit', radius: 64, among: WORLD.bridges, says: () => 'Cross the river bridge' },
+    { id: 'village', kind: 'visit', radius: 140, among: ofType('village'), says: p => `Find the village of ${p.name}` },
+    { id: 'castle', kind: 'visit', radius: 120, among: ofType('castle'), says: p => `Visit ${p.name}` },
+    { id: 'dungeon', kind: 'visit', radius: 100, among: ofType('dungeon'), says: p => `Find the mouth of ${p.name}` },
 ];
+
+/** Give each visit its place: the nearest of its kind you can walk to from the starting town. */
+export function placeQuests(world) {
+    if (QUESTS.every(q => q.kind !== 'visit' || q.x !== undefined)) return;
+    const walking = walkingFrom(world, WORLD.spawn.x, WORLD.spawn.y);
+    for (const q of QUESTS) {
+        if (q.kind !== 'visit') continue;
+        const near = q.among.filter(p => walking.reaches(p.x, p.y, q.radius * 0.75));
+        const place = nearest(near.length ? near : q.among);
+        Object.assign(q, { x: place.x, y: place.y, text: q.says(place) });
+    }
+}
 
 const CARD = { x: 8, y: 42, width: 160 };
 
@@ -45,6 +56,7 @@ export class QuestTracker {
      */
     constructor(scene, saved = null, onChange = () => {}) {
         this.scene = scene;
+        placeQuests(scene.cache.json.get('world'));
         this.index = Math.max(0, Math.min(QUESTS.length, saved?.index || 0));
         this.progress = saved?.progress || 0;
         this.onChange = onChange;

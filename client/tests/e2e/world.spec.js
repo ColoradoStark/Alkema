@@ -437,4 +437,38 @@ test.describe('Living world', () => {
         expect(Math.abs(pos.tx + pos.r - pos.x / 32)).toBeLessThan(1.5);
         expect(Math.abs(pos.ty + pos.r - pos.y / 32)).toBeLessThan(1.5);
     });
+
+    test('every starter quest sends you somewhere you can walk to from Riverhold', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const unreachable = await page.evaluate(async () => {
+            const { QUESTS } = await import('/src/ui/QuestTracker.js');
+            // Our own flood fill over the walking grid (wrapping at the edges), from where heroes appear
+            const world = window.__PHASER_GAME.scene.getScene('GameScene').cache.json.get('world');
+            const k = world.collisionScale || 1, n = world.width * k, cell = world.tileSize / k;
+            const bytes = Uint8Array.from(atob(world.collision), c => c.charCodeAt(0));
+            const blocked = (i) => (bytes[i >> 3] >> (7 - (i & 7))) & 1;
+            const { WORLD } = await import('/src/world/places.js');
+            const seen = new Uint8Array(n * n);
+            const start = Math.floor(WORLD.spawn.y / cell) * n + Math.floor(WORLD.spawn.x / cell);
+            const queue = [start];
+            seen[start] = 1;
+            while (queue.length) {
+                const i = queue.pop(), x = i % n, y = (i / n) | 0;
+                for (const j of [y * n + (x + 1) % n, y * n + (x + n - 1) % n, ((y + 1) % n) * n + x, ((y + n - 1) % n) * n + x]) {
+                    if (!seen[j] && !blocked(j)) { seen[j] = 1; queue.push(j); }
+                }
+            }
+            const reached = (q) => {
+                const r = Math.ceil(q.radius / cell), cx = Math.floor(q.x / cell), cy = Math.floor(q.y / cell);
+                for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+                    if (dx * dx + dy * dy > r * r) continue;
+                    if (seen[((cy + dy + n) % n) * n + (cx + dx + n) % n]) return true;
+                }
+                return false;
+            };
+            return QUESTS.filter(q => q.kind === 'visit').filter(q => !reached(q)).map(q => q.text);
+        });
+        expect(unreachable).toEqual([]);
+    });
 });
