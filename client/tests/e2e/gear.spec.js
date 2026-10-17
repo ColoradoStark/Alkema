@@ -366,6 +366,52 @@ test.describe('Gear', () => {
         expect(await worn()).not.toContain('torso_clothes_longsleeve2');
     });
 
+    test('a cat-folk hero takes off her trousers, boots and belt and sells them, and keeps her ears and tail', async ({ page }) => {
+        test.setTimeout(150000);
+        await page.goto('/');
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight;
+        }, null, { timeout: 60000 });
+        await page.evaluate(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            s._changeIdentity(() => { s.state.pickBodyType('female'); s.state.pickKind('furry-cat'); s.state.pickClass('thief'); });
+        });
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            return !s._inFlight && s.state.current('kind') === 'furry-cat';
+        }, null, { timeout: 60000 });
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory, null, { timeout: 30000 });
+        const worn = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.map(l => l.type));
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));
+        await expect(page.locator('.gear-slot[data-slot="legs"] .gear-slot-item')).toHaveText(/trousers|leggings/i);
+        for (const slot of ['legs', 'feet', 'belt']) {
+            await page.locator(`.gear-slot[data-slot="${slot}"] .gear-slot-off`).click();
+            await expect(page.locator(`.gear-slot[data-slot="${slot}"] .gear-slot-off`)).toHaveCount(0, { timeout: 30000 });
+        }
+        await expect.poll(worn, { timeout: 15000 }).not.toContain('legs');
+        const types = await worn();
+        for (const part of ['furry_ears', 'tail']) expect(types).toContain(part);
+        expect(types).not.toContain('shoes');
+        expect(types).not.toContain('belt');
+        // Every slot still fits the screen
+        const overflow = await page.evaluate(() => {
+            const panel = document.querySelector('.gear-panel').getBoundingClientRect();
+            return [...document.querySelectorAll('.gear-slot')].filter(s => s.getBoundingClientRect().right > panel.right + 1).length;
+        });
+        expect(overflow).toBe(0);
+        // And they sell, like anything else
+        const sold = await page.evaluate(() => {
+            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            const before = inv.gold;
+            for (const id of ['starter-legs', 'starter-feet', 'starter-belt']) inv.sell(id);
+            return { gained: inv.gold - before, bag: [...inv.bag] };
+        });
+        expect(sold.gained).toBe(15);
+        expect(sold.bag).not.toContain('starter-legs');
+    });
+
     test("what the server tells you isn't sent back to it (a cast seen would bounce between players forever)", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

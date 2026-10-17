@@ -8,8 +8,8 @@
 
 import { account } from '../account/account.js';
 
-export const SLOTS = ['weapon', 'body', 'head', 'shield', 'crystal'];
-export const SLOT_NAMES = { weapon: 'Weapon', body: 'Body', head: 'Head', shield: 'Shield', crystal: 'Crystal' };
+export const SLOTS = ['weapon', 'shield', 'head', 'body', 'legs', 'feet', 'belt', 'crystal'];
+export const SLOT_NAMES = { weapon: 'Weapon', body: 'Body', head: 'Head', shield: 'Shield', crystal: 'Crystal', legs: 'Legs', feet: 'Feet', belt: 'Belt' };
 
 export class Inventory {
     /**
@@ -152,8 +152,8 @@ export class Inventory {
     }
 
     _save() {
-        // gearVersion 2: starting clothes are gear (a body slot left empty was emptied on purpose)
-        account.updateProgress({ gold: this.gold, bag: [...this.bag], equipped: { ...this.equipped }, gearVersion: 2 });
+        // gearVersion 3: all starting clothes are gear (a slot left empty was emptied on purpose)
+        account.updateProgress({ gold: this.gold, bag: [...this.bag], equipped: { ...this.equipped }, gearVersion: 3 });
         this._emit();
     }
 
