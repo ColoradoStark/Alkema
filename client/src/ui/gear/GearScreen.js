@@ -340,7 +340,8 @@ export class GearScreen {
         const slots = el('div', 'gear-slots');
         for (const slot of SLOTS) {
             const id = inv.equipped[slot];
-            const b = el('button', `gear-slot${this.picking === slot ? ' is-current' : ''}`, { type: 'button', 'data-slot': slot });
+            const cell = el('div', `gear-slot${this.picking === slot ? ' is-current' : ''}`, { 'data-slot': slot });
+            const b = el('button', 'gear-slot-pick', { type: 'button' });
             b.append(id ? this._icon(id) : el('span', 'gear-icon is-empty', { 'data-slot': slot }));
             const words = el('span', 'gear-slot-words');
             words.append(el('span', 'gear-slot-name', { text: SLOT_NAMES[slot] }),
@@ -352,7 +353,15 @@ export class GearScreen {
                 this.notice = '';
                 this.render();
             });
-            slots.append(b);
+            cell.append(b);
+            // Take it off, straight from the slot
+            if (id) {
+                const off = el('button', 'gear-slot-off', { type: 'button', 'aria-label': `Take off ${inv.item(id)?.name}`, text: '✕' });
+                off.disabled = inv.busy;
+                off.addEventListener('click', () => this._unequip(slot));
+                cell.append(off);
+            }
+            slots.append(cell);
         }
         panel.append(slots);
 

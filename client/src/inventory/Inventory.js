@@ -152,7 +152,8 @@ export class Inventory {
     }
 
     _save() {
-        account.updateProgress({ gold: this.gold, bag: [...this.bag], equipped: { ...this.equipped } });
+        // gearVersion 2: starting clothes are gear (a body slot left empty was emptied on purpose)
+        account.updateProgress({ gold: this.gold, bag: [...this.bag], equipped: { ...this.equipped }, gearVersion: 2 });
         this._emit();
     }
 

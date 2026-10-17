@@ -321,6 +321,44 @@ test.describe('Gear', () => {
         await expect(page.locator('.gear-says')).toHaveText("Arms up. Let's see what you're made of.");
     });
 
+    test("a mage takes off the tunic they set out in, right from its slot, and it stays off", async ({ page }) => {
+        test.setTimeout(150000);
+        await page.goto('/');
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight;
+        }, null, { timeout: 60000 });
+        await page.evaluate(() => { const s = window.__PHASER_GAME.scene.getScene('CreateScene'); s._change(() => s.state.pickClass('mage')); });
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            return !s._inFlight && s.state.current('character_class') === 'mage';
+        }, null, { timeout: 60000 });
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory, null, { timeout: 30000 });
+        const worn = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.map(l => l.item));
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equipped.body)).toBe('starter-body');
+        expect(await worn()).toContain('torso_clothes_longsleeve2');
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));
+        await expect(page.locator('.gear-slot[data-slot="body"] .gear-slot-item')).toHaveText('Tunic');
+        await page.locator('.gear-slot[data-slot="body"] .gear-slot-off').click();
+        await expect(page.locator('.gear-notice')).toHaveText('Put away: Tunic.', { timeout: 30000 });
+        await expect(page.locator('.gear-slot[data-slot="body"] .gear-slot-off')).toHaveCount(0);
+        await expect.poll(worn, { timeout: 15000 }).toContain('torso_clothes_tshirt');
+        expect(await worn()).not.toContain('torso_clothes_longsleeve2');
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.bag)).toContain('starter-body');
+        // Every slot fits the screen
+        const overflow = await page.evaluate(() => {
+            const panel = document.querySelector('.gear-panel').getBoundingClientRect();
+            return [...document.querySelectorAll('.gear-slot')].filter(s => s.getBoundingClientRect().right > panel.right + 1).length;
+        });
+        expect(overflow).toBe(0);
+        // Next time, still in just a shirt
+        await page.reload();
+        await enterWorld(page);
+        await expect.poll(worn, { timeout: 30000 }).toContain('torso_clothes_tshirt');
+        expect(await worn()).not.toContain('torso_clothes_longsleeve2');
+    });
+
     test("what the server tells you isn't sent back to it (a cast seen would bounce between players forever)", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

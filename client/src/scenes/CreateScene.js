@@ -366,6 +366,7 @@ export class CreateScene extends Scene {
                 request: this.state?.previewRequest(),
                 name: this.state?.name,
                 equipped: account.current?.data?.equipped,     // dressed as they were last time
+                gearVersion: account.current?.data?.gearVersion,
             }, 30000);
         } catch {
             res = null;
