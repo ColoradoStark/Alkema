@@ -98,7 +98,7 @@ Other races and classes are reserved for NPCs and enemies.
 
 ## Multiplayer
 
-Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles:
+Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles, with The Battle for Wesnoth's painted grass, sand, mountains and forests:
 
 - A 512×512-tile map in the spirit of the classic Ultima games: a continent, one large island and an arc of three small isles off the south-west coast (a long ridge, a crescent round a lagoon, a teardrop trailing an islet) in an animated ocean
 - A great range of snow-capped peaks (The Battle for Wesnoth's hand-painted mountains, brought into the LPC palette: single peaks at the edges of a range, long snowy ridges in its heart, sandy ones by the desert) walls off the north, crossed by a single pass; more ranges run along the west coast, the south-east and the big island
@@ -173,7 +173,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The world map's mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of 71 contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The world map's grass, beaches, desert, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
 
 ## License
 

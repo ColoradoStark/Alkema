@@ -320,7 +320,10 @@ test.describe('Riverhold', () => {
         const turned = await ui();
         expect(turned.clip).toBe(line);
         expect(turned.t).toBeGreaterThan(2);
-        await expect.poll(() => ui().then(u => u.text), { timeout: 5000 }).toBe(line.slice(line.indexOf(turned.text.split(' ')[0], 40)));
+        // ...and the page is the rest of her line
+        const rest = await page.evaluate(() => { const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue; return d.pages[d.page].text; });
+        expect(line.endsWith(rest) && rest.length < line.length).toBe(true);
+        await expect.poll(() => ui().then(u => u.text), { timeout: 5000 }).toBe(rest);
         // She doesn't run on past her own line
         await page.waitForTimeout(6000);
         expect((await ui()).page).toBe(first + 1);

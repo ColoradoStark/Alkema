@@ -35,10 +35,10 @@ export function wrap(v) {
 /** Queue the world's files on a scene's loader. */
 export function preloadOverworld(load) {
     load.json('world', '/world/overworld.json');
-    load.image('world-ground', '/world/ground.png');
-    // The feature tiles come in several sheets (phones can't load one huge texture), and the
-    // trees in frames of a size: the map gives both
+    // The ground and feature tiles come in several sheets (phones can't load one huge texture),
+    // and the trees in frames of a size: the map gives both
     load.once('filecomplete-json-world', (key, type, data) => {
+        data.tilesets.ground.images.forEach((name, i) => load.image(`world-ground-${i}`, `/world/${name}`));
         data.tilesets.features.images.forEach((name, i) => load.image(`world-features-${i}`, `/world/${name}`));
         const { image, frameWidth, frameHeight } = data.trees;
         load.spritesheet('world-trees', `/world/${image}`, { frameWidth, frameHeight });
@@ -81,7 +81,8 @@ export class Overworld {
         const groundCount = data.tilesets.ground.count;
 
         const map = scene.make.tilemap({ tileWidth: TILE, tileHeight: TILE, width: WINDOW, height: WINDOW });
-        const groundSet = map.addTilesetImage('world-ground', 'world-ground', TILE, TILE, 0, 0, 0);
+        const groundSets = data.tilesets.ground.images.map((_, i) =>
+            map.addTilesetImage(`world-ground-${i}`, `world-ground-${i}`, TILE, TILE, 0, 0, i * data.tilesets.ground.perImage));
         const { images, perImage } = data.tilesets.features;
         const featureSets = images.map((_, i) =>
             map.addTilesetImage(`world-features-${i}`, `world-features-${i}`, TILE, TILE, 0, 0, groundCount + i * perImage));
@@ -93,10 +94,10 @@ export class Overworld {
         // Aboard ship everything but open water blocks: the invisible sail layer.
         // (On foot, collide() checks the finer walking cells itself.)
         const gid = (arr, offset) => (i) => (arr[i] ? arr[i] + offset - 1 : -1);
-        this.groundLayer = map.createBlankLayer('ground', groundSet).setDepth(DEPTH.ground);
+        this.groundLayer = map.createBlankLayer('ground', groundSets).setDepth(DEPTH.ground);
         this.featureLayer = map.createBlankLayer('features', featureSets).setDepth(DEPTH.features);
         this.canopyLayer = map.createBlankLayer('canopy', featureSets).setDepth(DEPTH.canopy);
-        this.sailLayer = map.createBlankLayer('sail', groundSet).setVisible(false);
+        this.sailLayer = map.createBlankLayer('sail', groundSets[0]).setVisible(false);
         this.sailLayer.setCollision(0);
         this._layers = [
             [this.groundLayer, gid(ground, 0)],
