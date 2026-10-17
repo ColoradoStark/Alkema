@@ -107,11 +107,11 @@ export const WORLD = {
   {
    "name": "Ravenford",
    "type": "city",
-   "x": 6288,
-   "y": 2316,
+   "x": 6448,
+   "y": 3340,
    "rect": [
-    6176,
-    2112,
+    6336,
+    3136,
     224,
     192
    ]
@@ -119,11 +119,11 @@ export const WORLD = {
   {
    "name": "Castle Nightspire",
    "type": "castle",
-   "x": 7712,
-   "y": 2700,
+   "x": 7424,
+   "y": 3052,
    "rect": [
-    7584,
-    2432,
+    7296,
+    2784,
     256,
     256
    ]
