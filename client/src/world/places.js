@@ -95,11 +95,11 @@ export const WORLD = {
   {
    "name": "Duskmere",
    "type": "city",
-   "x": 10192,
-   "y": 6508,
+   "x": 9968,
+   "y": 6060,
    "rect": [
-    10080,
-    6304,
+    9856,
+    5856,
     224,
     192
    ]
@@ -192,11 +192,11 @@ export const WORLD = {
   {
    "name": "Tumbledown",
    "type": "village",
-   "x": 3792,
-   "y": 14732,
+   "x": 5872,
+   "y": 1452,
    "rect": [
-    3680,
-    14560,
+    5760,
+    1280,
     224,
     160
    ]
@@ -252,11 +252,11 @@ export const WORLD = {
   {
    "name": "Shadowmaw",
    "type": "dungeon",
-   "x": 8112,
-   "y": 3788,
+   "x": 3344,
+   "y": 1932,
    "rect": [
-    8064,
-    3680,
+    3296,
+    1824,
     96,
     96
    ]
