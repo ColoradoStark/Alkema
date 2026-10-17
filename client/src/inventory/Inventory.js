@@ -35,7 +35,10 @@ export class Inventory {
         this.gold = (saved?.gold || 0) + (fresh ? catalogue.startingGold || 0 : 0);
         this.bag = fresh ? [] : saved.bag.filter(id => this.item(id));
         this.equipped = { ...(equipped || this.kit.equipped) };
-        if (fresh) this._save();
+        // What they had on that the server didn't put on them (it wouldn't go together) is in their bag
+        const left = fresh ? [] : Object.values(saved.equipped || {}).filter(id => this.item(id) && !Object.values(this.equipped).includes(id));
+        if (left.length) this.bag.push(...left);
+        if (fresh || left.length) this._save();
     }
 
     /** An item by id: the shops' or one of this hero's starting pieces. */
@@ -102,6 +105,26 @@ export class Inventory {
     equip(id) {
         const item = this.item(id);
         if (!item || !this.bag.includes(id)) return Promise.resolve({ ok: false, error: 'not-carried' });
+        const { equipped, bag, bothHands } = this._putting(id);
+        return this._wear(equipped, bag).then(res => (res?.ok && bothHands ? { ...res, bothHands } : res));
+    }
+
+    /**
+     * Would `id` work on them with what else they have on: { ok } or
+     * { ok: false, message } (a robe leaves no room to thrust a spear).
+     */
+    async tryOn(id) {
+        if (!this.item(id)) return { ok: true };
+        try {
+            return await this.request('try-on', { equipped: this._putting(id).equipped }, 15000);
+        } catch {
+            return { ok: true };
+        }
+    }
+
+    /** What they'd wear and carry with `id` put on (it needn't be in the bag yet). */
+    _putting(id) {
+        const item = this.item(id);
         const equipped = { ...this.equipped, [item.slot]: id };
         const putAway = [this.equipped[item.slot]];
         let bothHands = null;      // what had to go for want of a free hand
@@ -114,9 +137,9 @@ export class Inventory {
             delete equipped.weapon;
         }
         const bag = [...this.bag];
-        bag.splice(bag.indexOf(id), 1);
+        if (bag.includes(id)) bag.splice(bag.indexOf(id), 1);
         bag.push(...[...putAway, bothHands].filter(Boolean));
-        return this._wear(equipped, bag).then(res => (res?.ok && bothHands ? { ...res, bothHands } : res));
+        return { equipped, bag, bothHands };
     }
 
     /** Take off what's in `slot`, into the bag. */

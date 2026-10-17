@@ -9,7 +9,7 @@
 import './gear.css';
 import { SLOTS, SLOT_NAMES } from '../../inventory/Inventory.js';
 import { itemIcon } from '../../inventory/itemIcons.js';
-import { ANIM_ROWS } from '../../sprites/AnimationFactory.js';
+import { ANIM_ROWS, attackInstead } from '../../sprites/AnimationFactory.js';
 import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes.js';
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
@@ -207,6 +207,12 @@ export class GearScreen {
             el('div', 'gear-detail-about', { text: item.about || (item.starter ? 'What you set out with.' : '') }));
         const power = this._power(item);
         if (power) words.append(power);
+        // Whether it would go with what they have on (a spear and a robe don't)
+        if (!this.inventory.equipped[item.slot] || this.inventory.equipped[item.slot] !== id) {
+            const warn = el('div', 'gear-detail-note gear-detail-warn');
+            words.append(warn);
+            this.inventory.tryOn(id).then(res => { if (!res?.ok && res?.message) warn.textContent = res.message; });
+        }
         if (item.twoHanded) words.append(el('div', 'gear-detail-note', { text: 'Takes both hands.' }));
         card.append(this._icon(id, true), words);
         const buttons = el('div', 'gear-actions');
@@ -309,7 +315,7 @@ export class GearScreen {
         this.notice = 'Changing…';
         this.render();
         const res = await this.inventory.equip(id);
-        this.notice = res.ok ? `Wearing: ${this.inventory.item(id).name}.` : SAY[res.error] || SAY.offline;
+        this.notice = res.ok ? `Wearing: ${this.inventory.item(id).name}.` : res.message || SAY[res.error] || SAY.offline;
         if (res.bothHands) {
             const item = this.inventory.item(id), other = this.inventory.item(res.bothHands);
             this.notice += item.twoHanded
@@ -400,10 +406,8 @@ export class GearScreen {
             const hero = this.hero();
             // An attack drawn only in the sheet's oversized rows (a longsword's slash) is
             // blank in the 64px ones this stage draws: swing one that isn't
-            const blanked = hero?.spriteMeta?.custom_animations?.blanked_animations || [];
             const want = getRangedAnimation(hero) || getMeleeAnimation(hero);
-            const anim = [want, 'slash', 'thrust', 'shoot', 'spellcast'].find(a => !blanked.includes(a));
-            this._pose = { anim, t: 0 };
+            this._pose = { anim: attackInstead(want, hero?.spriteMeta) || want, t: 0 };
         });
         stage.append(el('div', 'gear-light'), canvas, left, right);
         if (this.inventory.busy) stage.append(el('div', 'gear-busy', { text: 'Changing…' }));

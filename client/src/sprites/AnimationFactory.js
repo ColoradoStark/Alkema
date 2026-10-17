@@ -21,7 +21,7 @@ export const ANIM_ROWS = {
 };
 
 // Maps oversized animation names to the standard animation they replace
-const OVERSIZE_TO_STANDARD = {
+export const OVERSIZE_TO_STANDARD = {
     slash_oversize: 'slash',
     slash_reverse_oversize: 'slash',
     slash_128: 'slash',
@@ -178,6 +178,20 @@ export function createOversizedAnimations(scene, bitmap, customAnims, characterI
             }
         }
     }
+}
+
+// Attacks, best first for one that can't be shown (spellcast is never blanked)
+const ATTACKS = ['slash', 'thrust', 'shoot', 'halfslash', 'backslash', 'spellcast'];
+
+/**
+ * The attack to play instead of `animName` when it's blank on this sheet (the
+ * sprite API blanks an attack the hero's clothes or weapon can't draw), or null
+ * if it can be played as it is.
+ */
+export function attackInstead(animName, spriteMeta) {
+    const blanked = spriteMeta?.custom_animations?.blanked_animations || [];
+    if (!blanked.includes(animName) || !ATTACKS.includes(animName)) return null;
+    return ATTACKS.find(a => !blanked.includes(a)) || null;
 }
 
 /**

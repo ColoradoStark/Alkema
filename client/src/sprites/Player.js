@@ -1,18 +1,11 @@
 import { CompositeCharacter } from './CompositeCharacter.js';
-import { getWeaponItemKey, getWeaponType, getMeleeAnimation, getRangedAnimation } from './weaponTypes.js';
+import { getWeaponItemKey, getWeaponType, getMeleeAnimation, getRangedAnimation, WEAPON_COMBO_ATTACKS } from './weaponTypes.js';
 import { spawnArrow, spawnRock } from './ProjectileSpawner.js';
 import { audio } from '../audio/audio.js';
 import { attackSound } from '../audio/combatSounds.js';
 import { Ship } from '../world/Ship.js';
 
 const STEP_MS = 330; // footstep spacing while walking
-
-const WEAPON_COMBO_ATTACKS = {
-    'weapon_sword_longsword':  ['slash', 'slash_reverse', 'thrust'],
-    'weapon_sword_arming':     ['backslash', 'halfslash', 'slash'],
-    'weapon_sword_dagger':     ['slash', 'thrust'],
-    'weapon_polearm_halberd':  ['slash', 'thrust'],
-};
 
 export class Player {
     constructor(scene, x, y, id, characterData, isLocal = false) {
@@ -117,10 +110,12 @@ export class Player {
             }
         } else {
             const weaponKey = getWeaponItemKey(this.characterData);
-            const comboList = weaponKey ? WEAPON_COMBO_ATTACKS[weaponKey] : null;
+            // The server says which of the weapon's attacks their clothes allow (a robe: no thrust)
+            const allowed = this.characterData.attacks;
+            const comboList = allowed?.length ? allowed : (weaponKey ? WEAPON_COMBO_ATTACKS[weaponKey] : null);
             let meleeAnim;
 
-            if (comboList) {
+            if (comboList?.length) {
                 this.comboIndex = (this.comboIndex + 1) % comboList.length;
                 meleeAnim = comboList[this.comboIndex];
             } else {

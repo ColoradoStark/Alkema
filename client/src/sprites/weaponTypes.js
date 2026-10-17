@@ -55,3 +55,19 @@ export function getMeleeAnimation(characterData) {
         default: return 'slash';
     }
 }
+
+/** Weapons that chain different attacks on repeated presses (each press plays the next). */
+export const WEAPON_COMBO_ATTACKS = {
+    'weapon_sword_longsword':  ['slash', 'slash_reverse', 'thrust'],
+    'weapon_sword_arming':     ['backslash', 'halfslash', 'slash'],
+    'weapon_sword_dagger':     ['slash', 'thrust'],
+    'weapon_polearm_halberd':  ['slash', 'thrust'],
+};
+
+/** Every attack animation a hero with this gear can play from the attack button. */
+export function attackAnimations(characterData) {
+    const ranged = getRangedAnimation(characterData);
+    if (ranged) return [ranged];
+    const key = getWeaponItemKey(characterData);
+    return (key && WEAPON_COMBO_ATTACKS[key]) || [getMeleeAnimation(characterData)];
+}

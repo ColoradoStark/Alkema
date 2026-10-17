@@ -239,7 +239,7 @@ test.describe('Gear', () => {
         expect(shielded.defence).toBe(after.defence + 1);
     });
 
-    test("a robed cleric with a spear stays in sight when they attack (robes can't thrust)", async ({ page }) => {
+    test("a robed cleric is told her robe leaves no room for a spear, and out of it she thrusts it, in sight", async ({ page }) => {
         test.setTimeout(150000);
         await page.goto('/');
         await page.waitForFunction(() => {
@@ -257,17 +257,28 @@ test.describe('Gear', () => {
         }, null, { timeout: 60000 });
         await page.locator('#cc-play').click();
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory, null, { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'torso_clothes_robe'))).toBe(true);
+        // The smith's spear: its card says so before she buys it
+        await intoShop(page, 'riverhold-weapons', 'smith');
+        await page.locator('.gear-row[data-item="spear"]').click();
+        const why = 'Your robe leaves no room to thrust the spear. Take it off to use it.';
+        await expect(page.locator('.gear-detail .gear-detail-warn')).toHaveText(why, { timeout: 15000 });
+        await page.locator('.gear-detail .gear-btn--go').click();
+        await page.locator('.gear-detail .gear-btn', { hasText: 'Wear it' }).click();
+        await expect(page.locator('.gear-notice')).toHaveText(why, { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equipped.weapon)).toBe('starter-weapon');
+        // Out of the robe, it goes on, and she thrusts it, drawn
         await page.evaluate(async () => {
             const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
-            inv.buy('spear');
+            await inv.unequip('body');
             await inv.equip('spear');
         });
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'weapon_polearm_spear')
-            && window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.spriteMeta, null, { timeout: 30000 });
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'torso_clothes_robe'))).toBe(true);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'weapon_polearm_spear'),
+            null, { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.attacks)).toEqual(['thrust']);
+        await page.locator('.gear-close').click();
         await page.waitForTimeout(1500);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAttack());
-        // Mid-attack, the frame she's drawn with has her in it
         const seen = [];
         for (let i = 0; i < 4; i++) {
             await page.waitForTimeout(80);
@@ -281,11 +292,11 @@ test.describe('Gear', () => {
                 const d = ctx.getImageData(0, 0, f.cutWidth, f.cutHeight).data;
                 let n = 0;
                 for (let k = 3; k < d.length; k += 4) if (d[k] > 0) n++;
-                return { anim: a.anims.currentAnim?.key.split('_').slice(-2, -1)[0], visible: a.visible, pixels: n };
+                return { anim: a.anims.currentAnim?.key.split('_').slice(-2, -1)[0], pixels: n };
             }));
         }
-        for (const s of seen) expect(s.pixels, JSON.stringify(seen)).toBeGreaterThan(200);
-        expect(seen.some(s => s.anim !== 'idle'), JSON.stringify(seen)).toBe(true);      // and she does attack
+        for (const f of seen) expect(f.pixels, JSON.stringify(seen)).toBeGreaterThan(200);
+        expect(seen.some(f => f.anim === 'thrust'), JSON.stringify(seen)).toBe(true);
     });
 
     test('a shopkeeper has their say and asks first: No leaves you be, Yes opens the shop', async ({ page }) => {
