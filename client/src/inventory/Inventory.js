@@ -3,7 +3,8 @@
 // (their own 'starter-weapon' and so on, from joining). Everything here is
 // kept in the hero's save: gold, bag (item ids, unequipped, one per thing
 // carried) and equipped ({ slot: item id }). Wearing something new asks the
-// server to dress the hero ('equip'), which makes their sprite again.
+// server to dress the hero ('equip'), which makes their sprite again and
+// reckons their stats with it on.
 
 import { account } from '../account/account.js';
 
@@ -16,11 +17,13 @@ export class Inventory {
      * @param {object} opts.catalogue  { items, shops, startingGold, sellRate }
      * @param {object} opts.kit  { items, equipped }: this hero's own starting gear
      * @param {object} opts.equipped  what they're wearing now (as the server dressed them)
+     * @param {object} opts.stats  their stats as the server reckons them, with that on
      * @param {(event: string, data: object, timeout?: number) => Promise<object>} opts.request
      */
-    constructor({ catalogue, kit, equipped, request }) {
+    constructor({ catalogue, kit, equipped, stats, request }) {
         this.catalogue = catalogue;
         this.kit = kit || { items: {}, equipped: {} };
+        this.stats = stats || null;
         this.request = request;
         this._listeners = new Set();
         this.busy = false;
@@ -127,6 +130,7 @@ export class Inventory {
         if (res?.ok) {
             this.equipped = equipped;
             this.bag = bag;
+            if (res.stats) this.stats = res.stats;
             this._save();
             this.onWorn?.(res.character);
         } else {

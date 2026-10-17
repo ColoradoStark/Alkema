@@ -1,6 +1,6 @@
 // Particles and little flourishes for the creator stage and the world: dust,
 // impacts that match what was struck (wood splinters, metal sparks, spell
-// glints; skeletons just rattle), coins that bounce, settle and fly into a purse, damage numbers,
+// glints; skeletons just rattle), coins that bounce and settle, damage numbers,
 // arrows and magic bolts, fireflies, and the treasure chest. Particles are small
 // hand-drawn pixel sprites in the DawnBringer-32 palette the UI uses.
 
@@ -15,10 +15,9 @@ export class StageEffects {
      * @param {Phaser.Scene} scene
      * @param {{ width: number, top: number, bottom: number }|null} area  the stage
      *   region for ambient fireflies; null in the game world
-     * @param {{ depth?: number, purse?: {x: number, y: number} }} [opts]
-     *   depth: draw order for bursts; purse: where collected gold is counted
+     * @param {{ depth?: number }} [opts]  depth: draw order for bursts
      */
-    constructor(scene, area, { depth = 7, purse = null } = {}) {
+    constructor(scene, area, { depth = 7 } = {}) {
         this.scene = scene;
         this.area = area;
         this.depth = depth;
@@ -78,12 +77,6 @@ export class StageEffects {
                 tint: [0xfbf236, 0x99e550], blendMode: 'ADD', frequency: 420, quantity: 1,
             }).setDepth(1);
         }
-
-        this.purse = purse ? new Purse(scene, purse.x, purse.y, depth + 2) : null;
-        this._flying = new Set();
-        const step = (_t, delta) => this._stepCoins(delta);
-        scene.events.on('update', step);
-        scene.events.once('shutdown', () => scene.events.off('update', step));
     }
 
     _debris(texture, config) {
@@ -146,68 +139,6 @@ export class StageEffects {
     coinBurst(x, y, groundY = y + 22) {
         this.ground.y = groundY;
         this.coins.explode(16, x, y);
-    }
-
-    /**
-     * Coins burst from (x, y), bounce on `groundY`, settle, then fly into the
-     * purse one after another, each ringing a little higher. `amount` gold is
-     * shared across the coins as they arrive.
-     */
-    collectCoins(x, y, groundY, amount) {
-        if (!this.purse) {
-            this.coinBurst(x, y, groundY);
-            return;
-        }
-        const count = Math.min(8, Math.max(3, Math.round(amount / 4)));
-        const share = splitAmount(amount, count);
-        for (let i = 0; i < count; i++) {
-            const coin = this.scene.add.sprite(x, y, 'fx-coin', i % 4).setScale(2).setDepth(this.depth + 1);
-            coin.play({ key: 'fx-coin-spin', startFrame: i % 4 });
-            this._flying.add({
-                coin, x, y, vx: -110 + Math.random() * 220, vy: -200 - Math.random() * 120,
-                groundY, bounces: 0, rest: 0, waitMs: 520 + i * 70, value: share[i], index: i,
-            });
-        }
-    }
-
-    _stepCoins(delta) {
-        if (!this._flying.size) return;
-        const dt = Math.min(delta, 50) / 1000;
-        for (const c of this._flying) {
-            if (c.homing) continue;
-            c.vy += 1000 * dt;
-            c.x += c.vx * dt;
-            c.y += c.vy * dt;
-            if (c.y >= c.groundY) {
-                c.y = c.groundY;
-                if (c.bounces < 2 && c.vy > 60) {
-                    c.vy = -c.vy * 0.38;
-                    c.bounces++;
-                } else {
-                    c.vy = 0;
-                }
-                c.vx *= 0.7;
-            }
-            c.coin.setPosition(c.x, c.y);
-            c.rest += delta;
-            if (c.rest >= c.waitMs) this._home(c);
-        }
-    }
-
-    /** Fly a settled coin into the purse. */
-    _home(c) {
-        c.homing = true;
-        const target = this.purse.anchor;
-        this.scene.tweens.add({
-            targets: c.coin, x: target.x, y: target.y, scale: 1.4, duration: 380, ease: 'Cubic.easeIn',
-            onComplete: () => {
-                c.coin.destroy();
-                this._flying.delete(c);
-                this.purse.add(c.value);
-                audio.play('ting', { detune: c.index * 120, drift: 0, volume: 0.7 });
-                this.stars.explode(3, target.x, target.y);
-            },
-        });
     }
 
     /** A number (or word) that pops up and floats away. */
@@ -278,60 +209,6 @@ export class StageEffects {
         s.tweens.add({ targets: glow, alpha: 0.15, duration: 500, yoyo: true, repeat: -1 });
         return chest;
     }
-}
-
-/** Gold earned on the stage, counted up as coins fly in. */
-class Purse {
-    constructor(scene, right, y, depth) {
-        this.scene = scene;
-        this.total = 0;
-        this.container = scene.add.container(right, y).setDepth(depth).setAlpha(0);
-        this.bg = scene.add.graphics();
-        this.icon = scene.add.image(0, 0, 'fx-coin', 0).setScale(2);
-        this.text = scene.add.text(0, 0, '0', {
-            fontFamily: 'Alagard', fontSize: '15px', color: '#fbf236', stroke: '#222034', strokeThickness: 4,
-        }).setOrigin(1, 0.5);
-        this.container.add([this.bg, this.icon, this.text]);
-        this._layout();
-    }
-
-    /** Where coins fly to (the coin icon), in scene coordinates. */
-    get anchor() {
-        return { x: this.container.x + this.icon.x, y: this.container.y };
-    }
-
-    /** Show a hero's saved gold (hidden at zero). */
-    set(total) {
-        this.total = total;
-        this.text.setText(String(total));
-        this._layout();
-        this.container.setAlpha(total > 0 ? 1 : 0);
-    }
-
-    add(value) {
-        if (this.total === 0) this.scene.tweens.add({ targets: this.container, alpha: 1, duration: 200 });
-        this.total += value;
-        this.text.setText(String(this.total));
-        this._layout();
-        this.scene.tweens.killTweensOf(this.text);
-        this.text.setScale(1.35);
-        this.scene.tweens.add({ targets: this.text, scale: 1, duration: 220, ease: 'Back.easeOut' });
-    }
-
-    _layout() {
-        // Right-aligned chip: [coin] 123
-        const w = Math.max(48, this.text.width + 34);
-        this.text.setPosition(-7, 0);
-        this.icon.setPosition(-w + 13, 0);
-        this.bg.clear();
-        this.bg.fillStyle(0x222034, 0.8).fillRect(-w, -12, w, 24);
-        this.bg.lineStyle(1, 0xc8a04a, 1).strokeRect(-w + 0.5, -11.5, w - 1, 23);
-    }
-}
-
-function splitAmount(amount, parts) {
-    const base = Math.floor(amount / parts);
-    return Array.from({ length: parts }, (_, i) => base + (i < amount - base * parts ? 1 : 0));
 }
 
 /** Keeps a debris emitter's particles above a ground line: bounce, scuff, rest. */

@@ -1,6 +1,8 @@
 // The hero's gear, over the map view: a shop (talk to a shopkeeper: buy what
 // they sell, sell them what you carry), Equip (the hero large on a stage, the
-// five slots, and what in your bag could go in each) and Items (your bag).
+// five slots, and what in your bag could go in each), Stats (level, hit and
+// magic points, the four attributes, and what their gear comes to) and Items
+// (your bag).
 // A page layer like the character creator, laid out in the game's 352 px
 // column and scaled with the canvas so it's crisp at any size.
 
@@ -10,12 +12,20 @@ import { itemIcon } from '../../inventory/itemIcons.js';
 import { ANIM_ROWS } from '../../sprites/AnimationFactory.js';
 import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes.js';
 import { audio } from '../../audio/audio.js';
+import { account } from '../../account/account.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
 const FRAME = 64;
 const DIRS = ['down', 'left', 'up', 'right'];
 const DIR_ROW = { up: 0, left: 1, down: 2, right: 3 };
+const ATTRIBUTES = [
+    ['str', 'STR', 'Strength', 'Hit harder with blades and clubs, and take more hits before you fall.'],
+    ['dex', 'DEX', 'Dexterity', 'Aim true with a bow, and slip past blows: a little armour of its own.'],
+    ['int', 'INT', 'Intelligence', "The power of a mage's spells, and how many they can cast."],
+    ['wis', 'WIS', 'Wisdom', "The power of a cleric's or ranger's spells, and how many they can cast."],
+];
+const POWERS = [['attack', 'Attack'], ['defence', 'Defence'], ['spell', 'Spell']];
 const SAY = {
     poor: "You can't afford that yet.",
     busy: 'One thing at a time.',
@@ -33,6 +43,8 @@ function el(tag, className, attrs = {}) {
     }
     return node;
 }
+
+const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
 
 function coins(n) {
     const span = el('span', 'gear-coins');
@@ -98,6 +110,10 @@ export class GearScreen {
         this._show('items');
     }
 
+    openStats() {
+        this._show('stats');
+    }
+
     close() {
         if (!this.visible) return;
         this.root.hidden = true;
@@ -135,7 +151,8 @@ export class GearScreen {
                 el('div', 'gear-says', { text: this.keeper.says || '' }));
             head.append(face, who);
         } else {
-            head.append(el('div', 'gear-title gear-title--big', { text: this.mode === 'equip' ? 'Equipment' : 'Your bag' }));
+            const titles = { equip: 'Equipment', stats: this.hero()?.name || 'Your hero', items: 'Your bag' };
+            head.append(el('div', 'gear-title gear-title--big', { text: titles[this.mode] }));
         }
         const purse = el('div', 'gear-purse');
         purse.append(coins(inv.gold));
@@ -146,6 +163,7 @@ export class GearScreen {
 
         if (this.mode === 'shop') this._renderShop(panel);
         else if (this.mode === 'equip') this._renderEquip(panel);
+        else if (this.mode === 'stats') this._renderStats(panel);
         else this._renderItems(panel);
 
         const notice = el('div', 'gear-notice', { role: 'status', text: this.notice || '' });
@@ -185,6 +203,8 @@ export class GearScreen {
         const words = el('div', 'gear-detail-words');
         words.append(el('div', 'gear-detail-name', { text: item.name }),
             el('div', 'gear-detail-about', { text: item.about || (item.starter ? 'What you set out with.' : '') }));
+        const power = this._power(item);
+        if (power) words.append(power);
         if (item.twoHanded) words.append(el('div', 'gear-detail-note', { text: 'Takes both hands.' }));
         card.append(this._icon(id, true), words);
         const buttons = el('div', 'gear-actions');
@@ -197,6 +217,21 @@ export class GearScreen {
         }
         card.append(buttons);
         return card;
+    }
+
+    /** "Attack 6 (+2)": what an item gives, against what's worn in its slot now. */
+    _power(item) {
+        const worn = this.inventory.item(this.inventory.equipped[item.slot]);
+        const line = el('div', 'gear-power');
+        for (const [key, name] of POWERS) {
+            if (!item[key]) continue;
+            const stat = el('span', 'gear-power-stat');
+            stat.append(`${name} ${item[key]}`);
+            const diff = item[key] - (worn?.[key] || 0);
+            if (worn !== item && diff) stat.append(el('span', diff > 0 ? 'is-up' : 'is-down', { text: ` (${diff > 0 ? '+' : ''}${diff})` }));
+            line.append(stat);
+        }
+        return line.childNodes.length ? line : null;
     }
 
     // ------------------------------------------------------------------ shop
@@ -391,6 +426,68 @@ export class GearScreen {
     _stopHero() {
         if (this._raf) cancelAnimationFrame(this._raf);
         this._raf = null;
+    }
+
+    // ------------------------------------------------------------------ stats
+
+    _renderStats(panel) {
+        const stats = this.inventory.stats;
+        if (!stats) {
+            panel.append(el('div', 'gear-empty', { text: 'Your stats will be here once the realm has reckoned them.' }));
+            return;
+        }
+        const summary = account.current?.data?.summary || {};
+        const top = el('div', 'gear-sheet');
+        const box = el('div', 'gear-portrait');
+        const canvas = el('canvas', 'gear-hero gear-hero--small', { width: FRAME, height: FRAME, 'aria-label': 'Your hero' });
+        box.append(el('div', 'gear-light'), canvas);
+        this._playHero(canvas);
+        const facts = el('div', 'gear-facts');
+        const who = [summary.raceLabel || cap(stats.race), summary.classLabel || cap(stats.class)].join(' ');
+        facts.append(el('div', 'gear-level', { text: `Level ${stats.level} ${who}` }),
+            this._bar('HP', stats.hp.now, stats.hp.max, 'hp'),
+            this._bar('MP', stats.mp.now, stats.mp.max, 'mp', stats.mp.max ? undefined : 'None'),
+            this._bar('EXP', stats.xp, stats.next ?? stats.xp, 'xp', stats.next ? `${stats.xp} / ${stats.next}` : `${stats.xp}`));
+        top.append(box, facts);
+        panel.append(top);
+
+        const attrs = el('div', 'gear-attrs');
+        for (const [key, short, name, about] of ATTRIBUTES) {
+            const b = el('button', `gear-attr${this.selected === key ? ' is-current' : ''}`, { type: 'button', 'data-attr': key });
+            const value = stats.attributes[key], max = stats.max[key];
+            const fill = el('span', 'gear-attr-fill');
+            fill.style.width = `${Math.round(100 * value / max)}%`;
+            const track = el('span', 'gear-attr-track');
+            track.append(fill);
+            b.append(el('span', 'gear-attr-key', { text: short }), el('span', 'gear-attr-value', { text: String(value) }),
+                track, el('span', 'gear-attr-max', { text: `/${max}` }));
+            b.addEventListener('click', () => {
+                audio.play('page', { volume: 0.6 });
+                this.selected = this.selected === key ? null : key;
+                this.notice = this.selected ? `${name}: ${about}` : '';
+                this.render();
+            });
+            attrs.append(b);
+        }
+        panel.append(attrs);
+
+        const powers = el('div', 'gear-powers');
+        for (const [key, name] of POWERS) {
+            const tile = el('div', 'gear-power-tile', { 'data-power': key });
+            tile.append(el('span', 'gear-power-value', { text: String(stats[key]) }), el('span', 'gear-power-name', { text: name }));
+            powers.append(tile);
+        }
+        panel.append(powers, el('div', 'gear-detail-note gear-sheet-note', { text: 'Gear adds to attack, defence and spell. Tap an attribute to see what it does. The number after the bar is as high as your race can raise it.' }));
+    }
+
+    _bar(label, now, max, kind, text = `${now} / ${max}`) {
+        const row = el('div', `gear-bar gear-bar--${kind}`);
+        const fill = el('span', 'gear-bar-fill');
+        fill.style.width = `${max ? Math.round(100 * now / max) : 0}%`;
+        const track = el('span', 'gear-bar-track');
+        track.append(fill, el('span', 'gear-bar-text', { text }));
+        row.append(el('span', 'gear-bar-label', { text: label }), track);
+        return row;
     }
 
     // ------------------------------------------------------------------ items

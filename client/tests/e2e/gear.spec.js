@@ -59,6 +59,22 @@ const inv = (page) => page.evaluate(() => {
 });
 
 test.describe('Gear', () => {
+    test("coins won sparring in the creator are only for show: a hero sets out with the starting purse", async ({ page }) => {
+        test.setTimeout(120000);
+        await page.goto('/');
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight;
+        }, null, { timeout: 60000 });
+        // A victory's coins spill on the stage
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').effects.coinBurst(220, 150, 200));
+        await page.waitForTimeout(2000);
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory, null, { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold)).toBe(100);
+        expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current.data.gold)).toBe(100);
+    });
+
     test("buy a dagger at the weaponsmith's, wear it, sell your old weapon, and still have it on next time", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
@@ -66,7 +82,7 @@ test.describe('Gear', () => {
         await expect(page.locator('.gear-title')).toContainText('Weaponsmith');
         await expect(page.locator('.gear-panel--shop .gear-row')).toHaveCount(6);
         const before = await inv(page);
-        expect(before.gold).toBeGreaterThanOrEqual(100);           // a purse to start with
+        expect(before.gold).toBe(100);           // a purse to start with
         expect(before.equipped.weapon).toBe('starter-weapon');
         // The world waits while you shop
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.visible)).toBe(true);
@@ -147,6 +163,36 @@ test.describe('Gear', () => {
         await me.waitForTimeout(3200);     // the spell's cooldown
         await me.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
         await expect.poll(() => them.evaluate(() => window.__GLOWS), { timeout: 5000 }).toEqual(['#ff6a3d']);
+    });
+
+    test('Stats: level, hit points, the four attributes, and attack that goes up with a better weapon', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 20000 });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        await expect(page.locator('.gear-panel--stats canvas.gear-hero')).toBeVisible();
+        await expect(page.locator('.gear-level')).toContainText('Level 1');
+        await expect(page.locator('.gear-attr')).toHaveCount(4);
+        await expect(page.locator('.gear-bar--hp .gear-bar-text')).toHaveText(/^\d+ \/ \d+$/);
+        const stats = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats);
+        await expect(page.locator('.gear-attr[data-attr="str"] .gear-attr-value')).toHaveText(String(stats.attributes.str));
+        await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(stats.attack));
+        await page.locator('.gear-attr[data-attr="dex"]').click();
+        await expect(page.locator('.gear-notice')).toContainText('Dexterity');
+        await page.locator('.gear-close').click();
+
+        // A spear from the smith: its card shows how much better it is, and Stats agrees
+        await intoShop(page, 'riverhold-weapons', 'smith');
+        await page.locator('.gear-row[data-item="spear"]').click();
+        await expect(page.locator('.gear-detail .gear-power')).toContainText('Attack 7');
+        await page.locator('.gear-detail .gear-btn--go').click();
+        await page.locator('.gear-detail .gear-btn', { hasText: 'Wear it' }).click();
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equipped.weapon), { timeout: 30000 }).toBe('spear');
+        const after = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats);
+        expect(after.attack).toBe(7 + Math.floor(after.attributes.str / 4));
+        await page.locator('.gear-close').click();
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(after.attack));
     });
 
     test('another player sees you cast a spell', async ({ browser }) => {

@@ -71,10 +71,7 @@ export class CreateScene extends Scene {
         this.mapPos = { ...MAP_SPOT };
         this._placeBackdrop();
 
-        // Gold won sparring is counted in a purse under the account chip
-        this.effects = new StageEffects(this, { width: this.scale.width, top: 0, bottom: STAGE_HEIGHT }, {
-            purse: { x: this.figureX + 176 - 8, y: 58 },
-        });
+        this.effects = new StageEffects(this, { width: this.scale.width, top: 0, bottom: STAGE_HEIGHT });
         // A hero appears in a burst of twinkling stars...
         this.poof = this.add.particles(this.figureX, FIGURE_Y + 10, 'fx-star', {
             anim: { anims: ['fx-twinkle'], randomFrame: true },
@@ -206,7 +203,6 @@ export class CreateScene extends Scene {
         if (last?.data?.hero) {
             this.state.loadHero(last.data.hero);
             account.currentId = last.id;
-            this.effects.purse?.set(last.data.gold || 0);
         }
         this.panel = new CreatorPanel(this.state, this.scale.width, {
             onPickBody: id => this._changeIdentity(() => this.state.pickBodyType(id)),
@@ -253,7 +249,6 @@ export class CreateScene extends Scene {
         if (!this.state || this._joining) return;
         // A whole new hero: no longer the saved one (that save is kept)
         account.currentId = null;
-        this.effects.purse?.set(0);
         this.state.randomize();
         const ready = this._prefetch;
         if (ready && this._previewCount - ready.count < MAX_PREFETCH_AGE && !this._inFlight) {
@@ -381,13 +376,12 @@ export class CreateScene extends Scene {
             this.panel?.toast('Couldn\'t reach the realm. Try again.');
             return;
         }
-        // Their starting kit and what they're wearing, for the inventory
-        if (res?.kit) this.game.registry.set('gear', { kit: res.kit, equipped: res.equipped });
+        // Their starting kit, what they're wearing and their stats, for the inventory
+        if (res?.kit) this.game.registry.set('gear', { kit: res.kit, equipped: res.equipped, stats: res.stats });
         // Save this hero (a new slot, or the one they loaded) before setting off
         const saved = await account.saveHero({
             hero: this.state.heroData(),
             summary: this.state.summary(),
-            gold: this.effects.purse?.total || 0,
         }).catch(() => undefined);
         if (saved === null) this.accountMenu.toast('All 10 hero slots are full. Free one in My heroes to save this hero.');
         // The chest is a flourish: never let it hold up entering the world. Hidden
@@ -467,7 +461,6 @@ export class CreateScene extends Scene {
         if (!this.state || this._joining || !save?.data?.hero) return;
         this.state.loadHero(save.data.hero);
         account.currentId = save.id;
-        this.effects.purse?.set(save.data.gold || 0);
         this.panel.render();
         this.panel.toast(`${this.state.name} is ready.`);
         this._requestPreview({ identityChanged: true });

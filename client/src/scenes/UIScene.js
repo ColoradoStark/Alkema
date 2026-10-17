@@ -44,8 +44,9 @@ export class UIScene extends Scene {
     }
 
     /**
-     * Gold, gear and the shops: the catalogue comes from the server, the hero's
-     * own starting kit from joining. Equip and Items open over the map; so does
+     * Gold, gear, stats and the shops: the catalogue comes from the server, the
+     * hero's own starting kit and stats from joining. Equip, Stats and Items open
+     * over the map; so does
      * a shop, when you talk to its keeper.
      */
     async _setupGear() {
@@ -59,7 +60,7 @@ export class UIScene extends Scene {
         } catch { /* no shops today */ }
         if (!catalogue || !this.scene.isActive()) return;
         const gear = this.game.registry.get('gear') || {};
-        this.inventory = new Inventory({ catalogue, kit: gear.kit, equipped: gear.equipped, request });
+        this.inventory = new Inventory({ catalogue, kit: gear.kit, equipped: gear.equipped, stats: gear.stats, request });
         this.inventory.onWorn = (character) => this.scene.get('GameScene')?.localPlayer?.updateAppearance(character);
         this.gear = new GearScreen({
             inventory: this.inventory,
@@ -75,6 +76,7 @@ export class UIScene extends Scene {
         if (!this.gear || this.dialogue.visible) return;
         if (key === 'equip') this.gear.openEquip();
         else if (key === 'items') this.gear.openItems();
+        else if (key === 'stats') this.gear.openStats();
         else this.gear.close();
     }
 

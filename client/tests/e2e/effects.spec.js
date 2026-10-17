@@ -1,5 +1,5 @@
 // Particles: pixel-sprite particles, impacts that match what was struck, and
-// coins that settle and fly into the purse.
+// coins that bounce and settle.
 import { test, expect } from '@playwright/test';
 
 async function stage(page) {
@@ -82,14 +82,15 @@ test.describe('Stage effects', () => {
         expect(xs.end).toBe(200);                  // and came back to rest
     });
 
-    test('victory coins fly into the purse, adding up to the gold won', async ({ page }) => {
+    test('victory coins spill out and settle (only for show)', async ({ page }) => {
         await stage(page);
-        await page.evaluate(() => {
+        const alive = await page.evaluate(() => {
             const fx = window.__PHASER_GAME.scene.getScene('CreateScene').effects;
-            fx.collectCoins(220, 150, 200, 23);
+            fx.coinBurst(220, 150, 200);
+            return fx.coins.getAliveParticleCount();
         });
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').effects.purse.total), { timeout: 5000 }).toBe(23);
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').effects._flying.size)).toBe(0);
+        expect(alive).toBe(16);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').effects.purse)).toBeUndefined();
     });
 
     test('hits in the world throw sparks and dust', async ({ page }) => {

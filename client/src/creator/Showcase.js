@@ -275,10 +275,10 @@ export class Showcase {
         audio.play(cries.down, { volume: 0.8 });
         audio.duck(1600);
         scene.time.delayedCall(250, () => audio.play('victory', { drift: 0 }));
-        // Coins spill out, bounce, settle, and fly into the purse
+        // Coins spill out, bounce and settle (just for show: sparring wins no gold)
         scene.time.delayedCall(300, () => {
             audio.play('coins');
-            effects.collectCoins(foe.x, y + 4 * stage.scale, stage.feetY, 10 + Math.floor(Math.random() * 15));
+            effects.coinBurst(foe.x, y + 4 * stage.scale, stage.feetY);
         });
         await this._wait(950);
         if (!alive()) return;
