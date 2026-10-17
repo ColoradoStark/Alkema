@@ -212,6 +212,45 @@ test.describe('Riverhold', () => {
         expect(back.y + 23).toBeGreaterThan(door[1]);          // outside, below the door
     });
 
+    test("behind each shop's counter, a doorway through to a back room where the stock is kept", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 30000 }).toBe('riverhold');
+        const walk = (dir, from) => page.evaluate(async ({ dir, from }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            keys[dir] = true;
+            for (let i = 0; i < 80 && gs.town?.key === from; i++) await new Promise(r => setTimeout(r, 50));
+            keys[dir] = false;
+        }, { dir, from });
+        for (const shop of ['riverhold-weapons', 'riverhold-armour', 'riverhold-apothecary']) {
+            await page.evaluate(async (shop) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                await gs._loadTown(shop);
+                await gs.changeMap(shop, gs.cache.json.get(`town-${shop}`).arrive, 'up');
+            }, shop);
+            await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(shop);
+            // Just below the doorway, then up through it
+            const door = await page.evaluate((shop) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                const e = gs.town.data.exits.find(e => e.to === `${shop}-back`);
+                const me = gs.localPlayer.sprite;
+                me.setPosition(e.rect[0] + e.rect[2] / 2, e.rect[1] + 40 - 23);
+                me.body.reset(me.x, me.y);
+                return e.rect;
+            }, shop);
+            await walk('up', shop);
+            await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(`${shop}-back`);
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.folk)).toEqual([]);
+            // ...and back out, below the doorway again
+            await walk('down', `${shop}-back`);
+            await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(shop);
+            const back = await where(page);
+            expect(Math.abs(back.x - (door[0] + door[2] / 2))).toBeLessThan(20);
+        }
+    });
+
     test('the town watch: twelve guards in one uniform, one of them off duty at the inn', async ({ page }) => {
         test.setTimeout(200000);
         await enterWorld(page);

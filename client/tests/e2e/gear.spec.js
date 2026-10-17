@@ -321,6 +321,25 @@ test.describe('Gear', () => {
         await expect(page.locator('.gear-says')).toHaveText("Arms up. Let's see what you're made of.");
     });
 
+    test("what the server tells you isn't sent back to it (a cast seen would bounce between players forever)", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const sent = await page.evaluate(() => {
+            const socket = window.__PHASER_GAME.scene.getScene('GameScene').networkManager.socket;
+            const sent = [];
+            const emit = socket.emit.bind(socket);
+            socket.emit = (event, ...rest) => { sent.push(event); return emit(event, ...rest); };
+            // Someone nearby casts, moves, swings and is hit
+            for (const [event, data] of [['player-cast', { id: 'someone', direction: 'down' }], ['player-moved', { id: 'someone', x: 1, y: 1 }],
+                ['player-attacked', { id: 'someone', direction: 'down' }], ['player-hit', { targetId: 'someone' }]]) {
+                for (const listener of socket.listeners(event)) listener(data);
+            }
+            socket.emit = emit;
+            return sent;
+        });
+        expect(sent).toEqual([]);
+    });
+
     test('another player sees you cast a spell', async ({ browser }) => {
         test.setTimeout(120000);
         const { pages: [me, them], ids: [myId] } = await twoHeroes(browser);
@@ -331,6 +350,7 @@ test.describe('Gear', () => {
             p.playCast = (...args) => { window.__CASTS++; return cast(...args); };
         }, myId);
         await me.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
+        await me.waitForTimeout(2000);      // long enough for any echo to come round
         await expect.poll(() => them.evaluate(() => window.__CASTS), { timeout: 5000 }).toBe(1);
     });
 });

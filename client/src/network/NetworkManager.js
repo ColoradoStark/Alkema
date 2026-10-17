@@ -82,15 +82,12 @@ export class NetworkManager {
         });
     }
 
+    /**
+     * Tell this client's listeners (what the server said, or connected and
+     * disconnected). Never sent back to the server: echoing a 'player-cast'
+     * that came in bounced it between players forever.
+     */
     emit(event, data) {
-        // Send to server if it's a player or game event
-        if (event.startsWith('player-') || event.startsWith('game-')) {
-            if (this.socket && this.connected) {
-                this.socket.emit(event, data);
-            }
-        }
-        
-        // Always emit to local listeners
         const callbacks = this.listeners.get(event);
         if (callbacks) {
             callbacks.forEach(callback => callback(data));
