@@ -207,12 +207,6 @@ export class GearScreen {
             el('div', 'gear-detail-about', { text: item.about || (item.starter ? 'What you set out with.' : '') }));
         const power = this._power(item);
         if (power) words.append(power);
-        // Whether it would go with what they have on (a spear and a robe don't)
-        if (!this.inventory.equipped[item.slot] || this.inventory.equipped[item.slot] !== id) {
-            const warn = el('div', 'gear-detail-note gear-detail-warn');
-            words.append(warn);
-            this.inventory.tryOn(id).then(res => { if (!res?.ok && res?.message) warn.textContent = res.message; });
-        }
         if (item.twoHanded) words.append(el('div', 'gear-detail-note', { text: 'Takes both hands.' }));
         card.append(this._icon(id, true), words);
         const buttons = el('div', 'gear-actions');

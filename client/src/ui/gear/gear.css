@@ -222,8 +222,6 @@
     color: var(--parchment);
 }
 .gear-detail-note { color: var(--muted); }
-.gear-detail-warn { color: #d95763; }
-.gear-detail-warn:empty { display: none; }
 .gear-actions { display: flex; flex-direction: column; gap: 4px; flex: none; }
 
 .gear-btn {

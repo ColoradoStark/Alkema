@@ -109,19 +109,6 @@ export class Inventory {
         return this._wear(equipped, bag).then(res => (res?.ok && bothHands ? { ...res, bothHands } : res));
     }
 
-    /**
-     * Would `id` work on them with what else they have on: { ok } or
-     * { ok: false, message } (a robe leaves no room to thrust a spear).
-     */
-    async tryOn(id) {
-        if (!this.item(id)) return { ok: true };
-        try {
-            return await this.request('try-on', { equipped: this._putting(id).equipped }, 15000);
-        } catch {
-            return { ok: true };
-        }
-    }
-
     /** What they'd wear and carry with `id` put on (it needn't be in the bag yet). */
     _putting(id) {
         const item = this.item(id);

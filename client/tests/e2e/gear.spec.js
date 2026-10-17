@@ -239,14 +239,14 @@ test.describe('Gear', () => {
         expect(shielded.defence).toBe(after.defence + 1);
     });
 
-    test("a robed cleric is told her robe leaves no room for a spear, and out of it she thrusts it, in sight", async ({ page }) => {
+    test("a cleric sets out in clothes that suit any weapon: she takes up a spear and thrusts it, in sight", async ({ page }) => {
         test.setTimeout(150000);
         await page.goto('/');
         await page.waitForFunction(() => {
             const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
             return s?.figure?.visible && !s._inFlight;
         }, null, { timeout: 60000 });
-        // A human woman cleric: her robe has no thrust frames
+        // A human woman cleric (who used to set out in a robe, which has no thrust frames)
         await page.evaluate(() => {
             const s = window.__PHASER_GAME.scene.getScene('CreateScene');
             s._changeIdentity(() => { s.state.pickBodyType('female'); s.state.pickKind('human'); s.state.pickClass('cleric'); });
@@ -257,24 +257,14 @@ test.describe('Gear', () => {
         }, null, { timeout: 60000 });
         await page.locator('#cc-play').click();
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory, null, { timeout: 30000 });
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'torso_clothes_robe'))).toBe(true);
-        // The smith's spear: its card says so before she buys it
+        const worn = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.map(l => l.item));
+        expect(worn).not.toContain('torso_clothes_robe');
+        // The smith's spear goes straight on
         await intoShop(page, 'riverhold-weapons', 'smith');
         await page.locator('.gear-row[data-item="spear"]').click();
-        const why = 'Your robe leaves no room to thrust the spear. Take it off to use it.';
-        await expect(page.locator('.gear-detail .gear-detail-warn')).toHaveText(why, { timeout: 15000 });
         await page.locator('.gear-detail .gear-btn--go').click();
         await page.locator('.gear-detail .gear-btn', { hasText: 'Wear it' }).click();
-        await expect(page.locator('.gear-notice')).toHaveText(why, { timeout: 30000 });
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equipped.weapon)).toBe('starter-weapon');
-        // Out of the robe, it goes on, and she thrusts it, drawn
-        await page.evaluate(async () => {
-            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
-            await inv.unequip('body');
-            await inv.equip('spear');
-        });
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'weapon_polearm_spear'),
-            null, { timeout: 30000 });
+        await expect(page.locator('.gear-notice')).toHaveText('Wearing: Spear.', { timeout: 30000 });
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.attacks)).toEqual(['thrust']);
         await page.locator('.gear-close').click();
         await page.waitForTimeout(1500);
