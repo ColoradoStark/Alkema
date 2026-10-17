@@ -12,6 +12,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
 
         this.scene = scene;
         this.characterData = characterData || {};
+        this.look = this.characterData.id;   // which of their sheets is showing (it changes as they change clothes)
         this.sprite = null;
         this.animationKey = null;
         this.currentDirection = 'down';
@@ -35,7 +36,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
 
     loadSpritesheet() {
         const spriteUrl = this.characterData.spriteUrl;
-        const textureKey = `sprite_${this.characterData.id}`;
+        const textureKey = `sprite_${this.look}`;
 
         if (this.scene.textures.exists(textureKey)) {
             // Sheets with oversized animations are wider than 13 columns; read the
@@ -56,9 +57,9 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
 
     onTextureReady(textureKey) {
         this.sprite = this.scene.add.sprite(0, 0, textureKey, 0);
-        this.add(this.sprite);
+        this.addAt(this.sprite, 0);      // under their name
 
-        this.animationKey = `anim_${this.characterData.id}`;
+        this.animationKey = `anim_${this.look}`;
         createStandardAnimations(this.scene, textureKey, this.animationKey, this.sheetCols);
 
         // Replay any animation that was requested while the spritesheet was
@@ -84,7 +85,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.spriteMeta = meta;
 
         if (meta?.custom_animations?.idle_frames && this.animationKey) {
-            const textureKey = `sprite_${this.characterData.id}`;
+            const textureKey = `sprite_${this.look}`;
             updateIdleFrames(this.scene, textureKey, this.animationKey, this.sheetCols, meta.custom_animations.idle_frames);
             this.playAnimation('idle', this.currentDirection);
         }
@@ -107,7 +108,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             .then(r => r.blob())
             .then(blob => createImageBitmap(blob))
             .then(bitmap => {
-                createOversizedAnimations(this.scene, bitmap, customAnims, this.characterData.id, this.animationKey);
+                createOversizedAnimations(this.scene, bitmap, customAnims, this.look, this.animationKey);
                 bitmap.close();
 
                 // Re-play current animation so it picks up oversized version
@@ -145,7 +146,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
                 if (!anim || !anim.frames.length) return;
                 const osTextureKey = anim.frames[0].textureKey;
                 this.oversizedSprite = this.scene.add.sprite(0, 0, osTextureKey, 0);
-                this.add(this.oversizedSprite);
+                this.addAt(this.oversizedSprite, 1);
             }
 
             this.oversizedSprite.setVisible(true);
@@ -157,6 +158,44 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             this.sprite.setVisible(true);
             this.sprite.play(result.key, true);
             this.usingOversized = false;
+        }
+    }
+
+    /**
+     * The same person in other clothes (a new spritesheet at characterData.spriteUrl):
+     * the new sheet loads, then takes the old one's place, facing the same way.
+     */
+    updateCharacter(characterData) {
+        const old = this.look;
+        this._looks = (this._looks || 0) + 1;
+        const look = `${this.characterData.id}~${this._looks}`;
+        this.look = look;
+        this.characterData = { ...characterData, id: this.characterData.id };
+        const textureKey = `sprite_${look}`;
+        return loadCharacterSpritesheet(this.scene, characterData.spriteUrl, textureKey)
+            .then(({ cols }) => {
+                if (this.look !== look || !this.scene) return;     // changed again meanwhile, or gone
+                this.sheetCols = cols || this.sheetCols;
+                this.sprite?.destroy();
+                this.oversizedSprite?.destroy();
+                this.sprite = null;
+                this.oversizedSprite = null;
+                this.usingOversized = false;
+                this.spriteMeta = null;
+                this.onTextureReady(textureKey);
+                if (characterData.spriteMeta) this.applySpriteMeta(characterData.spriteMeta);
+                this._forget(old);
+            })
+            .catch(() => { /* keep the old clothes */ });
+    }
+
+    /** Drop the animations and textures of a sheet no longer worn. */
+    _forget(look) {
+        for (const key of [...this.scene.anims.anims.keys()]) {
+            if (key.startsWith(`anim_${look}_`)) this.scene.anims.remove(key);
+        }
+        for (const key of this.scene.textures.getTextureKeys()) {
+            if (key === `sprite_${look}` || key.startsWith(`sprite_${look}_os_`)) this.scene.textures.remove(key);
         }
     }
 

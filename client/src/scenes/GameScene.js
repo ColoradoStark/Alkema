@@ -467,6 +467,26 @@ export class GameScene extends Scene {
         }
     }
 
+    /** A spell cast with a crystal: a ring of its colour swells round the caster, and sparks fly. */
+    castGlow(player, colour) {
+        const me = player?.sprite;
+        if (!me) return;
+        const c = Phaser.Display.Color.HexStringToColor(colour).color;
+        const x = me.x, y = me.y + 6;
+        const ring = this.add.circle(x, y, 8).setStrokeStyle(2, c, 0.9).setDepth(me.depth + 1);
+        const glow = this.add.circle(x, y - 10, 14, c, 0.35).setDepth(me.depth + 1).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: ring, radius: 34, alpha: 0, duration: 520, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+        this.tweens.add({ targets: glow, scale: 1.8, alpha: 0, duration: 420, onComplete: () => glow.destroy() });
+        for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2;
+            const spark = this.add.rectangle(x, y - 10, 2, 2, c).setDepth(me.depth + 1);
+            this.tweens.add({
+                targets: spark, x: x + Math.cos(a) * 30, y: y - 10 + Math.sin(a) * 22, alpha: 0,
+                duration: 480 + Math.random() * 200, ease: 'Quad.easeOut', onComplete: () => spark.destroy(),
+            });
+        }
+    }
+
     emitCast() {
         if (this.networkManager?.socket?.connected) {
             this.networkManager.socket.emit('player-cast', {

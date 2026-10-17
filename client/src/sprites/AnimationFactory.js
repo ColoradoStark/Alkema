@@ -4,7 +4,7 @@
 import { SPRITE_FRAME_SIZE } from './SpritesheetLoader.js';
 
 // Optimized spritesheet row layout (64x64 frames)
-const ANIM_ROWS = {
+export const ANIM_ROWS = {
     spellcast: { start: 0, dirs: 4, frames: 7 },
     thrust:    { start: 4, dirs: 4, frames: 8 },
     walk:      { start: 8, dirs: 4, frames: 9 },

@@ -1,0 +1,349 @@
+/* The gear screens (shop, equip, bag), over the map view. Laid out in the
+   game's 352×640 logical pixels and scaled with the canvas like the character
+   creator, in its colours (DawnBringer-32) and leather. */
+
+.gear {
+    --ink: #222034;
+    --leather: #3d2510;
+    --brass: #d27d2c;
+    --brass-dark: #8f563b;
+    --gold: #fbf236;
+    --parchment: #eec39a;
+    --text: #fff6e0;
+    --muted: #a8886a;
+    --well: #291709;
+
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 352px;
+    height: 640px;
+    transform-origin: 0 0;
+    z-index: 55;
+    pointer-events: none;
+    font-family: 'Alagard', monospace;
+    color: var(--text);
+    image-rendering: pixelated;
+    -webkit-tap-highlight-color: transparent;
+}
+.gear[hidden] { display: none; }
+
+.gear :where(button) {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    pointer-events: auto;
+}
+.gear :focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+.gear-panel {
+    position: absolute;
+    top: 32px;
+    height: 448px;
+    left: calc(-1 * var(--side, 0px));
+    right: calc(-1 * var(--side, 0px));
+    padding: 8px calc(10px + var(--side, 0px)) 6px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    pointer-events: auto;
+    background: url('/ui/creator/art/leather.png') 0 0 / 32px 32px repeat, var(--leather);
+    box-shadow: inset 0 0 0 1px #c8a04a, inset 0 0 24px rgba(0, 0, 0, 0.45);
+    scrollbar-width: thin;
+    scrollbar-color: var(--brass-dark) transparent;
+}
+
+/* ---------- Head: who you're talking to (or which screen), your purse, close ---------- */
+
+.gear-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+}
+.gear-face {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    background: var(--ink) center 12% / cover no-repeat;
+    box-shadow: 0 0 0 1px var(--ink), 0 0 0 3px var(--gold), 0 0 0 4px var(--brass-dark);
+    margin: 3px;
+}
+.gear-face.is-blank { background: radial-gradient(circle at 50% 40%, #5a3a20, var(--ink)); }
+.gear-who { flex: 1; min-width: 0; }
+.gear-title {
+    font-family: 'Romulus', monospace;
+    font-size: 15px;
+    color: var(--gold);
+    text-shadow: 1px 1px var(--ink);
+}
+.gear-title--big { flex: 1; font-size: 20px; }
+.gear-says {
+    font-family: 'Romulus', monospace;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--parchment);
+    margin-top: 2px;
+}
+.gear-purse {
+    flex: none;
+    padding: 3px 8px;
+    background: var(--well);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px var(--brass-dark);
+    font-size: 15px;
+}
+.gear-close {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    border-radius: 4px;
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px #c8a04a;
+}
+.gear-close:active { transform: translateY(1px); }
+
+.gear-coins {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--gold);
+    text-shadow: 1px 1px var(--ink);
+    white-space: nowrap;
+}
+.gear-coin {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff6a0, #fbf236 40%, #d27d2c 75%);
+    box-shadow: 0 0 0 1px #8f563b;
+}
+.gear-coins.is-dear { color: #d95763; }
+
+/* ---------- Buy / Sell ---------- */
+
+.gear-tabs { display: flex; gap: 6px; }
+.gear-tab {
+    flex: 1;
+    height: 26px;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000;
+    background: var(--well);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px #c8a04a;
+}
+.gear-tab.is-current {
+    color: #ffe060;
+    background: #6a4a18;
+    box-shadow: inset 0 0 0 2px #dab040;
+}
+
+/* ---------- Lists of things ---------- */
+
+.gear-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1 1 auto;
+    min-height: 90px;
+    overflow-y: auto;
+}
+.gear-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 2px 8px 2px 3px;
+    text-align: left;
+    background: rgba(41, 23, 9, 0.85);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #6a4a18;
+}
+.gear-row:hover { box-shadow: inset 0 0 0 1px var(--brass); }
+.gear-row.is-current { background: #4a3012; box-shadow: inset 0 0 0 2px #dab040; }
+.gear-row-name { flex: 1; font-size: 14px; }
+.gear-row-slot { font-family: 'Romulus', monospace; font-size: 11px; color: var(--muted); }
+.gear-row-act { color: var(--gold); font-size: 13px; }
+.gear-count { color: var(--parchment); font-size: 12px; }
+.gear-empty {
+    padding: 10px 6px;
+    font-family: 'Romulus', monospace;
+    font-size: 13px;
+    color: var(--parchment);
+    text-align: center;
+}
+
+.gear-icon {
+    flex: none;
+    position: relative;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 50% 45%, #4a3a52, var(--ink) 75%);
+    box-shadow: inset 0 0 0 1px var(--brass-dark);
+    border-radius: 2px;
+}
+.gear-icon img { width: 32px; height: 32px; image-rendering: pixelated; }
+.gear-icon:not(.has-art)::after {
+    font-family: 'Romulus', monospace;
+    font-size: 10px;
+    color: #5e5068;
+    content: attr(data-slot);
+}
+.gear-icon--big { width: 56px; height: 56px; }
+.gear-icon--big img { width: 48px; height: 48px; }
+
+/* ---------- The selected thing ---------- */
+
+.gear-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    background: rgba(34, 32, 52, 0.75);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #c8a04a;
+}
+.gear-detail-words { flex: 1; min-width: 0; }
+.gear-detail-name { color: var(--gold); font-size: 15px; text-shadow: 1px 1px var(--ink); }
+.gear-detail-about, .gear-detail-note {
+    font-family: 'Romulus', monospace;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--parchment);
+}
+.gear-detail-note { color: var(--muted); }
+.gear-actions { display: flex; flex-direction: column; gap: 4px; flex: none; }
+
+.gear-btn {
+    position: relative;
+    z-index: 0;
+    min-width: 92px;
+    height: 26px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: #fff;
+    text-shadow: 1px 1px var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.gear-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-style: solid;
+    border-width: 0 13px 0 40px;
+    border-image: url('/ui/creator/btn_brown.png') 0 13 0 40 fill / 0 13px 0 40px stretch;
+}
+.gear-btn--go::before { border-image-source: url('/ui/creator/btn_green.png'); }
+.gear-btn--go:hover::before { border-image-source: url('/ui/creator/btn_green_hi.png'); }
+.gear-btn:active { transform: translateY(1px); }
+.gear-btn:disabled { filter: grayscale(0.8) brightness(0.7); cursor: default; }
+.gear-btn-label { display: inline-flex; gap: 4px; align-items: center; }
+.gear-btn .gear-coins { color: #fff; }
+
+.gear-notice {
+    min-height: 15px;
+    font-family: 'Romulus', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    text-align: center;
+}
+
+/* ---------- Equip: the hero on a stage, and the slots ---------- */
+
+.gear-stage {
+    position: relative;
+    flex: none;
+    height: 168px;
+    overflow: hidden;
+    border-radius: 3px;
+    background:
+        radial-gradient(ellipse 60% 14% at 50% 88%, rgba(0, 0, 0, 0.45), transparent 70%),
+        radial-gradient(ellipse 55% 75% at 50% 40%, #5b4a6e, #2b2440 60%, var(--ink));
+    box-shadow: inset 0 0 0 1px #c8a04a;
+}
+.gear-light {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 40% 60% at 50% 30%, rgba(255, 214, 120, 0.22), transparent 70%);
+    pointer-events: none;
+}
+.gear-hero {
+    position: absolute;
+    left: 50%;
+    bottom: -10px;
+    width: 192px;
+    height: 192px;
+    margin-left: -96px;
+    image-rendering: pixelated;
+    cursor: pointer;
+}
+.gear-turn {
+    position: absolute;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    margin-top: -15px;
+    border-radius: 50%;
+    font-size: 13px;
+    color: var(--gold);
+    background: rgba(41, 23, 9, 0.85);
+    box-shadow: inset 0 0 0 1px #c8a04a;
+}
+.gear-turn--left { left: 12px; }
+.gear-turn--right { right: 12px; }
+.gear-stage.is-busy .gear-hero { filter: brightness(0.6); }
+.gear-busy {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 12px;
+    text-align: center;
+    color: var(--gold);
+    font-size: 14px;
+    text-shadow: 1px 1px var(--ink);
+}
+
+.gear-slots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+.gear-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 2px 6px 2px 3px;
+    text-align: left;
+    background: rgba(41, 23, 9, 0.85);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #6a4a18;
+}
+.gear-slot.is-current { background: #4a3012; box-shadow: inset 0 0 0 2px #dab040; }
+.gear-slot-words { display: flex; flex-direction: column; min-width: 0; }
+.gear-slot-name { font-family: 'Romulus', monospace; font-size: 11px; color: var(--muted); }
+.gear-slot-item { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.gear-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px;
+    background: rgba(34, 32, 52, 0.6);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px var(--brass-dark);
+}
+.gear-pick > .gear-btn { align-self: center; margin-top: 2px; }

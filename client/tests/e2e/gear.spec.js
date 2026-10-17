@@ -1,0 +1,164 @@
+// Gold, gear and the shops: buy from Riverhold's weaponsmith, armourer and
+// apothecary, wear it (Equip shows the hero large), sell it back; and spells
+// cast with a crystal glow its colour, for you and everyone near.
+
+import { test, expect } from '@playwright/test';
+
+async function enterWorld(page) {
+    await page.goto('/');
+    await page.waitForFunction(() => {
+        const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+        return s?.figure?.visible && !s._inFlight;
+    }, null, { timeout: 60000 });
+    await page.locator('#cc-play').click();
+    await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
+}
+
+/** Stand two heroes side by side on the overworld, each seeing the other. */
+async function twoHeroes(browser) {
+    const pages = [];
+    for (let i = 0; i < 2; i++) {
+        const page = await (await browser.newContext()).newPage();
+        await enterWorld(page);
+        pages.push(page);
+    }
+    const ids = await Promise.all(pages.map(p => p.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.id)));
+    await expect.poll(() => pages[1].evaluate((id) => !!window.__PHASER_GAME.scene.getScene('GameScene').players.get(id)?.sprite?.sprite, ids[0]),
+        { timeout: 15000 }).toBe(true);
+    return { pages, ids };
+}
+
+/** Into one of Riverhold's shops, and up to its keeper's counter: the shop opens. */
+async function intoShop(page, room, keeper) {
+    await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 20000 });
+    await page.evaluate(async (room) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        gs._townPlace = { name: 'Riverhold', x: 6320, y: 11116 };
+        await gs._loadTown(room);
+        await gs.changeMap(room, gs.cache.json.get(`town-${room}`).arrive, 'up');
+    }, room);
+    await expect.poll(() => page.evaluate((keeper) => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === keeper), keeper),
+        { timeout: 20000 }).toBe(true);
+    await page.evaluate((keeper) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === keeper));
+    }, keeper);
+    await expect(page.locator('.gear-panel--shop')).toBeVisible();
+}
+
+const inv = (page) => page.evaluate(() => {
+    const i = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+    const hero = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer;
+    return {
+        gold: i.gold, bag: [...i.bag], equipped: { ...i.equipped }, busy: i.busy,
+        weapon: hero.characterData.selections.find(s => s.type === 'weapon')?.item || null,
+        crystal: hero.characterData.selections.find(s => s.type === 'weapon_magic_crystal')?.variant || null,
+        look: hero.sprite.look, drawn: !!hero.sprite.sprite?.texture && hero.sprite.sprite.texture.key === `sprite_${hero.sprite.look}`,
+        saved: window.__ALKEMA_ACCOUNT.current?.data,
+    };
+});
+
+test.describe('Gear', () => {
+    test("buy a dagger at the weaponsmith's, wear it, sell your old weapon, and still have it on next time", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await intoShop(page, 'riverhold-weapons', 'smith');
+        await expect(page.locator('.gear-title')).toContainText('Weaponsmith');
+        await expect(page.locator('.gear-panel--shop .gear-row')).toHaveCount(6);
+        const before = await inv(page);
+        expect(before.gold).toBeGreaterThanOrEqual(100);           // a purse to start with
+        expect(before.equipped.weapon).toBe('starter-weapon');
+        // The world waits while you shop
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.visible)).toBe(true);
+
+        await page.locator('.gear-row[data-item="dagger"]').click();
+        await expect(page.locator('.gear-detail-name')).toHaveText('Dagger');
+        await page.locator('.gear-detail .gear-btn--go').click();
+        await expect(page.locator('.gear-notice')).toHaveText('Bought: Dagger.');
+        expect(await inv(page)).toMatchObject({ gold: before.gold - 15, bag: ['dagger'] });
+
+        await page.locator('.gear-detail .gear-btn', { hasText: 'Wear it' }).click();
+        await expect.poll(() => inv(page).then(i => i.equipped.weapon), { timeout: 30000 }).toBe('dagger');
+        await expect.poll(() => inv(page).then(i => [i.weapon, i.drawn]), { timeout: 15000 }).toEqual(['weapon_sword_dagger', true]);
+        const worn = await inv(page);
+        expect(worn.look).not.toBe(before.look);
+        expect(worn.bag).toEqual(['starter-weapon']);
+
+        // Sell what you started with
+        await page.locator('.gear-tab', { hasText: 'Sell' }).click();
+        await page.locator('.gear-row[data-item="starter-weapon"]').click();
+        await page.locator('.gear-detail .gear-btn--go').click();
+        await expect.poll(() => inv(page)).toMatchObject({ gold: before.gold - 15 + 5, bag: [] });
+        const saved = (await inv(page)).saved;
+        expect(saved).toMatchObject({ gold: before.gold - 10, bag: [], equipped: { weapon: 'dagger' } });
+
+        // Equip: the hero large on a stage, the dagger in the weapon slot
+        await page.locator('.gear-close').click();
+        await expect(page.locator('.gear-panel')).toBeHidden();
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));
+        await expect(page.locator('.gear-panel--equip canvas.gear-hero')).toBeVisible();
+        await expect(page.locator('.gear-slot[data-slot="weapon"] .gear-slot-item')).toHaveText('Dagger');
+
+        // Back next time: still wearing it
+        await page.reload();
+        await enterWorld(page);
+        await expect.poll(() => inv(page).then(i => [i.weapon, i.equipped.weapon, i.gold]), { timeout: 30000 })
+            .toEqual(['weapon_sword_dagger', 'dagger', before.gold - 10]);
+    });
+
+    test('a crystal from the apothecary colours your spells, and others see your new look', async ({ browser }) => {
+        test.setTimeout(150000);
+        const { pages: [me, them], ids: [myId] } = await twoHeroes(browser);
+        await intoShop(me, 'riverhold-apothecary', 'herbalist');
+        await expect(me.locator('.gear-panel--shop .gear-row')).toHaveCount(4);
+        await me.locator('.gear-row[data-item="ember-crystal"]').click();
+        await me.locator('.gear-detail .gear-btn--go').click();
+        await me.locator('.gear-close').click();
+        // Wear it from your bag
+        await me.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('items'));
+        await me.locator('.gear-row[data-item="ember-crystal"]').click();
+        await me.locator('.gear-detail .gear-btn--go').click();
+        await expect.poll(() => inv(me).then(i => [i.equipped.crystal, i.crystal]), { timeout: 30000 }).toEqual(['ember-crystal', 'red']);
+        await me.locator('.gear-close').click();
+        // (They're in the shop, the other hero outside: bring them together to see each other)
+        await me.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            window.__GLOWS = [];
+            const glow = gs.castGlow.bind(gs);
+            gs.castGlow = (p, c) => { window.__GLOWS.push(c); return glow(p, c); };
+            gs.scene.get('UIScene').handleAbility();
+        });
+        expect(await me.evaluate(() => window.__GLOWS)).toEqual(['#ff6a3d']);
+        await them.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs._townPlace = { name: 'Riverhold', x: 6320, y: 11116 };
+            await gs._loadTown('riverhold-apothecary');
+            await gs.changeMap('riverhold-apothecary', gs.cache.json.get('town-riverhold-apothecary').arrive, 'up');
+        });
+        await expect.poll(() => them.evaluate((id) => {
+            const p = window.__PHASER_GAME.scene.getScene('GameScene').players.get(id);
+            return p?.characterData?.selections?.find(s => s.type === 'weapon_magic_crystal')?.variant || null;
+        }, myId), { timeout: 20000 }).toBe('red');
+        await them.evaluate((id) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            window.__GLOWS = [];
+            gs.castGlow = (p, c) => window.__GLOWS.push(p.id === id ? c : null);
+        }, myId);
+        await me.waitForTimeout(3200);     // the spell's cooldown
+        await me.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
+        await expect.poll(() => them.evaluate(() => window.__GLOWS), { timeout: 5000 }).toEqual(['#ff6a3d']);
+    });
+
+    test('another player sees you cast a spell', async ({ browser }) => {
+        test.setTimeout(120000);
+        const { pages: [me, them], ids: [myId] } = await twoHeroes(browser);
+        await them.evaluate((id) => {
+            const p = window.__PHASER_GAME.scene.getScene('GameScene').players.get(id);
+            window.__CASTS = 0;
+            const cast = p.playCast.bind(p);
+            p.playCast = (...args) => { window.__CASTS++; return cast(...args); };
+        }, myId);
+        await me.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
+        await expect.poll(() => them.evaluate(() => window.__CASTS), { timeout: 5000 }).toBe(1);
+    });
+});

@@ -370,6 +370,7 @@ export class CreateScene extends Scene {
                 previewId: this.state?.previewId,
                 request: this.state?.previewRequest(),
                 name: this.state?.name,
+                equipped: account.current?.data?.equipped,     // dressed as they were last time
             }, 30000);
         } catch {
             res = null;
@@ -380,6 +381,8 @@ export class CreateScene extends Scene {
             this.panel?.toast('Couldn\'t reach the realm. Try again.');
             return;
         }
+        // Their starting kit and what they're wearing, for the inventory
+        if (res?.kit) this.game.registry.set('gear', { kit: res.kit, equipped: res.equipped });
         // Save this hero (a new slot, or the one they loaded) before setting off
         const saved = await account.saveHero({
             hero: this.state.heroData(),

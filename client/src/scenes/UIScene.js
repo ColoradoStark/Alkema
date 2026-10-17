@@ -4,7 +4,9 @@ import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
 import { EnterPrompt } from '../ui/EnterPrompt.js';
-import { Dialogue } from '../ui/Dialogue.js';
+import { Dialogue, portraitUrl } from '../ui/Dialogue.js';
+import { GearScreen } from '../ui/gear/GearScreen.js';
+import { Inventory } from '../inventory/Inventory.js';
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -24,7 +26,7 @@ export class UIScene extends Scene {
         this.bottomControls = new BottomControls(this, {
             onAttack: () => this.handleAttack(),
             onAbility: () => this.handleAbility(),
-            onTabChange: (key) => console.log('Switched to tab:', key)
+            onTabChange: (key) => this._showTab(key)
         });
 
         // Asks before taking you into a city, village, castle or dungeon
@@ -38,6 +40,48 @@ export class UIScene extends Scene {
 
         this._setupKeyboard();
         this._setupNetworkHandlers();
+        this._setupGear();
+    }
+
+    /**
+     * Gold, gear and the shops: the catalogue comes from the server, the hero's
+     * own starting kit from joining. Equip and Items open over the map; so does
+     * a shop, when you talk to its keeper.
+     */
+    async _setupGear() {
+        const network = this.game.registry.get('networkManager');
+        if (!network) return;
+        const request = (event, data, timeout) => network.request(event, data, timeout);
+        let catalogue = null;
+        try {
+            const res = await request('shop-catalogue', null, 15000);
+            if (res?.ok) catalogue = res;
+        } catch { /* no shops today */ }
+        if (!catalogue || !this.scene.isActive()) return;
+        const gear = this.game.registry.get('gear') || {};
+        this.inventory = new Inventory({ catalogue, kit: gear.kit, equipped: gear.equipped, request });
+        this.inventory.onWorn = (character) => this.scene.get('GameScene')?.localPlayer?.updateAppearance(character);
+        this.gear = new GearScreen({
+            inventory: this.inventory,
+            hero: () => this.scene.get('GameScene')?.localPlayer?.characterData,
+            request,
+            gameWidth: this.scale.width,
+            onClose: () => this.bottomControls.activeTab !== 'map' && this.bottomControls.switchTab('map'),
+        });
+        this.events.once('shutdown', () => this.gear?.close());
+    }
+
+    _showTab(key) {
+        if (!this.gear || this.dialogue.visible) return;
+        if (key === 'equip') this.gear.openEquip();
+        else if (key === 'items') this.gear.openItems();
+        else this.gear.close();
+    }
+
+    /** A shopkeeper at their counter: their shop, if they keep one here. */
+    _shopOf(folk) {
+        const town = this.scene.get('GameScene')?.town;
+        return town && this.inventory?.shopAt(town.key, folk.plan?.id);
     }
 
     /**
@@ -155,7 +199,7 @@ export class UIScene extends Scene {
         else if (this.cursors.down.isDown || this.wasd.S.isDown || keys.down) dy = 1;
 
         const me = gameScene.localPlayer.sprite;
-        if (this.dialogue.visible) {        // the world waits while someone's talking
+        if (this.dialogue.visible || this.gear?.visible) {        // the world waits while someone's talking, or you're shopping
             gameScene.handlePlayerMovement(0, 0);
             return;
         }
@@ -180,13 +224,28 @@ export class UIScene extends Scene {
 
     /** Story mode with someone you walked into (unless you've only just finished talking). */
     talkTo(folk) {
-        if (this.dialogue.visible || this.enterPrompt.visible || folk === this._lastTalk) return;
+        if (this.dialogue.visible || this.enterPrompt.visible || this.gear?.visible || folk === this._lastTalk) return;
+        const shop = this._shopOf(folk);
+        if (shop) {
+            this._lastTalk = folk;
+            for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
+            const sid = folk.sprite.characterData?.id;
+            const listed = new Set(this.cache.json.get('portraits') || []);
+            this.gear.openShop(shop, {
+                name: (folk.name || '').split(' ')[0],
+                role: folk.plan.role,
+                says: folk.plan.says,
+                portrait: listed.has(sid) ? portraitUrl(sid) : null,
+            });
+            return;
+        }
         this.bottomControls.container.setVisible(false);     // the story box takes their place
         for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
         this.dialogue.open(folk);
     }
 
     handleAttack() {
+        if (this.gear?.visible) return;
         if (this.dialogue.visible) {
             this.dialogue.advance();
             return;
@@ -199,10 +258,13 @@ export class UIScene extends Scene {
     }
 
     handleAbility() {
+        if (this.gear?.visible) return;
         const gameScene = this.scene.get('GameScene');
         if (!gameScene?.localPlayer || gameScene.localPlayer.sailing || this.bottomControls.coolingDown) return;
         gameScene.localPlayer.playCast();
         gameScene.emitCast();
+        const crystal = this.inventory?.item(this.inventory.equipped.crystal);
+        if (crystal?.colour) gameScene.castGlow(gameScene.localPlayer, crystal.colour);
         this.bottomControls.startCooldown(ABILITY_COOLDOWN_MS);
         this.quests.record('cast');
     }

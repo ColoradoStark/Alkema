@@ -61,6 +61,7 @@ export class GameNetworkBridge {
             if (player && player !== gs.localPlayer) {
                 if (data.direction) player.sprite.setDirection(data.direction);
                 player.playCast();
+                if (data.crystal) gs.castGlow(player, data.crystal);
             }
         });
 

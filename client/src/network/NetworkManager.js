@@ -57,6 +57,7 @@ export class NetworkManager {
             'chat-message',
             'sprite-meta',
             'player-attacked',
+            'player-cast',
             'player-hit'
         ];
 
