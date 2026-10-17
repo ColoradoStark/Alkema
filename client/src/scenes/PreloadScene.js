@@ -76,6 +76,8 @@ export class PreloadScene extends Scene {
 
         // Leather tile for the HUD panels (same as the character creator's)
         this.load.image('ui-leather', '/ui/creator/art/leather.png');
+        // The LPC base set's treasure chests (two kinds: shut, ajar, open) for the creator's starter kit
+        this.load.spritesheet('cc-chests', '/ui/chests.png', { frameWidth: 32, frameHeight: 32 });
         
         // The overworld: tiles, collision, water and the minimap
         preloadOverworld(this.load);

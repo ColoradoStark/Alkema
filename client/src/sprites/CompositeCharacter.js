@@ -6,6 +6,9 @@ import {
     resolveAnimationKey
 } from './AnimationFactory.js';
 
+// Attacks, best first for one that can't be shown (spellcast is never blanked)
+const ATTACKS = ['slash', 'thrust', 'shoot', 'halfslash', 'backslash', 'spellcast'];
+
 export class CompositeCharacter extends Phaser.GameObjects.Container {
     constructor(scene, x, y, characterData) {
         super(scene, x, y);
@@ -137,7 +140,14 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
 
         const dir = direction || this.currentDirection || 'down';
 
-        const result = resolveAnimationKey(this.scene, this.animationKey, animName, dir, this.spriteMeta);
+        let result = resolveAnimationKey(this.scene, this.animationKey, animName, dir, this.spriteMeta);
+        // An attack their clothes can't make (a robe has no thrust) is blank on
+        // their sheet: they make one they can instead, rather than vanish
+        const blanked = this.spriteMeta?.custom_animations?.blanked_animations || [];
+        if (result && !result.oversized && blanked.includes(animName) && ATTACKS.includes(animName)) {
+            const instead = ATTACKS.find(a => !blanked.includes(a));
+            result = instead && resolveAnimationKey(this.scene, this.animationKey, instead, dir, this.spriteMeta);
+        }
         if (!result) return;
 
         if (result.oversized) {

@@ -43,7 +43,27 @@ async function intoShop(page, room, keeper) {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
         gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === keeper));
     }, keeper);
+    await talkThrough(page, 'yes');
     await expect(page.locator('.gear-panel--shop')).toBeVisible();
+}
+
+/** Hear someone out, answering their question `answer`; returns everything they said. */
+async function talkThrough(page, answer) {
+    const said = [];
+    for (let i = 0; i < 40; i++) {
+        const state = await page.evaluate((answer) => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            if (!d.visible) return null;
+            const p = d.pages[d.page];
+            if (p.ask && !p.answer && !d._typing) d.choose(answer);
+            else d.advance();
+            return p.text;
+        }, answer);
+        if (state === null) break;
+        if (said.at(-1) !== state) said.push(state);
+        await page.waitForTimeout(60);
+    }
+    return said;
 }
 
 const inv = (page) => page.evaluate(() => {
@@ -201,9 +221,104 @@ test.describe('Gear', () => {
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equipped.weapon), { timeout: 30000 }).toBe('spear');
         const after = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats);
         expect(after.attack).toBe(7 + Math.floor(after.attributes.str / 4));
+        // A shield then: the spear takes both hands, and you're told so
+        await page.evaluate(async () => {
+            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            inv.buy('wooden-shield');
+        });
+        await page.locator('.gear-close').click();
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('items'));
+        await page.locator('.gear-row[data-item="wooden-shield"]').click();
+        await page.locator('.gear-detail .gear-btn--go').click();
+        await expect(page.locator('.gear-notice')).toHaveText("Wearing: Wooden shield. Your spear takes both hands, so it's in your bag.", { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equipped.weapon)).toBeUndefined();
+        const shielded = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats);
         await page.locator('.gear-close').click();
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
-        await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(after.attack));
+        await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(shielded.attack));
+        expect(shielded.defence).toBe(after.defence + 1);
+    });
+
+    test("a robed cleric with a spear stays in sight when they attack (robes can't thrust)", async ({ page }) => {
+        test.setTimeout(150000);
+        await page.goto('/');
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight;
+        }, null, { timeout: 60000 });
+        // A human woman cleric: her robe has no thrust frames
+        await page.evaluate(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            s._changeIdentity(() => { s.state.pickBodyType('female'); s.state.pickKind('human'); s.state.pickClass('cleric'); });
+        });
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            return !s._inFlight && s.state.current('character_class') === 'cleric';
+        }, null, { timeout: 60000 });
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory, null, { timeout: 30000 });
+        await page.evaluate(async () => {
+            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            inv.buy('spear');
+            await inv.equip('spear');
+        });
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'weapon_polearm_spear')
+            && window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.spriteMeta, null, { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections.some(l => l.item === 'torso_clothes_robe'))).toBe(true);
+        await page.waitForTimeout(1500);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAttack());
+        // Mid-attack, the frame she's drawn with has her in it
+        const seen = [];
+        for (let i = 0; i < 4; i++) {
+            await page.waitForTimeout(80);
+            seen.push(await page.evaluate(() => {
+                const a = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.getActiveSprite();
+                const f = a.frame, img = f.source.image;
+                const cv = document.createElement('canvas');
+                cv.width = f.cutWidth; cv.height = f.cutHeight;
+                const ctx = cv.getContext('2d');
+                ctx.drawImage(img, f.cutX, f.cutY, f.cutWidth, f.cutHeight, 0, 0, f.cutWidth, f.cutHeight);
+                const d = ctx.getImageData(0, 0, f.cutWidth, f.cutHeight).data;
+                let n = 0;
+                for (let k = 3; k < d.length; k += 4) if (d[k] > 0) n++;
+                return { anim: a.anims.currentAnim?.key.split('_').slice(-2, -1)[0], visible: a.visible, pixels: n };
+            }));
+        }
+        for (const s of seen) expect(s.pixels, JSON.stringify(seen)).toBeGreaterThan(200);
+        expect(seen.some(s => s.anim !== 'idle'), JSON.stringify(seen)).toBe(true);      // and she does attack
+    });
+
+    test('a shopkeeper has their say and asks first: No leaves you be, Yes opens the shop', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 20000 });
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs._townPlace = { name: 'Riverhold', x: 6320, y: 11116 };
+            await gs._loadTown('riverhold-armour');
+            await gs.changeMap('riverhold-armour', gs.cache.json.get('town-riverhold-armour').arrive, 'up');
+        });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'armourer')),
+            { timeout: 20000 }).toBe(true);
+        const talk = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const ui = gs.scene.get('UIScene');
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'armourer'));
+        });
+        await talk();
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.visible)).toBe(true);
+        await expect(page.locator('.gear-panel')).toHaveCount(0);
+        const said = await talkThrough(page, 'no');
+        expect(said[0]).toContain('Mail, plate');
+        expect(said).toContain('Shall I show you what fits?');
+        expect(said.at(-1)).toContain('chasing you');
+        await expect(page.locator('.gear-panel--shop')).toHaveCount(0);
+        // Ask again (they ask every time), and this time yes
+        await talk();
+        await talkThrough(page, 'yes');
+        await expect(page.locator('.gear-panel--shop')).toBeVisible();
+        await expect(page.locator('.gear-says')).toHaveText("Arms up. Let's see what you're made of.");
     });
 
     test('another player sees you cast a spell', async ({ browser }) => {

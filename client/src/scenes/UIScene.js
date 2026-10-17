@@ -36,6 +36,12 @@ export class UIScene extends Scene {
         this.dialogue.onClose = (who) => {
             this._lastTalk = who;
             this.bottomControls.container.setVisible(true);
+            // A shopkeeper you said yes to: on to their wares
+            if (who && who === this._toShop) this._openShop(who);
+            this._toShop = null;
+        };
+        this.dialogue.onChoice = (who, answer) => {
+            this._toShop = answer === 'yes' && this._shopOf(who) ? who : null;
         };
 
         this._setupKeyboard();
@@ -78,6 +84,22 @@ export class UIScene extends Scene {
         else if (key === 'items') this.gear.openItems();
         else if (key === 'stats') this.gear.openStats();
         else this.gear.close();
+    }
+
+    /** Their shop over the map, with their portrait and what they said yes with. */
+    _openShop(folk) {
+        const shop = this._shopOf(folk);
+        if (!shop || !this.gear) return;
+        for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
+        const sid = folk.sprite.characterData?.id;
+        const listed = new Set(this.cache.json.get('portraits') || []);
+        const says = folk.plan.ask?.yes?.at(-1) || [].concat(folk.plan.says || '')[0];
+        this.gear.openShop(shop, {
+            name: (folk.name || '').split(' ')[0],
+            role: folk.plan.role,
+            says,
+            portrait: listed.has(sid) ? portraitUrl(sid) : null,
+        });
     }
 
     /** A shopkeeper at their counter: their shop, if they keep one here. */
@@ -227,20 +249,8 @@ export class UIScene extends Scene {
     /** Story mode with someone you walked into (unless you've only just finished talking). */
     talkTo(folk) {
         if (this.dialogue.visible || this.enterPrompt.visible || this.gear?.visible || folk === this._lastTalk) return;
-        const shop = this._shopOf(folk);
-        if (shop) {
-            this._lastTalk = folk;
-            for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
-            const sid = folk.sprite.characterData?.id;
-            const listed = new Set(this.cache.json.get('portraits') || []);
-            this.gear.openShop(shop, {
-                name: (folk.name || '').split(' ')[0],
-                role: folk.plan.role,
-                says: folk.plan.says,
-                portrait: listed.has(sid) ? portraitUrl(sid) : null,
-            });
-            return;
-        }
+        // A shopkeeper asks every time whether you'd like to see their wares
+        if (this._shopOf(folk)) this.dialogue.answers.delete(folk.plan.id);
         this.bottomControls.container.setVisible(false);     // the story box takes their place
         for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
         this.dialogue.open(folk);

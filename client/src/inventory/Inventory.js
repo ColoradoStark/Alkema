@@ -96,25 +96,27 @@ export class Inventory {
 
     /**
      * Wear `id` from the bag in its slot (what was there goes back in the bag;
-     * a two-handed weapon puts the shield away, and a shield a two-handed weapon).
+     * a two-handed weapon puts the shield away, and a shield a two-handed weapon:
+     * that one comes back as `bothHands`).
      */
     equip(id) {
         const item = this.item(id);
         if (!item || !this.bag.includes(id)) return Promise.resolve({ ok: false, error: 'not-carried' });
         const equipped = { ...this.equipped, [item.slot]: id };
         const putAway = [this.equipped[item.slot]];
+        let bothHands = null;      // what had to go for want of a free hand
         if (item.twoHanded && equipped.shield) {
-            putAway.push(equipped.shield);
+            bothHands = equipped.shield;
             delete equipped.shield;
         }
         if (item.slot === 'shield' && this.item(equipped.weapon)?.twoHanded) {
-            putAway.push(equipped.weapon);
+            bothHands = equipped.weapon;
             delete equipped.weapon;
         }
         const bag = [...this.bag];
         bag.splice(bag.indexOf(id), 1);
-        bag.push(...putAway.filter(Boolean));
-        return this._wear(equipped, bag);
+        bag.push(...[...putAway, bothHands].filter(Boolean));
+        return this._wear(equipped, bag).then(res => (res?.ok && bothHands ? { ...res, bothHands } : res));
     }
 
     /** Take off what's in `slot`, into the bag. */

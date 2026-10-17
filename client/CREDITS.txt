@@ -88,6 +88,12 @@ RIVERHOLD (THE TOWN)
 
 The town of Riverhold is put together from these LPC sets:
 
+Treasure chests (behind the shopkeepers' counters, and the one your
+starter kit comes out of in the character creator): chests.png from the
+"Liberated Pixel Cup (LPC) Base Assets" by Lanea Zimmerman (Sharm).
+  License: CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+
 "[LPC] Thatched-roof Cottage" by bluecarrot16, based on the LPC Base
 Assets by Lanea Zimmerman (Sharm) and Daniel Armstrong (HughSpectrum),
 and the LPC art entry by Casper Nilsson.

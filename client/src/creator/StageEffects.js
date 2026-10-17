@@ -1,14 +1,14 @@
 // Particles and little flourishes for the creator stage and the world: dust,
 // impacts that match what was struck (wood splinters, metal sparks, spell
 // glints; skeletons just rattle), coins that bounce and settle, damage numbers,
-// arrows and magic bolts, fireflies, and the treasure chest. Particles are small
+// arrows and magic bolts, fireflies, and the treasure chest (the LPC base set's). Particles are small
 // hand-drawn pixel sprites in the DawnBringer-32 palette the UI uses.
 
 import { audio } from '../audio/audio.js';
 
 const SPARK = 'cc-spark';
-const CHEST_CLOSED = 'cc-chest-closed';
-const CHEST_OPEN = 'cc-chest-open';
+const CHESTS = 'cc-chests';                  // 2 columns of chests; rows: shut, ajar, open
+const CHEST_FRAMES = { shut: 0, ajar: 2, open: 4 };
 
 export class StageEffects {
     /**
@@ -192,7 +192,7 @@ export class StageEffects {
     /** Drop a chest at (x, y), pop it open, burst coins. Resolves when open. */
     async chest(x, y) {
         const s = this.scene;
-        const chest = s.add.image(x, y - 90, CHEST_CLOSED).setScale(2).setOrigin(0.5, 1).setDepth(4);
+        const chest = s.add.image(x, y - 90, CHESTS, CHEST_FRAMES.shut).setScale(1.5).setOrigin(0.5, 1).setDepth(4);
         this._chest = chest;
         // Thud when it first touches down (Bounce.easeOut lands at ~36% of the tween)
         s.time.delayedCall(150, () => audio.play('chest_drop'));
@@ -202,7 +202,9 @@ export class StageEffects {
         await delay(s, 220);
         audio.play('chest_open');
         audio.play('coins');
-        chest.setTexture(CHEST_OPEN);
+        chest.setFrame(CHEST_FRAMES.ajar);
+        await delay(s, 70);
+        chest.setFrame(CHEST_FRAMES.open);
         this.coinBurst(x, y - 22, y);
         this.stars.explode(12, x, y - 22);
         const glow = s.add.ellipse(x, y - 20, 34, 14, 0xfbf236, 0.6).setDepth(3).setBlendMode('ADD');
@@ -264,7 +266,7 @@ export function tween(scene, config) {
     return new Promise(resolve => scene.tweens.add({ ...config, onComplete: resolve }));
 }
 
-/** 2×2 spark, and a pixel-art treasure chest (closed/open) in the UI palette. */
+/** A 2×2 spark. */
 function makeTextures(scene) {
     if (!scene.textures.exists(SPARK)) {
         const g = scene.make.graphics({ x: 0, y: 0 }, false);
@@ -272,37 +274,6 @@ function makeTextures(scene) {
         g.generateTexture(SPARK, 2, 2);
         g.destroy();
     }
-    if (scene.textures.exists(CHEST_CLOSED)) return;
-
-    const INK = 0x222034, WOOD = 0x8f563b, WOOD_DK = 0x663931, GOLD = 0xdad45e, GOLD_HI = 0xfbf236, DARK = 0x45283c;
-    const draw = (open) => {
-        const g = scene.make.graphics({ x: 0, y: 0 }, false);
-        const W = 22, H = 20;
-        // body
-        g.fillStyle(INK).fillRect(1, 9, 20, 11);
-        g.fillStyle(WOOD).fillRect(2, 10, 18, 9);
-        g.fillStyle(WOOD_DK).fillRect(2, 15, 18, 1);
-        g.fillStyle(GOLD).fillRect(5, 10, 2, 9).fillRect(15, 10, 2, 9);
-        if (open) {
-            // raised lid, glowing inside
-            g.fillStyle(INK).fillRect(1, 1, 20, 6);
-            g.fillStyle(WOOD).fillRect(2, 2, 18, 4);
-            g.fillStyle(GOLD).fillRect(5, 2, 2, 4).fillRect(15, 2, 2, 4);
-            g.fillStyle(DARK).fillRect(2, 7, 18, 3);
-            g.fillStyle(GOLD_HI).fillRect(4, 8, 14, 2);
-        } else {
-            g.fillStyle(INK).fillRect(1, 4, 20, 6);
-            g.fillStyle(WOOD_DK).fillRect(2, 5, 18, 4);
-            g.fillStyle(GOLD).fillRect(5, 5, 2, 4).fillRect(15, 5, 2, 4);
-            // lock
-            g.fillStyle(INK).fillRect(9, 8, 4, 5);
-            g.fillStyle(GOLD_HI).fillRect(10, 9, 2, 3);
-        }
-        g.generateTexture(open ? CHEST_OPEN : CHEST_CLOSED, W, H);
-        g.destroy();
-    };
-    draw(false);
-    draw(true);
 }
 
 // Hand-drawn pixel particles, one character per pixel, in the UI's palette.

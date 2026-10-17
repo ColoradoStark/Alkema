@@ -310,6 +310,12 @@ export class GearScreen {
         this.render();
         const res = await this.inventory.equip(id);
         this.notice = res.ok ? `Wearing: ${this.inventory.item(id).name}.` : SAY[res.error] || SAY.offline;
+        if (res.bothHands) {
+            const item = this.inventory.item(id), other = this.inventory.item(res.bothHands);
+            this.notice += item.twoHanded
+                ? ` It takes both hands, so your ${other.name.toLowerCase()} is in your bag.`
+                : ` Your ${other.name.toLowerCase()} takes both hands, so it's in your bag.`;
+        }
         this.picking = null;
         if (res.ok) audio.play('reveal', { volume: 0.6, drift: 0 });
         this.render();
