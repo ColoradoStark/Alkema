@@ -100,7 +100,7 @@ test.describe('Gear', () => {
         await enterWorld(page);
         await intoShop(page, 'riverhold-weapons', 'smith');
         await expect(page.locator('.gear-title')).toContainText('Weaponsmith');
-        await expect(page.locator('.gear-panel--shop .gear-row')).toHaveCount(6);
+        await expect(page.locator('.gear-panel--shop .gear-row')).toHaveCount(9);
         const before = await inv(page);
         expect(before.gold).toBe(100);           // a purse to start with
         // What a dagger costs this hero: its price, less (or more) for their charisma
@@ -153,7 +153,7 @@ test.describe('Gear', () => {
         test.setTimeout(150000);
         const { pages: [me, them], ids: [myId] } = await twoHeroes(browser);
         await intoShop(me, 'riverhold-apothecary', 'herbalist');
-        await expect(me.locator('.gear-panel--shop .gear-row')).toHaveCount(4);
+        await expect(me.locator('.gear-panel--shop .gear-row')).toHaveCount(6);
         await me.locator('.gear-row[data-item="ember-crystal"]').click();
         await me.locator('.gear-detail .gear-btn--go').click();
         await me.locator('.gear-close').click();

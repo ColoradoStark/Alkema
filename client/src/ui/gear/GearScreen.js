@@ -398,7 +398,12 @@ export class GearScreen {
         right.addEventListener('click', () => turn(1));
         canvas.addEventListener('click', () => {
             const hero = this.hero();
-            this._pose = { anim: getRangedAnimation(hero) || getMeleeAnimation(hero), t: 0 };
+            // An attack drawn only in the sheet's oversized rows (a longsword's slash) is
+            // blank in the 64px ones this stage draws: swing one that isn't
+            const blanked = hero?.spriteMeta?.custom_animations?.blanked_animations || [];
+            const want = getRangedAnimation(hero) || getMeleeAnimation(hero);
+            const anim = [want, 'slash', 'thrust', 'shoot', 'spellcast'].find(a => !blanked.includes(a));
+            this._pose = { anim, t: 0 };
         });
         stage.append(el('div', 'gear-light'), canvas, left, right);
         if (this.inventory.busy) stage.append(el('div', 'gear-busy', { text: 'Changing…' }));

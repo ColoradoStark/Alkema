@@ -56,6 +56,15 @@ export class Town {
         this.things = data.things.map(([frame, left, top, foot]) =>
             scene.add.image(left, top, `town-${key}-things`, String(frame)).setOrigin(0, 0).setData('foot', foot));
 
+        // Treasure seen through a doorway catches the light now and then
+        this.glints = scene.textures.exists('fx-star') ? (data.glints || []).map(([x, y], i) => {
+            const glint = scene.add.sprite(x, y, 'fx-star', 0).setDepth(DEPTH.features).setAlpha(0).setScale(1.5);
+            if (scene.anims.exists('fx-twinkle')) glint.play('fx-twinkle');
+            scene.tweens.add({ targets: glint, alpha: 1, scale: 2.2, duration: 240, hold: 160, yoyo: true,
+                repeat: -1, repeatDelay: 2400 + i * 500, delay: 700 });
+            return glint;
+        }) : [];
+
         this.folk = [];
         this._waterFrame = 0;
         this._waterTime = 0;
@@ -250,6 +259,7 @@ export class Town {
         this.water?.destroy();
         this.ground.destroy();
         this.things.forEach(t => t.destroy());
+        this.glints.forEach(g => g.destroy());
         this.folk.forEach(f => f.sprite.destroy());
         this.folk = [];
     }

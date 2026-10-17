@@ -231,6 +231,8 @@ test.describe('Riverhold', () => {
                 await gs.changeMap(shop, gs.cache.json.get(`town-${shop}`).arrive, 'up');
             }, shop);
             await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(shop);
+            // Through the doorway, a chest catching the light now and then
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.glints.length)).toBe(1);
             // Just below the doorway, then up through it
             const door = await page.evaluate((shop) => {
                 const gs = window.__PHASER_GAME.scene.getScene('GameScene');
