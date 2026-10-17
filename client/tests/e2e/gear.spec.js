@@ -340,22 +340,29 @@ test.describe('Gear', () => {
         expect(await worn()).toContain('torso_clothes_longsleeve2');
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));
         await expect(page.locator('.gear-slot[data-slot="body"] .gear-slot-item')).toHaveText('Tunic');
+        const clothed = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.defence);
         await page.locator('.gear-slot[data-slot="body"] .gear-slot-off').click();
         await expect(page.locator('.gear-notice')).toHaveText('Put away: Tunic.', { timeout: 30000 });
         await expect(page.locator('.gear-slot[data-slot="body"] .gear-slot-off')).toHaveCount(0);
-        await expect.poll(worn, { timeout: 15000 }).toContain('torso_clothes_tshirt');
-        expect(await worn()).not.toContain('torso_clothes_longsleeve2');
+        await expect.poll(worn, { timeout: 15000 }).not.toContain('torso_clothes_longsleeve2');
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.bag)).toContain('starter-body');
+        // Going without costs defence: the tunic's 1, and 2 more
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.defence)).toBe(Math.max(0, clothed - 3));
+        await page.locator('.gear-close').click();
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        await expect(page.locator('.gear-sheet-note')).toContainText('Nothing on your body: 2 less defence');
+        await page.locator('.gear-close').click();
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));
         // Every slot fits the screen
         const overflow = await page.evaluate(() => {
             const panel = document.querySelector('.gear-panel').getBoundingClientRect();
             return [...document.querySelectorAll('.gear-slot')].filter(s => s.getBoundingClientRect().right > panel.right + 1).length;
         });
         expect(overflow).toBe(0);
-        // Next time, still in just a shirt
+        // Next time, still without it
         await page.reload();
         await enterWorld(page);
-        await expect.poll(worn, { timeout: 30000 }).toContain('torso_clothes_tshirt');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')?.inventory?.equipped.body ?? null), { timeout: 30000 }).toBeNull();
         expect(await worn()).not.toContain('torso_clothes_longsleeve2');
     });
 

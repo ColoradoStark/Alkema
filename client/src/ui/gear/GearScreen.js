@@ -495,7 +495,10 @@ export class GearScreen {
             tile.append(el('span', 'gear-power-value', { text: String(stats[key]) }), el('span', 'gear-power-name', { text: name }));
             powers.append(tile);
         }
-        panel.append(powers, el('div', 'gear-detail-note gear-sheet-note', { text: 'Gear adds to attack, defence and spell. Tap an attribute to learn more.' }));
+        const note = this.inventory.equipped.body
+            ? 'Gear adds to attack, defence and spell. Tap an attribute to learn more.'
+            : 'Nothing on your body: 2 less defence. Tap an attribute to learn more.';
+        panel.append(powers, el('div', 'gear-detail-note gear-sheet-note', { text: note }));
     }
 
     _bar(label, now, max, kind, text = `${now} / ${max}`) {
