@@ -719,10 +719,10 @@ LPC Tile Atlas (sand beaches)
 
 
 ======================================================================
-MILLBROOK (THE FARMING VILLAGE)
+MILLBROOK, FERNWICK AND ASHBY (THE FARMING VILLAGES)
 ======================================================================
 
-Millbrook is built from the same LPC sets as Riverhold (above), and:
+The villages are built from the same LPC sets as Riverhold (above), and:
 
 "[LPC] Crops" by bluecarrot16, Daniel Eddeland (daneeklu), Joshua
 Taylor, Richard Kettering (Jetrel). Commissioned by castelonia.

@@ -1,0 +1,3312 @@
+[
+ {
+  "id": "finn",
+  "role": "Fisherman",
+  "character": {
+   "id": "ashby-finn",
+   "name": "Finn Saltash",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "blonde"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-finn.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "gerda",
+  "role": "Fisherman's wife",
+  "character": {
+   "id": "ashby-gerda",
+   "name": "Gerda Saltash",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_braid",
+     "variant": "dark brown"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_full",
+     "variant": "tan"
+    },
+    {
+     "type": "hat",
+     "item": "hat_headband_kerchief",
+     "variant": "tan"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-gerda.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "eric",
+  "role": "Farmer",
+  "character": {
+   "id": "ashby-eric",
+   "name": "Eric Barley",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_parted2",
+     "variant": "sandy"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "leather"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-eric.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "sigrid",
+  "role": "Farmer's wife",
+  "character": {
+   "id": "ashby-sigrid",
+   "name": "Sigrid Barley",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "tan"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "blonde"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_half",
+     "variant": "white"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-sigrid.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "olaf",
+  "role": "Field hand",
+  "character": {
+   "id": "ashby-olaf",
+   "name": "Olaf Tern",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_messy1",
+     "variant": "platinum"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "brown"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "hoe"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-olaf.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "anders",
+  "role": "Field hand",
+  "character": {
+   "id": "ashby-anders",
+   "name": "Anders Tern",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_unkempt",
+     "variant": "sandy"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-anders.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "hilde",
+  "role": "Gardener",
+  "character": {
+   "id": "ashby-hilde",
+   "name": "Hilde Barley",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs_bun",
+     "variant": "blonde"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_half",
+     "variant": "tan"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-hilde.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "rolf",
+  "role": "Crofter",
+  "character": {
+   "id": "ashby-rolf",
+   "name": "Rolf Gannet",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pantaloons",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_page",
+     "variant": "sandy"
+    },
+    {
+     "type": "hat",
+     "item": "hat_bandana",
+     "variant": "brown"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "hoe"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-rolf.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "ivo",
+  "role": "Crofter",
+  "character": {
+   "id": "ashby-ivo",
+   "name": "Ivo Gannet",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "blonde"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-ivo.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "lars",
+  "role": "Farm lad",
+  "character": {
+   "id": "ashby-lars",
+   "name": "Lars Tern",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_shorts",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs",
+     "variant": "platinum"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-lars.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "britt",
+  "role": "Gleaner",
+  "character": {
+   "id": "ashby-britt",
+   "name": "Britt Saltash",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_ponytail",
+     "variant": "blonde"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-britt.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "old_ulf",
+  "role": "Village elder",
+  "character": {
+   "id": "ashby-old_ulf",
+   "name": "Old Ulf",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_elderly",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_balding",
+     "variant": "platinum"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-old_ulf.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "ebba",
+  "role": "Dairymaid",
+  "character": {
+   "id": "ashby-ebba",
+   "name": "Ebba Gannet",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "sandy"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "tan"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-ebba.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "tobin",
+  "role": "Barn hand",
+  "character": {
+   "id": "ashby-tobin",
+   "name": "Tobin Crane",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_messy1",
+     "variant": "light brown"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-tobin.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "freya",
+  "role": "Villager",
+  "character": {
+   "id": "ashby-freya",
+   "name": "Freya Tern",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_braid",
+     "variant": "blonde"
+    },
+    {
+     "type": "hat",
+     "item": "hat_hood_cloth",
+     "variant": "brown"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/ashby-freya.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

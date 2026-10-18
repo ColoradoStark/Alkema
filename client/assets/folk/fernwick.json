@@ -1,0 +1,3548 @@
+[
+ {
+  "id": "bram",
+  "role": "Orchard keeper",
+  "character": {
+   "id": "fernwick-bram",
+   "name": "Bram Hollin",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "leather"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-bram.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "tamsin",
+  "role": "Picker",
+  "character": {
+   "id": "fernwick-tamsin",
+   "name": "Tamsin Hollin",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_braid",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_full",
+     "variant": "tan"
+    },
+    {
+     "type": "hat",
+     "item": "hat_headband_kerchief",
+     "variant": "tan"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-tamsin.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "kit",
+  "role": "Apple boy",
+  "character": {
+   "id": "fernwick-kit",
+   "name": "Kit Fallow",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_shorts",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs",
+     "variant": "black"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-kit.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "osric",
+  "role": "Woodcutter",
+  "character": {
+   "id": "fernwick-osric",
+   "name": "Osric Thorne",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_unkempt",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-osric.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "dora",
+  "role": "Gardener",
+  "character": {
+   "id": "fernwick-dora",
+   "name": "Dora Fallow",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "tan"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs_bun",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_half",
+     "variant": "white"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-dora.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "gideon",
+  "role": "Field hand",
+  "character": {
+   "id": "fernwick-gideon",
+   "name": "Gideon Marsh",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_messy1",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "brown"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "hoe"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-gideon.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "pip",
+  "role": "Field hand",
+  "character": {
+   "id": "fernwick-pip",
+   "name": "Pip Marsh",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pantaloons",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_page",
+     "variant": "black"
+    },
+    {
+     "type": "hat",
+     "item": "hat_bandana",
+     "variant": "brown"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-pip.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "mabel",
+  "role": "Woodcutter's sister",
+  "character": {
+   "id": "fernwick-mabel",
+   "name": "Mabel Thorne",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_full",
+     "variant": "white"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-mabel.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "ezra",
+  "role": "Farmer",
+  "character": {
+   "id": "fernwick-ezra",
+   "name": "Ezra Wold",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_parted2",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "tan"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "hoe"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-ezra.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "cole",
+  "role": "Farmer",
+  "character": {
+   "id": "fernwick-cole",
+   "name": "Cole Wold",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "black"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-cole.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "hester",
+  "role": "Village elder",
+  "character": {
+   "id": "fernwick-hester",
+   "name": "Old Hester",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female_elderly",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs_bun",
+     "variant": "black"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-hester.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "abel",
+  "role": "Cowman",
+  "character": {
+   "id": "fernwick-abel",
+   "name": "Abel Croft",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_balding",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-abel.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "ruth",
+  "role": "Villager",
+  "character": {
+   "id": "fernwick-ruth",
+   "name": "Ruth Wold",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "black"
+    },
+    {
+     "type": "hat",
+     "item": "hat_hood_cloth",
+     "variant": "brown"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-ruth.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "wat",
+  "role": "Barn hand",
+  "character": {
+   "id": "fernwick-wat",
+   "name": "Wat Croft",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_messy1",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-wat.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "nan",
+  "role": "Bram's mother",
+  "character": {
+   "id": "fernwick-nan",
+   "name": "Nan Hollin",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_ponytail",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_half",
+     "variant": "tan"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-nan.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "jem",
+  "role": "Field hand",
+  "character": {
+   "id": "fernwick-jem",
+   "name": "Jem Furrow",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pantaloons",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs",
+     "variant": "black"
+    },
+    {
+     "type": "hat",
+     "item": "hat_bandana",
+     "variant": "brown"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "hoe"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-jem.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

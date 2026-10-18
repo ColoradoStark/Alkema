@@ -219,10 +219,10 @@ export class GameScene extends Scene {
         const key = TOWNS[place?.name];
         if (!key || this.town || this._changingRoom) return;
         await this._loadTown(key).catch(() => null);
-        const arrive = this.cache.json.get(`town-${key}`)?.arrive;
+        const { arrive, facing } = this.cache.json.get(`town-${key}`) || {};
         if (!arrive) return;
         this._townPlace = place;
-        await this.changeMap(key, arrive, 'right');
+        await this.changeMap(key, arrive, facing || 'right');
     }
 
     /** Walk out through an exit (a town's gate, any door) and you're in the map it leads to. */

@@ -493,3 +493,41 @@ test.describe('Millbrook', () => {
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
     });
 });
+
+for (const v of [
+    { name: 'Fernwick', key: 'fernwick', folk: 16, doors: ['cottage', 'farmhouse', 'weaver', 'woodcutter'], out: { x: 40, row: 27, dir: 'left' } },
+    { name: 'Ashby', key: 'ashby', folk: 15, doors: ['farmhouse', 'fisherman', 'hut', 'netmaker'], out: { x: 68 * 32 - 40, row: 26, dir: 'right' } },
+]) {
+    test.describe(v.name, () => {
+        test('a farming village: everyone out at work, every door leading somewhere, and out by the gate', async ({ page }) => {
+            test.setTimeout(150000);
+            await enterWorld(page);
+            await page.evaluate(async (name) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                const { WORLD } = await import('/src/world/places.js');
+                await gs.enterPlace(WORLD.places.find(p => p.name === name));
+            }, v.name);
+            await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(v.key);
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
+                { timeout: 60000 }).toBe(v.folk);
+            const doing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => {
+                const s = f.sprite.getActiveSprite();
+                const key = s?.anims?.currentAnim?.key || '';
+                return { chore: (key.match(/_chore_(\w+)_/) || [])[1] || null, shown: !!(s?.visible && s.frame?.realWidth) };
+            }));
+            await expect.poll(async () => [...new Set((await doing()).map(d => d.chore).filter(Boolean))].sort(),
+                { timeout: 30000, intervals: [1000] }).toEqual(['dig', 'hoe', 'sit', 'water']);
+            expect((await doing()).every(d => d.shown)).toBe(true);
+            const doors = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.exits
+                .filter(e => e.to).map(e => e.to));
+            expect(doors.sort()).toEqual(v.doors.map(d => `${v.key}-${d}`));
+            await page.evaluate(({ x, row }) => {
+                const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+                me.setPosition(x, row * 32 - 23);
+                me.body.reset(me.x, me.y);
+            }, v.out);
+            await hold(page, v.out.dir, 800);
+            await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
+        });
+    });
+}

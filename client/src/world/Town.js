@@ -17,7 +17,7 @@ const WANDER_SPEED = 46;
 const WATER_FRAME_MS = 260;
 
 /** The places on the overworld you can go into, and their maps. */
-export const TOWNS = { Riverhold: 'riverhold', Millbrook: 'millbrook' };
+export const TOWNS = { Riverhold: 'riverhold', Millbrook: 'millbrook', Fernwick: 'fernwick', Ashby: 'ashby' };
 
 /**
  * Work townsfolk do with the tool in their hands, made from the moves on

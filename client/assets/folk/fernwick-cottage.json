@@ -1,0 +1,215 @@
+[
+ {
+  "id": "agnes",
+  "role": "Baker",
+  "character": {
+   "id": "fernwick-cottage-agnes",
+   "name": "Agnes Fallow",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_half",
+     "variant": "white"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/fernwick-cottage-agnes.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]
