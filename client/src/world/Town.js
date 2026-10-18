@@ -8,6 +8,7 @@
 import { sortDepth } from './Forest.js';
 import { DEPTH } from './Overworld.js';
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
+import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
 const TALK_REACH = 64;         // stand this close to someone and they speak
@@ -16,7 +17,20 @@ const WANDER_SPEED = 46;
 const WATER_FRAME_MS = 260;
 
 /** The places on the overworld you can go into, and their maps. */
-export const TOWNS = { Riverhold: 'riverhold' };
+export const TOWNS = { Riverhold: 'riverhold', Millbrook: 'millbrook' };
+
+/**
+ * Work townsfolk do with the tool in their hands, made from the moves on
+ * their sheet: a row, the frames to play from it, how fast, and a breather
+ * between goes. Watering is the character generator's own watering cycle.
+ */
+export const CHORES = {
+    water: { row: 'thrust', frames: [0, 1, 4, 4, 4, 4, 5], rate: 5, rest: 1200 },
+    hoe: { row: 'thrust', frames: [0, 1, 2, 3, 4, 5, 6, 7], rate: 9, rest: 700 },
+    dig: { row: 'thrust', frames: [0, 1, 2, 3, 4, 5, 6, 7], rate: 7, rest: 1100 },
+    sit: { row: 'sit', frames: [2], rate: 1, rest: 0 },
+};
+const DIRS = ['up', 'left', 'down', 'right'];
 
 /** Queue a town's files on a loader. */
 export function preloadTown(load, key) {
@@ -178,6 +192,7 @@ export class Town {
         for (const t of this.things) t.setDepth(sortDepth(this.scene, t.getData('foot')));
         for (const f of this.folk) {
             if (f.plan.wander) this._wander(f, delta, feet);
+            else if (f.plan.chore && !f.working && !f.talking) f.working = this._work(f, f.plan.facing || 'down');
             const s = f.sprite;
             s.setDepth(sortDepth(this.scene, s.y + FEET));
             const near = feet && Math.hypot(feet.x - s.x, feet.y - (s.y + FEET)) < (this.indoors ? COUNTER_REACH : TALK_REACH);
@@ -187,6 +202,7 @@ export class Town {
                 const dx = feet.x - s.x, dy = feet.y - (s.y + FEET);
                 s.setDirection(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
                 s.stopAnimation();
+                f.working = false;
             } else if (!near && f.talking && f.plan.post) {
                 s.setDirection(f.plan.facing || 'down');
                 s.stopAnimation();
@@ -226,6 +242,10 @@ export class Town {
             f.target = null;
             f.wait = 1500 + Math.random() * 4000;
             s.stopAnimation();
+            // Someone with work to do gets on with it here, a good while longer
+            if (f.plan.chore && this._work(f, f.plan.facing || ['left', 'right', 'down'][Math.floor(Math.random() * 3)])) {
+                f.wait += 4000 + Math.random() * 5000;
+            }
             return;
         }
         // Walk one leg at a time, like townsfolk in the old games: the longer leg
@@ -253,6 +273,27 @@ export class Town {
         }
         s.setPosition(horizontal ? s.x + Math.sign(dx) * stepLen : s.x, horizontal ? s.y : s.y + Math.sign(dy) * stepLen);
         s.playAnimation('walk', horizontal ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
+    }
+
+    /** Set someone to their chore, facing dir; false if their sheet isn't loaded yet. */
+    _work(f, dir) {
+        const s = f.sprite, chore = CHORES[f.plan.chore];
+        if (!chore || !s.sprite || !s.animationKey) return false;
+        const key = `${s.animationKey}_chore_${f.plan.chore}_${dir}`;
+        if (!this.scene.anims.exists(key)) {
+            const { start, dirs } = ANIM_ROWS[chore.row];
+            const row = start + (dirs >= 4 ? DIRS.indexOf(dir) : 0);
+            const texture = s.sprite.texture.key;
+            this.scene.anims.create({
+                key, frameRate: chore.rate, repeat: -1, repeatDelay: chore.rest,
+                frames: chore.frames.map(i => ({ key: texture, frame: row * s.sheetCols + i })),
+            });
+        }
+        s.setDirection(dir);
+        s.oversizedSprite?.setVisible(false);
+        s.usingOversized = false;
+        s.sprite.setVisible(true).play(key, true);
+        return true;
     }
 
     destroy() {

@@ -452,3 +452,44 @@ test.describe('Riverhold', () => {
         expect(await page.locator('.story-clip').isVisible()).toBe(false);
     });
 });
+
+test.describe('Millbrook', () => {
+    test('a farming village: everyone out at work in the fields, and the feed store shut', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Millbrook'));
+        });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('millbrook');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
+            { timeout: 60000 }).toBe(12);
+        // Watering, hoeing, digging and sitting, each with their own frames, and nobody vanishes doing it
+        const doing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => {
+            const s = f.sprite.getActiveSprite();
+            const key = s?.anims?.currentAnim?.key || '';
+            return { id: f.plan.id, chore: (key.match(/_chore_(\w+)_/) || [])[1] || null, shown: !!(s?.visible && s.frame?.realWidth) };
+        }));
+        await expect.poll(async () => [...new Set((await doing()).map(d => d.chore).filter(Boolean))].sort(),
+            { timeout: 30000, intervals: [1000] }).toEqual(['dig', 'hoe', 'sit', 'water']);
+        expect((await doing()).every(d => d.shown)).toBe(true);
+        // The feed store has no way in: its keeper stands outside the barred door
+        const shut = await page.evaluate(() => {
+            const t = window.__PHASER_GAME.scene.getScene('GameScene').town;
+            const keeper = t.folk.find(f => f.plan.id === 'seedsman');
+            return { says: keeper.plan.says[0], doors: t.data.exits.filter(e => e.to).map(e => e.to) };
+        });
+        expect(shut.says).toMatch(/Shut/);
+        expect(shut.doors.sort()).toEqual(['millbrook-cottage', 'millbrook-croft', 'millbrook-farmhouse']);
+        // Out through the gate and back on the overworld, by Millbrook
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(40, 22 * 32 - 23);
+            me.body.reset(me.x, me.y);
+        });
+        await hold(page, 'left', 800);
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
+    });
+});

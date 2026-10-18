@@ -719,6 +719,511 @@ LPC Tile Atlas (sand beaches)
 
 
 ======================================================================
+MILLBROOK (THE FARMING VILLAGE)
+======================================================================
+
+Millbrook is built from the same LPC sets as Riverhold (above), and:
+
+"[LPC] Crops" by bluecarrot16, Daniel Eddeland (daneeklu), Joshua
+Taylor, Richard Kettering (Jetrel). Commissioned by castelonia.
+  License: CC-BY-SA 3.0+ or GPL 3.0+
+  https://opengameart.org/content/lpc-crops
+  (the vegetable beds, every crop at its stage of growing; the full
+  per-item credits are in tools/towngen-sources/CREDITS-crops.txt)
+
+The fences are from "[LPC] Medieval Village Decorations" (fence_medieval),
+credited above; the fields of standing wheat and ripe grain from the LPC
+tile atlas (Daniel Eddeland's farming tiles), credited above.
+
+The villagers' hoes, shovels and watering cans are the LPC hand tools
+(credited with the character art above); the farm lad's basket is
+bluecarrot16's LPC basket backpack (CC0).
+
+The sacks, baskets and crates are from "[LPC] Containers", and the
+produce heaped in the crates from "[LPC] Foods", both CC-BY-SA 4.0
+(other licenses may be available: see the original submissions).
+Their full credits follow, as their authors ask.
+
+--- [LPC] Containers (CREDITS-container.txt) ---
+
+[LPC] Containers by bluecarrot16, Lanea Zimmerman (Sharm), William Thompson, Tuomo Untinen (Reemax), Evert, Buch, Blarumyrran, n2liquid, Jetrel, Guido Bos, Hyptosis, Bonsaiheldin, NaRNeRZz, PriorBlue, Jerom, 7Soul, and Wolthera van Hövell tot Westerflier (TheraHedwig). 
+
+Please credit all the above authors, include a link back to: https://opengameart.org/content/lpc-containers
+
+Based on: 
+
+LPC compatible Ancient Greek Architecture
+Wolthera van Hövell tot Westerflier (TheraHedwig)
+CC-BY-SA 3.0 / GPL 3.0
+https://opengameart.org/content/lpc-compatible-ancient-greek-architecture
+
+Liberated Pixel Cup (LPC) Base Assets (sprites & map tiles)
+Lanea Zimmerman (Sharm)
+CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0
+http://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+
+LPC: Modified base tiles
+Lanea Zimmerman (Sharm), William Thompson
+CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0
+http://opengameart.org/content/lpc-modified-base-tiles
+
+[LPC] House interior and decorations
+Tuomo Untinen (Reemax)
+CC-BY-SA 3.0 / GPL 3.0 / GPL 2.0
+http://opengameart.org/content/lpc-house-interior-and-decorations
+
+Cute dungeon LPC edit
+Evert, Buch, Sharm, William Thompson
+CC-BY 3.0
+http://opengameart.org/content/cute-dungeon-lpc-edit
+
+A cute dungeon
+Buch
+CC-BY 3.0
+https://opengameart.org/content/a-cute-dungeon
+
+Treasure chests, 32x32 and 16x16
+Blarumyrran
+CC0
+http://opengameart.org/content/treasure-chests-32x32-and-16x16
+
+RPG item set
+Jetrel
+CC0
+https://opengameart.org/content/rpg-item-set
+
+[LPC] Guido Bos entries cut up
+Guido Bos
+CC-BY-SA 3.0 / GPL 3.0
+https://opengameart.org/content/lpc-guido-bos-entries-cut-up
+
+Mage City Arcanos
+Hyptosis
+CC0
+https://opengameart.org/content/mage-city-arcanos
+
+[LPC] Dungeon Elements
+Lanea Zimmerman (Sharm), William.Thompsonj
+CC-BY 3.0 / GPL 3.0 / GPL 2.0 / OGA-BY 3.0
+https://opengameart.org/content/lpc-dungeon-elements
+
+Exterior 32x32 Town tileset
+n2liquid
+CC-BY-SA 4.0
+https://opengameart.org/content/exterior-32x32-town-tileset
+
+Treasure chests 32x32
+Bonsaiheldin
+CC-BY 4.0
+https://opengameart.org/content/treasure-chests-32x32
+
+LPC: Interior Castle Tiles
+Lanea Zimmerman (Sharm)
+CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0
+https://opengameart.org/content/lpc-interior-castle-tiles
+
+Adventure Tileset (Unfinished)
+NaRNeRZz
+CC0
+https://opengameart.org/content/adventure-tileset-unfinished
+
+Recolor all the items!!!
+PriorBlue, Jerom, 7Soul
+CC-BY-SA 3.0
+https://opengameart.org/content/recolor-all-the-items
+
+32x32 fantasy tileset
+Jerom
+CC-BY-SA 3.0
+https://opengameart.org/content/32x32-fantasy-tileset
+
+420-Pixel-Art-Icons-for-RPG
+7soul
+CC0
+https://www.deviantart.com/7soul1/art/420-Pixel-Art-Icons-for-RPG-129892453
+
+--- [LPC] Foods (CREDITS-food.txt) ---
+
+"[LPC] Foods" by bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor, Richard Kettering (Jetrel), thekingphoenix, RedVoxel, and Molly "Cougarmint" Willits. 
+https://opengameart.org/content/lpc-food
+
+# BASED ON:
+
+[LPC] Farming tilesets, magic animations and UI elements
+DE = Daniel Eddeland (Daneeklu)
+CC-BY-SA 3.0 / GPL 3.0
+https://opengameart.org/content/lpc-farming-tilesets-magic-animations-and-ui-elements
+
+Fruit and Veggie Inventory
+JT = Joshua Taylor
+CC-BY-SA 3.0 / GPL 3.0 
+https://opengameart.org/content/fruit-and-veggie-inventory
+
+RPG item set
+RK = Richard Kettering (Jetrel)
+CC0
+https://opengameart.org/content/rpg-item-set
+
+Icons: Food.
+TKP = thekingphoenix
+CC0
+http://opengameart.org/content/icons-food
+
+Food Items 16x16
+RV = RedVoxel
+CC0
+https://opengameart.org/content/food-items-16x16
+
+Chicken and Pork Icon Pack
+MCW = Molly "Cougarmint" Willits
+CC-BY 3.0 / OGA-BY 3.0
+https://opengameart.org/content/chicken-and-pork-icon-pack
+
+LPC style farm animals
+DE = Daniel Eddeland (Daneeklu)
+CC-BY 3.0 / GPL 2.0
+https://opengameart.org/content/lpc-style-farm-animals
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+# LIST OF ITEMS AND LICENSES
+
+All items edited by bluecarrot16. Original authors listed, otherwise drawn from scratch by bluecarrot16. 
+
+- If you use this entire set, the license is CC-BY-SA 3.0+ or GPL v3.0+. 
+- All individual can be used under either of those licenses (CC-BY-SA 3.0+ or GPL 3.0+). 
+- Some items can also be used under other licenses, according to the table below.
+- For items with a CC-BY, CC-BY-SA, OGA-BY, or GPL license, you must credit the original author(s) as well as bluecarrot16, link to the original submissions (above) and include a link back to this page <https://opengameart.org/content/lpc-food>.
+- For items licensed CC0, credit and link back to this page is appreciated, but not required. 
+
+EXAMPLE 1: Watermelon
+Watermelon, by Joshua Taylor, Richard Kettering (Jetrel), and bluecarrot16.
+CC-BY-SA 3.0
+https://opengameart.org/content/lpc-food
+Based on:
+https://opengameart.org/content/fruit-and-veggie-inventory
+https://opengameart.org/content/rpg-item-set
+
+
+EXAMPLE 2: Leeks (credit optional due to CC0 license)
+Leeks by bluecarrot16
+CC0
+https://opengameart.org/content/lpc-food
+
+
+## FRUITS / VEGETABLES
+
+|                                    Item                                    | Other Authors | Other Licenses |
+|----------------------------------------------------------------------------|---------------|----------------|
+| Russet potatoes                                                            | JT            |                |
+| Gold potatoes                                                              | DE            |                |
+| Purple potatoes                                                            | DE            |                |
+| Sweet potatoes                                                             | DE            |                |
+| Yuca / Cassava                                                             | DE            |                |
+| Carrots                                                                    | DE            |                |
+| Carrots                                                                    | JT            |                |
+| Parsnips                                                                   | JT            |                |
+| Radishes                                                                   | JT            |                |
+| Beets                                                                      | JT            |                |
+| Turnips                                                                    | JT            |                |
+| Rutabaga                                                                   | JT            |                |
+| Garlic                                                                     | JT            |                |
+| Yellow onion / Sweet onion                                                 | JT            |                |
+| Red onion / Purple onion                                                   | JT            |                |
+| White onion                                                                | JT            |                |
+| Green onion                                                                | JT            |                |
+| Hot pepper                                                                 | DE            |                |
+| Green bell pepper                                                          | JT            |                |
+| Red bell pepper                                                            | JT            |                |
+| Orange bell pepper                                                         | JT            |                |
+| Yellow bell pepper                                                         | JT            |                |
+| Chili peppers / Hot peppers / Poblano, Cayanne Serrano, Habanero, Jalapeño |               | CC0            |
+| Watermelon                                                                 | JT, RK        |                |
+| Honeydew melon                                                             |               | CC0            |
+| Cantaloupe melon                                                           |               | CC0            |
+| Acorn squash                                                               |               | CC0            |
+| Pumpkin                                                                    | JT            |                |
+| Crookneck squash                                                           | JT            |                |
+| Butternut squash                                                           |               | CC0            |
+| Ornamental gourds: turban squash, gooseneck, small pumpkins                |               | CC0            |
+| Ornamental gourds: pan patty squash, small pumpkins                        |               | CC0            |
+|----------------------------------------------------------------------------|---------------|----------------|
+| Asparagus                                                                  |               | CC0            |
+| Rhubarb                                                                    |               | CC0            |
+| Romaine lettuce                                                            |               | CC0            |
+| Iceberg lettuce                                                            | RK            | CC0            |
+| Kale                                                                       |               | CC0            |
+| Red cabbage / Purple cabbage                                               |               | CC0            |
+| Green cabbage                                                              |               | CC0            |
+| Celery                                                                     |               | CC0            |
+| Bok choy                                                                   |               | CC0            |
+| Fennel bulb                                                                |               | CC0            |
+| Brussels sprouts                                                           |               | CC0            |
+| Cauliflower                                                                | JT            |                |
+| Broccoli                                                                   | JT            |                |
+| Artichoke                                                                  | DE            |                |
+| Leeks                                                                      |               | CC0            |
+| Kohlrabi                                                                   |               | CC0            |
+| Eggplant                                                                   | DE, JT        |                |
+| Zucchini / Green squash                                                    | DE            |                |
+| Yellow squash / Summer squash                                              | DE            |                |
+| Cucumber                                                                   | RK            | CC0            |
+| Strawberry                                                                 | JT            |                |
+| Blackberries                                                               |               | CC0            |
+| Raspberries                                                                |               | CC0            |
+| Red grapes                                                                 |               | CC0            |
+| Green grapes                                                               |               | CC0            |
+| Cherry tomatoes                                                            |               | CC0            |
+| Tomatoes                                                                   | DE            |                |
+| Large tomatoes                                                             | JT            |                |
+| Peas / Snap peas / Sugar peas                                              | JT            |                |
+| Hops                                                                       |               | CC0            |
+| Green beans                                                                |               | CC0            |
+|----------------------------------------------------------------------------|---------------|----------------|
+| Red delicious apples / red apples                                          | JT            |                |
+| Granny smith apples / green apples                                         | JT            |                |
+| Golden delicious apples / yellow apples                                    | JT            |                |
+| Golden delicious apples / yellow apples                                    | JT            |                |
+| Honeycrisp apples / variegated apples                                      | JT            |                |
+| Lemon                                                                      | JT            |                |
+| Lime                                                                       | JT            |                |
+| Cherries                                                                   | JT            |                |
+| Oranges                                                                    | JT            |                |
+| Bartlett pears / Green pears                                               | JT            |                |
+| D'anjou pears / Yellow pears                                               | JT            |                |
+| Bosc pears / Brown pears                                                   | JT            |                |
+| Figs                                                                       |               | CC0            |
+| Starfruit / Carambola                                                      |               | CC0            |
+| Banana                                                                     | JT            |                |
+| Peach                                                                      |               | CC0            |
+| Avocado                                                                    |               | CC0            |
+| Mango                                                                      |               | CC0            |
+| Mango                                                                      |               | CC0            |
+| Pomegranate                                                                |               | CC0            |
+| Dragonfruit / Pitaya / Pitahaya                                            |               | CC0            |
+| Pineapple                                                                  |               | CC0            |
+| Coconut                                                                    |               | CC0            |
+| Coffee                                                                     |               | CC0            |
+| Mandarin orange / Kumquat                                                  |               | CC0            |
+| Plums                                                                      |               | CC0            |
+| Jackfruit / Jack tree                                                      |               | CC0            |
+| Breadfruit                                                                 |               | CC0            |
+| Papaya                                                                     |               | CC0            |
+| Kiwi                                                                       |               | CC0            |
+| Corn                                                                       | DE            |                |
+| Corn                                                                       | JT            |                |
+
+## CHEESE, DAIRY, EGGS
+
+|           Item           | Other Authors | Other Licenses |
+|--------------------------|---------------|----------------|
+| Brie                     | TKP           | CC0            |
+| Gouda                    | TKP           | CC0            |
+| White Swiss              | TKP           | CC0            |
+| Cheddar                  | TKP           | CC0            |
+| Yellow Swiss             | TKP           | CC0            |
+| Smoked gruyere           |               | CC0            |
+| Muenster                 |               | CC0            |
+| Blue cheese / Gorgonzola | TKP           | CC0            |
+| Feta                     |               | CC0            |
+| Mozarella                |               | CC0            |
+| Manchengo                |               | CC0            |
+| Jack                     |               | CC0            |
+| Parmesean                |               | CC0            |
+|--------------------------|---------------|----------------|
+| White eggs               |               | CC0            |
+| Brown eggs               |               | CC0            |
+| Hardboiled eggs          |               | CC0            |
+| Fried eggs               |               | CC0            |
+| Scrambled eggs           |               | CC0            |
+| Butter                   |               | CC0            |
+
+## MUSHROOMS
+
+|                                    Item                                    | Other Authors | Other Licenses |
+|----------------------------------------------------------------------------|---------------|----------------|
+| Common mushroom / button mushroom / crimini mushroom / champignon mushroom |               | CC0            |
+| Oyster mushrooms                                                           |               | CC0            |
+| Portobello mushrooms                                                       |               | CC0            |
+| King trumpet mushrooms / King oyster mushrooms / French horn mushroom      |               | CC0            |
+| Black morels                                                               |               | CC0            |
+| Enokitake / Enoki                                                          |               | CC0            |
+
+
+## NUTS
+
+|    Item    | Other Authors | Other Licenses |
+|------------|---------------|----------------|
+| Pisatcchio |               | CC0            |
+| Pecan      |               | CC0            |
+| Peanut     |               | CC0            |
+| Walnut     |               | CC0            |
+| Almond     |               | CC0            |
+| Cashew     |               | CC0            |
+
+## BREAD
+
+|       Item       | Other Authors | Other Licenses |
+|------------------|---------------|----------------|
+| Vienna small     | RV            | CC0            |
+| Loaf             | RK            | CC0            |
+| Vienna large     | TKP           | CC0            |
+| Baguette         |               | CC0            |
+| Pullman loaf     |               | CC0            |
+| Coburg large     |               | CC0            |
+| ???              |               | CC0            |
+| Crescent roll    |               | CC0            |
+| Coburg roll      |               | CC0            |
+| Muffin           |               | CC0            |
+| Cob / Boule roll |               | CC0            |
+| Pretzel          |               | CC0            |
+| Croissant        |               | CC0            |
+| Donut            |               | CC0            |
+| Chocolate cake   |               | CC0            |
+| Pie              |               | CC0            |
+| Braided Pie      |               | CC0            |
+| Bagel            |               | CC0            |
+| Pancakes         |               | CC0            |
+| Waffles          |               | CC0            |
+
+## MEAT
+|           Item          | Other Authors |     Other Licenses     |
+|-------------------------|---------------|------------------------|
+| Chicken                 | MCW           | CC-BY 3 / OGA-BY 3     |
+| Chicken drumstick       | RK            | CC0                    |
+| Rotisserie chicken      | DE            |                        |
+| Large chicken drumstick | DE            |                        |
+| Turkey                  | DE            |                        |
+| Liver                   | DE            |                        |
+| Chop                    | RK            |                        |
+| Sausage                 | RK            |                        |
+| Ribeye steak            | DE            |                        |
+| T-bone steak            |               | CC0                    |
+| Rib roast               |               | CC0                    |
+| Back ribs               |               | CC0                    |
+| Ham                     | DE            |                        |
+| Pork chop               | MCW           | CC-BY 3.0 / OGA-BY 3.0 |
+| Bacon                   |               | CC0                    |
+| Pig                     | DE            |                        |
+| Kebab                   |               | CC0                    |
+| Meatballs               |               | CC0                    |
+
+
+
+## SEAFOOD
+
+|    Item   | Other Authors | Other Licenses |
+|-----------|---------------|----------------|
+| Mussel    |               | CC0            |
+| Scallop   |               | CC0            |
+| Oyster    |               | CC0            |
+| Crab      |               | CC0            |
+|-----------|---------------|----------------|
+| Anchovy   |               | CC0            |
+| Perch     | DE            |                |
+| Salmon    | DE            |                |
+| Trout     | DE            |                |
+| Catfish   | DE            |                |
+| Walleye   | DE            |                |
+| Carp      | DE            |                |
+| Bass      |               | CC0            |
+| Flounder  |               | CC0            |
+| Cod       | DE            |                |
+| Tilapia   |               | CC0            |
+| Herring   |               | CC0            |
+| Haddock   |               | CC0            |
+| Calamari  |               | CC0            |
+| Lobster   |               | CC0            |
+|-----------|---------------|----------------|
+| Grouper   | DE            |                |
+| Halibut   |               | CC0            |
+| Tuna      | DE            |                |
+| Swordfish |               | CC0            |
+| Pike      | DE            |                |
+
+
+## Future ideas
+
+- Fruits/vegetables
+    + Olives
+    + Green Olives
+    + Berries
+        * Cranberry
+        * Elderberry
+        * Huckleberry
+        * Lingonberry
+    + Tropical
+        * Guava
+        * Rambutan
+        * Soursop
+    + Flowers
+        * Poppy
+        * Sunflower
+        * Tulip
+    + Apricot
+    + Durian
+    + Lychee
+    + Persimmon
+    + Quince
+    + Tamarind
+- Herbs
+    + Basil
+    + Chives
+    + Cilantro / Coriander
+    + Dill
+    + Lavender
+    + Lemongrass
+    + Mugwort
+    + Mitsuba
+    + Oregano
+    + Parsley
+    + Rosemary
+    + Sage
+    + Tarragon
+    + Thyme
+    + Verbena
+- Cereals
+    + Wheat
+    + Barley
+    + Amarinth
+- Beans
+    + Black beans
+    + Kidney beans
+    + Navy beans
+    + Garbanzo beans
+
+https://en.wikipedia.org/wiki/List_of_breads
+- Oval loaf w/ longitudinal slashes (ear)
+- Kaiser
+- Miche
+- Twisted roll
+- Breadsticks
+- Focaccia
+- Ciabatta?
+- English muffin
+- Challah
+- Jerkey
+
+- Eel 
+- Shrimp/prawn
+- Abalone
+- Basa
+- Crappie 
+- Crayfish 
+- Kingfish
+- Mackerel 
+- Marlin 
+- Milkfish 
+- Orange roughy  
+- Pacific saury  
+- Pollock 
+- Sardine
+- Sole 
+- Swai
+- Sea urchin
+
+
+======================================================================
 INTERFACE ART
 ======================================================================
 
@@ -739,4 +1244,5 @@ created for the Liberated Pixel Cup contest on OpenGameArt.org.
 If you use these assets in your own project, you must provide
 attribution to the original artists as required by their licenses.
 
-This file lists 71 contributing artists.
+The character art's credits above list 71 contributing artists; the
+world, town, village and interface sections credit more.
