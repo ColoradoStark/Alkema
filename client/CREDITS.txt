@@ -1246,3 +1246,36 @@ attribution to the original artists as required by their licenses.
 
 The character art's credits above list 71 contributing artists; the
 world, town, village and interface sections credit more.
+
+======================================================================
+TUMBLEDOWN AND GULL'S REST (THE NORTHERN AND HARBOUR VILLAGES)
+======================================================================
+
+The snow, trodden snow, ice and icy shore tiles in town-terrain.png were added
+from "[LPC] Terrains" (above) by tools/town_terrain.py.
+
+winter-trees.png (the snow-laden pines and the chimney in the snow) and
+winter-roof.png (the snowed-up roof): "LPC Winter Tiles" by Demetrius, based
+on the LPC: Modified Base Tiles by Lanea Zimmerman (Sharm) and William Thompson.
+  License: CC-BY 3.0 / OGA-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-winter-tiles
+
+seasons-trees.png (the bare and the snow-dusted winter trees),
+seasons-trunks.png (stumps), seasons-bushes.png (the frosted bush) and
+seasons-rocks.png: "[LPC Revised] 4-Season Terrain" by Eliza Wyatt
+(DeathsDarling), after Lanea Zimmerman (Sharm) and Hyptosis.
+  License: OGA-BY 3.0 (per-piece credits in tools/towngen-sources/CREDITS-seasons.txt)
+  https://opengameart.org/content/lpc-revised-4-season-terrain
+
+dock.png: "Dock tileset" by Reid.
+  License: CC-BY-SA 3.0
+  https://opengameart.org/content/dock-tileset
+
+rowboat.png: the LPC rowboat by Daniel Eddeland (daneeklu), recoloured by
+AntumDeluge ("LPC Rowboat Recolor").
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/lpc-rowboat-recolor
+
+The fish, crabs, mussels and oysters are from "[LPC] Foods" (food.png, above).
+The fishermen's rod and the woodcutters' axe are from "[LPC] Hand Tools" by
+bluecarrot16 and others, drawn by the character generator.

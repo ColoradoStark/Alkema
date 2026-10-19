@@ -17,7 +17,10 @@ const WANDER_SPEED = 46;
 const WATER_FRAME_MS = 260;
 
 /** The places on the overworld you can go into, and their maps. */
-export const TOWNS = { Riverhold: 'riverhold', Millbrook: 'millbrook', Fernwick: 'fernwick', Ashby: 'ashby' };
+export const TOWNS = {
+    Riverhold: 'riverhold', Millbrook: 'millbrook', Fernwick: 'fernwick', Ashby: 'ashby',
+    Tumbledown: 'tumbledown', "Gull's Rest": 'gulls_rest',
+};
 
 /**
  * Work townsfolk do with the tool in their hands, made from the moves on
@@ -29,6 +32,9 @@ export const CHORES = {
     hoe: { row: 'thrust', frames: [0, 1, 2, 3, 4, 5, 6, 7], rate: 9, rest: 700 },
     dig: { row: 'thrust', frames: [0, 1, 2, 3, 4, 5, 6, 7], rate: 7, rest: 1100 },
     sit: { row: 'sit', frames: [2], rate: 1, rest: 0 },
+    // Long tools draw in their own oversized frames: cast, the line out and bobbing, reel in
+    fish: { swing: 'tool_rod', frames: [2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 7, 8, 9, 9, 10, 11, 12], rate: 6, rest: 1400 },
+    chop: { swing: 'slash_128', frames: [0, 1, 2, 3, 4, 5], rate: 10, rest: 900 },
 };
 const DIRS = ['up', 'left', 'down', 'right'];
 
@@ -279,6 +285,7 @@ export class Town {
     _work(f, dir) {
         const s = f.sprite, chore = CHORES[f.plan.chore];
         if (!chore || !s.sprite || !s.animationKey) return false;
+        if (chore.swing) return this._swing(f, chore, dir);
         const key = `${s.animationKey}_chore_${f.plan.chore}_${dir}`;
         if (!this.scene.anims.exists(key)) {
             const { start, dirs } = ANIM_ROWS[chore.row];
@@ -293,6 +300,31 @@ export class Town {
         s.oversizedSprite?.setVisible(false);
         s.usingOversized = false;
         s.sprite.setVisible(true).play(key, true);
+        return true;
+    }
+
+    /** A chore made with a long tool, from its oversized frames (cut from the sheet once its meta has come); false till then. */
+    _swing(f, chore, dir) {
+        const s = f.sprite;
+        const layout = s.spriteMeta?.custom_animations?.[chore.swing];
+        const texture = `sprite_${s.look}_os_${chore.swing}`;
+        if (!layout || !this.scene.textures.exists(texture)) return false;
+        const key = `${s.animationKey}_chore_${f.plan.chore}_${dir}`;
+        if (!this.scene.anims.exists(key)) {
+            const row = DIRS.indexOf(dir);
+            this.scene.anims.create({
+                key, frameRate: chore.rate, repeat: -1, repeatDelay: chore.rest,
+                frames: chore.frames.map(i => ({ key: texture, frame: row * layout.num_frames + i })),
+            });
+        }
+        s.setDirection(dir);
+        if (!s.oversizedSprite) {
+            s.oversizedSprite = this.scene.add.sprite(0, 0, texture, 0);
+            s.addAt(s.oversizedSprite, 1);
+        }
+        s.sprite.setVisible(false);
+        s.oversizedSprite.setVisible(true).play(key, true);
+        s.usingOversized = true;
         return true;
     }
 

@@ -1,0 +1,3531 @@
+[
+ {
+  "id": "mags",
+  "role": "Harbourmaster",
+  "character": {
+   "id": "gulls_rest-mags",
+   "name": "Mags Pellow",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "navy"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs_bun",
+     "variant": "redhead"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-mags.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "jory",
+  "role": "Fisherman",
+  "character": {
+   "id": "gulls_rest-jory",
+   "name": "Jory Penhale",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_messy1",
+     "variant": "sandy"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "leather"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_rod",
+     "variant": "rod"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-jory.png",
+   "animations": {
+    "complete": [
+     "thrust"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "tool_rod": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 13,
+      "num_directions": 4,
+      "base_animation": "thrust"
+     },
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": "tool_rod",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "kofi",
+  "role": "Fisherman",
+  "character": {
+   "id": "gulls_rest-kofi",
+   "name": "Kofi Amarel",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "black"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "black"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "black"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "black"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_rod",
+     "variant": "rod"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-kofi.png",
+   "animations": {
+    "complete": [
+     "thrust"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "tool_rod": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 13,
+      "num_directions": 4,
+      "base_animation": "thrust"
+     },
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": "tool_rod",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "nell",
+  "role": "Fisherwoman",
+  "character": {
+   "id": "gulls_rest-nell",
+   "name": "Nell Trevose",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "blue"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_ponytail",
+     "variant": "chestnut"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_rod",
+     "variant": "rod"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-nell.png",
+   "animations": {
+    "complete": [
+     "thrust"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "tool_rod": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 13,
+      "num_directions": 4,
+      "base_animation": "thrust"
+     },
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": "tool_rod",
+      "weapon_visible": {
+       "standard": false,
+       "oversized": true
+      },
+      "recommended_source": "oversized"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "perran",
+  "role": "Net-mender",
+  "character": {
+   "id": "gulls_rest-perran",
+   "name": "Old Perran",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male_elderly",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_balding",
+     "variant": "white"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-perran.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "tamsin",
+  "role": "Fishwife",
+  "character": {
+   "id": "gulls_rest-tamsin",
+   "name": "Tamsin Rowe",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "navy"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "carrot"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_full",
+     "variant": "white"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-tamsin.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "dara",
+  "role": "Fishmonger",
+  "character": {
+   "id": "gulls_rest-dara",
+   "name": "Dara Quill",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "brown"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "brown"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "brown"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_braid",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_full",
+     "variant": "tan"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-dara.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "wil",
+  "role": "Errand lad",
+  "character": {
+   "id": "gulls_rest-wil",
+   "name": "Wil Rowe",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_shorts",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs",
+     "variant": "ginger"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-wil.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "isolde",
+  "role": "Villager",
+  "character": {
+   "id": "gulls_rest-isolde",
+   "name": "Isolde Vane",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "olive"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "olive"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "olive"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_blouse_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "maroon"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_long_tied",
+     "variant": "dark brown"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-isolde.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "cador",
+  "role": "Gardener",
+  "character": {
+   "id": "gulls_rest-cador",
+   "name": "Cador Penhale",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_parted2",
+     "variant": "light brown"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_overalls",
+     "variant": "tan"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "watering"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-cador.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "femi",
+  "role": "Bait-digger",
+  "character": {
+   "id": "gulls_rest-femi",
+   "name": "Femi Amarel",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "black"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "black"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "black"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_ponytail",
+     "variant": "raven"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-femi.png",
+   "animations": {
+    "complete": [
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": false,
+       "oversized": false
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "brannoc",
+  "role": "Deckhand",
+  "character": {
+   "id": "gulls_rest-brannoc",
+   "name": "Brannoc Hale",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "bronze"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "bronze"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "bronze"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "brown"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants2",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_unkempt",
+     "variant": "black"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-brannoc.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "gwen",
+  "role": "Gleaner",
+  "character": {
+   "id": "gulls_rest-gwen",
+   "name": "Gwen Trevose",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "amber"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "amber"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "amber"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_skirts_plain",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_bangs_bun",
+     "variant": "strawberry"
+    },
+    {
+     "type": "backpack",
+     "item": "backpack_basket",
+     "variant": "round"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-gwen.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "aldo",
+  "role": "Boatwright",
+  "character": {
+   "id": "gulls_rest-aldo",
+   "name": "Aldo Marr",
+   "body_type": "male",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "olive"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_male",
+     "variant": "olive"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "olive"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve",
+     "variant": "white"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "charcoal"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_plain",
+     "variant": "gray"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-aldo.png",
+   "animations": {
+    "complete": [
+     "hurt",
+     "shoot",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "senna",
+  "role": "Traveller",
+  "character": {
+   "id": "gulls_rest-senna",
+   "name": "Senna Lark",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "taupe"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "taupe"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "taupe"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_longsleeve2",
+     "variant": "forest"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_boots_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_braid",
+     "variant": "blonde"
+    },
+    {
+     "type": "hat",
+     "item": "hat_hood_cloth",
+     "variant": "forest"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-senna.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": "morwen",
+  "role": "Smoker",
+  "character": {
+   "id": "gulls_rest-morwen",
+   "name": "Morwen Quill",
+   "body_type": "female",
+   "race": "human",
+   "character_class": "peasant",
+   "selections": [
+    {
+     "type": "body",
+     "item": "body",
+     "variant": "light"
+    },
+    {
+     "type": "head",
+     "item": "heads_human_female",
+     "variant": "light"
+    },
+    {
+     "type": "expression",
+     "item": "face_neutral",
+     "variant": "light"
+    },
+    {
+     "type": "clothes",
+     "item": "torso_clothes_tshirt",
+     "variant": "tan"
+    },
+    {
+     "type": "legs",
+     "item": "legs_pants",
+     "variant": "brown"
+    },
+    {
+     "type": "shoes",
+     "item": "feet_shoes_basic",
+     "variant": "brown"
+    },
+    {
+     "type": "hair",
+     "item": "hair_page",
+     "variant": "platinum"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_suspenders",
+     "variant": "leather"
+    },
+    {
+     "type": "shadow",
+     "item": "shadow",
+     "variant": "shadow"
+    }
+   ],
+   "spriteUrl": "/folk/gulls_rest-morwen.png",
+   "animations": {
+    "complete": [
+     "backslash",
+     "climb",
+     "combat_idle",
+     "emote",
+     "halfslash",
+     "hurt",
+     "idle",
+     "jump",
+     "run",
+     "shoot",
+     "sit",
+     "slash",
+     "spellcast",
+     "thrust",
+     "walk"
+    ]
+   },
+   "spriteMeta": {
+    "custom_animations": {
+     "blanked_animations": [
+      "climb"
+     ]
+    },
+    "animation_coverage": {
+     "spellcast": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "thrust": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "walk": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "slash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "shoot": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "hurt": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "climb": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "jump": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "sit": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "emote": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "run": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "combat_idle": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "backslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     },
+     "halfslash": {
+      "standard": true,
+      "oversized": null,
+      "weapon_visible": {
+       "standard": true,
+       "oversized": true
+      },
+      "recommended_source": "standard"
+     }
+    }
+   }
+  }
+ }
+]

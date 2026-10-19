@@ -497,9 +497,13 @@ test.describe('Millbrook', () => {
 for (const v of [
     { name: 'Fernwick', key: 'fernwick', folk: 16, doors: ['cottage', 'farmhouse', 'weaver', 'woodcutter'], out: { x: 40, row: 27, dir: 'left' } },
     { name: 'Ashby', key: 'ashby', folk: 15, doors: ['farmhouse', 'fisherman', 'hut', 'netmaker'], out: { x: 68 * 32 - 40, row: 26, dir: 'right' } },
+    { name: 'Tumbledown', key: 'tumbledown', folk: 16, doors: ['fisher', 'longhall', 'trapper', 'woodcutter'], out: { x: 40, row: 24, dir: 'left' },
+      chores: ['chop', 'dig', 'fish', 'sit'] },
+    { name: "Gull's Rest", key: 'gulls_rest', folk: 16, doors: ['alehouse', 'boatwright', 'fisherman', 'netloft'], out: { x: 40, row: 26, dir: 'left' },
+      chores: ['dig', 'fish', 'sit', 'water'] },
 ]) {
     test.describe(v.name, () => {
-        test('a farming village: everyone out at work, every door leading somewhere, and out by the gate', async ({ page }) => {
+        test('a village: everyone out at work, every door leading somewhere, and out by the gate', async ({ page }) => {
             test.setTimeout(150000);
             await enterWorld(page);
             await page.evaluate(async (name) => {
@@ -513,11 +517,13 @@ for (const v of [
             const doing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => {
                 const s = f.sprite.getActiveSprite();
                 const key = s?.anims?.currentAnim?.key || '';
-                return { chore: (key.match(/_chore_(\w+)_/) || [])[1] || null, shown: !!(s?.visible && s.frame?.realWidth) };
+                return { chore: (key.match(/_chore_(\w+)_/) || [])[1] || null, shown: !!(s?.visible && s.frame?.realWidth), size: s?.frame?.realWidth };
             }));
             await expect.poll(async () => [...new Set((await doing()).map(d => d.chore).filter(Boolean))].sort(),
-                { timeout: 30000, intervals: [1000] }).toEqual(['dig', 'hoe', 'sit', 'water']);
+                { timeout: 30000, intervals: [1000] }).toEqual(v.chores || ['dig', 'hoe', 'sit', 'water']);
             expect((await doing()).every(d => d.shown)).toBe(true);
+            // A rod or an axe swings in its own big frames
+            for (const d of (await doing()).filter(d => d.chore === 'fish' || d.chore === 'chop')) expect(d.size).toBe(128);
             const doors = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.exits
                 .filter(e => e.to).map(e => e.to));
             expect(doors.sort()).toEqual(v.doors.map(d => `${v.key}-${d}`));
