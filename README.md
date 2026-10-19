@@ -140,7 +140,7 @@ Also in the world:
 - Player join/leave events
 - Mobile-responsive layout with touch controls
 - A round minimap showing the land around you, other players, and the way to your current quest
-- Starter quests that teach the controls, then lead you to a river bridge, a village, a castle and a dungeon's mouth; every new hero starts them fresh
+- Starter quests that teach the controls, then walk you round all five villages (Fernwick, hidden in the woods, then Millbrook, Ashby, snowy Tumbledown and the harbour of Gull's Rest), then to a castle and a dungeon's mouth; every new hero starts them fresh
 - A short cooldown on the ability button, shown as a filling gold ring
 - Warm golden-hour light over the world, matching the character creator's stage, where motes drift in the light and a spotlight falls on your hero while you customize
 

@@ -1,7 +1,7 @@
 // Starter quests and the tracker card in the top-left of the map view.
-// A short chain that teaches the controls, then tours the places nearest the
-// starting town that you can walk to: a bridge, a village, a castle and a
-// dungeon's mouth (an island village waits until there's a boat).
+// A short chain that teaches the controls, then walks you round all five
+// villages (none needs the boat), then the nearest castle and dungeon's mouth
+// you can walk to.
 // Quests belong to the hero: progress is kept in that hero's save.
 
 import { audio } from '../audio/audio.js';
@@ -19,6 +19,7 @@ function nearest(list) {
 }
 
 const ofType = type => WORLD.places.filter(p => p.type === type && !p.hidden);
+const named = name => WORLD.places.filter(p => p.name === name);
 
 /**
  * kind 'count': `goal` events of `event` ('attack' | 'cast').
@@ -28,8 +29,12 @@ const ofType = type => WORLD.places.filter(p => p.type === type && !p.hidden);
 export const QUESTS = [
     { id: 'swing', text: 'Swing your weapon', kind: 'count', event: 'attack', goal: 5 },
     { id: 'cast', text: 'Cast a spell', kind: 'count', event: 'cast', goal: 1 },
-    { id: 'bridge', kind: 'visit', radius: 64, among: WORLD.bridges, says: () => 'Cross the river bridge' },
-    { id: 'village', kind: 'visit', radius: 140, among: ofType('village'), says: p => `Find the village of ${p.name}` },
+    // The villages in the order you'd walk them: west, north into the snow, then east to the sea
+    { id: 'fernwick', kind: 'visit', radius: 140, among: named('Fernwick'), says: p => `Find ${p.name}, hidden in the woods` },
+    { id: 'millbrook', kind: 'visit', radius: 140, among: named('Millbrook'), says: p => `Find the village of ${p.name}` },
+    { id: 'ashby', kind: 'visit', radius: 140, among: named('Ashby'), says: p => `Find the village of ${p.name}` },
+    { id: 'tumbledown', kind: 'visit', radius: 140, among: named('Tumbledown'), says: p => `Head north to snowy ${p.name}` },
+    { id: 'gulls_rest', kind: 'visit', radius: 140, among: named("Gull's Rest"), says: p => `Find the harbour of ${p.name}` },
     { id: 'castle', kind: 'visit', radius: 120, among: ofType('castle'), says: p => `Visit ${p.name}` },
     { id: 'dungeon', kind: 'visit', radius: 100, among: ofType('dungeon'), says: p => `Find the mouth of ${p.name}` },
 ];

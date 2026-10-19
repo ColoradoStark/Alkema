@@ -46,13 +46,13 @@ test.describe('Living world', () => {
         expect(await quest(page)).toEqual({ id: 'cast', progress: 0 });
 
         await page.keyboard.press('KeyE');
-        expect(await quest(page)).toEqual({ id: 'bridge', progress: 0 });
+        expect(await quest(page)).toEqual({ id: 'fernwick', progress: 0 });
 
         // Coming back as the same hero picks up where they left off...
         await page.reload();
         await page.locator('#cc-play').click({ timeout: 60000 });
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.quests, null, { timeout: 30000 });
-        expect(await quest(page)).toEqual({ id: 'bridge', progress: 0 });
+        expect(await quest(page)).toEqual({ id: 'fernwick', progress: 0 });
 
         // ...and a brand-new hero starts from the beginning
         await page.reload();
@@ -67,14 +67,29 @@ test.describe('Living world', () => {
     test('walking to a landmark completes its quest', async ({ page }) => {
         await enterWorld(page);
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').quests.index = 2; });
-        expect((await quest(page)).id).toBe('bridge');
+        expect((await quest(page)).id).toBe('fernwick');
         await page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
             const q = ui.quests.current;
             me.setPosition(q.x, q.y);
         });
-        await expect.poll(async () => (await quest(page)).id).toBe('village');
+        await expect.poll(async () => (await quest(page)).id).toBe('millbrook');
+    });
+
+    test('the quests take you to all five villages, one after another', async ({ page }) => {
+        await enterWorld(page);
+        const tour = await page.evaluate(async () => {
+            const { QUESTS } = await import('/src/ui/QuestTracker.js');
+            return QUESTS.filter(q => q.kind === 'visit').map(q => q.text);
+        });
+        expect(tour.slice(0, 5)).toEqual([
+            'Find Fernwick, hidden in the woods',
+            'Find the village of Millbrook',
+            'Find the village of Ashby',
+            'Head north to snowy Tumbledown',
+            "Find the harbour of Gull's Rest",
+        ]);
     });
 
     test('the overworld blocks walls and water, and wraps at the edges', async ({ page }) => {
