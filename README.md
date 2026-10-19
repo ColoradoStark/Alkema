@@ -34,7 +34,7 @@ A character creator and multiplayer game demo built on [Liberated Pixel Cup](htt
 
 ### Aesthetic Customization
 
-657 items across 104 categories. Mix and match:
+667 items across 106 categories. Mix and match:
 
 - **91 hairstyles** with color variants
 - **52 hats** with trims, buckles, and overlays
