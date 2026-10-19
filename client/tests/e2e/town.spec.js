@@ -144,9 +144,11 @@ test.describe('Riverhold', () => {
                     const h = seen.get(f.plan.id) || { keys: [], flips: 0 };
                     const k = h.keys;
                     if (key !== k[k.length - 1]) {
-                        if (k.length >= 2 && key === k[k.length - 2] && frames - h.at < 6) h.flips++;
+                        // Straight back within a tenth of a second of the game's time (counted in frames,
+                        // a busy machine's slow frames made a villager's short pause look like a flicker)
+                        if (k.length >= 2 && key === k[k.length - 2] && gs.time.now - h.at < 100) h.flips++;
                         k.push(key);
-                        h.at = frames;
+                        h.at = gs.time.now;
                     }
                     seen.set(f.plan.id, h);
                 }

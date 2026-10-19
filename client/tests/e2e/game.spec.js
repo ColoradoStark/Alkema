@@ -11,9 +11,16 @@
 
 import { test, expect } from '@playwright/test';
 
-/** Load the client and press Play in the character creator to enter the world. */
-async function enterGame(page) {
+/** Load the client and press Play in the character creator to enter the world (as one of `cls`, if given). */
+async function enterGame(page, cls = null) {
     await page.goto('/');
+    if (cls) {
+        await page.locator(`.cc-tile[data-id="${cls}"]`).click({ timeout: 20000 });
+        await page.waitForFunction((cls) => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.state?.character?.character_class === cls && s.figure?.visible && !s._inFlight;
+        }, cls, { timeout: 45000 });
+    }
     await page.locator('#cc-play').click({ timeout: 20000 });
 }
 
@@ -240,7 +247,9 @@ test.describe('Multiplayer', () => {
             });
         });
 
-        await enterGame(page1);
+        // A ranger: a bow is drawn in oversized frames even walking, so their walk plays on
+        // the oversized sprite (the creator rolls a class at random: one in five came out a ranger)
+        await enterGame(page1, 'ranger');
         await waitForGame(page1);
 
         await enterGame(page2);
@@ -290,7 +299,8 @@ test.describe('Multiplayer', () => {
                     if (!gs?.players) return '';
                     let remote = null;
                     gs.players.forEach(p => { if (p !== gs.localPlayer) remote = p; });
-                    return remote?.sprite?.sprite?.anims?.currentAnim?.key || '';
+                    // The sprite showing: a bow's walk plays on the oversized one
+                    return remote?.sprite?.getActiveSprite?.()?.anims?.currentAnim?.key || '';
                 });
                 if (key.includes('walk')) { walkDetected = true; break; }
                 await new Promise(r => setTimeout(r, 100));

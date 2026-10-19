@@ -182,9 +182,10 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.look = look;
         this.characterData = { ...characterData, id: this.characterData.id };
         const textureKey = `sprite_${look}`;
-        return loadCharacterSpritesheet(this.scene, characterData.spriteUrl, textureKey)
+        const scene = this.scene;
+        return loadCharacterSpritesheet(scene, characterData.spriteUrl, textureKey)
             .then(({ cols }) => {
-                if (this.look !== look || !this.scene) return;     // changed again meanwhile, or gone
+                if (this.look !== look || !this.scene) return this._forget(look, scene);     // changed again meanwhile, or gone
                 this.sheetCols = cols || this.sheetCols;
                 this.sprite?.destroy();
                 this.oversizedSprite?.destroy();

@@ -33,6 +33,20 @@ const CLIP_FORMATS = [['webm', 'video/webm'], ['mp4', 'video/mp4']];
 const painted = new Map();     // sprite id -> its painted portrait (an <img>), fetched with their town
 const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>), made when you first talk to them
 
+/** Let go of these people's portraits and voiced lines (their town is left behind). */
+export function forgetPortraits(ids) {
+    for (const id of ids) {
+        painted.delete(id);
+        for (const v of voiced.get(id)?.values() || []) {
+            v.pause();
+            v.remove();
+            v.replaceChildren();
+            v.load();          // drops what it had buffered
+        }
+        voiced.delete(id);
+    }
+}
+
 /** Fetch the painted portraits of these people (sprite ids), for those who have one. */
 export function loadPortraits(scene, ids) {
     const listed = new Set(scene.cache.json.get('portraits') || []);
@@ -46,6 +60,11 @@ export function loadPortraits(scene, ids) {
 }
 
 export class Dialogue {
+    /** How many portraits and voiced lines are held (for the memory tests). */
+    static portraitsHeld() {
+        return painted.size + [...voiced.values()].reduce((n, lines) => n + lines.size, 0);
+    }
+
     /**
      * @param {Phaser.Scene} scene  the UI scene
      * @param {number} top  the map view's top edge (screen px)

@@ -330,6 +330,7 @@ export class Player {
     destroy() {
         this.ship?.destroy();
         if (this.sprite) {
+            this.sprite.forget();      // their sheets go with them
             this.sprite.destroy();
         }
         if (this.nameText) {

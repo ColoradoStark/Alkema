@@ -8,7 +8,7 @@ import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
 import { Ship } from '../world/Ship.js';
 import { Town, TOWNS, preloadTown } from '../world/Town.js';
-import { loadPortraits } from '../ui/Dialogue.js';
+import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -247,7 +247,7 @@ export class GameScene extends Scene {
             const res = await this.networkManager.request('change-room', { town: key, ...at });
             if (!res?.ok) return;
             await this._fadeOut();
-            this.town?.destroy();
+            this._dropTown();
             this.overworld.setVisible(false);
             this.mooredShip.setVisible(false);
             this.town = this.world = new Town(this, key);
@@ -272,7 +272,7 @@ export class GameScene extends Scene {
             const res = await this.networkManager.request('change-room', { town: null, ...at });
             if (!res?.ok) return;
             await this._fadeOut();
-            this.town.destroy();
+            this._dropTown();
             this.town = null;
             this.world = this.overworld;
             this.overworld.setVisible(true);
@@ -288,6 +288,13 @@ export class GameScene extends Scene {
         } finally {
             this._changingRoom = false;
         }
+    }
+
+    /** Take down the town or room showing, and let go of everything it loaded. */
+    _dropTown() {
+        if (!this.town) return;
+        forgetPortraits(this.town.folk.map(f => f.sprite.characterData?.id));
+        this.town.destroy();
     }
 
     _loadTown(key) {

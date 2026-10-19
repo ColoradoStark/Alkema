@@ -28,15 +28,15 @@ export function loadCharacterSpritesheet(scene, spriteUrl, textureKey) {
                     const url = URL.createObjectURL(blob);
                     const img = new Image();
                     img.onload = () => {
+                        URL.revokeObjectURL(url);     // the decoded picture is all that's needed now
                         const cols = Math.floor(img.width / FRAME_SIZE);
                         scene.textures.addSpriteSheet(textureKey, img, {
                             frameWidth: FRAME_SIZE,
                             frameHeight: FRAME_SIZE
                         });
                         resolve({ textureKey, rawImage: img, cols, alreadyExisted: false });
-                        // Don't revoke URL yet - may be needed for canvas readback
                     };
-                    img.onerror = () => reject(new Error('Image decode failed'));
+                    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image decode failed')); };
                     img.src = url;
                 })
                 .catch(() => {

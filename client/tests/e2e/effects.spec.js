@@ -56,7 +56,10 @@ test.describe('Stage effects', () => {
             const fx = window.__PHASER_GAME.scene.getScene('CreateScene').effects;
             fx.splinters.killAll();
             fx.impact('wood', 150, 100, 160);
-            await new Promise(r => setTimeout(r, 900));
+            // 900 ms of the game's time (debris falls on the game clock, which lags the wall clock under load)
+            const scene = window.__PHASER_GAME.scene.getScene('CreateScene');
+            const t0 = scene.time.now;
+            while (scene.time.now - t0 < 900) await new Promise(r => setTimeout(r, 50));
             return fx.splinters.alive.map(p => ({ y: p.y, vy: p.velocityY }));
         });
         expect(ys.length).toBeGreaterThan(0);
