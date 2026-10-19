@@ -537,3 +537,34 @@ for (const v of [
         });
     });
 }
+
+test.describe('Memory', () => {
+    // A phone's browser drops a tab that holds too much: after four villages, entering a fifth sent you back to the start
+    test("leaving a town lets go of its pictures and its people's sprite sheets; coming back loads them again", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page);
+        const visit = (name) => page.evaluate(async (name) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === name));
+        }, name);
+        const held = () => page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys()
+            .filter(k => k.startsWith('town-tumbledown') || k.startsWith('sprite_tumbledown-')));
+        const fishing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
+            .filter(f => f.plan.chore === 'fish' && f.sprite.getActiveSprite()?.frame?.realWidth === 128).length);
+
+        await visit('Tumbledown');
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('tumbledown');
+        await expect.poll(fishing, { timeout: 60000 }).toBe(4);
+        expect((await held()).some(k => k.includes('_os_tool_rod'))).toBe(true);
+
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
+        expect(await held()).toEqual([]);
+
+        await visit('Tumbledown');
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('tumbledown');
+        await expect.poll(fishing, { timeout: 60000 }).toBe(4);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.ground.frame.realWidth)).toBe(68 * 32);
+    });
+});

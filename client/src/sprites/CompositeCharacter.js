@@ -48,8 +48,10 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             return;
         }
 
-        loadCharacterSpritesheet(this.scene, spriteUrl, textureKey)
+        const scene = this.scene;
+        loadCharacterSpritesheet(scene, spriteUrl, textureKey)
             .then(({ cols }) => {
+                if (!this.scene) return this._forget(this.look, scene);   // gone before it came
                 if (cols) this.sheetCols = cols;
                 this.onTextureReady(textureKey);
             })
@@ -109,6 +111,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             .then(r => r.blob())
             .then(blob => createImageBitmap(blob))
             .then(bitmap => {
+                if (!this.scene) return bitmap.close();
                 createOversizedAnimations(this.scene, bitmap, customAnims, this.look, this.animationKey);
                 bitmap.close();
 
@@ -196,13 +199,18 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             .catch(() => { /* keep the old clothes */ });
     }
 
+    /** Let go of this character's sheets and animations (call before destroying them for good). */
+    forget() {
+        this._forget(this.look);
+    }
+
     /** Drop the animations and textures of a sheet no longer worn. */
-    _forget(look) {
-        for (const key of [...this.scene.anims.anims.keys()]) {
-            if (key.startsWith(`anim_${look}_`)) this.scene.anims.remove(key);
+    _forget(look, scene = this.scene) {
+        for (const key of [...scene.anims.anims.keys()]) {
+            if (key.startsWith(`anim_${look}_`)) scene.anims.remove(key);
         }
-        for (const key of this.scene.textures.getTextureKeys()) {
-            if (key === `sprite_${look}` || key.startsWith(`sprite_${look}_os_`)) this.scene.textures.remove(key);
+        for (const key of scene.textures.getTextureKeys()) {
+            if (key === `sprite_${look}` || key.startsWith(`sprite_${look}_os_`)) scene.textures.remove(key);
         }
     }
 

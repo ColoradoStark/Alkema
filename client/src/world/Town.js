@@ -333,7 +333,10 @@ export class Town {
         this.ground.destroy();
         this.things.forEach(t => t.destroy());
         this.glints.forEach(g => g.destroy());
-        this.folk.forEach(f => f.sprite.destroy());
+        // ...and let go of their pictures: a phone's browser drops a tab that holds every town it's been to
+        this.folk.forEach(f => { f.sprite.forget(); f.sprite.destroy(); });
         this.folk = [];
+        this.scene.textures.remove(`town-${this.key}`);
+        this.scene.textures.remove(`town-${this.key}-things`);
     }
 }
