@@ -90,7 +90,7 @@ Other races and classes are reserved for NPCs and enemies.
 
 ## Sound and Music
 
-- Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world, crossfading between moods
+- Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world; lost in a dark forest the music turns to shadows, at sea a rollicking sailors' jig, and in the snows of the far north (and Tumbledown) the songs of the north, crossfading as you go
 - Every tap, pick and roll has a sound: dice rattle for **Random New Hero**, each class answers with its weapon (a sword drawn, a bow twang, a spell), pages turn in **Customize look**
 - The creator's sparring bouts and the world's fights are fully voiced: whooshes, bone clacks, blocks, monster cries, a victory jingle and coins
 - The starter chest thuds down, creaks open and chimes for each item
@@ -185,7 +185,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The villages' crops are bluecarrot16's LPC Crops (with Daniel Eddeland, Joshua Taylor and Jetrel), its sacks, baskets and produce from the LPC Containers and Foods. The world map's grass, beaches, desert, snow, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic and RandomMind; sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The villages' crops are bluecarrot16's LPC Crops (with Daniel Eddeland, Joshua Taylor and Jetrel), its sacks, baskets and produce from the LPC Containers and Foods. The world map's grass, beaches, desert, snow, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic, RandomMind, Scott Buckley and The Battle for Wesnoth's composers (Tyler Johnson, Gianmarco Leone, Timothy Pinkham, Mattias Westlund); sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
 
 ## License
 

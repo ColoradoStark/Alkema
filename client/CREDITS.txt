@@ -32,6 +32,19 @@ Music
     License: CC0
     https://opengameart.org/content/medieval-minstrel-dance
     https://opengameart.org/content/medieval-the-bards-tale
+  From the soundtrack of The Battle for Wesnoth (https://www.wesnoth.org):
+    "Into the Shadows" by Tyler Johnson (lost in a dark forest)
+    "The Deep Path" by Gianmarco Leone (lost in a dark forest)
+    "Wanderer" by Timothy Pinkham (at sea)
+    "Legends of the North", "Over the Northern Mountains" by Mattias
+      Westlund (the far north)
+    License: GPL v2 or later
+    https://github.com/wesnoth/wesnoth/tree/master/data/core/music
+  "Three Sheets to the Wind" by Scott Buckley (at sea), as shipped with
+    The Battle for Wesnoth
+    License: CC-BY 4.0
+    https://www.scottbuckley.com.au/library/three-sheets-to-the-wind/
+  The Wesnoth tracks were mixed down to mono and loudness-matched.
 
 Sound effects
   Kenney (www.kenney.nl): Interface Sounds, RPG Audio, Impact Sounds,

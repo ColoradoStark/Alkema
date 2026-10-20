@@ -79,10 +79,8 @@ test.describe('Living world', () => {
 
     test('the quests take you to all five villages, one after another', async ({ page }) => {
         await enterWorld(page);
-        const tour = await page.evaluate(async () => {
-            const { QUESTS } = await import('/src/ui/QuestTracker.js');
-            return QUESTS.filter(q => q.kind === 'visit').map(q => q.text);
-        });
+        const tour = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').quests.constructor.all
+            .filter(q => q.kind === 'visit').map(q => q.text));
         expect(tour.slice(0, 5)).toEqual([
             'Find Fernwick, hidden in the woods',
             'Find the village of Seacombe',
@@ -457,7 +455,7 @@ test.describe('Living world', () => {
         test.setTimeout(90000);
         await enterWorld(page);
         const unreachable = await page.evaluate(async () => {
-            const { QUESTS } = await import('/src/ui/QuestTracker.js');
+            const QUESTS = window.__PHASER_GAME.scene.getScene('UIScene').quests.constructor.all;
             // Our own flood fill over the walking grid (wrapping at the edges), from where heroes appear
             const world = window.__PHASER_GAME.scene.getScene('GameScene').cache.json.get('world');
             const k = world.collisionScale || 1, n = world.width * k, cell = world.tileSize / k;

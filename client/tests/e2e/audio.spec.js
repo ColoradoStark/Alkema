@@ -110,6 +110,60 @@ test.describe('Sound', () => {
         expect(await page.evaluate(() => navigator.audioSession.type)).toBe('playback');
     });
 
+    test('the music follows where you are: lost in a dark forest, in the far north, at sea, and back out in the world', async ({ page }) => {
+        test.setTimeout(240000);
+        await page.addInitScript(() => localStorage.removeItem('alkema.audio'));
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.locator('.cc-tile[data-id="elf"]').click();
+        await page.locator('#cc-play').click();
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
+
+        const standAt = (x, y) => page.evaluate(([x, y]) => {
+            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            me.setPosition(x, y - 23);
+            me.body.reset(x, y - 23);
+        }, [x, y]);
+        // Decoded music is tens of MB a track: no more than what's playing and what's fading out is kept
+        const held = () => page.evaluate(() => window.__PHASER_GAME.cache.audio.getKeys().filter(k => k.startsWith('music-')).length);
+        const spots = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { forest } = gs.world;
+            const deepest = forest.woods.reduce((best, v, i) => (v > forest.woods[best] ? i : best), 0);
+            const { WORLD } = await import('/src/world/places.js');
+            const north = WORLD.places.find(p => p.name === 'Tumbledown');
+            return { forest: [(deepest % forest.n) * 32 + 16, Math.floor(deepest / forest.n) * 32 + 16], north: [north.x, north.y],
+                spawn: [WORLD.spawn.x, WORLD.spawn.y + 23] };
+        });
+
+        await standAt(...spots.forest);
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-into-the-shadows']);
+        await standAt(...spots.north);
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-legends-of-the-north']);
+        expect(await held()).toBeLessThanOrEqual(2);
+
+        // Aboard the ship: stand on the shore above her and walk down into her
+        await page.evaluate(async () => {
+            const game = window.__PHASER_GAME, gs = game.scene.getScene('GameScene');
+            const keys = game.scene.getScene('UIScene').bottomControls.movementKeys;
+            const me = gs.localPlayer.sprite, ship = gs.mooredShip;
+            const x = ship.x, y = Math.floor(ship.y / 32) * 32 - 32 + 16 - 23 + 6;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+            await new Promise(r => setTimeout(r, 150));
+            keys.down = true;
+            await new Promise(r => setTimeout(r, 800));
+            keys.down = false;
+        });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sailing)).toBe(true);
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-three-sheets']);
+
+        // Ashore on the road below Riverhold: back to the world's music
+        await page.evaluate(([x, y]) => window.__PHASER_GAME.scene.getScene('GameScene').setSailing(false, { x, y }), spots.spawn);
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
+        await expect.poll(held, { timeout: 10000 }).toBeLessThanOrEqual(2);
+    });
+
     test('the speaker cycles sound on → music off → off, and is remembered', async ({ page }) => {
         test.setTimeout(90000);
         // Start from the default setting once (not again on the reload below)

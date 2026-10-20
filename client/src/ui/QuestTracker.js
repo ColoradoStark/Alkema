@@ -54,6 +54,11 @@ export function placeQuests(world) {
 const CARD = { x: 8, y: 42, width: 160 };
 
 export class QuestTracker {
+    /** Every quest, as the game placed them (tests ask through the game's own tracker: a module imported from a test can be a second copy). */
+    static get all() {
+        return QUESTS;
+    }
+
     /**
      * @param {Phaser.Scene} scene
      * @param {{index: number, progress: number}} [saved]  where this hero left off

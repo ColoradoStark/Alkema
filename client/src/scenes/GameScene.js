@@ -20,6 +20,7 @@ const SETTLE_MS = 600;          // just aboard, she won't put you ashore again (
 const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 const FADE_MS = 260;            // going into a town or out again
+const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
 
 export class GameScene extends Scene {
     constructor() {
@@ -30,6 +31,7 @@ export class GameScene extends Scene {
 
     create() {
         audio.playMusic('world');
+        this._mood = 'world';
         this.networkManager = this.game.registry.get('networkManager');
         if (!this.networkManager) return;
 
@@ -104,6 +106,7 @@ export class GameScene extends Scene {
         }
         const snowing = this.town ? !!this.town.data.snow : !!feet && this.overworld.isSnowy(feet.x, feet.y);
         this.snowfall?.update(delta, snowing, this.dayNight?.ambient);
+        this.updateMusic(delta, feet);
         this.updateSailing();
         this.updatePlaceVisit();
         this.updateGate();
@@ -119,6 +122,29 @@ export class GameScene extends Scene {
             // Heroes and trees sort by where they stand, so you pass in front of and behind each other
             if (player?.sprite && !player.sailing) player.sprite.setDepth(sortDepth(this, player.sprite.y + FEET));
         });
+    }
+
+    /**
+     * The music of where you are: at sea, lost in a dark forest, in the far
+     * north (or a town there), or out in the world.
+     */
+    updateMusic(delta, feet) {
+        if (!this.overworld || !feet) return;
+        let mood = 'world';
+        const lost = this.town ? 0 : this.overworld.forest.lost;
+        const at = this.town ? this._townPlace : feet;
+        if (this.localPlayer?.sailing) mood = 'sea';
+        else if (lost > (this._mood === 'forest' ? 0.2 : 0.6)) mood = 'forest';
+        else if (at && this.overworld.isSnowy(at.x, at.y)) mood = 'north';
+        if (mood !== this._moodWanted) {
+            this._moodWanted = mood;
+            this._moodFor = 0;
+        }
+        this._moodFor += delta;
+        if (mood !== this._mood && this._moodFor >= MOOD_SETTLE_MS) {
+            this._mood = mood;
+            audio.playMusic(mood);
+        }
     }
 
     /** Off one edge of the world, on at the other; the camera comes along. */

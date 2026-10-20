@@ -16,7 +16,11 @@ const MASTER_VOLUME = 1.25; // the mix measures ~-19 LUFS with peaks well under 
 const FADE_MS = 1600;
 const HEARING_RANGE = 520; // world px beyond which other players' fights are silent
 
-/** Music, by mood. The world plays its tracks in turn, crossfading between them. */
+/**
+ * Music, by mood. Each mood plays its tracks in turn, crossfading between them;
+ * the game picks the mood from where you are (GameScene.updateMusic): out in
+ * the world, lost in a dark forest, at sea, or in the snows of the far north.
+ */
 export const MUSIC = {
     creator: [{ id: 'grassy-world' }], // replays, fading back in, when it ends
     world: [
@@ -26,6 +30,9 @@ export const MUSIC = {
         { id: 'woodland-fantasy', plays: 1 },
         { id: 'bards-tale', plays: 2 },
     ],
+    forest: [{ id: 'into-the-shadows' }, { id: 'the-deep-path' }],
+    sea: [{ id: 'three-sheets' }, { id: 'wanderer' }],
+    north: [{ id: 'legends-of-the-north' }, { id: 'over-the-northern-mountains' }],
 };
 
 class Audio {
@@ -236,15 +243,22 @@ class Audio {
         this._startTrack();
     }
 
-    /** Destroy a music sound and free its decoded audio (tens of MB) unless still in use. */
+    /**
+     * Destroy a music sound and free decoded music (tens of MB a track) no longer
+     * wanted: anything not playing that isn't this mood's next track (a mood left
+     * behind may have fetched its next one already).
+     */
     _release(sound) {
-        const key = sound.key;
         sound.destroy();
         const list = this.music ? MUSIC[this.music.mood] : [];
         const upcoming = this.music ? list[(this.music.index + 1) % list.length] : null;
-        const inUse = this.sound.sounds.some(s => s.key === key && s !== sound)
-            || (upcoming && `music-${upcoming.id}` === key);
-        if (!inUse) this.game.cache.audio.remove(key);
+        for (const key of this.game.cache.audio.getKeys()) {
+            if (!key.startsWith('music-')) continue;
+            // (a destroyed sound stays on the manager's list till its next update)
+            const inUse = this.sound.sounds.some(s => s.key === key && s !== sound && !s.pendingRemove)
+                || (upcoming && `music-${upcoming.id}` === key);
+            if (!inUse) this.game.cache.audio.remove(key);
+        }
     }
 
     /**
