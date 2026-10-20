@@ -70,7 +70,7 @@ export function createStandardAnimations(scene, textureKey, animationKey, sheetC
             const key = `${animationKey}_${animName}_${dir}`;
             if (scene.anims.exists(key)) continue;
 
-            const isLooping = (animName === 'walk' || animName === 'run');
+            const isLooping = (animName === 'walk' || animName === 'run' || animName === 'combat_idle');
             const isAttack = ['slash', 'thrust', 'shoot', 'spellcast', 'backslash', 'halfslash'].includes(animName);
 
             scene.anims.create({

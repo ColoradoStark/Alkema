@@ -195,6 +195,8 @@ export class Showcase {
             return;
         }
         figure.playAnimation(step.anim, this.facing());
+        // The ground scrolls and dust flies only under feet that are moving
+        if (step.anim !== 'walk' && step.anim !== 'run') return this._wait(step.ms);
         this.walking = step;
         const dust = this._dustTrail(() => figure);
         await this._wait(step.ms);

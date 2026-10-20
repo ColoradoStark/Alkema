@@ -384,6 +384,41 @@ test.describe('Character creator on a phone', () => {
         await page.waitForTimeout(600);
         expect(await canvasSize()).toEqual(before);
     });
+
+    test('the ready stance keeps moving for its whole turn, and the ground only scrolls under a walk', async ({ page }) => {
+        test.setTimeout(150000);
+        await page.goto('/');
+        await waitForPreview(page);
+        // Not every outfit has a ready stance: roll warriors until one does
+        const hasStance = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').showcase.steps.some(step => step.anim === 'combat_idle'));
+        for (let roll = 0; roll < 12; roll++) {
+            const { character } = await waitForPreview(page);
+            await page.locator('#cc-randomize').click();
+            await waitForPreview(page, `c.seed !== ${character.seed}`);
+            await page.locator('.cc-tile[data-id="warrior"]').click();
+            await waitForPreview(page, "c.character_class === 'warrior'");
+            if (await hasStance()) break;
+        }
+        const seen = await page.evaluate(async () => {
+            const showcase = window.__PHASER_GAME.scene.getScene('CreateScene').showcase;
+            const ready = showcase.steps.findIndex(step => step.anim === 'combat_idle');
+            if (ready < 0) return null;
+            showcase._start(ready);
+            const seen = [];
+            for (let i = 0; i < 14; i++) {
+                await new Promise(r => setTimeout(r, 100));
+                if (showcase.index !== ready) break;
+                const sprite = showcase.figure.getActiveSprite();
+                seen.push({ key: sprite.anims.currentAnim?.key, playing: sprite.anims.isPlaying, moving: Boolean(showcase.motion()) });
+            }
+            return seen;
+        });
+        expect(seen, 'a warrior has a ready stance').not.toBeNull();
+        expect(seen.length).toBeGreaterThan(10);
+        expect(seen.every(s => s.key.endsWith('_combat_idle_down'))).toBe(true);
+        expect(seen.filter(s => !s.playing), 'stance frozen').toEqual([]);
+        expect(seen.filter(s => s.moving), 'ground scrolling under a hero standing still').toEqual([]);
+    });
 });
 
 test.describe('Character creator on desktop', () => {
