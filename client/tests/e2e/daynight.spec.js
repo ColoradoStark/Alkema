@@ -88,6 +88,41 @@ test.describe('Day and night', () => {
         expect(hours).toEqual([0, 12, 1]);
     });
 
+    test('a lamp lights what is beside it brighter than daylight, warm, as Light2D did', async ({ page }) => {
+        await enterWorld(page);
+        const spot = await page.evaluate(() => {
+            const f = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            return { x: f.x + 40, y: f.y + 60 };
+        });
+        // The red of a patch of ground there, as drawn on the screen
+        const red = () => page.evaluate(async (spot) => {
+            const g = window.__PHASER_GAME, cam = g.scene.getScene('GameScene').cameras.main;
+            const x = Math.round(spot.x - cam.worldView.x + cam.x), y = Math.round(spot.y - cam.worldView.y + cam.y);
+            const snap = await new Promise(r => g.renderer.snapshotArea(x - 3, y - 3, 6, 6, r));
+            const c = document.createElement('canvas'); c.width = 6; c.height = 6;
+            const ctx = c.getContext('2d'); ctx.drawImage(snap, 0, 0);
+            const d = ctx.getImageData(0, 0, 6, 6).data;
+            let sum = 0; for (let i = 0; i < d.length; i += 4) sum += d[i];
+            return sum / (d.length / 4);
+        }, spot);
+        // The art's own colours: noon, without the warm late-afternoon light laid over it
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').goldenHour.setVisible(false));
+        await hour(page, 12);
+        const noon = await red();
+        // A campfire's light alone (no flames drawn, no glow in the air), steady
+        await page.evaluate((spot) => {
+            const dn = window.__PHASER_GAME.scene.getScene('GameScene').dayNight;
+            const lamp = dn.addLamp(spot.x, spot.y, 'campfire');
+            lamp.art?.destroy(); lamp.art = null;
+            lamp.glow.destroy(); lamp.glow = null;
+            lamp.def = { ...lamp.def, flicker: 0, lift: 0 };
+            lamp.y = spot.y;
+        }, spot);
+        await hour(page, 0);
+        const night = await red();
+        expect(night).toBeGreaterThan(noon * 1.3);
+    });
+
     test("windows and torches light up after dark; a hearth's fire burns day and night, and goes with the room", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);

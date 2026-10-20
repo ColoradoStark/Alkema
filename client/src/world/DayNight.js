@@ -2,8 +2,11 @@
 //
 // A light map lies over the world: each frame it's filled with the light of
 // the hour (white by day, gold at dusk, moonlit blue at night) and every lamp
-// in view adds its own glow, then it's multiplied over everything below it, so
-// the world darkens except where something gives light. At dusk windows,
+// in view adds its own light, then it's laid over everything below it, so
+// the world darkens except where something gives light. A lamp lights the
+// ground as Phaser's Light2D would (its falloff, warm and bright close by,
+// brighter than the art's own colours right beside a fire), so it looks the
+// same as lighting every sprite per pixel. At dusk windows,
 // torches and the towns on the map light up; fires and lanterns burn all day,
 // but you only see their light once it's dark. A soft glow (a Phaser
 // PointLight) hangs in the air round each lamp at night.
@@ -11,8 +14,8 @@
 // The map is drawn at a quarter of the screen's resolution and smoothed when
 // it's laid over (light has no hard edges), so it costs a phone very little;
 // by day out of doors there's nothing to darken, and it isn't drawn at all.
-// (Phaser's Light2D lit every sprite per pixel per light, and cost two thirds
-// of the frame rate.)
+// (Light2D itself cost two thirds of the frame rate, and lights only the 10
+// lamps nearest the camera.)
 //
 // Everyone's day is the same: the clock is the wall clock, an hour a minute.
 
@@ -36,15 +39,15 @@ const INDOORS = [[0, 0x4a4262], [5.5, 0x4a4262], [7.5, 0xd8d0c8], [18, 0xd8d0c8]
  * light is `lift` px above).
  */
 export const LAMPS = {
-    window: { radius: 40, colour: 0xffb860, strength: 0.8, flicker: 0.04, dark: true },
-    place: { radius: 64, colour: 0xffb860, strength: 0.7, flicker: 0.05, dark: true },   // a town on the map
-    torch: { radius: 110, colour: 0xff9440, strength: 0.95, flicker: 0.12, dark: true, art: 'torch', lift: 54 },
-    campfire: { radius: 130, colour: 0xff8a3a, strength: 1, flicker: 0.14, art: 'campfire', lift: 12 },
-    hearth: { radius: 120, colour: 0xff8a3a, strength: 0.95, flicker: 0.14, art: 'flames', lift: 6 },
-    stove: { radius: 70, colour: 0xff8a3a, strength: 0.8, flicker: 0.1 },
-    lantern: { radius: 90, colour: 0xffd890, strength: 0.85, flicker: 0.04 },
-    candle: { radius: 50, colour: 0xffd27a, strength: 0.75, flicker: 0.1 },
-    hero: { radius: 120, colour: 0xfff0d8, strength: 0.55, flicker: 0, dark: true },      // your own light
+    window: { radius: 46, colour: 0xffb860, strength: 1.4, flicker: 0.04, dark: true },
+    place: { radius: 70, colour: 0xffb860, strength: 1.2, flicker: 0.05, dark: true },   // a town on the map
+    torch: { radius: 120, colour: 0xff9440, strength: 1.8, flicker: 0.12, dark: true, art: 'torch', lift: 54 },
+    campfire: { radius: 140, colour: 0xff8a3a, strength: 2, flicker: 0.14, art: 'campfire', lift: 12 },
+    hearth: { radius: 130, colour: 0xff8a3a, strength: 1.8, flicker: 0.14, art: 'flames', lift: 6 },
+    stove: { radius: 80, colour: 0xff8a3a, strength: 1.4, flicker: 0.1 },
+    lantern: { radius: 96, colour: 0xffd890, strength: 1.4, flicker: 0.04 },
+    candle: { radius: 56, colour: 0xffd27a, strength: 1.2, flicker: 0.1 },
+    hero: { radius: 150, colour: 0xfff0d8, strength: 0.9, flicker: 0, dark: true },      // your own light
 };
 
 /** The animated fires (client/assets/fx): frame size, frames, speed. */
@@ -78,19 +81,50 @@ function darkness(colour) {
     return Math.min(1, Math.max(0, (1 - lum) / (1 - night)));
 }
 
-/** The soft round light every lamp is drawn with: bright in the middle, gone at the edge. */
-function glowTexture(scene) {
-    if (scene.textures.exists(GLOW_TEX)) return;
-    const tex = scene.textures.createCanvas(GLOW_TEX, 64, 64);
+/**
+ * The light a lamp of a radius throws, white, as a texture: Light2D's own
+ * falloff for a flat surface (bright close by, gone at the radius), so lamps
+ * look as they did lit per pixel. Stored at half strength, like the map.
+ */
+const GLOW_SIZE = 64;
+function glowTexture(scene, radius) {
+    const key = `${GLOW_TEX}-${radius}`;
+    if (scene.textures.exists(key)) return key;
+    const tex = scene.textures.createCanvas(key, GLOW_SIZE, GLOW_SIZE);
     const ctx = tex.getContext();
-    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    g.addColorStop(0.35, 'rgba(255, 255, 255, 0.7)');
-    g.addColorStop(0.7, 'rgba(255, 255, 255, 0.25)');
-    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 64, 64);
+    const img = ctx.createImageData(GLOW_SIZE, GLOW_SIZE);
+    const res = scene.cameras.main.width;        // Light2D measures distance in screen widths
+    const rad = radius / res;
+    for (let y = 0; y < GLOW_SIZE; y++) {
+        for (let x = 0; x < GLOW_SIZE; x++) {
+            const dx = (x + 0.5 - GLOW_SIZE / 2) / (GLOW_SIZE / 2) * radius / res;
+            const dy = (y + 0.5 - GLOW_SIZE / 2) / (GLOW_SIZE / 2) * radius / res;
+            const dist2 = dx * dx + dy * dy + 0.01;
+            const diffuse = 0.1 / Math.sqrt(dist2);
+            const att = Math.max(0, Math.min(1, 1 - dist2 / (rad * rad)));
+            const v = Math.round(255 * diffuse * att);
+            const i = (y * GLOW_SIZE + x) * 4;
+            img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+            img.data[i + 3] = 255;
+        }
+    }
+    ctx.putImageData(img, 0, 0);
     tex.refresh();
+    return key;
+}
+
+/**
+ * Lays the light map over the world at twice its stored value (dst * src * 2),
+ * so a lamp can light things brighter than their own colours, as Light2D did.
+ */
+const OVERBRIGHT = new WeakMap();
+function overbright(renderer) {
+    if (renderer.type !== Phaser.WEBGL) return Phaser.BlendModes.MULTIPLY;
+    if (!OVERBRIGHT.has(renderer)) {
+        const gl = renderer.gl;
+        OVERBRIGHT.set(renderer, renderer.addBlendMode([gl.DST_COLOR, gl.SRC_COLOR], gl.FUNC_ADD));
+    }
+    return OVERBRIGHT.get(renderer);
 }
 
 export class DayNight {
@@ -104,13 +138,14 @@ export class DayNight {
         this.ambient = 0xffffff;
         this.drawn = false;           // whether the light map is over the world this frame
 
-        glowTexture(scene);
         const cam = scene.cameras.main;
         this.map = scene.add.renderTexture(0, 0, Math.ceil(cam.width / SCALE), Math.ceil(cam.height / SCALE))
             .setOrigin(0, 0).setScale(SCALE).setScrollFactor(0).setDepth(DEPTH)
-            .setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false);
+            .setBlendMode(overbright(scene.sys.renderer)).setVisible(false);
+        this.half = this.map.blendMode !== Phaser.BlendModes.MULTIPLY;   // the map holds half the light
         this.map.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);     // smooth, though the game is pixel art
-        this.stamp = scene.make.image({ key: GLOW_TEX, add: false }).setBlendMode(Phaser.BlendModes.ADD);
+        for (const def of Object.values(LAMPS)) glowTexture(scene, def.radius);    // made up front: a few KB, kept till the scene goes
+        this.stamp = scene.make.image({ key: glowTexture(scene, LAMPS.hero.radius), add: false }).setBlendMode(Phaser.BlendModes.ADD);
         this.hero = { kind: 'hero', def: LAMPS.hero, x: 0, y: 0, phase: 0, off: true, strength: 0 };
         scene.events.once('shutdown', () => this.destroy());
     }
@@ -200,14 +235,16 @@ export class DayNight {
     _draw() {
         const view = this.scene.cameras.main.worldView;
         const mx = view.centerX, my = view.centerY;
-        this.map.fill(this.ambient);
+        const k = this.half ? 0.5 : 1;
+        const a = this.ambient;
+        this.map.fill((Math.round(((a >> 16) & 255) * k) << 16) | (Math.round(((a >> 8) & 255) * k) << 8) | Math.round((a & 255) * k));
         this.map.beginDraw();
         for (const lamp of [...this.lamps, this.hero]) {
             if (lamp.strength < 0.02) continue;
             const r = lamp.def.radius;
             const x = mx + wrapDelta(mx, lamp.x) - view.x, y = my + wrapDelta(my, lamp.y) - view.y;
             if (x < -r || y < -r || x > view.width + r || y > view.height + r) continue;
-            this.stamp.setTint(lamp.def.colour).setAlpha(Math.min(1, lamp.strength)).setScale(r * 2 / 64 / SCALE);
+            this.stamp.setTexture(glowTexture(this.scene, r)).setTint(lamp.def.colour).setAlpha(Math.min(1, lamp.strength * k)).setScale(r * 2 / GLOW_SIZE / SCALE);
             this.map.batchDraw(this.stamp, x / SCALE, y / SCALE);
         }
         this.map.endDraw();
@@ -217,6 +254,6 @@ export class DayNight {
         this.remove([...this.lamps]);
         this.map.destroy();
         this.stamp.destroy();
-        if (this.scene.textures.exists(GLOW_TEX)) this.scene.textures.remove(GLOW_TEX);
+        for (const key of this.scene.textures.getTextureKeys()) if (key.startsWith(`${GLOW_TEX}-`)) this.scene.textures.remove(key);
     }
 }
