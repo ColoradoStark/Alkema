@@ -19,7 +19,7 @@ const WATER_FRAME_MS = 260;
 
 /** The places on the overworld you can go into, and their maps. */
 export const TOWNS = {
-    Riverhold: 'riverhold', Millbrook: 'millbrook', Fernwick: 'fernwick', Ashby: 'ashby',
+    Riverhold: 'riverhold', Seacombe: 'seacombe', Fernwick: 'fernwick', Ashby: 'ashby',
     Tumbledown: 'tumbledown', "Gull's Rest": 'gulls_rest',
 };
 

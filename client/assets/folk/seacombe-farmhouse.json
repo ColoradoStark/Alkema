@@ -1,10 +1,10 @@
 [
  {
-  "id": "crofter_wife",
-  "role": "Crofter's wife",
+  "id": "gran",
+  "role": "Grandmother",
   "character": {
-   "id": "millbrook-croft-crofter_wife",
-   "name": "Joan Furrow",
+   "id": "seacombe-farmhouse-gran",
+   "name": "Gran Harrow",
    "body_type": "female",
    "race": "human",
    "character_class": "peasant",
@@ -16,7 +16,7 @@
     },
     {
      "type": "head",
-     "item": "heads_human_female",
+     "item": "heads_human_female_elderly",
      "variant": "light"
     },
     {
@@ -26,12 +26,12 @@
     },
     {
      "type": "clothes",
-     "item": "torso_clothes_tshirt",
-     "variant": "tan"
+     "item": "torso_clothes_longsleeve2",
+     "variant": "brown"
     },
     {
      "type": "legs",
-     "item": "legs_pants",
+     "item": "legs_skirts_plain",
      "variant": "charcoal"
     },
     {
@@ -41,13 +41,13 @@
     },
     {
      "type": "hair",
-     "item": "hair_ponytail",
-     "variant": "dark brown"
+     "item": "hair_bangs_bun",
+     "variant": "black"
     },
     {
      "type": "overalls",
-     "item": "torso_aprons_apron_half",
-     "variant": "tan"
+     "item": "torso_aprons_apron_full",
+     "variant": "white"
     },
     {
      "type": "shadow",
@@ -55,7 +55,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-croft-crofter_wife.png",
+   "spriteUrl": "/folk/seacombe-farmhouse-gran.png",
    "animations": {
     "complete": [
      "hurt",
@@ -69,7 +69,15 @@
    "spriteMeta": {
     "custom_animations": {
      "blanked_animations": [
-      "climb"
+      "climb",
+      "idle",
+      "jump",
+      "sit",
+      "emote",
+      "run",
+      "combat_idle",
+      "backslash",
+      "halfslash"
      ]
     },
     "animation_coverage": {

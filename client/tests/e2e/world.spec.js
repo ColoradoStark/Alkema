@@ -74,7 +74,7 @@ test.describe('Living world', () => {
             const q = ui.quests.current;
             me.setPosition(q.x, q.y);
         });
-        await expect.poll(async () => (await quest(page)).id).toBe('millbrook');
+        await expect.poll(async () => (await quest(page)).id).toBe('seacombe');
     });
 
     test('the quests take you to all five villages, one after another', async ({ page }) => {
@@ -85,7 +85,7 @@ test.describe('Living world', () => {
         });
         expect(tour.slice(0, 5)).toEqual([
             'Find Fernwick, hidden in the woods',
-            'Find the village of Millbrook',
+            'Find the village of Seacombe',
             'Find the village of Ashby',
             'Head north to snowy Tumbledown',
             "Find the harbour of Gull's Rest",

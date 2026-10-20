@@ -719,7 +719,7 @@ LPC Tile Atlas (sand beaches)
 
 
 ======================================================================
-MILLBROOK, FERNWICK AND ASHBY (THE FARMING VILLAGES)
+SEACOMBE, FERNWICK AND ASHBY (THE FARMING VILLAGES)
 ======================================================================
 
 The villages are built from the same LPC sets as Riverhold (above), and:

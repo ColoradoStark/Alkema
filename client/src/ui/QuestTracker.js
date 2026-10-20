@@ -31,7 +31,7 @@ export const QUESTS = [
     { id: 'cast', text: 'Cast a spell', kind: 'count', event: 'cast', goal: 1 },
     // The villages in the order you'd walk them: west, north into the snow, then east to the sea
     { id: 'fernwick', kind: 'visit', radius: 140, among: named('Fernwick'), says: p => `Find ${p.name}, hidden in the woods` },
-    { id: 'millbrook', kind: 'visit', radius: 140, among: named('Millbrook'), says: p => `Find the village of ${p.name}` },
+    { id: 'seacombe', kind: 'visit', radius: 140, among: named('Seacombe'), says: p => `Find the village of ${p.name}` },
     { id: 'ashby', kind: 'visit', radius: 140, among: named('Ashby'), says: p => `Find the village of ${p.name}` },
     { id: 'tumbledown', kind: 'visit', radius: 140, among: named('Tumbledown'), says: p => `Head north to snowy ${p.name}` },
     { id: 'gulls_rest', kind: 'visit', radius: 140, among: named("Gull's Rest"), says: p => `Find the harbour of ${p.name}` },

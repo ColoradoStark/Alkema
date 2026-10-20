@@ -3,7 +3,7 @@
   "id": "tom",
   "role": "Farmer",
   "character": {
-   "id": "millbrook-tom",
+   "id": "seacombe-tom",
    "name": "Tom Harrow",
    "body_type": "male",
    "race": "human",
@@ -60,7 +60,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-tom.png",
+   "spriteUrl": "/folk/seacombe-tom.png",
    "animations": {
     "complete": [
      "thrust",
@@ -227,7 +227,7 @@
   "id": "maud",
   "role": "Farmer's wife",
   "character": {
-   "id": "millbrook-maud",
+   "id": "seacombe-maud",
    "name": "Maud Harrow",
    "body_type": "female",
    "race": "human",
@@ -289,7 +289,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-maud.png",
+   "spriteUrl": "/folk/seacombe-maud.png",
    "animations": {
     "complete": [
      "thrust",
@@ -456,7 +456,7 @@
   "id": "will",
   "role": "Field hand",
   "character": {
-   "id": "millbrook-will",
+   "id": "seacombe-will",
    "name": "Will Ashdown",
    "body_type": "male",
    "race": "human",
@@ -513,7 +513,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-will.png",
+   "spriteUrl": "/folk/seacombe-will.png",
    "animations": {
     "complete": [
      "thrust",
@@ -674,7 +674,7 @@
   "id": "ned",
   "role": "Field hand",
   "character": {
-   "id": "millbrook-ned",
+   "id": "seacombe-ned",
    "name": "Ned Cobb",
    "body_type": "male",
    "race": "human",
@@ -726,7 +726,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-ned.png",
+   "spriteUrl": "/folk/seacombe-ned.png",
    "animations": {
     "complete": [
      "thrust",
@@ -893,7 +893,7 @@
   "id": "jory",
   "role": "Farm lad",
   "character": {
-   "id": "millbrook-jory",
+   "id": "seacombe-jory",
    "name": "Jory Wheeler",
    "body_type": "male",
    "race": "human",
@@ -945,7 +945,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-jory.png",
+   "spriteUrl": "/folk/seacombe-jory.png",
    "animations": {
     "complete": [
      "hurt",
@@ -1106,7 +1106,7 @@
   "id": "ada",
   "role": "Gardener",
   "character": {
-   "id": "millbrook-ada",
+   "id": "seacombe-ada",
    "name": "Ada Penny",
    "body_type": "female",
    "race": "human",
@@ -1163,7 +1163,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-ada.png",
+   "spriteUrl": "/folk/seacombe-ada.png",
    "animations": {
     "complete": [
      "thrust",
@@ -1330,7 +1330,7 @@
   "id": "old_hob",
   "role": "Village elder",
   "character": {
-   "id": "millbrook-old_hob",
+   "id": "seacombe-old_hob",
    "name": "Old Hob",
    "body_type": "male",
    "race": "human",
@@ -1377,7 +1377,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-old_hob.png",
+   "spriteUrl": "/folk/seacombe-old_hob.png",
    "animations": {
     "complete": [
      "backslash",
@@ -1547,7 +1547,7 @@
   "id": "nell",
   "role": "Dairymaid",
   "character": {
-   "id": "millbrook-nell",
+   "id": "seacombe-nell",
    "name": "Nell Cooper",
    "body_type": "female",
    "race": "human",
@@ -1599,7 +1599,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-nell.png",
+   "spriteUrl": "/folk/seacombe-nell.png",
    "animations": {
     "complete": [
      "backslash",
@@ -1769,7 +1769,7 @@
   "id": "seedsman",
   "role": "Seedsman",
   "character": {
-   "id": "millbrook-seedsman",
+   "id": "seacombe-seedsman",
    "name": "Gil Barley",
    "body_type": "male",
    "race": "human",
@@ -1821,7 +1821,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-seedsman.png",
+   "spriteUrl": "/folk/seacombe-seedsman.png",
    "animations": {
     "complete": [
      "hurt",
@@ -1990,7 +1990,7 @@
   "id": "barnhand",
   "role": "Barn hand",
   "character": {
-   "id": "millbrook-barnhand",
+   "id": "seacombe-barnhand",
    "name": "Rob Tanner",
    "body_type": "male",
    "race": "human",
@@ -2042,7 +2042,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-barnhand.png",
+   "spriteUrl": "/folk/seacombe-barnhand.png",
    "animations": {
     "complete": [
      "backslash",
@@ -2212,7 +2212,7 @@
   "id": "meg",
   "role": "Villager",
   "character": {
-   "id": "millbrook-meg",
+   "id": "seacombe-meg",
    "name": "Meg Ashdown",
    "body_type": "female",
    "race": "human",
@@ -2264,7 +2264,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-meg.png",
+   "spriteUrl": "/folk/seacombe-meg.png",
    "animations": {
     "complete": [
      "hurt",
@@ -2433,7 +2433,7 @@
   "id": "hal",
   "role": "Crofter",
   "character": {
-   "id": "millbrook-hal",
+   "id": "seacombe-hal",
    "name": "Hal Furrow",
    "body_type": "male",
    "race": "human",
@@ -2490,7 +2490,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-hal.png",
+   "spriteUrl": "/folk/seacombe-hal.png",
    "animations": {
     "complete": [
      "thrust",

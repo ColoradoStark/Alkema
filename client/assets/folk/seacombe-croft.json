@@ -1,10 +1,10 @@
 [
  {
-  "id": "edith",
-  "role": "Weaver",
+  "id": "crofter_wife",
+  "role": "Crofter's wife",
   "character": {
-   "id": "millbrook-cottage-edith",
-   "name": "Edith Cobb",
+   "id": "seacombe-croft-crofter_wife",
+   "name": "Joan Furrow",
    "body_type": "female",
    "race": "human",
    "character_class": "peasant",
@@ -26,13 +26,13 @@
     },
     {
      "type": "clothes",
-     "item": "torso_clothes_longsleeve2",
+     "item": "torso_clothes_tshirt",
      "variant": "tan"
     },
     {
      "type": "legs",
      "item": "legs_pants",
-     "variant": "brown"
+     "variant": "charcoal"
     },
     {
      "type": "shoes",
@@ -41,8 +41,13 @@
     },
     {
      "type": "hair",
-     "item": "hair_long_tied",
+     "item": "hair_ponytail",
      "variant": "dark brown"
+    },
+    {
+     "type": "overalls",
+     "item": "torso_aprons_apron_half",
+     "variant": "tan"
     },
     {
      "type": "shadow",
@@ -50,20 +55,11 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/millbrook-cottage-edith.png",
+   "spriteUrl": "/folk/seacombe-croft-crofter_wife.png",
    "animations": {
     "complete": [
-     "backslash",
-     "climb",
-     "combat_idle",
-     "emote",
-     "halfslash",
      "hurt",
-     "idle",
-     "jump",
-     "run",
      "shoot",
-     "sit",
      "slash",
      "spellcast",
      "thrust",

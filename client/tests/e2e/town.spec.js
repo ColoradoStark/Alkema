@@ -455,16 +455,16 @@ test.describe('Riverhold', () => {
     });
 });
 
-test.describe('Millbrook', () => {
+test.describe('Seacombe', () => {
     test('a farming village: everyone out at work in the fields, and the feed store shut', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const { WORLD } = await import('/src/world/places.js');
-            await gs.enterPlace(WORLD.places.find(p => p.name === 'Millbrook'));
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Seacombe'));
         });
-        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('millbrook');
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('seacombe');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length),
             { timeout: 60000 }).toBe(12);
         // Watering, hoeing, digging and sitting, each with their own frames, and nobody vanishes doing it
@@ -483,8 +483,8 @@ test.describe('Millbrook', () => {
             return { says: keeper.plan.says[0], doors: t.data.exits.filter(e => e.to).map(e => e.to) };
         });
         expect(shut.says).toMatch(/Shut/);
-        expect(shut.doors.sort()).toEqual(['millbrook-cottage', 'millbrook-croft', 'millbrook-farmhouse']);
-        // Out through the gate and back on the overworld, by Millbrook
+        expect(shut.doors.sort()).toEqual(['seacombe-cottage', 'seacombe-croft', 'seacombe-farmhouse']);
+        // Out through the gate and back on the overworld, by Seacombe
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const me = gs.localPlayer.sprite;

@@ -153,7 +153,7 @@ export const WORLD = {
    ]
   },
   {
-   "name": "Millbrook",
+   "name": "Seacombe",
    "type": "village",
    "x": 1232,
    "y": 7820,
@@ -262,7 +262,7 @@ export const WORLD = {
    ]
   },
   {
-   "name": "The Old Mine",
+   "name": "Saltcliff Hollow",
    "type": "dungeon",
    "x": 2416,
    "y": 11980,
