@@ -9,6 +9,7 @@ import { sortDepth } from './Forest.js';
 import { DEPTH } from './Overworld.js';
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
+import { FIRE_ART } from './DayNight.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
 const TALK_REACH = 64;         // stand this close to someone and they speak
@@ -46,6 +47,18 @@ export function preloadTown(load, key) {
     if (!load.scene.cache.json.exists('portraits')) load.json('portraits', '/portraits/portraits.json');
     if (!load.scene.cache.json.exists('talk')) load.json('talk', '/portraits/talk.json');
     load.json(`folk-${key}`, `/folk/${key}.json`);   // the people there, ready-made (tools/bake_folk.py)
+    // The fires that burn in towns and rooms (small: a few dozen KB between them)
+    for (const [name, { file, w, h }] of Object.entries(FIRE_ART)) {
+        if (!load.scene.textures.exists(`fx-${name}`)) load.spritesheet(`fx-${name}`, `/fx/${file}`, { frameWidth: w, frameHeight: h });
+    }
+}
+
+/** Let go of the fires' art (out of the towns and back on the map: the next town loads it again). */
+export function forgetFires(scene) {
+    for (const name of Object.keys(FIRE_ART)) {
+        scene.anims.remove(`fx-${name}`);
+        scene.textures.remove(`fx-${name}`);
+    }
 }
 
 export class Town {
@@ -75,6 +88,9 @@ export class Town {
         data.frames.forEach(([x, y, w, h], i) => tex.has(String(i)) || tex.add(String(i), 0, x, y, w, h));
         this.things = data.things.map(([frame, left, top, foot]) =>
             scene.add.image(left, top, `town-${key}-things`, String(frame)).setOrigin(0, 0).setData('foot', foot));
+        // The windows, fires and lanterns that give light here
+        const dayNight = scene.dayNight;
+        this.lamps = dayNight ? (data.lights || []).map(([x, y, kind]) => dayNight.addLamp(x, y, kind)) : [];
 
         // Treasure seen through a doorway catches the light now and then
         this.glints = scene.textures.exists('fx-star') ? (data.glints || []).map(([x, y], i) => {
@@ -196,6 +212,10 @@ export class Town {
     /** @param {{x: number, y: number}|null} feet  where the local hero stands */
     update(delta, feet = null) {
         for (const t of this.things) t.setDepth(sortDepth(this.scene, t.getData('foot')));
+        // A fire sorts like what it stands on (a hearth's flames just in front of the hearth)
+        for (const lamp of this.lamps) {
+            lamp.art?.setDepth(sortDepth(this.scene, lamp.y + (lamp.def.lift || 0) + (lamp.kind === 'hearth' ? 1 : 0)));
+        }
         for (const f of this.folk) {
             if (f.plan.wander) this._wander(f, delta, feet);
             else if (f.plan.chore && !f.working && !f.talking) f.working = this._work(f, f.plan.facing || 'down');
@@ -333,6 +353,8 @@ export class Town {
         this.ground.destroy();
         this.things.forEach(t => t.destroy());
         this.glints.forEach(g => g.destroy());
+        this.scene.dayNight?.remove(this.lamps);
+        this.lamps = [];
         // ...and let go of their pictures: a phone's browser drops a tab that holds every town it's been to
         this.folk.forEach(f => { f.sprite.forget(); f.sprite.destroy(); });
         this.folk = [];

@@ -1279,3 +1279,25 @@ AntumDeluge ("LPC Rowboat Recolor").
 The fish, crabs, mussels and oysters are from "[LPC] Foods" (food.png, above).
 The fishermen's rod and the woodcutters' axe are from "[LPC] Hand Tools" by
 bluecarrot16 and others, drawn by the character generator.
+
+======================================================================
+FIRE (CAMPFIRES, TORCHES AND HEARTHS)
+======================================================================
+
+fx/campfire.png (the campfires in Tumbledown and Gull's Rest): the animated
+fire from "[LPC] Dungeon Elements" by Lanea Zimmerman (Sharm), contributed by
+William.Thompsonj. Its white background was made transparent and its frames
+laid side by side.
+  License: CC-BY 4.0 / CC-BY 3.0 / OGA-BY 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-dungeon-elements
+
+fx/torch.png (the torches by the alehouse and inn doors): "[LPC] Animated
+Torch" by Hugh Spectrum and Lanea Zimmerman (Sharm), put together by
+William.Thompsonj.
+  License: CC-BY 4.0 / CC-BY 3.0 / OGA-BY 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-animated-torch
+
+fx/flames.png (the flames in the hearths): "[LPC] Flames" by Lanea Zimmerman
+(Sharm), taken from her LPC fireplace by William.Thompsonj.
+  License: CC-BY 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-flames

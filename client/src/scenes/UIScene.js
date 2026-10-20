@@ -139,7 +139,7 @@ export class UIScene extends Scene {
         this.add.image(0, TOP, 'map-vignette').setOrigin(0, 0);
     }
 
-    /** Warm late-afternoon light from the upper left, matching the creator's stage. */
+    /** Warm late-afternoon light from the upper left, matching the creator's stage (it fades as night falls). */
     _addGoldenHour() {
         const W = this.scale.width, H = 448, TOP = 32;
         if (!this.textures.exists('golden-hour')) {
@@ -161,7 +161,7 @@ export class UIScene extends Scene {
             ctx.fillRect(0, 0, W, H);
             tex.refresh();
         }
-        this.add.image(0, TOP, 'golden-hour').setOrigin(0, 0).setBlendMode(BlendModes.SCREEN);
+        this.goldenHour = this.add.image(0, TOP, 'golden-hour').setOrigin(0, 0).setBlendMode(BlendModes.SCREEN);
     }
 
     _setupKeyboard() {
@@ -210,6 +210,8 @@ export class UIScene extends Scene {
     }
 
     update() {
+        const dayNight = this.scene.get('GameScene')?.dayNight;
+        if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);
         const gameScene = this.scene.get('GameScene');
         if (!gameScene || !gameScene.localPlayer) return;
 

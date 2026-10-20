@@ -7,8 +7,10 @@ import { Overworld, wrap, wrapDelta } from '../world/Overworld.js';
 import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
 import { Ship } from '../world/Ship.js';
-import { Town, TOWNS, preloadTown } from '../world/Town.js';
+import { Town, TOWNS, preloadTown, forgetFires } from '../world/Town.js';
 import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
+import { DayNight } from '../world/DayNight.js';
+import { Snowfall } from '../world/Snowfall.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -66,6 +68,10 @@ export class GameScene extends Scene {
     }
 
     createWorld() {
+        // The light of the hour (everything in the world is drawn in it), and the snow up north
+        this.dayNight = new DayNight(this);
+        this.snowfall = new Snowfall(this);
+        this.events.once('shutdown', () => this.snowfall.destroy());
         this.world = this.overworld = new Overworld(this);
         this.town = null;
         // Your ship, at anchor off the port of Saltmere, bow out to sea
@@ -90,7 +96,14 @@ export class GameScene extends Scene {
     update(time, delta) {
         this.wrapLocalPlayer();
         const me = this.localPlayer?.sprite;
-        this.world?.update(delta, me ? { x: me.x, y: me.y + FEET } : null);
+        const feet = me ? { x: me.x, y: me.y + FEET } : null;
+        this.world?.update(delta, feet);
+        if (this.dayNight) {
+            this.dayNight.indoors = !!this.town?.indoors;
+            this.dayNight.update(delta, feet);
+        }
+        const snowing = this.town ? !!this.town.data.snow : !!feet && this.overworld.isSnowy(feet.x, feet.y);
+        this.snowfall?.update(delta, snowing, this.dayNight?.ambient);
         this.updateSailing();
         this.updatePlaceVisit();
         this.updateGate();
@@ -273,6 +286,7 @@ export class GameScene extends Scene {
             if (!res?.ok) return;
             await this._fadeOut();
             this._dropTown();
+            forgetFires(this);
             this.town = null;
             this.world = this.overworld;
             this.overworld.setVisible(true);

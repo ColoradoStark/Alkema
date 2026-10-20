@@ -143,6 +143,9 @@ Also in the world:
 - Starter quests that teach the controls, then walk you round all five villages (Fernwick, hidden in the woods, then Millbrook, Ashby, snowy Tumbledown and the harbour of Gull's Rest), then to a castle and a dungeon's mouth; every new hero starts them fresh
 - A short cooldown on the ability button, shown as a filling gold ring
 - Warm golden-hour light over the world, matching the character creator's stage, where motes drift in the light and a spotlight falls on your hero while you customize
+- Day and night: the sun goes round once every 24 minutes (an hour a minute), the same for every player. Dawn comes up rose, dusk falls gold and the night is moonlit blue; everything in the world is lit by real 2D lights, so after dark the windows of every house glow, torches burn by the inn and alehouse doors, the towns on the map shine in the distance, and you carry a little light of your own. Indoors, hearths and stoves crackle with animated fire and lanterns and candles throw pools of warm light
+- Campfires burn on Tumbledown's frozen shore and Gull's Rest's beach, Sharm's animated LPC fire
+- Light snow falls across the far north and in Tumbledown, drifting past as you walk through it
 
 ## Art Attribution
 

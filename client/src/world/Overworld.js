@@ -111,6 +111,12 @@ export class Overworld {
 
         this.map = map;
         this.forest = new Forest(scene, data);
+        // The towns on the map light up at night
+        const dayNight = scene.dayNight;
+        this.lamps = dayNight ? WORLD.places.filter(p => p.type !== 'dungeon').map(p =>
+            dayNight.addLamp(p.rect[0] + p.rect[2] / 2, p.rect[1] + p.rect[3] / 2, 'place')) : [];
+        // Snow falls north of this row, column by column
+        this.snowLine = decodeU16(data.snowLine);
         this._waterFrame = 0;
         this._waterTime = 0;
 
@@ -137,6 +143,12 @@ export class Overworld {
             layer.setPosition(ox * TILE, oy * TILE);
         }
         this._window = { cx: (ox + WINDOW / 2) * TILE, cy: (oy + WINDOW / 2) * TILE };
+    }
+
+    /** Is it snowing at this world point (the far north)? */
+    isSnowy(x, y) {
+        const tx = Math.floor(wrap(x) / TILE), ty = Math.floor(wrap(y) / TILE);
+        return ty <= this.snowLine[tx];
     }
 
     /** Is the walking cell under this world point blocked? */
@@ -217,6 +229,7 @@ export class Overworld {
     setVisible(on) {
         [this.groundLayer, this.featureLayer, this.canopyLayer, this.water, ...this.labels].forEach(o => o.setVisible(on));
         if (!on) this.forest.hide();
+        this.scene.dayNight?.setOff(this.lamps, !on);
     }
 
     /** The place whose icon the point (a hero's feet) is touching, if any. */
