@@ -1,4 +1,4 @@
-import { loadCharacterSpritesheet, SPRITE_FRAME_SIZE } from './SpritesheetLoader.js';
+import { loadCharacterSpritesheet, oversizedFrom, SPRITE_FRAME_SIZE } from './SpritesheetLoader.js';
 import {
     createStandardAnimations,
     updateIdleFrames,
@@ -40,16 +40,16 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         const textureKey = `sprite_${this.look}`;
 
         if (this.scene.textures.exists(textureKey)) {
-            // Sheets with oversized animations are wider than 13 columns; read the
-            // real width or every animation indexes the wrong (often blank) frames.
-            const source = this.scene.textures.get(textureKey).getSourceImage();
-            this.sheetCols = Math.floor(source.width / SPRITE_FRAME_SIZE);
+            // Sheets with oversized animations are wider than 13 columns; number frames
+            // across the full sheet's columns or every animation shows the wrong (often blank) ones.
+            const tex = this.scene.textures.get(textureKey);
+            this.sheetCols = tex.customData.cols ?? Math.floor(tex.getSourceImage().width / SPRITE_FRAME_SIZE);
             this.onTextureReady(textureKey);
             return;
         }
 
         const scene = this.scene;
-        loadCharacterSpritesheet(scene, spriteUrl, textureKey)
+        loadCharacterSpritesheet(scene, spriteUrl, textureKey, oversizedFrom(this.characterData.spriteMeta))
             .then(({ cols }) => {
                 if (!this.scene) return this._forget(this.look, scene);   // gone before it came
                 if (cols) this.sheetCols = cols;
@@ -183,7 +183,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this.characterData = { ...characterData, id: this.characterData.id };
         const textureKey = `sprite_${look}`;
         const scene = this.scene;
-        return loadCharacterSpritesheet(scene, characterData.spriteUrl, textureKey)
+        return loadCharacterSpritesheet(scene, characterData.spriteUrl, textureKey, oversizedFrom(characterData.spriteMeta))
             .then(({ cols }) => {
                 if (this.look !== look || !this.scene) return this._forget(look, scene);     // changed again meanwhile, or gone
                 this.sheetCols = cols || this.sheetCols;

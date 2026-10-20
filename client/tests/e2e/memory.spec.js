@@ -5,10 +5,10 @@
 import { test, expect } from '@playwright/test';
 
 // Decoded size of the pictures one place holds at once, on top of what the game holds everywhere
-// (about 100 MB). Measured October 2026: Riverhold's streets (22 folk) 338 MB, a village 142-266 MB,
-// a room 12-86 MB; a townsperson's sheet alone is 12-25 MB decoded, three quarters of it blank
-// frames. Raise it only knowing what a weak phone can hold.
-const BUDGET_MB = 360;
+// (about 100 MB). Measured October 2026, with character sheets kept packed: Riverhold's streets
+// (22 folk) 96 MB, a village 53-88 MB, a room 5-26 MB (unpacked: 338, 142-266 and 12-86).
+// Raise it only knowing what a weak phone can hold.
+const BUDGET_MB = 120;
 // What may be left behind after leaving a place: nothing, give or take a name label
 const SLACK_MB = 1;
 
@@ -126,5 +126,39 @@ test.describe('Memory', () => {
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         expect(await page.evaluate((ids) => window.__PHASER_GAME.textures.getTextureKeys()
             .filter(k => ids.some(id => k.startsWith(`sprite_${id}`))), ids)).toEqual([]);
+    });
+
+    test('a sheet kept packed draws every frame exactly as the full sheet does', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const result = await page.evaluate(async () => {
+            const { loadCharacterSpritesheet, oversizedFrom } = await import('/src/sprites/SpritesheetLoader.js');
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const who = (await (await fetch('/folk/tumbledown.json')).json()).find(f => f.id === 'astrid').character;
+            await loadCharacterSpritesheet(gs, who.spriteUrl, 'packed-check', oversizedFrom(who.spriteMeta));
+            const full = await createImageBitmap(await (await fetch(who.spriteUrl)).blob());
+            const tex = gs.textures.get('packed-check');
+            const packed = tex.getSourceImage();
+            const cols = full.width / 64, rows = Math.floor(oversizedFrom(who.spriteMeta) / 64);
+            const pixels = (src, x, y) => {
+                const c = document.createElement('canvas'); c.width = c.height = 64;
+                const g = c.getContext('2d'); g.drawImage(src, x, y, 64, 64, 0, 0, 64, 64);
+                return g.getImageData(0, 0, 64, 64).data.join();
+            };
+            let wrong = 0, drawn = 0;
+            for (let i = 0; i < rows * cols; i++) {
+                const f = tex.get(i);
+                const want = pixels(full, (i % cols) * 64, Math.floor(i / cols) * 64);
+                if (pixels(packed, f.cutX, f.cutY) !== want) wrong++;
+                if (/[1-9]/.test(want.split(',').filter((_, j) => j % 4 === 3).join(''))) drawn++;
+            }
+            const out = { frames: rows * cols, drawn, wrong, fullMB: full.width * full.height * 4 / 2 ** 20, packedMB: packed.width * packed.height * 4 / 2 ** 20 };
+            gs.textures.remove('packed-check');
+            return out;
+        });
+        console.log('packed sheet', JSON.stringify(result));
+        expect(result.drawn).toBeGreaterThan(100);
+        expect(result.wrong).toBe(0);
+        expect(result.packedMB).toBeLessThan(result.fullMB / 4);
     });
 });

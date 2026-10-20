@@ -213,7 +213,9 @@ test.describe('Character creator', () => {
             const check = await page.evaluate(async () => {
                 const s = window.__PHASER_GAME.scene.getScene('CreateScene');
                 const fig = s.figure;
-                const width = s.textures.get(`sprite_${fig.characterData.id}`).getSourceImage().width;
+                // Kept packed, a sheet records the full sheet's columns its frames are numbered across
+                const tex = s.textures.get(`sprite_${fig.characterData.id}`);
+                const width = (tex.customData.cols ?? 0) * 64 || tex.getSourceImage().width;
                 const cv = document.createElement('canvas');
                 const ctx = cv.getContext('2d', { willReadFrequently: true });
                 const drawn = (spr) => {

@@ -12,10 +12,13 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite, null, { timeout: 30000 });
 }
 
+// Hold a direction for ms of the game's own time (a busy machine runs the game slower than the clock on the wall)
 const hold = (page, dir, ms) => page.evaluate(async ([dir, ms]) => {
     const keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
+    const clock = window.__PHASER_GAME.scene.getScene('GameScene').time;
+    const start = clock.now;
     keys[dir] = true;
-    await new Promise(r => setTimeout(r, ms));
+    while (clock.now - start < ms) await new Promise(r => setTimeout(r, 16));
     keys[dir] = false;
 }, [dir, ms]);
 
