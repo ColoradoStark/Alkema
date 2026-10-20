@@ -12,6 +12,8 @@ async function enterWorld(page) {
     }, null, { timeout: 60000 });
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
+    // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
+    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
 }
 
 /** Stand two heroes side by side on the overworld, each seeing the other. */

@@ -15,6 +15,24 @@ const FEET = 23;               // from a character's centre down to their feet (
 const TALK_REACH = 64;         // stand this close to someone and they speak
 const COUNTER_REACH = 104;     // ...indoors, across a shop counter
 const WANDER_SPEED = 46;
+const SCHEDULE_MS = 500;       // how often townsfolk look at the time
+
+/**
+ * Whether it's night for someone: each townsperson goes in at their own
+ * time between dusk and full dark and comes out between first light and
+ * sunrise, so a street empties and fills a few at a time.
+ */
+export function nightFor(id, hour) {
+    let h = 0;
+    for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    const k = (h % 1000) / 1000;
+    return hour >= 19.25 + k * 1.5 || hour < 5.5 + k * 1.5;
+}
+
+/** Whether someone's in this map at that time of day (tools/towngen.py schedule(): day/night 'away'). */
+function hereAt(plan, night) {
+    return plan[night ? 'night' : 'day'] !== 'away';
+}
 const WATER_FRAME_MS = 260;
 
 /** The places on the overworld you can go into, and their maps. */
@@ -106,24 +124,96 @@ export class Town {
         this._waterTime = 0;
     }
 
-    /** The townsfolk, ready-made or as the server made them: [{ id, role, character }]. Anyone already here stays. */
+    /**
+     * The townsfolk, ready-made or as the server made them: [{ id, role, character }].
+     * Anyone already here stays; anyone not here at this hour comes when it's their time.
+     */
     populate(made) {
+        this.made ??= new Map();
+        for (const who of made) this.made.set(who.id, who);
+        const hour = this.hour;
         for (const plan of this.data.folk) {
-            const who = made.find(f => f.id === plan.id);
-            if (!who || this.folk.some(f => f.plan.id === plan.id)) continue;
-            const [x, y] = plan.post || this._randomSpot(plan.wander);
-            const sprite = new CompositeCharacter(this.scene, x, y - FEET, who.character);
-            sprite.body.enable = false;
-            if (who.character.spriteMeta) sprite.applySpriteMeta(who.character.spriteMeta);
-            sprite.setDirection(plan.facing || 'down');
-            sprite.stopAnimation();
-            const name = who.character.name || '';
-            const label = this.scene.add.text(0, -40, `${name.split(' ')[0]}, ${who.role}`, {
-                fontFamily: 'Alagard', fontSize: '12px', color: '#fbf236',
-                backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
-            }).setOrigin(0.5).setVisible(false);
-            sprite.add(label);
-            this.folk.push({ plan, sprite, label, name, wait: 500 + Math.random() * 2000, target: null });
+            if (hereAt(plan, nightFor(plan.id, hour)) && !this.folk.some(f => f.plan.id === plan.id)) this._arrive(plan, false);
+        }
+    }
+
+    get hour() {
+        return this.scene.dayNight?.hour ?? 12;
+    }
+
+    /** Someone in their place, or (walking) coming in at their door to it. */
+    _arrive(plan, walking) {
+        const who = this.made?.get(plan.id);
+        if (!who) return null;
+        const door = walking && this._door(plan);
+        const [x, y] = door ? [door.x, door.y] : plan.post || this._randomSpot(plan.wander);
+        const sprite = new CompositeCharacter(this.scene, x, y - FEET, who.character);
+        sprite.body.enable = false;
+        if (who.character.spriteMeta) sprite.applySpriteMeta(who.character.spriteMeta);
+        sprite.setDirection(plan.facing || 'down');
+        sprite.stopAnimation();
+        const name = who.character.name || '';
+        const label = this.scene.add.text(0, -40, `${name.split(' ')[0]}, ${who.role}`, {
+            fontFamily: 'Alagard', fontSize: '12px', color: '#fbf236',
+            backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
+        }).setOrigin(0.5).setVisible(false);
+        sprite.add(label);
+        const f = { plan, sprite, label, name, wait: 500 + Math.random() * 2000, target: null };
+        if (door) {
+            const [px, py] = plan.post || this._randomSpot(plan.wander);
+            f.target = { x: px, y: py - FEET };
+            f.coming = true;
+            f.stuck = 0;
+        }
+        this.folk.push(f);
+        return f;
+    }
+
+    /** Where someone goes in or comes out for the night: the door to the map `via` (feet, px). */
+    _door(plan) {
+        const exit = plan.via && this.data.exits.find(e => e.to === plan.via);
+        if (!exit) return null;
+        const [x, y, w, h] = exit.rect;
+        return { x: x + w / 2, y: y + h / 2 };
+    }
+
+    /** Someone leaves for the night (or the day): off to their door, and gone through it. */
+    _leave(f) {
+        const door = this._door(f.plan);
+        if (!door) return this._gone(f);
+        f.going = true;
+        f.coming = false;
+        f.working = false;
+        f.target = { x: door.x, y: door.y - FEET };
+        f.stuck = 0;
+        f.sprite.oversizedSprite?.setVisible(false);
+        f.sprite.usingOversized = false;
+        f.sprite.sprite?.setVisible(true);
+    }
+
+    _gone(f) {
+        if (f.lamp) this.scene.dayNight?.remove([f.lamp]);
+        f.sprite.forget();
+        f.sprite.destroy();
+        this.folk = this.folk.filter(o => o !== f);
+    }
+
+    /** Everyone where they should be at this hour: out at dawn, in at dusk, a lantern on the night watch. */
+    _keepHours() {
+        const hour = this.hour, dayNight = this.scene.dayNight;
+        for (const plan of this.data.folk) {
+            const night = nightFor(plan.id, hour);
+            const f = this.folk.find(o => o.plan === plan);
+            if (hereAt(plan, night)) {
+                if (!f) this._arrive(plan, true);
+                else if (f.going) { f.going = false; f.target = null; f.sprite.stopAnimation(); }
+            } else if (f && !f.going && this.scene.scene.get('UIScene')?.dialogue?.who !== f) {
+                this._leave(f);        // (not in the middle of telling you something)
+            }
+            if (f && plan.lamp && dayNight) {
+                if (night && !f.lamp) f.lamp = dayNight.addLamp(f.sprite.x, f.sprite.y, plan.lamp);
+                else if (!night && f.lamp) { dayNight.remove([f.lamp]); f.lamp = null; }
+            }
         }
     }
 
@@ -216,13 +306,30 @@ export class Town {
         for (const lamp of this.lamps) {
             lamp.art?.setDepth(sortDepth(this.scene, lamp.y + (lamp.def.lift || 0) + (lamp.kind === 'hearth' ? 1 : 0)));
         }
-        for (const f of this.folk) {
-            if (f.plan.wander) this._wander(f, delta, feet);
-            else if (f.plan.chore && !f.working && !f.talking) f.working = this._work(f, f.plan.facing || 'down');
+        this._hoursIn = (this._hoursIn ?? 0) - delta;
+        if (this._hoursIn <= 0) {
+            this._hoursIn = SCHEDULE_MS;
+            this._keepHours();
+        }
+        for (const f of [...this.folk]) {
             const s = f.sprite;
+            if (f.going || f.coming) {
+                // Walking to their door for the night, or in from it to their place
+                const step = this._step(f, delta, feet);
+                if (step !== 'walking' && f.going) { this._gone(f); continue; }
+                if (step !== 'walking') {
+                    f.coming = false;
+                    f.target = null;
+                    s.setDirection(f.plan.facing || 'down');
+                    s.stopAnimation();
+                }
+            } else if (f.plan.wander) this._wander(f, delta, feet);
+            else if (f.plan.chore && !f.working && !f.talking) f.working = this._work(f, f.plan.facing || 'down');
             s.setDepth(sortDepth(this.scene, s.y + FEET));
+            f.lamp && this.scene.dayNight?.moveLamp(f.lamp, s.x, s.y + FEET);
             const near = feet && Math.hypot(feet.x - s.x, feet.y - (s.y + FEET)) < (this.indoors ? COUNTER_REACH : TALK_REACH);
             f.label.setVisible(!!near);
+            if (f.going || f.coming) continue;
             if (near && !f.talking && f.plan.post) {
                 // Turn to face whoever came to talk
                 const dx = feet.x - s.x, dy = feet.y - (s.y + FEET);
@@ -261,18 +368,32 @@ export class Town {
             f.target = { x, y: y - FEET };
             f.stuck = 0;
         }
+        const step = this._step(f, delta, feet);
+        if (step === 'there') {
+            f.target = null;
+            f.wait = 1500 + Math.random() * 4000;
+            s.stopAnimation();
+            // Someone with work to do gets on with it here, a good while longer (by daylight)
+            if (f.plan.chore && this._work(f, f.plan.facing || ['left', 'right', 'down'][Math.floor(Math.random() * 3)])) {
+                f.wait += 4000 + Math.random() * 5000;
+            }
+        } else if (step === 'stuck') {
+            // Nowhere to go from here: stop and choose somewhere else
+            f.target = null;
+            f.wait = 800;
+            s.stopAnimation();
+        }
+    }
+
+    /** A step toward f.target: 'walking', 'there', or 'stuck' (no way on from here). */
+    _step(f, delta, feet) {
+        const s = f.sprite;
         const dx = f.target.x - s.x, dy = f.target.y - s.y;
         const d = Math.hypot(dx, dy);
         const stepLen = WANDER_SPEED * delta / 1000;
         if (d < stepLen + 1) {
-            f.target = null;
-            f.wait = 1500 + Math.random() * 4000;
-            s.stopAnimation();
-            // Someone with work to do gets on with it here, a good while longer
-            if (f.plan.chore && this._work(f, f.plan.facing || ['left', 'right', 'down'][Math.floor(Math.random() * 3)])) {
-                f.wait += 4000 + Math.random() * 5000;
-            }
-            return;
+            s.setPosition(f.target.x, f.target.y);
+            return 'there';
         }
         // Walk one leg at a time, like townsfolk in the old games: the longer leg
         // first, turning only when it's done or something's in the way
@@ -287,18 +408,15 @@ export class Town {
         if (blocked(horizontal)) {
             const other = !horizontal;
             if ((other ? Math.abs(dx) : Math.abs(dy)) < stepLen || blocked(other) || ++f.stuck > 120) {
-                // Nowhere to go from here: stop and choose somewhere else
-                f.target = null;
                 f.axis = null;
-                f.wait = 800;
-                s.stopAnimation();
-                return;
+                return 'stuck';
             }
             horizontal = other;
             f.axis = other ? 'x' : 'y';
         }
         s.setPosition(horizontal ? s.x + Math.sign(dx) * stepLen : s.x, horizontal ? s.y : s.y + Math.sign(dy) * stepLen);
         s.playAnimation('walk', horizontal ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
+        return 'walking';
     }
 
     /** Set someone to their chore, facing dir; false if their sheet isn't loaded yet. */
@@ -356,8 +474,7 @@ export class Town {
         this.scene.dayNight?.remove(this.lamps);
         this.lamps = [];
         // ...and let go of their pictures: a phone's browser drops a tab that holds every town it's been to
-        this.folk.forEach(f => { f.sprite.forget(); f.sprite.destroy(); });
-        this.folk = [];
+        [...this.folk].forEach(f => this._gone(f));
         this.scene.textures.remove(`town-${this.key}`);
         this.scene.textures.remove(`town-${this.key}-things`);
     }

@@ -46,6 +46,7 @@ export const LAMPS = {
     hearth: { radius: 130, colour: 0xff8a3a, strength: 1.8, flicker: 0.14, art: 'flames', lift: 6 },
     stove: { radius: 80, colour: 0xff8a3a, strength: 1.4, flicker: 0.1 },
     lantern: { radius: 96, colour: 0xffd890, strength: 1.4, flicker: 0.04 },
+    carried: { radius: 96, colour: 0xffd890, strength: 1.2, flicker: 0.06, dark: true, lift: 22 },     // a lantern in someone's hand
     candle: { radius: 56, colour: 0xffd27a, strength: 1.2, flicker: 0.1 },
     hero: { radius: 150, colour: 0xfff0d8, strength: 0.9, flicker: 0, dark: true },      // your own light
 };
@@ -173,6 +174,13 @@ export class DayNight {
             lamp.off = off;
             lamp.art?.setVisible(!off);
         }
+    }
+
+    /** Carry a lamp (a watchman's lantern) to x, y: where its bearer's feet are. */
+    moveLamp(lamp, x, y) {
+        lamp.x = x;
+        lamp.y = y - (lamp.def.lift || 0);
+        lamp.glow?.setPosition(lamp.x, lamp.y);
     }
 
     /** Put out lamps (a map being left). */

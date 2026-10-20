@@ -20,6 +20,8 @@ async function enterWorld(page) {
     }, null, { timeout: 60000 });
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
+    // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
+    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
 }
 
 /** Pictures held, decoded (MB), and painted portraits and voice clips held. */
@@ -56,7 +58,7 @@ async function visit(page, go, arg) {
     await expect.poll(() => page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), town = gs.town;
         if (!town || gs._changingRoom) return 'on the way';
-        return `${town.key}: ${town.folk.filter(f => f.sprite.sprite).length} of ${town.data.folk.length} drawn`;
+        return `${town.key}: ${town.folk.filter(f => f.sprite.sprite).length} of ${town.folk.length} drawn`;
     }), { timeout: 90000 }).toMatch(/^(\S+): (\d+) of \2 drawn$/);
     await page.waitForTimeout(1500);     // oversized frames are cut a moment after the sheet comes
 }
@@ -95,6 +97,36 @@ test.describe('Memory', () => {
             expect.soft(r.left, `left behind by ${r.key}`).toBeLessThan(SLACK_MB);
             expect.soft(r.portraits, `portraits kept after ${r.key}`).toBe(0);
         }
+    });
+
+    test("by night the taverns fill (everyone in from the cold in Tumbledown's longhall): still under budget, and let go on leaving", async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 23; });
+        const base = await settled(page);
+        await visit(page, async () => {
+            const { WORLD } = await import('/src/world/places.js');
+            await window.__PHASER_GAME.scene.getScene('GameScene').enterPlace(WORLD.places.find(p => p.name === 'Tumbledown'));
+        });
+        await visit(page, () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const e = gs.town.data.exits.find(e => e.to === 'tumbledown-longhall');
+            return gs.changeMap(e.to, e.at, 'up');
+        });
+        const inHall = await held(page);
+        const crowd = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const back = gs.town.data.exits.find(e => e.to === 'tumbledown');
+            return gs.changeMap(back.to, back.at, 'down');
+        });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
+        const after = await held(page);
+        console.log('longhall by night', crowd, 'folk,', Math.round(inHall.mb - base.mb), 'MB');
+        expect(crowd).toBeGreaterThan(10);
+        expect(inHall.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
     });
 
     test("other players' sheets come with them and go when they leave", async ({ page }) => {

@@ -10,6 +10,8 @@ async function enterWorld(page) {
     }, null, { timeout: 60000 });
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite, null, { timeout: 30000 });
+    // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
+    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
 }
 
 // Hold a direction for ms of the game's own time (a busy machine runs the game slower than the clock on the wall)
@@ -168,7 +170,16 @@ test.describe('Riverhold', () => {
         await enterWorld(page);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold');
+        // Once everyone's drawn: their sheets coming in hitch the frames, and a hitched walk falls short
+        await page.waitForFunction(() => { const t = window.__PHASER_GAME.scene.getScene('GameScene').town; return t.folk.length && t.folk.every(f => f.sprite.sprite); }, null, { timeout: 60000 });
         await page.evaluate(() => {
+            // The watchmen and townsfolk walking the high street stand aside (walk into one and they talk)
+            for (const f of window.__PHASER_GAME.scene.getScene('GameScene').town.folk.filter(f => f.plan.wander)) {
+                f.target = null;
+                f.wait = Infinity;
+                f.sprite.stopAnimation();
+                f.sprite.setPosition(4 * 32, 23 * 32);
+            }
             const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
             me.setPosition(42 * 32, 23 * 32 - 23);   // on the high street, west of the creek
             me.body.reset(me.x, me.y);

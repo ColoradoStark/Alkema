@@ -197,4 +197,52 @@ test.describe('Day and night', () => {
             texture: window.__PHASER_GAME.textures.exists('fx-snowflake'),
         })), { timeout: 60000 }).toEqual({ emitter: false, texture: false });
     });
+
+    test('townsfolk keep the hours: in at their door at nightfall, home for the night, out again in the morning', async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        await hour(page, 12);
+        await enterPlace(page, 'Seacombe');
+        const folk = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
+            .map(f => ({ id: f.plan.id, going: !!f.going, coming: !!f.coming })));
+        // Noon: Tom the farmer is out watering his carrots
+        await expect.poll(async () => (await folk()).some(f => f.id === 'tom'), { timeout: 30000 }).toBe(true);
+        await page.waitForFunction(() => window.__PHASER_GAME.textures.exists('sprite_seacombe-tom'), null, { timeout: 30000 });
+
+        // Nightfall: everyone in the fields heads for their door, and goes in; their sheets go with them
+        await hour(page, 23);
+        await expect.poll(async () => (await folk()).find(f => f.id === 'tom')?.going).toBe(true);
+        await expect.poll(async () => (await folk()).length, { timeout: 120000 }).toBe(0);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('sprite_seacombe-tom'))).toBe(false);
+
+        // ...and he's at home in the farmhouse, with Gran
+        await goTo(page, 'seacombe-farmhouse');
+        await expect.poll(async () => (await folk()).map(f => f.id).sort()).toEqual(expect.arrayContaining(['gran', 'tom']));
+
+        // Morning: he's off out of the door to work; Gran stays in
+        await hour(page, 9);
+        await expect.poll(async () => (await folk()).find(f => f.id === 'tom')?.going ?? 'gone').toBeTruthy();
+        await expect.poll(async () => (await folk()).map(f => f.id), { timeout: 60000 }).toEqual(['gran']);
+    });
+
+    test("the Riverhold watch keep their posts all night, the watchmen walking their beat with a lantern", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await hour(page, 12);
+        await enterPlace(page, 'Riverhold');
+        const state = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return {
+                watch: gs.town.folk.filter(f => /guard|watch|warden/i.test(f.plan.role) && !f.going).length,
+                lanterns: gs.dayNight.lamps.filter(l => l.kind === 'carried').length,
+                townsfolk: gs.town.folk.filter(f => /^wanderer/.test(f.plan.id) && !f.going).length,
+            };
+        });
+        await expect.poll(state, { timeout: 30000 }).toEqual({ watch: 11, lanterns: 0, townsfolk: 4 });
+        await hour(page, 1);
+        await expect.poll(state, { timeout: 10000 }).toEqual({ watch: 11, lanterns: 3, townsfolk: 0 });
+        // Daybreak: the lanterns are put out
+        await hour(page, 10);
+        await expect.poll(state, { timeout: 10000 }).toMatchObject({ watch: 11, lanterns: 0 });
+    });
 });
