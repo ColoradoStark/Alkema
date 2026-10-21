@@ -239,7 +239,7 @@ export class UIScene extends Scene {
         const others = [];
         for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
         // In town the overworld's minimap and quests wait for you outside
-        const outside = !gameScene.town;
+        const outside = !gameScene.town && !gameScene.battle;
         this.minimap.setVisible(outside);
         if (!outside) return;
         const quest = this.quests.current;
@@ -265,7 +265,10 @@ export class UIScene extends Scene {
             return;
         }
         const gameScene = this.scene.get('GameScene');
-        if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
+        if (gameScene?.battle) {
+            gameScene.battle.attack();
+            this.quests.record('attack');
+        } else if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
             gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');
         }

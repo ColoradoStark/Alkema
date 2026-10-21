@@ -129,6 +129,33 @@ test.describe('Memory', () => {
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
     });
 
+    test("a battle lets go of its map when it's over, and a foe's sheet goes once you've left it behind", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots[0].foe, null, { timeout: 30000 });
+        const base = await settled(page);
+        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.enterBattle(gs.encounters.spots[0]); });
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
+        const inBattle = await held(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return !gs.battle && !gs._changingRoom; }, null, { timeout: 15000 });
+        const after = await held(page);
+        console.log('battle', +(inBattle.mb - base.mb).toFixed(2), 'MB');
+        expect(inBattle.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        // Walk far off (here, to Saltmere) and the orc's sheet and animations go
+        await page.evaluate(async () => {
+            const { WORLD } = await import('/src/world/places.js');
+            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite, p = WORLD.places.find(p => p.name === 'Saltmere');
+            me.setPosition(p.x, p.y + 40);
+            me.body.reset(me.x, me.y);
+        });
+        await expect.poll(() => page.evaluate(() => ({
+            sheet: window.__PHASER_GAME.textures.exists('foe-grunt'),
+            anims: window.__PHASER_GAME.anims.exists('foe-grunt-stand-s'),
+        })), { timeout: 10000 }).toEqual({ sheet: false, anims: false });
+    });
+
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);

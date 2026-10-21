@@ -16,11 +16,20 @@ async function enterWorld(page) {
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
 }
 
+// Browsers opened for a second hero, closed after each test (left open, their heroes stay in the
+// world, playing on, and every later test shares the machine with them)
+const opened = [];
+test.afterEach(async () => {
+    for (const context of opened.splice(0)) await context.close();
+});
+
 /** Stand two heroes side by side on the overworld, each seeing the other. */
 async function twoHeroes(browser) {
     const pages = [];
     for (let i = 0; i < 2; i++) {
-        const page = await (await browser.newContext()).newPage();
+        const context = await browser.newContext();
+        opened.push(context);
+        const page = await context.newPage();
         await enterWorld(page);
         pages.push(page);
     }

@@ -1,0 +1,695 @@
+{
+ "tile": 32,
+ "cols": 11,
+ "rows": 14,
+ "hero": [
+  5,
+  12
+ ],
+ "foe": [
+  5,
+  3
+ ],
+ "maps": {
+  "grass": {
+   "ground": "grass.png",
+   "trees": [
+    {
+     "col": 9,
+     "row": 0,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 2,
+     "row": 3,
+     "frame": 78,
+     "blocks": false
+    },
+    {
+     "col": 7,
+     "row": 6,
+     "frame": 78,
+     "blocks": false
+    },
+    {
+     "col": 4,
+     "row": 8,
+     "frame": 22,
+     "blocks": true
+    },
+    {
+     "col": 3,
+     "row": 9,
+     "frame": 22,
+     "blocks": true
+    },
+    {
+     "col": 5,
+     "row": 9,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 10,
+     "row": 9,
+     "frame": 17,
+     "blocks": true
+    },
+    {
+     "col": 3,
+     "row": 11,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 6,
+     "row": 11,
+     "frame": 18,
+     "blocks": false
+    },
+    {
+     "col": 2,
+     "row": 12,
+     "frame": 32,
+     "blocks": false
+    },
+    {
+     "col": 10,
+     "row": 12,
+     "frame": 19,
+     "blocks": false
+    },
+    {
+     "col": 2,
+     "row": 13,
+     "frame": 30,
+     "blocks": false
+    },
+    {
+     "col": 8,
+     "row": 13,
+     "frame": 30,
+     "blocks": false
+    }
+   ]
+  },
+  "forest": {
+   "ground": "forest.png",
+   "trees": [
+    {
+     "col": 2,
+     "row": 0,
+     "frame": 109,
+     "blocks": true
+    },
+    {
+     "col": 6,
+     "row": 0,
+     "frame": 30,
+     "blocks": false
+    },
+    {
+     "col": 7,
+     "row": 0,
+     "frame": 81,
+     "blocks": false
+    },
+    {
+     "col": 10,
+     "row": 0,
+     "frame": 26,
+     "blocks": true
+    },
+    {
+     "col": 3,
+     "row": 1,
+     "frame": 83,
+     "blocks": false
+    },
+    {
+     "col": 2,
+     "row": 2,
+     "frame": 109,
+     "blocks": true
+    },
+    {
+     "col": 6,
+     "row": 2,
+     "frame": 22,
+     "blocks": true
+    },
+    {
+     "col": 7,
+     "row": 2,
+     "frame": 26,
+     "blocks": true
+    },
+    {
+     "col": 1,
+     "row": 4,
+     "frame": 110,
+     "blocks": true
+    },
+    {
+     "col": 6,
+     "row": 4,
+     "frame": 26,
+     "blocks": true
+    },
+    {
+     "col": 8,
+     "row": 4,
+     "frame": 83,
+     "blocks": false
+    },
+    {
+     "col": 9,
+     "row": 4,
+     "frame": 110,
+     "blocks": true
+    },
+    {
+     "col": 0,
+     "row": 5,
+     "frame": 111,
+     "blocks": true
+    },
+    {
+     "col": 1,
+     "row": 5,
+     "frame": 117,
+     "blocks": true
+    },
+    {
+     "col": 4,
+     "row": 5,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 6,
+     "row": 5,
+     "frame": 28,
+     "blocks": false
+    },
+    {
+     "col": 3,
+     "row": 6,
+     "frame": 120,
+     "blocks": true
+    },
+    {
+     "col": 2,
+     "row": 7,
+     "frame": 117,
+     "blocks": true
+    },
+    {
+     "col": 4,
+     "row": 7,
+     "frame": 110,
+     "blocks": true
+    },
+    {
+     "col": 5,
+     "row": 8,
+     "frame": 27,
+     "blocks": false
+    },
+    {
+     "col": 10,
+     "row": 8,
+     "frame": 17,
+     "blocks": true
+    },
+    {
+     "col": 1,
+     "row": 9,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 2,
+     "row": 9,
+     "frame": 124,
+     "blocks": true
+    },
+    {
+     "col": 9,
+     "row": 9,
+     "frame": 17,
+     "blocks": true
+    },
+    {
+     "col": 8,
+     "row": 10,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 9,
+     "row": 10,
+     "frame": 110,
+     "blocks": true
+    },
+    {
+     "col": 0,
+     "row": 11,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 2,
+     "row": 11,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 3,
+     "row": 12,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 7,
+     "row": 12,
+     "frame": 84,
+     "blocks": true
+    },
+    {
+     "col": 0,
+     "row": 13,
+     "frame": 17,
+     "blocks": true
+    },
+    {
+     "col": 2,
+     "row": 13,
+     "frame": 26,
+     "blocks": true
+    },
+    {
+     "col": 3,
+     "row": 13,
+     "frame": 29,
+     "blocks": false
+    },
+    {
+     "col": 9,
+     "row": 13,
+     "frame": 18,
+     "blocks": false
+    }
+   ]
+  },
+  "snow": {
+   "ground": "snow.png",
+   "trees": [
+    {
+     "col": 0,
+     "row": 1,
+     "frame": 97,
+     "blocks": true
+    },
+    {
+     "col": 6,
+     "row": 1,
+     "frame": 51,
+     "blocks": true
+    },
+    {
+     "col": 8,
+     "row": 1,
+     "frame": 57,
+     "blocks": false
+    },
+    {
+     "col": 0,
+     "row": 3,
+     "frame": 40,
+     "blocks": false
+    },
+    {
+     "col": 1,
+     "row": 3,
+     "frame": 136,
+     "blocks": true
+    },
+    {
+     "col": 1,
+     "row": 5,
+     "frame": 134,
+     "blocks": true
+    },
+    {
+     "col": 4,
+     "row": 6,
+     "frame": 43,
+     "blocks": false
+    },
+    {
+     "col": 0,
+     "row": 8,
+     "frame": 51,
+     "blocks": true
+    },
+    {
+     "col": 1,
+     "row": 8,
+     "frame": 97,
+     "blocks": true
+    },
+    {
+     "col": 9,
+     "row": 9,
+     "frame": 52,
+     "blocks": false
+    },
+    {
+     "col": 10,
+     "row": 9,
+     "frame": 40,
+     "blocks": false
+    },
+    {
+     "col": 6,
+     "row": 10,
+     "frame": 46,
+     "blocks": true
+    },
+    {
+     "col": 0,
+     "row": 13,
+     "frame": 134,
+     "blocks": true
+    },
+    {
+     "col": 1,
+     "row": 13,
+     "frame": 102,
+     "blocks": true
+    },
+    {
+     "col": 8,
+     "row": 13,
+     "frame": 43,
+     "blocks": false
+    }
+   ]
+  }
+ },
+ "foes": {
+  "grunt": {
+   "name": "Orcish Grunt",
+   "hp": 38,
+   "frameWidth": 72,
+   "frameHeight": 72,
+   "anims": {
+    "stand-s": [
+     [
+      2,
+      200
+     ],
+     [
+      3,
+      200
+     ],
+     [
+      4,
+      300
+     ],
+     [
+      5,
+      200
+     ],
+     [
+      6,
+      200
+     ],
+     [
+      5,
+      200
+     ],
+     [
+      4,
+      200
+     ],
+     [
+      3,
+      200
+     ]
+    ],
+    "stand-n": [
+     [
+      7,
+      200
+     ],
+     [
+      8,
+      200
+     ],
+     [
+      9,
+      300
+     ],
+     [
+      10,
+      200
+     ],
+     [
+      11,
+      200
+     ],
+     [
+      10,
+      200
+     ],
+     [
+      9,
+      200
+     ],
+     [
+      8,
+      200
+     ]
+    ],
+    "breeze-s": [
+     [
+      0,
+      250
+     ],
+     [
+      12,
+      250
+     ],
+     [
+      13,
+      250
+     ],
+     [
+      14,
+      250
+     ],
+     [
+      15,
+      250
+     ],
+     [
+      16,
+      250
+     ],
+     [
+      15,
+      250
+     ],
+     [
+      14,
+      250
+     ],
+     [
+      13,
+      250
+     ],
+     [
+      12,
+      250
+     ]
+    ],
+    "breeze-n": [
+     [
+      1,
+      250
+     ],
+     [
+      17,
+      250
+     ],
+     [
+      18,
+      250
+     ],
+     [
+      19,
+      250
+     ],
+     [
+      20,
+      250
+     ],
+     [
+      21,
+      250
+     ],
+     [
+      20,
+      250
+     ],
+     [
+      19,
+      250
+     ],
+     [
+      18,
+      250
+     ],
+     [
+      17,
+      250
+     ]
+    ],
+    "attack-s": [
+     [
+      0,
+      50
+     ],
+     [
+      27,
+      50
+     ],
+     [
+      22,
+      100
+     ],
+     [
+      23,
+      75
+     ],
+     [
+      24,
+      100
+     ],
+     [
+      25,
+      50
+     ],
+     [
+      26,
+      75
+     ],
+     [
+      0,
+      75
+     ]
+    ],
+    "defend-s": [
+     [
+      27,
+      80
+     ],
+     [
+      28,
+      220
+     ],
+     [
+      27,
+      80
+     ]
+    ],
+    "defend-n": [
+     [
+      29,
+      80
+     ],
+     [
+      30,
+      220
+     ],
+     [
+      29,
+      80
+     ]
+    ],
+    "die-s": [
+     [
+      31,
+      120
+     ],
+     [
+      32,
+      120
+     ],
+     [
+      33,
+      120
+     ],
+     [
+      34,
+      100
+     ],
+     [
+      35,
+      100
+     ],
+     [
+      36,
+      80
+     ],
+     [
+      37,
+      70
+     ],
+     [
+      38,
+      170
+     ]
+    ],
+    "die-n": [
+     [
+      39,
+      120
+     ],
+     [
+      40,
+      120
+     ],
+     [
+      41,
+      120
+     ],
+     [
+      42,
+      100
+     ],
+     [
+      43,
+      100
+     ],
+     [
+      44,
+      80
+     ],
+     [
+      45,
+      70
+     ],
+     [
+      46,
+      170
+     ]
+    ]
+   },
+   "image": "grunt.png"
+  }
+ }
+}

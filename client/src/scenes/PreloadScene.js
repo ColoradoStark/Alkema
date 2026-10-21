@@ -81,6 +81,8 @@ export class PreloadScene extends Scene {
         
         // The overworld: tiles, collision, water and the minimap
         preloadOverworld(this.load);
+        // The battle maps and foes (their pictures load as you meet them)
+        this.load.json('battle', '/battle/battle.json');
 
         // Load arrow projectile spritesheet (13 cols x 4 rows of 64x64, directions: up/left/down/right)
         this.load.spritesheet('arrow-projectile', '/spritesheets/weapon/ranged/bow/arrow/shoot/arrow.png', {

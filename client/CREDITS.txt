@@ -38,6 +38,7 @@ Music
     "Wanderer" by Timothy Pinkham (at sea)
     "Legends of the North", "Over the Northern Mountains" by Mattias
       Westlund (the far north)
+    "Frantic" by Stephen Rozanc (TreizeCouleurs) (battles)
     License: GPL v2 or later
     https://github.com/wesnoth/wesnoth/tree/master/data/core/music
   "Three Sheets to the Wind" by Scott Buckley (at sea), as shipped with
@@ -70,6 +71,22 @@ Sound effects
 Effects were trimmed, level-matched and combined into one audio file;
 music loops were crossfaded at the seam and loudness-matched.
 
+
+======================================================================
+BATTLES
+======================================================================
+
+The Orcish Grunt you fight outside Riverhold is The Battle for
+Wesnoth's (https://www.wesnoth.org) unit art: its standing, idle,
+attack, defend and death frames, by the Wesnoth unit artists (the full
+list of contributors is in data/core/about.cfg of the Wesnoth
+repository), with its colours mapped to the LPC character palettes
+(Wesnoth's team colour to maroon cloth, its iron to LPC iron and
+steel, its leather to LPC leather).
+  License: GNU GPL version 2 or later
+  https://github.com/wesnoth/wesnoth/tree/master/data/core/images/units/orcs
+The battle maps are laid out from the same Wesnoth grass, snow and
+trees as the world map (below).
 
 ======================================================================
 OVERWORLD MOUNTAINS, FORESTS, GRASS, SAND AND SNOW

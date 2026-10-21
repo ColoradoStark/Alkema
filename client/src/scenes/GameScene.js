@@ -11,6 +11,8 @@ import { Town, TOWNS, preloadTown, forgetFires } from '../world/Town.js';
 import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
+import { Battle, battleCountry, loadBattleMap } from '../battle/Battle.js';
+import { Encounters } from '../battle/Encounters.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -21,6 +23,7 @@ const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pa
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 const FADE_MS = 260;            // going into a town or out again
 const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
+const BACK_OFF = 40;            // back from a fight, you stand this far from where the foe stood
 
 export class GameScene extends Scene {
     constructor() {
@@ -76,6 +79,10 @@ export class GameScene extends Scene {
         this.events.once('shutdown', () => this.snowfall.destroy());
         this.world = this.overworld = new Overworld(this);
         this.town = null;
+        this.battle = null;
+        // Foes out in the world, and what they leave behind
+        this.encounters = new Encounters(this);
+        this.events.once('shutdown', () => this.encounters.destroy());
         // Your ship, at anchor off the port of Saltmere, bow out to sea
         this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
         // Ships follow their captains after the physics step, so they never lag a frame
@@ -104,12 +111,14 @@ export class GameScene extends Scene {
             this.dayNight.indoors = !!this.town?.indoors;
             this.dayNight.update(delta, feet);
         }
-        const snowing = this.town ? !!this.town.data.snow : !!feet && this.overworld.isSnowy(feet.x, feet.y);
+        const snowing = this.battle ? this.battle.snowing
+            : this.town ? !!this.town.data.snow : !!feet && this.overworld.isSnowy(feet.x, feet.y);
         this.snowfall?.update(delta, snowing, this.dayNight?.ambient);
         this.updateMusic(delta, feet);
         this.updateSailing();
         this.updatePlaceVisit();
         this.updateGate();
+        this.updateEncounters(feet);
         // Walked into someone: story mode
         if (this.town?.bumped) {
             this.scene.get('UIScene')?.talkTo(this.town.bumped);
@@ -131,9 +140,10 @@ export class GameScene extends Scene {
     updateMusic(delta, feet) {
         if (!this.overworld || !feet) return;
         let mood = 'world';
-        const lost = this.town ? 0 : this.overworld.forest.lost;
-        const at = this.town ? this._townPlace : feet;
-        if (this.localPlayer?.sailing) mood = 'sea';
+        const lost = this.town || this.battle ? 0 : this.overworld.forest.lost;
+        const at = this.town ? this._townPlace : this.battle ? this._battleFrom : feet;
+        if (this.battle) mood = 'battle';
+        else if (this.localPlayer?.sailing) mood = 'sea';
         else if (lost > (this._mood === 'forest' ? 0.2 : 0.6)) mood = 'forest';
         else if (at && this.overworld.isSnowy(at.x, at.y)) mood = 'north';
         if (mood !== this._moodWanted) {
@@ -141,7 +151,9 @@ export class GameScene extends Scene {
             this._moodFor = 0;
         }
         this._moodFor += delta;
-        if (mood !== this._mood && this._moodFor >= MOOD_SETTLE_MS) {
+        // A fight's music starts with the fight, and stops with it
+        const now = mood === 'battle' || this._mood === 'battle';
+        if (mood !== this._mood && (now || this._moodFor >= MOOD_SETTLE_MS)) {
             this._mood = mood;
             audio.playMusic(mood);
         }
@@ -165,7 +177,7 @@ export class GameScene extends Scene {
     updateSailing() {
         const player = this.localPlayer;
         const me = player?.sprite;
-        if (!me || !this.world || !this.mooredShip || this.town) return;
+        if (!me || !this.world || !this.mooredShip || this.town || this.battle) return;
         const intent = this._intent || { dx: 0, dy: 0 };
         if (!player.sailing) {
             const ship = this.mooredShip;
@@ -227,7 +239,7 @@ export class GameScene extends Scene {
         const me = player?.sprite;
         if (!me) return;
         let ox = 0, oy = 0;
-        const vista = player.sailing || this.town ? null : (WORLD.vistas || []).find(v =>
+        const vista = player.sailing || this.town || this.battle ? null : (WORLD.vistas || []).find(v =>
             Math.hypot(wrapDelta(me.x, v.x), wrapDelta(me.y + FEET, v.y)) < LOOKOUT_REACH);
         if (vista) {
             const lx = wrapDelta(me.x, vista.look.x), ly = wrapDelta(me.y, vista.look.y);
@@ -256,7 +268,7 @@ export class GameScene extends Scene {
     /** Answer "Enter Riverhold?" with yes. Places without a map of their own yet stay closed. */
     async enterPlace(place) {
         const key = TOWNS[place?.name];
-        if (!key || this.town || this._changingRoom) return;
+        if (!key || this.town || this.battle || this._changingRoom) return;
         await this._loadTown(key).catch(() => null);
         const { arrive, facing } = this.cache.json.get(`town-${key}`) || {};
         if (!arrive) return;
@@ -289,6 +301,7 @@ export class GameScene extends Scene {
             this._dropTown();
             this.overworld.setVisible(false);
             this.mooredShip.setVisible(false);
+            this.encounters.setVisible(false);
             this.town = this.world = new Town(this, key);
             this.cameras.main.setBackgroundColor(this.town.indoors ? '#0c080e' : '#1d5d8c');
             this._arriveAt(at, facing, res.players);
@@ -317,6 +330,7 @@ export class GameScene extends Scene {
             this.world = this.overworld;
             this.overworld.setVisible(true);
             this.mooredShip.setVisible(true);
+            this.encounters.setVisible(true);
             this.cameras.main.setBackgroundColor('#1d5d8c');
             this.cameras.main.removeBounds();
             this._arriveAt(at, 'down', res.players);
@@ -325,6 +339,78 @@ export class GameScene extends Scene {
             this.cameras.main.fadeIn(FADE_MS);
         } catch (err) {
             console.warn('Could not leave', place?.name, err);
+        } finally {
+            this._changingRoom = false;
+        }
+    }
+
+    /** Out in the world on foot, walk into a foe and you're fighting it. */
+    updateEncounters(feet) {
+        if (this.town || this.battle || this._changingRoom || this.localPlayer?.sailing) return;
+        const met = this.encounters.update(feet);
+        if (met) this.enterBattle(met);
+    }
+
+    /** To the battle map for the country you met the foe in (Ultima III style), a room of your own on the server. */
+    async enterBattle(spot) {
+        const me = this.localPlayer?.sprite;
+        if (!me || this._changingRoom || this.town || this.battle) return;
+        this._changingRoom = this._fighting = true;
+        try {
+            const country = battleCountry(this.overworld, spot.x, spot.y);
+            await loadBattleMap(this, country);
+            this.localPlayer.setVelocity(0, 0);
+            // You'll be back a step from where it stood, the way you came (clear of the chest it leaves)
+            const away = { x: wrapDelta(spot.x, me.x), y: wrapDelta(spot.y, me.y + FEET) };
+            const k = BACK_OFF / (Math.hypot(away.x, away.y) || 1);
+            this._battleFrom = { x: spot.x + away.x * k, y: spot.y + (away.x || away.y ? away.y * k : -BACK_OFF), spot, country };
+            const [col, row] = this.cache.json.get('battle').hero;
+            const res = await this.networkManager.request('change-room', { battle: true, x: col * 32 + 16, y: row * 32 });
+            if (!res?.ok) return;
+            await this._fadeOut();
+            this.overworld.setVisible(false);
+            this.mooredShip.setVisible(false);
+            this.encounters.setVisible(false);
+            this.scene.get('UIScene')?.enterPrompt?.hide();
+            this.battle = this.world = new Battle(this, { country, kind: spot.kind, onEnd: result => this.leaveBattle(result) });
+            const cam = this.cameras.main;
+            cam.setBackgroundColor('#000000');
+            cam.stopFollow();
+            this.localPlayer.nameText.setVisible(false);      // no names over the fight (it would cover the foe)
+            this._arriveAt(this.battle.heroAt, 'up', res.players);
+            cam.centerOn(this.battle.width / 2, this.battle.height / 2);
+            cam.fadeIn(FADE_MS);
+        } catch (err) {
+            console.warn('Could not fight', err);
+        } finally {
+            this._changingRoom = this._fighting = false;
+        }
+    }
+
+    /** Won or fled: back in the world where you met the foe (and, won, a chest where it stood). */
+    async leaveBattle(result) {
+        const from = this._battleFrom;
+        this._changingRoom = true;
+        try {
+            const at = { x: from.x, y: from.y - FEET };
+            const res = await this.networkManager.request('change-room', { town: null, ...at }).catch(() => null);
+            await this._fadeOut();
+            this.battle.destroy();
+            this.battle = null;
+            this.world = this.overworld;
+            this.overworld.setVisible(true);
+            this.mooredShip.setVisible(true);
+            this.encounters.setVisible(true);
+            const cam = this.cameras.main;
+            cam.setBackgroundColor('#1d5d8c');
+            this.localPlayer.nameText.setVisible(true);
+            this._arriveAt(at, from.y < from.spot.y ? 'down' : 'up', res?.players);
+            cam.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
+            cam.centerOn(at.x, at.y);
+            this.encounters.after(from.spot, result);
+            cam.fadeIn(FADE_MS);
+        } catch (err) {
+            console.warn('Could not leave the battle', err);
         } finally {
             this._changingRoom = false;
         }
@@ -407,6 +493,14 @@ export class GameScene extends Scene {
         if (!this.localPlayer) return;
 
         this._intent = { dx, dy };
+        if (this._fighting) {        // stopped in your tracks: it's a fight
+            this.localPlayer.setVelocity(0, 0);
+            return;
+        }
+        if (this.battle) {           // a step at a time, a tile at a time
+            this.battle.move(dx, dy);
+            return;
+        }
         let vx, vy;
         if (this.localPlayer.sailing) {
             // At sea the ship does the moving: momentum, turning, drift

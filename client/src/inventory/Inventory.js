@@ -87,6 +87,13 @@ export class Inventory {
         return { ok: true };
     }
 
+    /** Found: gold, and an item (if any) into the bag. */
+    loot(gold, id = null) {
+        this.gold += gold;
+        if (id && this.item(id)) this.bag.push(id);
+        this._save();
+    }
+
     /** Sell one of `id` from the bag (what you're wearing, take off first). */
     sell(id) {
         const at = this.bag.indexOf(id);

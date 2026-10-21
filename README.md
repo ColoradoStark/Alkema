@@ -90,11 +90,21 @@ Other races and classes are reserved for NPCs and enemies.
 
 ## Sound and Music
 
-- Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world; lost in a dark forest the music turns to shadows, at sea a rollicking sailors' jig, and in the snows of the far north (and Tumbledown) the songs of the north, crossfading as you go
+- Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world; lost in a dark forest the music turns to shadows, at sea a rollicking sailors' jig, in the snows of the far north (and Tumbledown) the songs of the north, and in a fight Wesnoth's battle music, crossfading as you go
 - Every tap, pick and roll has a sound: dice rattle for **Random New Hero**, each class answers with its weapon (a sword drawn, a bow twang, a spell), pages turn in **Customize look**
 - The creator's sparring bouts and the world's fights are fully voiced: whooshes, bone clacks, blocks, monster cries, a victory jingle and coins
 - The starter chest thuds down, creaks open and chimes for each item
 - A speaker button cycles sound on, music off, or silent, and remembers your choice
+
+## Battles
+
+Fights are fought Ultima III style, on a battle map of their own:
+
+- An orc (The Battle for Wesnoth's Orcish Grunt, recoloured into the LPC palette) stands on the grass just outside Riverhold's gate, shifting its weight and turning to watch you
+- Walk into it and you're on a portrait battle map, 11 by 14 tiles, of the country you met it in (grassland, forest or snow, laid out from the same Wesnoth grass, snow and trees as the world map), with battle music
+- You move a tile at a step; walk into the orc, or press attack beside it, to strike (a bow or sling shoots it from down a clear line). Damage numbers fly, its HP bar drains, it reels when hit and swings back (its blows don't land yet), and it falls with Wesnoth's death animation
+- Walk off any side of the map to flee
+- Beat it and you're back in the world, where a chest has dropped where it stood: walk into it for gold and, often, a piece of gear any shop will buy. The orc is back at its post a couple of minutes later
 
 ## Multiplayer
 
@@ -185,7 +195,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The villages' crops are bluecarrot16's LPC Crops (with Daniel Eddeland, Joshua Taylor and Jetrel), its sacks, baskets and produce from the LPC Containers and Foods. The world map's grass, beaches, desert, snow, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Music by Matthew Pablo, cynicmusic, RandomMind, Scott Buckley and The Battle for Wesnoth's composers (Tyler Johnson, Gianmarco Leone, Timothy Pinkham, Mattias Westlund); sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The villages' crops are bluecarrot16's LPC Crops (with Daniel Eddeland, Joshua Taylor and Jetrel), its sacks, baskets and produce from the LPC Containers and Foods. The world map's grass, beaches, desert, snow, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. The orc you fight is Wesnoth's Orcish Grunt, by its unit artists. Music by Matthew Pablo, cynicmusic, RandomMind, Scott Buckley and The Battle for Wesnoth's composers (Tyler Johnson, Gianmarco Leone, Timothy Pinkham, Mattias Westlund, Stephen Rozanc); sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
 
 ## License
 

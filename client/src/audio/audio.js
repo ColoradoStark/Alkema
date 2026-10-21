@@ -19,7 +19,8 @@ const HEARING_RANGE = 520; // world px beyond which other players' fights are si
 /**
  * Music, by mood. Each mood plays its tracks in turn, crossfading between them;
  * the game picks the mood from where you are (GameScene.updateMusic): out in
- * the world, lost in a dark forest, at sea, or in the snows of the far north.
+ * the world, lost in a dark forest, at sea, in the snows of the far north, or
+ * in a battle.
  */
 export const MUSIC = {
     creator: [{ id: 'grassy-world' }], // replays, fading back in, when it ends
@@ -33,6 +34,7 @@ export const MUSIC = {
     forest: [{ id: 'into-the-shadows' }, { id: 'the-deep-path' }],
     sea: [{ id: 'three-sheets' }, { id: 'wanderer' }],
     north: [{ id: 'legends-of-the-north' }, { id: 'over-the-northern-mountains' }],
+    battle: [{ id: 'frantic' }],
 };
 
 class Audio {
