@@ -8,8 +8,6 @@
 
 import { sortDepth } from '../world/Forest.js';
 
-const FEET_Y = 56;          // where a Wesnoth unit's feet are in its 72 px frame
-
 export const foeKey = kind => `foe-${kind}`;
 
 /** Load a foe's sheet and make its animations (resolves at once if it's here already). */
@@ -71,7 +69,8 @@ export class Foe {
         this.spec = scene.cache.json.get('battle').foes[kind];
         this.name = this.spec.name;
         this.key = foeKey(kind);
-        this.sprite = scene.add.sprite(x, y, this.key, 0).setOrigin(0.5, FEET_Y / this.spec.frameHeight);
+        this.tall = this.spec.tall;     // how far it stands above its feet
+        this.sprite = scene.add.sprite(x, y, this.key, 0).setOrigin(0.5, this.spec.feet / this.spec.frameHeight);
         this.side = 's';
         this.busy = false;          // playing something other than standing about
         this.dead = false;

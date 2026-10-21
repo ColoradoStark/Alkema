@@ -13,8 +13,8 @@ const ROCK_OFFSETS = {
     right: { x:  16, y:  0 },
 };
 
-const ARROW_SPEED = 300;
-const ROCK_SPEED = 250;
+export const ARROW_SPEED = 300;
+export const ROCK_SPEED = 250;
 
 function velocityFor(direction, speed) {
     const v = {
@@ -26,10 +26,18 @@ function velocityFor(direction, speed) {
     return v[direction] || v.down;
 }
 
-function attachMover(scene, sprite, vel) {
+/** Fly on (until off screen, or `range` px if given: it struck something). */
+function attachMover(scene, sprite, vel, range = Infinity) {
+    let flown = 0;
     const update = (time, delta) => {
         sprite.x += vel.x * (delta / 1000);
         sprite.y += vel.y * (delta / 1000);
+        flown += Math.hypot(vel.x, vel.y) * (delta / 1000);
+        if (flown >= range) {
+            sprite.destroy();
+            scene.events.off('update', update);
+            return;
+        }
 
         const cam = scene.cameras.main;
         const margin = 100;
@@ -42,7 +50,7 @@ function attachMover(scene, sprite, vel) {
     scene.events.on('update', update);
 }
 
-export function spawnArrow(scene, originX, originY, direction, weaponType) {
+export function spawnArrow(scene, originX, originY, direction, weaponType, range) {
     if (!scene.textures.exists('arrow-projectile')) return;
 
     // Use left/right arrow rows and rotate for up/down
@@ -57,10 +65,10 @@ export function spawnArrow(scene, originX, originY, direction, weaponType) {
     arrow.setDepth(25);
     if (direction === 'up' || direction === 'down') arrow.setRotation(Math.PI / 2);
 
-    attachMover(scene, arrow, velocityFor(direction, ARROW_SPEED));
+    attachMover(scene, arrow, velocityFor(direction, ARROW_SPEED), range);
 }
 
-export function spawnRock(scene, originX, originY, direction) {
+export function spawnRock(scene, originX, originY, direction, range) {
     if (!scene.textures.exists('rock-projectile')) return;
 
     const { x: offsetX, y: offsetY } = ROCK_OFFSETS[direction] || { x: 0, y: 0 };
@@ -69,5 +77,5 @@ export function spawnRock(scene, originX, originY, direction) {
     rock.setScale(0.5);
     rock.setDepth(25);
 
-    attachMover(scene, rock, velocityFor(direction, ROCK_SPEED));
+    attachMover(scene, rock, velocityFor(direction, ROCK_SPEED), range);
 }

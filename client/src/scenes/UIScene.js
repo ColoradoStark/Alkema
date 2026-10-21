@@ -241,6 +241,7 @@ export class UIScene extends Scene {
         // In town the overworld's minimap and quests wait for you outside
         const outside = !gameScene.town && !gameScene.battle;
         this.minimap.setVisible(outside);
+        this.quests.container.setVisible(!gameScene.battle);     // clear of the foes at the top of a battle map
         if (!outside) return;
         const quest = this.quests.current;
         this.minimap.update(me, others, quest?.kind === 'visit' ? quest : null);

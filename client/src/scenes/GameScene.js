@@ -364,7 +364,7 @@ export class GameScene extends Scene {
             const away = { x: wrapDelta(spot.x, me.x), y: wrapDelta(spot.y, me.y + FEET) };
             const k = BACK_OFF / (Math.hypot(away.x, away.y) || 1);
             this._battleFrom = { x: spot.x + away.x * k, y: spot.y + (away.x || away.y ? away.y * k : -BACK_OFF), spot, country };
-            const [col, row] = this.cache.json.get('battle').hero;
+            const [col, row] = this.cache.json.get('battle').maps[country].party[0];
             const res = await this.networkManager.request('change-room', { battle: true, x: col * 32 + 16, y: row * 32 });
             if (!res?.ok) return;
             await this._fadeOut();
@@ -372,7 +372,7 @@ export class GameScene extends Scene {
             this.mooredShip.setVisible(false);
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
-            this.battle = this.world = new Battle(this, { country, kind: spot.kind, onEnd: result => this.leaveBattle(result) });
+            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, onEnd: result => this.leaveBattle(result) });
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
             cam.stopFollow();

@@ -3,9 +3,10 @@
 // Each foe stands at its post (for now one: an orc just outside Riverhold's
 // gate, where you set out). Its sheet loads as you come near and goes when
 // you're far away. Walk into it and you're in a battle (GameScene.enterBattle);
-// beat it and you come back to a chest where it stood (gold, and sometimes
-// something a shop will buy), and it's back at its post a while later. Flee and
-// it waits for you to step away before it'll fight again.
+// it leads a band of one to eight, and you fight them all. Beat them and you
+// come back to a chest where it stood (gold for each, and sometimes something a
+// shop will buy), and a new band is at the post a while later. Flee and they
+// wait for you to step away before they'll fight again.
 
 import { Foe, loadFoe, forgetFoe } from './Foe.js';
 import { sortDepth } from '../world/Forest.js';
@@ -13,7 +14,8 @@ import { wrapDelta } from '../world/Overworld.js';
 import { audio } from '../audio/audio.js';
 
 export const FOES = [
-    { kind: 'grunt', x: 6224, y: 11190 },      // feet; on the grass a few steps from Riverhold's gate
+    // feet; on the grass a few steps from Riverhold's gate. A band of 1 to 8 (each time it's met, a new number)
+    { kind: 'grunt', x: 6224, y: 11190, band: [1, 8] },
 ];
 const NEAR = 900;               // a foe's sheet loads when you're this close
 const FAR = 1300;               // and goes when you're this far
@@ -26,17 +28,23 @@ const GOLD = [12, 40];
 const ITEM_CHANCE = 0.6;
 const FINDS = ['dagger', 'mace', 'spear', 'wooden-shield', 'mail-coif', 'iron-helm', 'leather-armour'];
 
-/** What's in a chest: some gold, and sometimes something a shop will buy. */
-export function rollLoot(rand = Math.random) {
-    const gold = GOLD[0] + Math.floor(rand() * (GOLD[1] - GOLD[0] + 1));
-    const item = rand() < ITEM_CHANCE ? FINDS[Math.floor(rand() * FINDS.length)] : null;
+/** How many in a band this time. */
+export function rollBand([least, most], rand = Math.random) {
+    return least + Math.floor(rand() * (most - least + 1));
+}
+
+/** What's in a chest a band leaves: some gold for each of them, and sometimes something a shop will buy (likelier the bigger the band). */
+export function rollLoot(count = 1, rand = Math.random) {
+    let gold = 0;
+    for (let i = 0; i < count; i++) gold += GOLD[0] + Math.floor(rand() * (GOLD[1] - GOLD[0] + 1));
+    const item = rand() < 1 - (1 - ITEM_CHANCE) ** count ? FINDS[Math.floor(rand() * FINDS.length)] : null;
     return { gold, item };
 }
 
 export class Encounters {
     constructor(scene) {
         this.scene = scene;
-        this.spots = FOES.map(f => ({ ...f, foe: null, loading: false, backAt: 0, waiting: false }));
+        this.spots = FOES.map(f => ({ ...f, count: rollBand(f.band), foe: null, loading: false, backAt: 0, waiting: false }));
         this.chests = [];
         this.visible = true;
     }
@@ -109,8 +117,10 @@ export class Encounters {
         spot.foe?.destroy();
         spot.foe = null;
         spot.backAt = this.scene.time.now + RESPAWN_MS;
+        const won = spot.count;
+        spot.count = rollBand(spot.band);       // whoever comes back next time
         const sprite = this.scene.add.sprite(spot.x, spot.y - 40, 'cc-chests', CHEST_FRAMES.shut).setOrigin(0.5, 0.9);
-        const chest = { x: spot.x, y: spot.y, sprite, open: false, landed: false, loot: rollLoot() };
+        const chest = { x: spot.x, y: spot.y, sprite, open: false, landed: false, loot: rollLoot(won) };
         this.chests.push(chest);
         sprite.setAlpha(0).setDepth(sortDepth(this.scene, spot.y));
         this.scene.tweens.add({ targets: sprite, alpha: 1, duration: 120 });
