@@ -7,6 +7,7 @@ import { EnterPrompt } from '../ui/EnterPrompt.js';
 import { Dialogue, portraitUrl } from '../ui/Dialogue.js';
 import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
+import { Spellbook } from '../magic/Spellbook.js';
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -68,8 +69,12 @@ export class UIScene extends Scene {
         const gear = this.game.registry.get('gear') || {};
         this.inventory = new Inventory({ catalogue, kit: gear.kit, equipped: gear.equipped, stats: gear.stats, request });
         this.inventory.onWorn = (character) => this.scene.get('GameScene')?.localPlayer?.updateAppearance(character);
+        // Their class's spells (or a fighter's battle skills), and the one they have ready
+        const heroClass = gear.stats?.class || this.scene.get('GameScene')?.localPlayer?.characterData?.character_class;
+        this.spellbook = new Spellbook({ spells: catalogue.spells, heroClass, level: gear.stats?.level });
         this.gear = new GearScreen({
             inventory: this.inventory,
+            spellbook: this.spellbook,
             hero: () => this.scene.get('GameScene')?.localPlayer?.characterData,
             request,
             gameWidth: this.scale.width,
@@ -278,6 +283,11 @@ export class UIScene extends Scene {
     handleAbility() {
         if (this.gear?.visible) return;
         const gameScene = this.scene.get('GameScene');
+        // In a fight: the spell (or skill) you have ready, as your turn
+        if (gameScene?.battle) {
+            if (gameScene.battle.cast()) this.quests.record('cast');
+            return;
+        }
         if (!gameScene?.localPlayer || gameScene.localPlayer.sailing || this.bottomControls.coolingDown) return;
         gameScene.localPlayer.playCast();
         gameScene.emitCast();

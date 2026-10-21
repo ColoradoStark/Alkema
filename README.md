@@ -108,6 +108,14 @@ Fights are fought Ultima III style, on a battle map of their own:
 - Walk off any side of the map to flee
 - Beat them all and you're back in the world, where a chest has dropped where they stood: gold for each orc and, likelier the bigger the band, a piece of gear any shop will buy. A new band is at the post a couple of minutes later
 
+## Spells
+
+Every class has six spells (a fighter's and a thief's are battle skills), three ranks each, with painted icons:
+
+- Everyone starts with the first: a mage's **Fireball**, a cleric's **Heal**, a ranger's **Flaming Arrow**, a fighter's **Mighty Swing** and a thief's **Shadowstrike** (gone in a swirl of shadow, and back beside the nearest foe, striking)
+- The **Equip** page has a spell slot and the whole spellbook: what you know in colour, everything still to learn greyed with the level it comes at; tap a spell to read each rank and to have it ready
+- In a fight, the blue button casts the one you have ready, as your turn, with The Battle for Wesnoth's spell effects. Spells cost magic points (full at the start of each fight); battle skills rest a few turns between uses
+
 ## Multiplayer
 
 Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles, with The Battle for Wesnoth's painted grass, sand, snow, mountains and forests:
@@ -197,7 +205,7 @@ A REST API powers all character generation. Full interactive docs at `/docs` (Sw
 
 ## Credits
 
-Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The villages' crops are bluecarrot16's LPC Crops (with Daniel Eddeland, Joshua Taylor and Jetrel), its sacks, baskets and produce from the LPC Containers and Foods. The world map's grass, beaches, desert, snow, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. The orcs you fight are Wesnoth's Orcish Grunt, by its unit artists, on battle maps strewn with Wesnoth's flowers, stones, mushrooms and dirt. Music by Matthew Pablo, cynicmusic, RandomMind, Scott Buckley and The Battle for Wesnoth's composers (Tyler Johnson, Gianmarco Leone, Timothy Pinkham, Mattias Westlund, Stephen Rozanc); sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
+Built on assets from the [Liberated Pixel Cup](https://lpc.opengameart.org) and the [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator). See [CREDITS.txt](CREDITS.txt) for the full list of contributing artists and their licenses. Riverhold's buildings are bluecarrot16's LPC thatched-roof cottage, roofs, windows and doors, with LPC terrains, bricks and medieval decorations by many hands; its rooms are furnished from Reemax's (Tuomo Untinen) LPC house interior set, after Sharm's LPC base tiles. The villages' crops are bluecarrot16's LPC Crops (with Daniel Eddeland, Joshua Taylor and Jetrel), its sacks, baskets and produce from the LPC Containers and Foods. The world map's grass, beaches, desert, snow, mountains and forests are the painted terrain of [The Battle for Wesnoth](https://www.wesnoth.org) (GPL v2+), by its terrain artists, chiefly Hogne Håskjold, with desert mountains by doofus-01, recoloured to the game's palette. Spell icons are J. W. Bjerk's Painterly Spell Icons (CC-BY 3.0); spell effects are Wesnoth's. The orcs you fight are Wesnoth's Orcish Grunt, by its unit artists, on battle maps strewn with Wesnoth's flowers, stones, mushrooms and dirt. Music by Matthew Pablo, cynicmusic, RandomMind, Scott Buckley and The Battle for Wesnoth's composers (Tyler Johnson, Gianmarco Leone, Timothy Pinkham, Mattias Westlund, Stephen Rozanc); sound effects by Kenney, artisticdude, rubberduck, Ogrebane and Vehicle (see CREDITS.txt).
 
 ## License
 
