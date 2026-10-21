@@ -1,10 +1,9 @@
 // Spells: every class has six (a fighter's and a thief's are battle skills),
-// three ranks each, with painted icons. Every hero starts with the first
-// rank of their class's first; the rest wait in the spellbook on the Equip
-// page, greyed with the level they're learned at. In a fight the blue button
-// casts the one you have ready, with Wesnoth's effects: a mage's fireball, a
-// cleric's healing, a ranger's flaming arrow, a fighter's mighty swing, a
-// thief's shadowstrike.
+// three ranks each, with painted icons. Every hero knows what opens at level 1:
+// their class's first, and for mages and clerics a bane (Ultima III's Repond
+// and Excuun). In a fight the blue button asks which to cast (always at the
+// highest rank known); the rest are there, greyed with the level they come at.
+// Spells spend the hero's magic (the blue bar); skills rest between uses.
 import { test, expect } from '@playwright/test';
 
 async function enterWorld(page) {
@@ -19,97 +18,165 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook, null, { timeout: 20000 });
 }
 
-const STARTERS = { mage: 'Fireball', cleric: 'Heal', ranger: 'Flaming Arrow', warrior: 'Mighty Swing', thief: 'Shadowstrike' };
+/** Into a fight with a band of `count`, standing just below the lowest of them, with magic to spare. */
+async function fight(page, count) {
+    await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots[0].foe, null, { timeout: 30000 });
+    await page.evaluate((count) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        gs.encounters.spots[0].count = count;
+        gs.enterBattle(gs.encounters.spots[0]);
+    }, count);
+    await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
+    await page.evaluate(() => {
+        const ui = window.__PHASER_GAME.scene.getScene('UIScene'), b = window.__PHASER_GAME.scene.getScene('GameScene').battle, m = b.party[0];
+        const f = [...b.foes].sort((a, c) => c.cell[1] - a.cell[1])[0];
+        m.cell = [f.cell[0], f.cell[1] + 1];
+        const at = b.feetOf(m.cell);
+        m.who.sprite.setPosition(at.x, at.y - 23);
+        Object.assign(ui.mp, { now: 99, max: 99 });
+        b.held = false;
+    });
+}
+
+const asClass = (page, cls) => page.evaluate((cls) => {
+    const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+    ui.spellbook = new ui.spellbook.constructor({ spells: ui.inventory.catalogue.spells, heroClass: cls });
+}, cls);
+
+const yourTurn = (page) => page.waitForFunction(() => {
+    const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+    return !b || b.over || b.canAct;
+}, null, { timeout: 20000 });
+
+/** What the cast menu shows: each row's spell, words and whether it can be picked. */
+const menu = (page) => page.evaluate(() => {
+    const m = window.__PHASER_GAME.scene.getScene('UIScene').castMenu;
+    if (!m.visible) return null;
+    const rows = m.container.list.filter(o => o.getData?.('spell'));
+    const texts = m.container.list.filter(o => o.type === 'Text').map(t => t.text);
+    return { rows: rows.map(r => ({ id: r.getData('spell'), usable: !!r.input?.enabled })), texts };
+});
+
+/** Press the blue button, and pick a spell from the menu as a tap would. */
+async function castFromMenu(page, id) {
+    await page.keyboard.press('e');
+    await expect.poll(async () => (await menu(page))?.rows.length ?? 0).toBe(6);
+    return page.evaluate((id) => {
+        const m = window.__PHASER_GAME.scene.getScene('UIScene').castMenu;
+        const row = m.container.list.find(o => o.getData?.('spell') === id);
+        if (!row?.input?.enabled) return false;
+        row.emit('pointerdown');
+        return true;
+    }, id);
+}
+
+const FIRST = { mage: 'fireball', cleric: 'heal', ranger: 'flaming-arrow', warrior: 'mighty-swing', thief: 'shadowstrike' };
 
 test.describe('Spells', () => {
-    test('the Equip page has a spell slot with your first spell ready, and the whole book: six spells in three ranks, the rest greyed with the level they come at', async ({ page }) => {
+    test('in a fight the blue button asks which spell: your class\'s six, the ones still to learn greyed with their level; Cancel spends nothing', async ({ page }) => {
         await enterWorld(page);
-        const cls = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.class);
-        await page.keyboard.press('2');          // Equip
-        await expect(page.locator('.gear-slot--spell')).toContainText(`${STARTERS[cls]} I`);
-        await expect(page.locator('.gear-book-row')).toHaveCount(6);
-        await expect(page.locator('.gear-book .gear-spell-icon')).toHaveCount(18);
-        await expect(page.locator('.gear-book .gear-spell-icon.is-locked')).toHaveCount(17);
-        await expect(page.locator('.gear-book-level')).toHaveCount(17);
-        // Each icon is cut from the painted sheet, square
-        const icon = await page.locator('.gear-slot--spell .gear-spell-icon').evaluate(e => {
-            const s = getComputedStyle(e);
-            return { image: s.backgroundImage, w: e.offsetWidth, h: e.offsetHeight };
-        });
-        expect(icon.image).toContain('/spells/icons.png');
-        expect(icon.w).toBe(icon.h);
-        // A spell still to learn: what it does, and when; it can't be readied
-        await page.locator('.gear-book-row').nth(3).click();
-        await expect(page.locator('.gear-book-detail')).toContainText('Learned at level');
-        await expect(page.locator('.gear-book-detail .gear-btn--go')).toHaveCount(0);
-        // The first: ready
-        await page.locator('.gear-book-row').first().click();
-        await expect(page.locator('.gear-book-detail')).toContainText('Ready');
-        // Kept with the hero
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.ready)).toEqual(expect.any(String));
+        await fight(page, 3);
+        const cls = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.heroClass);
+        await page.keyboard.press('e');
+        await expect.poll(async () => (await menu(page))?.rows.length ?? 0).toBe(6);
+        const shown = await menu(page);
+        const known = cls === 'mage' || cls === 'cleric' ? 2 : 1;
+        expect(shown.texts.filter(t => t.startsWith('Learned at level'))).toHaveLength(6 - known);
+        expect(shown.rows[0]).toEqual({ id: FIRST[cls], usable: true });
+        expect(shown.texts[0]).toMatch(/^(Cast which spell\?|Use which skill\?)$/);
+        // Each spell's icon, square, from the painted sheet
+        const icons = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').castMenu.container.list
+            .filter(o => o.texture?.key === 'spell-icons').map(o => [o.displayWidth, o.displayHeight]));
+        expect(icons).toHaveLength(6);
+        expect(icons.every(([w, h]) => w === h)).toBe(true);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').castMenu.container.list.find(o => o.text === 'Cancel').emit('pointerdown'));
+        expect(await menu(page)).toBe(null);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').mp.now)).toBe(99);
     });
 
-    test("in a fight the blue button casts what's ready: every class's first spell, with its effect, as your turn", async ({ page }) => {
+    test("every class's first spell, picked from the menu, with its effect; spells spend the blue bar's magic, skills rest", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
-        // Into a fight with a band of eight, standing just below the lowest of them
-        await page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            gs.encounters.spots[0].count = 8;
-        });
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots[0].foe, null, { timeout: 30000 });
-        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.enterBattle(gs.encounters.spots[0]); });
-        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
-        await page.evaluate(() => {
-            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, m = b.party[0];
-            const f = [...b.foes].sort((a, c) => c.cell[1] - a.cell[1])[0];
-            m.cell = [f.cell[0], f.cell[1] + 1];
-            const at = b.feetOf(m.cell);
-            m.who.sprite.setPosition(at.x, at.y - 23);
-            m.mp = m.maxMp = 99;          // enough magic for every class's spell
-            b.held = false;
-        });
-        const yourTurn = () => page.waitForFunction(() => {
-            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
-            return !b || b.over || (!b.busy && b.phase !== 'foes');
-        }, null, { timeout: 20000 });
+        await fight(page, 8);
         const hp = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.foes.reduce((n, f) => n + f.hp, 0));
-
         for (const cls of ['mage', 'cleric', 'ranger', 'warrior', 'thief']) {
-            await yourTurn();
-            // Whatever class the test's hero is, try each class's first spell
-            await page.evaluate((cls) => {
-                const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-                const Book = ui.spellbook.constructor;
-                ui.spellbook = new Book({ spells: ui.inventory.catalogue.spells, heroClass: cls });
-            }, cls);
-            const before = await hp();
-            const fx = await page.evaluate(() => new Promise(resolve => {
+            await yourTurn(page);
+            await asClass(page, cls);
+            const before = { hp: await hp(), mp: await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').mp.now) };
+            const fx = page.evaluate(() => new Promise(resolve => {
                 const gs = window.__PHASER_GAME.scene.getScene('GameScene');
                 const seen = new Set();
                 const watch = () => gs.children.list.forEach(c => c.texture?.key === 'spell-fx' && c.anims?.currentAnim && seen.add(c.anims.currentAnim.key));
                 gs.events.on('postupdate', watch);
-                window.__PHASER_GAME.scene.getScene('UIScene').handleAbility();
-                setTimeout(() => { gs.events.off('postupdate', watch); resolve([...seen]); }, 1500);
+                setTimeout(() => { gs.events.off('postupdate', watch); resolve([...seen]); }, 2500);
             }));
-            await yourTurn();
-            const after = await hp();
-            if (cls === 'cleric') expect(after, cls).toBe(before);            // a heal hurts no one
-            else expect(after, `${cls}'s ${STARTERS[cls]}`).toBeLessThan(before);
-            expect(fx.length, `${cls}: an effect played`).toBeGreaterThan(0);
+            expect(await castFromMenu(page, FIRST[cls]), cls).toBe(true);
+            const seen = await fx;
+            await yourTurn(page);
+            const after = { hp: await hp(), mp: await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').mp.now) };
+            if (cls === 'cleric') expect(after.hp, cls).toBe(before.hp);
+            else expect(after.hp, `${cls}'s first`).toBeLessThan(before.hp);
             const want = { mage: 'fireball', cleric: 'healing', ranger: 'fire-missile', warrior: 'flare', thief: 'dark-magic' }[cls];
-            expect(fx, cls).toContain(`spell-fx-${want}`);
+            expect(seen, cls).toContain(`spell-fx-${want}`);
+            const cost = await page.evaluate((id) => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.at(id).mp, FIRST[cls]);
+            expect(after.mp, `${cls} spends ${cost} MP`).toBe(before.mp - cost);
         }
-        // A skill rests before it can be used again: the fighter's swing, straight after, does nothing
-        await yourTurn();
-        await page.evaluate(() => {
-            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            ui.spellbook = new ui.spellbook.constructor({ spells: ui.inventory.catalogue.spells, heroClass: 'warrior' });
-        });
-        const used = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.cast());
-        expect(used).toBe(false);
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.log.text)).toContain('rests');
-        // Magic is spent: casting cost MP
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.party[0].mp)).toBeLessThan(99);
+        // The blue bar shows it
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').topBar._bars)).toMatch(/\/9\d\/99$/);
+        // A skill rests: the fighter's swing, straight after, is greyed in the menu
+        await yourTurn(page);
+        await asClass(page, 'warrior');
+        expect(await castFromMenu(page, 'mighty-swing')).toBe(false);
+        expect((await menu(page)).texts.some(t => /^Resting \d/.test(t))).toBe(true);
+    });
+
+    test('a skill hits at least twice as hard as a plain blow', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await fight(page, 6);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.attack = 10; });
+        for (const [cls, id] of [['warrior', 'mighty-swing'], ['ranger', 'flaming-arrow'], ['thief', 'shadowstrike']]) {
+            await yourTurn(page);
+            await asClass(page, cls);
+            const hits = page.evaluate(() => new Promise(resolve => {
+                const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, was = b.foes.map(f => f.hp);
+                const tick = () => {
+                    const i = b.foes.findIndex((f, i) => f.hp < was[i]);
+                    if (i >= 0) resolve({ dealt: was[i] - b.foes[i].hp, killed: b.foes[i].hp === 0 });
+                    else requestAnimationFrame(tick);
+                };
+                tick();
+            }));
+            expect(await castFromMenu(page, id), cls).toBe(true);
+            const { dealt, killed } = await hits;
+            // A plain blow of attack 10 is 6 to 14; a skill at least twice that (unless it finished a foe off)
+            if (!killed) expect(dealt, `${cls}'s ${id}`).toBeGreaterThanOrEqual(20);
+        }
+    });
+
+    test("a mage's Orcbane strikes every orc on the field, one after another; a cleric's Turn Undead finds no undead here", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await fight(page, 5);
+        await yourTurn(page);
+        await asClass(page, 'mage');
+        const order = page.evaluate(() => new Promise(resolve => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, was = b.foes.map(f => f.hp), when = [];
+            const tick = (t) => {
+                b.foes.forEach((f, i) => { if (f.hp < was[i] && !when[i]) when[i] = t; });
+                if (when.filter(Boolean).length === b.foes.length) resolve(when);
+                else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+            setTimeout(() => resolve(when), 8000);
+        }));
+        expect(await castFromMenu(page, 'orcbane')).toBe(true);
+        const when = await order;
+        expect(when.filter(Boolean)).toHaveLength(5);                       // every orc
+        expect(new Set(when).size).toBe(5);                                  // each in its turn
+        await yourTurn(page);
+        await asClass(page, 'cleric');
+        expect(await castFromMenu(page, 'turn-undead')).toBe(false);
+        expect((await menu(page)).texts).toContain('No undead here');
     });
 });

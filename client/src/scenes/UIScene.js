@@ -8,6 +8,9 @@ import { Dialogue, portraitUrl } from '../ui/Dialogue.js';
 import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
 import { Spellbook } from '../magic/Spellbook.js';
+import { CastMenu } from '../ui/CastMenu.js';
+
+const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -34,6 +37,8 @@ export class UIScene extends Scene {
         this.enterPrompt = new EnterPrompt(this, this.scale.width / 2, 32 + 448 - 70);   // low, clear of the hero
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
+        // In a fight, the blue button asks which spell (or skill)
+        this.castMenu = new CastMenu(this, { onPick: (id) => this._castPicked(id) });
         this.dialogue.onClose = (who) => {
             this._lastTalk = who;
             this.bottomControls.container.setVisible(true);
@@ -71,10 +76,12 @@ export class UIScene extends Scene {
         this.inventory.onWorn = (character) => this.scene.get('GameScene')?.localPlayer?.updateAppearance(character);
         // Their class's spells (or a fighter's battle skills), and the one they have ready
         const heroClass = gear.stats?.class || this.scene.get('GameScene')?.localPlayer?.characterData?.character_class;
-        this.spellbook = new Spellbook({ spells: catalogue.spells, heroClass, level: gear.stats?.level });
+        this.spellbook = new Spellbook({ spells: catalogue.spells, heroClass });
+        // Their magic: full to start, spent casting, coming back slowly out of a fight
+        const mp = gear.stats?.mp?.max || 0;
+        this.mp = { now: mp, max: mp };
         this.gear = new GearScreen({
             inventory: this.inventory,
-            spellbook: this.spellbook,
             hero: () => this.scene.get('GameScene')?.localPlayer?.characterData,
             request,
             gameWidth: this.scale.width,
@@ -214,7 +221,31 @@ export class UIScene extends Scene {
         this.updatePlayerCount();
     }
 
-    update() {
+    /** Spend magic points (a spell cast); false if there aren't enough. */
+    spendMp(n) {
+        if (!this.mp || this.mp.now < n) return false;
+        this.mp.now -= n;
+        return true;
+    }
+
+    _castPicked(id) {
+        const battle = this.scene.get('GameScene')?.battle;
+        if (battle?.cast(id)) this.quests.record('cast');
+    }
+
+    update(time, delta) {
+        // Hit points and magic in the top bar; magic comes back out of a fight
+        const inFight = !!this.scene.get('GameScene')?.battle;
+        if (this.mp && !inFight && this.mp.now < this.mp.max) {
+            this._mpBack = (this._mpBack || 0) + delta;
+            if (this._mpBack >= MP_BACK_MS) {
+                this._mpBack = 0;
+                this.mp.now++;
+            }
+        }
+        const hp = this.inventory?.stats?.hp;
+        this.topBar.setBars(hp?.now ?? 1, hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
+        if (!inFight) this.castMenu.close();
         const dayNight = this.scene.get('GameScene')?.dayNight;
         if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);
         const gameScene = this.scene.get('GameScene');
@@ -230,7 +261,7 @@ export class UIScene extends Scene {
         else if (this.cursors.down.isDown || this.wasd.S.isDown || keys.down) dy = 1;
 
         const me = gameScene.localPlayer.sprite;
-        if (this.dialogue.visible || this.gear?.visible) {        // the world waits while someone's talking, or you're shopping
+        if (this.dialogue.visible || this.gear?.visible || this.castMenu.visible) {        // the world waits while someone's talking, you're shopping, or choosing a spell
             gameScene.handlePlayerMovement(0, 0);
             return;
         }
@@ -283,9 +314,10 @@ export class UIScene extends Scene {
     handleAbility() {
         if (this.gear?.visible) return;
         const gameScene = this.scene.get('GameScene');
-        // In a fight: the spell (or skill) you have ready, as your turn
+        // In a fight: which spell (or skill)? Then it's cast as your turn
         if (gameScene?.battle) {
-            if (gameScene.battle.cast()) this.quests.record('cast');
+            if (this.castMenu.visible) this.castMenu.close();
+            else if (gameScene.battle.canAct && this.spellbook) this.castMenu.open(this.spellbook, gameScene.battle);
             return;
         }
         if (!gameScene?.localPlayer || gameScene.localPlayer.sailing || this.bottomControls.coolingDown) return;

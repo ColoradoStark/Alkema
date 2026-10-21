@@ -13,7 +13,6 @@ import { ANIM_ROWS, attackInstead } from '../../sprites/AnimationFactory.js';
 import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes.js';
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
-import { ICONS } from '../../magic/Spellbook.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -46,14 +45,6 @@ function el(tag, className, attrs = {}) {
     return node;
 }
 
-const ROMAN = ['', 'I', 'II', 'III'];
-let spellIndex = null;
-/** Which row of the spellbook's sheet is which spell (fetched once). */
-function spellIcons() {
-    spellIndex ||= fetch(ICONS.json).then(r => r.json()).catch(() => null);
-    return spellIndex;
-}
-
 const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -72,9 +63,8 @@ export class GearScreen {
      * @param {number} opts.gameWidth
      * @param {() => void} opts.onClose
      */
-    constructor({ inventory, spellbook, hero, request, gameWidth, onClose }) {
+    constructor({ inventory, hero, request, gameWidth, onClose }) {
         this.inventory = inventory;
-        this.spellbook = spellbook;
         this.hero = hero;
         this.request = request;
         this.gameWidth = gameWidth;
@@ -89,7 +79,6 @@ export class GearScreen {
         this._fitTimer = setInterval(this._fit, 500);
         this.fitToCanvas();
         inventory.onChange(() => this.visible && this.render());
-        spellbook?.onChange(() => this.visible && this.render());
     }
 
     get visible() {
@@ -393,96 +382,6 @@ export class GearScreen {
             }
             panel.append(pick);
         }
-        if (this.spellbook?.list.length) this._renderSpells(panel);
-    }
-
-    /** A spell's icon at a rank, cut from the spellbook's sheet (greyed while it's still to learn). */
-    _spellIcon(id, rank, locked = false) {
-        const box = el('span', `gear-spell-icon${locked ? ' is-locked' : ''}`, { 'data-spell': id, 'data-rank': rank });
-        spellIcons().then(index => {
-            const row = index?.rows[id];
-            if (row === undefined) return;
-            box.style.backgroundImage = `url(${ICONS.url})`;
-            box.style.setProperty('--col', rank - 1);
-            box.style.setProperty('--row', row);
-            box.style.setProperty('--rows', Object.keys(index.rows).length);
-        });
-        return box;
-    }
-
-    /**
-     * Spells (a fighter's or thief's battle skills): the one ready to cast, and
-     * the whole book, six spells in three ranks, what's still to learn greyed
-     * with the level it waits for. Tap one to read it, and to have it ready.
-     */
-    _renderSpells(panel) {
-        const book = this.spellbook;
-        const magic = (this.inventory.stats?.mp?.max || 0) > 0;
-        const title = magic ? 'Spells' : 'Battle skills';
-        const ready = book.readied;
-        const slot = el('div', 'gear-slot gear-slot--spell', { 'data-slot': 'spell' });
-        const b = el('button', 'gear-slot-pick', { type: 'button' });
-        b.append(ready ? this._spellIcon(ready.spell.id, ready.rank) : el('span', 'gear-icon is-empty'));
-        const words = el('span', 'gear-slot-words');
-        words.append(el('span', 'gear-slot-name', { text: magic ? 'Spell' : 'Skill' }),
-            el('span', 'gear-slot-item', { text: ready ? `${ready.spell.name} ${ROMAN[ready.rank]}` : '—' }));
-        b.append(words);
-        b.addEventListener('click', () => {
-            audio.play('page', { volume: 0.6 });
-            this.spellPick = ready?.spell.id || null;
-            this.render();
-        });
-        slot.append(b);
-        panel.append(el('div', 'gear-section', { text: title }), slot);
-
-        const grid = el('div', 'gear-book');
-        for (const spell of book.list) {
-            const known = book.rankOf(spell.id);
-            const row = el('button', `gear-book-row${this.spellPick === spell.id ? ' is-current' : ''}${book.ready === spell.id ? ' is-ready' : ''}`,
-                { type: 'button', 'data-spell': spell.id });
-            const icons = el('span', 'gear-book-icons');
-            spell.ranks.forEach((r, i) => {
-                const cell = el('span', 'gear-book-rank');
-                cell.append(this._spellIcon(spell.id, i + 1, i + 1 > known));
-                if (i + 1 > known) cell.append(el('span', 'gear-book-level', { text: `Lv ${r.level}` }));
-                icons.append(cell);
-            });
-            row.append(icons, el('span', `gear-book-name${known ? '' : ' is-locked'}`, { text: spell.name }));
-            row.addEventListener('click', () => {
-                audio.play('page', { volume: 0.6 });
-                this.spellPick = this.spellPick === spell.id ? null : spell.id;
-                this.render();
-            });
-            grid.append(row);
-            if (this.spellPick === spell.id) grid.append(this._spellDetail(spell));
-        }
-        panel.append(grid);
-    }
-
-    /** What a spell does at each rank, what it costs, and whether it's yours yet. */
-    _spellDetail(spell) {
-        const book = this.spellbook;
-        const known = book.rankOf(spell.id);
-        const card = el('div', 'gear-book-detail');
-        spell.ranks.forEach((r, i) => {
-            const line = el('div', `gear-book-line${i + 1 > known ? ' is-locked' : ''}`);
-            const cost = [r.mp ? `${r.mp} MP` : null, r.wait ? `then ${r.wait} turns' rest` : null].filter(Boolean).join(', ');
-            line.append(el('span', 'gear-book-rankname', { text: ROMAN[i + 1] }),
-                el('span', 'gear-book-text', { text: `${r.text}${cost ? ` (${cost})` : ''}${i + 1 > known ? ` Learned at level ${r.level}.` : ''}` }));
-            card.append(line);
-        });
-        if (known && !spell.kind) card.append(el('div', 'gear-detail-note', { text: 'Not yet castable in a fight.' }));
-        if (known && book.ready !== spell.id) {
-            const go = el('button', 'gear-btn gear-btn--go', { type: 'button', text: 'Have it ready' });
-            go.addEventListener('click', () => {
-                audio.play('equip_mage', { volume: 0.6 });
-                book.readySpell(spell.id);
-            });
-            card.append(go);
-        } else if (known) {
-            card.append(el('div', 'gear-detail-note', { text: 'Ready: the blue button casts it in a fight.' }));
-        }
-        return card;
     }
 
     /** The hero, large, on a little lit stage: turn them round, tap them to see their weapon swing. */

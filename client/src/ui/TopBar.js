@@ -72,6 +72,19 @@ export class TopBar {
         s.events.once('shutdown', () => this._offSoundMode());
     }
 
+    /** Hit points and magic points, as bars. */
+    setBars(hp, hpMax, mp, mpMax) {
+        const key = `${hp}/${hpMax}/${mp}/${mpMax}`;
+        if (key === this._bars) return;
+        this._bars = key;
+        const draw = (bar, colour, x, w, k) => {
+            bar.clear();
+            if (k > 0) bar.fillStyle(colour, 1).fillRoundedRect(x, 12, Math.max(4, Math.round(w * Math.min(1, k))), 8, 2);
+        };
+        draw(this.hpBar, 0xff3333, 20, 100, hpMax ? hp / hpMax : 0);
+        draw(this.mpBar, 0x3366ff, 130, 80, mpMax ? mp / mpMax : 0);
+    }
+
     setConnected(connected) {
         this.connectionOrb.setFillStyle(connected ? 0x00ff00 : 0xff0000);
     }

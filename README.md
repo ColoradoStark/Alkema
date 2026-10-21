@@ -112,9 +112,10 @@ Fights are fought Ultima III style, on a battle map of their own:
 
 Every class has six spells (a fighter's and a thief's are battle skills), three ranks each, with painted icons:
 
-- Everyone starts with the first: a mage's **Fireball**, a cleric's **Heal**, a ranger's **Flaming Arrow**, a fighter's **Mighty Swing** and a thief's **Shadowstrike** (gone in a swirl of shadow, and back beside the nearest foe, striking)
-- The **Equip** page has a spell slot and the whole spellbook: what you know in colour, everything still to learn greyed with the level it comes at; tap a spell to read each rank and to have it ready
-- In a fight, the blue button casts the one you have ready, as your turn, with The Battle for Wesnoth's spell effects. Spells cost magic points (full at the start of each fight); battle skills rest a few turns between uses
+- Everyone starts with the first: a mage's **Fireball**, a cleric's **Heal**, a ranger's **Flaming Arrow**, a fighter's **Mighty Swing** and a thief's **Shadowstrike** (gone in a swirl of shadow, and back beside the nearest foe, striking). Skills strike two and a half to three and a half times as hard as a plain blow
+- Mages and clerics also start with a bane, after Ultima III's Repond and Excuun: a mage's **Orcbane** sends fire down on every orc on the field, one after another, and a cleric's **Turn Undead** does the same to the undead; at their third rank most of those they touch simply fall
+- In a fight, the blue button asks which to cast: your class's six, each at the highest rank you know, with what it costs; those still to learn are greyed with the level they come at. It's cast as your turn, with The Battle for Wesnoth's spell effects
+- Spells spend your magic (the blue bar at the top), which comes back slowly out of a fight; battle skills rest a few turns between uses
 
 ## Multiplayer
 

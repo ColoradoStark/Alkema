@@ -44,6 +44,8 @@ export const PARTY = [];
 const groundKey = country => `battle-${country}`;
 const FX = 'spell-fx';           // the spells' effects: Wesnoth's projectiles and halos (tools/spellgen.py)
 const FX_ANIMS = 'spell-fx-anims';   // the same file, for its list of animations (the atlas keeps only its frames)
+const ICONS = 'spell-icons';            // the cast menu's icons (tools/spellgen.py)
+const ICONS_INDEX = 'spell-icons-index';
 const FX_DEPTH = 32;             // over the night's dark: magic gives its own light
 const BOLT_SPEED = 300;          // px a second, a fireball or a burning arrow
 
@@ -60,7 +62,9 @@ function fxAnims(scene) {
 function forgetFx(scene) {
     for (const name of Object.keys(scene.cache.json.get(FX_ANIMS)?.anims || {})) scene.anims.remove(`${FX}-${name}`);
     if (scene.textures.exists(FX)) scene.textures.remove(FX);
+    if (scene.textures.exists(ICONS)) scene.textures.remove(ICONS);
     scene.cache.json.remove(FX_ANIMS);
+    scene.cache.json.remove(ICONS_INDEX);
 }
 
 /** The country you're in at a world point, for the battle map: snow, forest or grass. */
@@ -73,7 +77,9 @@ export function battleCountry(overworld, x, y) {
 export function loadBattleMap(scene, country) {
     const files = [{ type: 'image', key: groundKey(country), url: `/battle/${scene.cache.json.get('battle').maps[country].ground}` },
         { type: 'atlas', key: FX, url: ['/spells/fx.png', '/spells/fx.json'] },
-        { type: 'json', key: FX_ANIMS, url: '/spells/fx.json' }];
+        { type: 'json', key: FX_ANIMS, url: '/spells/fx.json' },
+        { type: 'spritesheet', key: ICONS, url: ['/spells/icons.png', { frameWidth: 64, frameHeight: 64 }] },
+        { type: 'json', key: ICONS_INDEX, url: '/spells/icons.json' }];
     for (const town of new Set(PARTY.map(p => p.town))) files.push({ type: 'json', key: `folk-${town}`, url: `/folk/${town}.json` });
     const wanted = files.filter(f => f.type === 'json' ? !scene.cache.json.exists(f.key) : !scene.textures.exists(f.key));
     if (!wanted.length) return Promise.resolve();
@@ -91,7 +97,7 @@ export function loadBattleMap(scene, country) {
                 scene.load.off('loaderror', failed);
                 resolve();
             });
-            if (f.type === 'atlas') scene.load.atlas(f.key, ...f.url);
+            if (f.type === 'atlas' || f.type === 'spritesheet') scene.load[f.type](f.key, ...f.url);
             else scene.load[f.type](f.key, f.url);
         }
         scene.load.start();
@@ -147,11 +153,10 @@ export class Battle {
             this.party.push({ who, name: (folk.character.name || folk.role).split(' ')[0], cell, attack: COMPANION_ATTACK });
         });
         this.turn = 0;
-        // Your magic for this fight (full as it starts), and how long each spell or skill must rest
-        const stats = scene.scene.get('UIScene')?.inventory?.stats;
-        this.party[0].mp = stats?.mp?.now ?? 0;
-        this.party[0].maxMp = stats?.mp?.max ?? 0;
-        this.party[0].spellPower = stats?.spell ?? 0;
+        // Your spells' power, your magic (the hero's own pool: UIScene.mp), and how long each spell or skill must rest
+        const ui = scene.scene.get('UIScene');
+        this.party[0].spellPower = ui?.inventory?.stats?.spell ?? 0;
+        this.party[0].magic = ui?.mp || { now: 0, max: 0 };
         for (const m of this.party) m.rest = {};
         fxAnims(scene);
 
@@ -450,27 +455,38 @@ export class Battle {
 
     // ------------------------------------------------ spells and skills
 
-    /**
-     * The blue button: whoever's turn it is casts the spell (or uses the
-     * skill) they have ready (UIScene.spellbook), as their turn. It costs
-     * magic points, or must rest some turns before it's used again.
-     */
-    cast() {
-        if (this.over || this.busy || this.phase === 'foes') return false;
+    /** Whoever's turn it is can do something now (not moving, not the foes' turn, not over). */
+    get canAct() {
+        return !this.over && !this.busy && this.phase !== 'foes';
+    }
+
+    /** Why the one whose turn it is can't cast a spell now ("needs 5 MP", "resting 2", "no orcs here"), or null. */
+    whyNot(spell, at) {
         const m = this.active;
-        const ready = m.who === this.scene.localPlayer ? this.scene.scene.get('UIScene')?.spellbook?.readied : null;
-        if (!ready) return this.say('No spell ready.'), false;
-        const { spell, at } = ready;
-        const doIt = SPELLS[spell.kind];
-        if (!doIt) return this.say(`${spell.name} can't be used in a fight yet.`), false;
-        if (m.rest[spell.id]) return this.say(`${spell.name} rests ${m.rest[spell.id]} more turn${m.rest[spell.id] > 1 ? 's' : ''}.`), false;
-        if ((at.mp || 0) > (m.mp || 0)) return this.say(`Not enough magic for ${spell.name}.`), false;
-        const done = doIt.call(this, m, spell, at);
-        if (!done) return false;
-        m.mp -= at.mp || 0;
+        const kind = SPELLS[spell.kind];
+        if (!kind) return 'Not castable yet';
+        if (m.rest[spell.id]) return `Resting ${m.rest[spell.id]} more turn${m.rest[spell.id] > 1 ? 's' : ''}`;
+        if ((at.mp || 0) > (m.magic?.now || 0)) return `Needs ${at.mp} MP`;
+        return kind.can?.call(this, m, spell, at) || null;
+    }
+
+    /**
+     * Cast a spell (or use a skill), at the highest rank they know it, as the
+     * turn of whoever's turn it is: it costs magic points, or must rest some
+     * turns before it's used again. False if it can't be cast now.
+     */
+    cast(id) {
+        if (!this.canAct) return false;
+        const m = this.active;
+        const book = m.who === this.scene.localPlayer ? this.scene.scene.get('UIScene')?.spellbook : null;
+        const spell = book?.spell(id), at = book?.at(id);
+        if (!spell || !at) return false;
+        const why = this.whyNot(spell, at);
+        if (why) return this.say(`${why}.`), false;
+        m.magic.now -= at.mp || 0;
         if (at.wait) m.rest[spell.id] = at.wait + 1;      // (the round it's used in counts down too)
         this.busy = true;
-        done.then(() => {
+        SPELLS[spell.kind].run.call(this, m, spell, at).then(() => {
             this.busy = false;
             if (!this.over) this._next();
         });
@@ -512,8 +528,32 @@ export class Battle {
         m.who.sprite.setDirection(Math.abs(dc) > Math.abs(dr) ? DIRS[`${Math.sign(dc)},0`] : DIRS[`0,${Math.sign(dr)}`]);
     }
 
+    /** The foes in a row or column with a member. */
+    _inLine(m) {
+        const [hc, hr] = m.cell;
+        return this.standing.filter(f => f.cell[0] === hc || f.cell[1] === hr);
+    }
+
+    /** Where a shadowstrike comes out: beside the nearest foe, nearest the striker, where no one stands. */
+    _shadowSpot(m) {
+        const f = this._nearest(m);
+        if (!f) return null;
+        const spots = [[0, 1], [-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]]
+            .map(([dc, dr]) => [f.cell[0] + dc, f.cell[1] + dr])
+            .filter(c => c[0] >= 0 && c[1] >= 0 && c[0] < this.cols && c[1] < this.rows && (!this._blocked(c) || (c[0] === m.cell[0] && c[1] === m.cell[1])));
+        spots.sort((a, b) => Math.hypot(a[0] - m.cell[0], a[1] - m.cell[1]) - Math.hypot(b[0] - m.cell[0], b[1] - m.cell[1]));
+        return spots[0] ? { f, to: spots[0] } : null;
+    }
+
     _mpWords(m) {
-        return m.maxMp ? ` (MP ${m.mp}/${m.maxMp})` : '';
+        return m.magic?.max ? ` (MP ${m.magic.now}/${m.magic.max})` : '';
+    }
+
+    /** A spell's blow: its power with the caster's, or their blow times its `mult`, with little to chance. */
+    _spellBlow(m, at) {
+        if (at.power) return at.power + (m.spellPower || 0);
+        const attack = m.attack ?? (this.scene.scene.get('UIScene')?.inventory?.stats?.attack || 5);
+        return Math.max(1, Math.round(attack * at.mult * (0.9 + Math.random() * 0.2)));
     }
 
     end(result) {
@@ -587,73 +627,69 @@ export class Battle {
  */
 const SPELLS = {
     /** A ball of fire at the nearest foe, wherever it is. */
-    bolt(m, spell, at) {
-        const f = this._nearest(m);
-        if (!f) return null;
-        this._face(m, f);
-        m.who.playCast();
-        audio.play('cast');
-        const me = m.who.sprite;
-        return (async () => {
+    bolt: {
+        can() { return this.standing.length ? null : 'No foe to aim at'; },
+        async run(m, spell, at) {
+            const f = this._nearest(m);
+            this._face(m, f);
+            m.who.playCast();
+            audio.play('cast');
+            const me = m.who.sprite;
             await this._wait(250);
             audio.play('zap', { volume: 0.7 });
             await this._bolt('fireball', { x: me.x, y: me.y - 8 }, f);
             this._fx('fireball-impact', f.foe.x, f.foe.y, { origin: 0.75 });
             audio.play('hit', { volume: 0.8 });
-            this._hit(f, at.power + (m.spellPower || 0), `${spell.name}!`, '#ffb050');
+            this._hit(f, this._spellBlow(m, at), `${spell.name}!`, '#ffb050');
             this.say(`${this.log.text}${this._mpWords(m)}`);
             await this._wait(500);
-        })();
+        },
     },
 
     /** Mend your wounds (the band can't wound you yet: you'll see it once they can). */
-    heal(m, spell, at) {
-        m.who.playCast();
-        audio.play('holy');
-        const me = m.who.sprite;
-        return (async () => {
+    heal: {
+        async run(m, spell, at) {
+            m.who.playCast();
+            audio.play('holy');
+            const me = m.who.sprite;
             await this._fx('healing', me.x, me.y);
-            const amount = at.power + (m.spellPower || 0);
-            this.scene.effects.floatText(me.x, me.y - 30, `+${amount}`, '#7ee07e', 20);
+            this.scene.effects.floatText(me.x, me.y - 30, `+${this._spellBlow(m, at)}`, '#7ee07e', 20);
             this.say(`${spell.name}: ${m.name} is mended.${this._mpWords(m)}`);
             await this._wait(250);
-        })();
+        },
     },
 
     /** A burning shot down a row or column: the first foe in the line takes it. */
-    shot(m, spell, at) {
-        const [hc, hr] = m.cell;
-        const line = this.standing.filter(f => f.cell[0] === hc || f.cell[1] === hr);
-        const f = this._nearest(m, line);
-        if (!f) return this.say('No foe in line with you.'), null;
-        this._face(m, f);
-        const me0 = m.who.sprite;
-        if (getRangedAnimation(m.who.characterData)) {
-            m.who.shotRange = Math.max(Math.abs(f.foe.x - me0.x), Math.abs(f.foe.y - f.foe.tall / 2 - me0.y));   // their own arrow stops in it too
-            m.who.playAttack();
-            m.who.shotRange = undefined;
-        } else {
-            m.who.playCast();
-        }
-        audio.play('bow');
-        const me = m.who.sprite;
-        return (async () => {
+    shot: {
+        can(m) { return this._inLine(m).length ? null : 'No foe in line with you'; },
+        async run(m, spell, at) {
+            const f = this._nearest(m, this._inLine(m));
+            this._face(m, f);
+            const me = m.who.sprite;
+            if (getRangedAnimation(m.who.characterData)) {
+                m.who.shotRange = Math.max(Math.abs(f.foe.x - me.x), Math.abs(f.foe.y - f.foe.tall / 2 - me.y));   // their own arrow stops in it too
+                m.who.playAttack();
+                m.who.shotRange = undefined;
+            } else {
+                m.who.playCast();
+            }
+            audio.play('bow');
             await this._wait(SHOT_DELAY_MS);
             await this._bolt('fire-missile', { x: me.x, y: me.y - 4 }, f);
             this._fx('fire-burst', f.foe.x, f.foe.y - f.foe.tall / 2);
-            this._hit(f, this._blow(m, at.mult), `${spell.name}!`, '#ffb050');
+            this._hit(f, this._spellBlow(m, at), `${spell.name}!`, '#ffb050');
             this.say(`${this.log.text}${this._mpWords(m)}`);
             await this._wait(450);
-        })();
+        },
     },
 
     /** A heavy blow at a foe beside you. */
-    swing(m, spell, at) {
-        const f = this._nearest(m, this.standing.filter(f => this._beside(m.cell, f.cell)));
-        if (!f) return this.say('No foe beside you.'), null;
-        this._face(m, f);
-        const me = m.who.sprite;
-        return (async () => {
+    swing: {
+        can(m) { return this.standing.some(f => this._beside(m.cell, f.cell)) ? null : 'No foe beside you'; },
+        async run(m, spell, at) {
+            const f = this._nearest(m, this.standing.filter(f => this._beside(m.cell, f.cell)));
+            this._face(m, f);
+            const me = m.who.sprite;
             audio.play('summon', { volume: 0.6 });
             await this._fx('flare', me.x, me.y - 6, { scale: 1.3 });
             m.who.playAttack(m.who === this.scene.localPlayer ? () => this.scene.emitAttack() : undefined);
@@ -661,24 +697,17 @@ const SPELLS = {
             audio.play('hit_blade');
             this._fx('fire-burst', f.foe.x, f.foe.y - f.foe.tall / 2);
             this.scene.effects.impact('metal', f.foe.x, f.foe.y - f.foe.tall / 2, f.foe.y);
-            this._hit(f, this._blow(m, at.mult), `${spell.name}!`);
+            this._hit(f, this._spellBlow(m, at), `${spell.name}!`);
             await this._wait(450);
-        })();
+        },
     },
 
     /** Gone in a swirl of shadow, and there again beside the nearest foe, striking: it never misses. */
-    shadowstrike(m, spell, at) {
-        const f = this._nearest(m);
-        if (!f) return null;
-        // Where to come out: beside it, nearest you, where no one stands
-        const spots = [[0, 1], [-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]]
-            .map(([dc, dr]) => [f.cell[0] + dc, f.cell[1] + dr])
-            .filter(c => c[0] >= 0 && c[1] >= 0 && c[0] < this.cols && c[1] < this.rows && (!this._blocked(c) || (c[0] === m.cell[0] && c[1] === m.cell[1])));
-        spots.sort((a, b) => Math.hypot(a[0] - m.cell[0], a[1] - m.cell[1]) - Math.hypot(b[0] - m.cell[0], b[1] - m.cell[1]));
-        const to = spots[0];
-        if (!to) return this.say('No way through to them.'), null;
-        const me = m.who.sprite;
-        return (async () => {
+    shadowstrike: {
+        can(m) { return this._shadowSpot(m) ? null : 'No way through to them'; },
+        async run(m, spell, at) {
+            const { f, to } = this._shadowSpot(m);
+            const me = m.who.sprite;
             audio.play('poof');
             this._fx('dark-magic', me.x, me.y);
             await this._wait(180);
@@ -694,8 +723,38 @@ const SPELLS = {
             m.who.playAttack(m.who === this.scene.localPlayer ? () => this.scene.emitAttack() : undefined);
             await this._wait(240);
             audio.play('hit_blade');
-            this._hit(f, this._blow(m, at.mult), `${spell.name}!`, '#c890ff');
+            this._hit(f, this._spellBlow(m, at), `${spell.name}!`, '#c890ff');
             await this._wait(450);
-        })();
+        },
+    },
+
+    /**
+     * Every foe of a race on the field (Ultima III's Repond for orcs, Excuun
+     * for the undead), struck one after another; at the top rank most of
+     * them simply fall.
+     */
+    bane: {
+        can(m, spell) {
+            return this.standing.some(f => spell.races.includes(f.foe.spec.race)) ? null : `No ${spell.races.join(' or ')} here`;
+        },
+        async run(m, spell, at) {
+            const marked = this.standing.filter(f => spell.races.includes(f.foe.spec.race))
+                .sort((a, b) => a.cell[1] - b.cell[1] || a.cell[0] - b.cell[0]);
+            m.who.playCast();
+            audio.play('cast');
+            this.say(`${spell.name}!${this._mpWords(m)}`);
+            const fx = spell.races.includes('undead') ? 'healing' : 'flame-burst';
+            await this._wait(300);
+            for (const f of marked) {
+                if (this.over) return;
+                this._fx(fx, f.foe.x, f.foe.y, { origin: fx === 'flame-burst' ? 0.9 : 0.5 });
+                audio.play(fx === 'flame-burst' ? 'zap' : 'holy', { volume: 0.6 });
+                await this._wait(220);
+                const slain = at.slay && Math.random() < at.slay;
+                this._hit(f, slain ? f.hp : this._spellBlow(m, at), `${spell.name}!`, '#ffb050');
+                await this._wait(260);
+            }
+            await this._wait(300);
+        },
     },
 };

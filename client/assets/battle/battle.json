@@ -1244,6 +1244,7 @@
  "foes": {
   "grunt": {
    "name": "Orcish Grunt",
+   "race": "orc",
    "hp": 38,
    "frameWidth": 90,
    "frameHeight": 90,
