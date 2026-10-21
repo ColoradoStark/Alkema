@@ -8,6 +8,7 @@
 // The deeper into a forest you go, the closer the dark comes in around you,
 // until you can see only a few steps.
 
+import Phaser from 'phaser';
 import { wrapDelta } from './Overworld.js';
 
 const CHUNK = 512;                 // world px per bucket of trees
@@ -15,6 +16,7 @@ const MARGIN = 96;                 // trees this far off screen still get sprite
 const GLOOM_DEPTH = 28;            // over the map and its labels, under effects
 const GLOOM_TEX = 512;
 const GLOOM_CLEAR = 0.25;          // fraction of the texture's half-width that stays clear
+const GLOOM_DARK = 0.45;           // ...and where it's quite dark
 
 /** Draw order for something standing at world y: heroes and trees sort around 20. */
 export function sortDepth(scene, y) {
@@ -27,19 +29,35 @@ function decodeU16(b64) {
     return new Uint16Array(bytes.buffer);
 }
 
+/** Rising from 0 to 1 and flat at both ends (no kink to show as a ring). */
+function smoother(t) {
+    t = Math.min(1, Math.max(0, t));
+    return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
 function gloomTexture(scene) {
     if (scene.textures.exists('forest-gloom')) return;
     const tex = scene.textures.createCanvas('forest-gloom', GLOOM_TEX, GLOOM_TEX);
     const ctx = tex.getContext();
+    const img = ctx.createImageData(GLOOM_TEX, GLOOM_TEX);
     const h = GLOOM_TEX / 2;
-    const g = ctx.createRadialGradient(h, h, 0, h, h, h);
-    g.addColorStop(0, 'rgba(8, 16, 12, 0.22)');           // even where you stand, the light is dim
-    g.addColorStop(GLOOM_CLEAR, 'rgba(8, 16, 12, 0.3)');
-    g.addColorStop(0.33, 'rgba(8, 16, 12, 0.75)');
-    g.addColorStop(0.42, 'rgba(8, 16, 12, 1)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, GLOOM_TEX, GLOOM_TEX);
+    for (let y = 0; y < GLOOM_TEX; y++) {
+        for (let x = 0; x < GLOOM_TEX; x++) {
+            const r = Math.hypot(x + 0.5 - h, y + 0.5 - h) / h;
+            // Even where you stand the light is dim; out past the clear circle it closes to black
+            const a = r < GLOOM_CLEAR ? 0.22 + 0.08 * smoother(r / GLOOM_CLEAR)
+                : 0.3 + 0.7 * smoother((r - GLOOM_CLEAR) / (GLOOM_DARK - GLOOM_CLEAR));
+            const i = (y * GLOOM_TEX + x) * 4;
+            img.data[i] = 8;
+            img.data[i + 1] = 16;
+            img.data[i + 2] = 12;
+            img.data[i + 3] = Math.round(255 * a);
+        }
+    }
+    ctx.putImageData(img, 0, 0);
     tex.refresh();
+    // Scaled up many times over: smoothed, though the game is pixel art (blocky, its rings would show)
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
 }
 
 export class Forest {

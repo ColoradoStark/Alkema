@@ -30,6 +30,8 @@ const GLOW_TEX = 'fx-light';   // a soft round light, white: tinted and scaled f
 
 // Ambient light by the hour, outdoors and in: [hour, colour], blended between
 const SKY = [[0, 0x262e58], [4.5, 0x262e58], [6, 0x9c7c90], [7.5, 0xffffff], [17.5, 0xffffff], [19, 0xe8a878], [20.5, 0x262e58], [24, 0x262e58]];
+// A battle is fought by moonlight, never darker than this (Ultima III's night fights were as clear as day's)
+const MOONLIT = 0xa8b8e0;
 const INDOORS = [[0, 0x4a4262], [5.5, 0x4a4262], [7.5, 0xd8d0c8], [18, 0xd8d0c8], [20.5, 0x4a4262], [24, 0x4a4262]];
 
 /**
@@ -134,6 +136,7 @@ export class DayNight {
         this.scene = scene;
         this.hourOverride = null;     // tests: stop the clock at an hour
         this.indoors = false;
+        this.moonlit = false;         // in a battle: night no darker than moonlight
         this.lamps = [];
         this.dark = 0;
         this.ambient = 0xffffff;
@@ -215,6 +218,10 @@ export class DayNight {
     update(delta, feet = null) {
         const hour = this.hour;
         this.ambient = blend(this.indoors ? INDOORS : SKY, hour);
+        if (this.moonlit) {
+            const lift = s => Math.max((this.ambient >> s) & 255, (MOONLIT >> s) & 255) << s;
+            this.ambient = lift(16) | lift(8) | lift(0);
+        }
         this.dark = darkness(blend(SKY, hour));
         const dark = this.indoors ? Math.max(this.dark, 0.35) : this.dark;
         const t = this.scene.time.now / 1000;

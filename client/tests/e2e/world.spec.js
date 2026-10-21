@@ -183,6 +183,38 @@ test.describe('Living world', () => {
         expect((await at(...spots.near)).label).toBe(1);
     });
 
+    test("the woods' dark has no edge: however deep you are, it reaches past every corner of the view, and fades smoothly", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const report = [];
+        for (let depth = 2; depth <= 9; depth++) {
+            report.push(await page.evaluate(async (depth) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                const { forest } = gs.world;
+                const i = forest.woods.indexOf(depth);
+                const me = gs.localPlayer.sprite;
+                me.setPosition((i % forest.n) * 32 + 16, Math.floor(i / forest.n) * 32 + 16 - 23);
+                me.body.reset(me.x, me.y);
+                await new Promise(r => setTimeout(r, 2500));
+                const g = forest.gloom, cam = gs.cameras.main;
+                const left = g.x - g.displayWidth / 2, top = g.y - g.displayHeight / 2;
+                // Out from the middle, how dark it gets: it must never turn sharply (a kink shows as a ring)
+                const canvas = g.texture.getSourceImage(), half = canvas.width / 2;
+                const row = canvas.getContext('2d').getImageData(half, half, half, 1).data;
+                const alpha = Array.from({ length: half }, (_, i) => row[i * 4 + 3] / 255);
+                let kink = 0;
+                for (let i = 1; i < half - 1; i++) kink = Math.max(kink, Math.abs(alpha[i + 1] - 2 * alpha[i] + alpha[i - 1]));
+                return {
+                    depth, visible: g.visible,
+                    // camera space: the view is 0..width, 0..height
+                    covers: left <= 0 && top <= 0 && left + g.displayWidth >= cam.width && top + g.displayHeight >= cam.height,
+                    smooth: g.texture.source[0].scaleMode === Phaser.Textures.FilterMode.LINEAR && kink < 0.005,
+                };
+            }, depth));
+        }
+        for (const r of report) expect.soft(r, `${r.depth} deep`).toEqual({ depth: r.depth, visible: true, covers: true, smooth: true });
+    });
+
     test('walking up to a place asks whether to enter; No closes it', async ({ page }) => {
         await enterWorld(page);
         // New heroes start just below Riverhold: walk up into it

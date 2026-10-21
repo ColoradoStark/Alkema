@@ -180,6 +180,29 @@ test.describe('Battle', () => {
         await expect.poll(async () => (await state(page)).chests.length, { timeout: 10000 }).toBe(0);
     });
 
+    test('a battle at midnight is moonlit: blue, but bright enough to see the whole band', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 0; });
+        const light = () => page.evaluate(() => {
+            const a = window.__PHASER_GAME.scene.getScene('GameScene').dayNight.ambient;
+            const r = (a >> 16) & 255, g = (a >> 8) & 255, b = a & 255;
+            return { lum: (0.3 * r + 0.59 * g + 0.11 * b) / 255, blue: b > r };
+        });
+        const world = await light();
+        expect(world.lum).toBeLessThan(0.25);              // out in the world, midnight is dark
+        await walkInto(page, 4);
+        await page.waitForTimeout(300);
+        const battle = await light();
+        expect(battle.lum).toBeGreaterThan(0.55);           // in the fight you can see them
+        expect(battle.blue).toBe(true);                     // and it's still night
+        // ...and back out, the night is as dark as it was
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
+        await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
+        await page.waitForTimeout(300);
+        expect((await light()).lum).toBeLessThan(0.25);
+    });
+
     test('a band of eight, each in its own place with its own HP bar; walk off the map and you flee, and they wait for you to step away', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);

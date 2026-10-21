@@ -109,6 +109,7 @@ export class GameScene extends Scene {
         this.world?.update(delta, feet);
         if (this.dayNight) {
             this.dayNight.indoors = !!this.town?.indoors;
+            this.dayNight.moonlit = !!this.battle;
             this.dayNight.update(delta, feet);
         }
         const snowing = this.battle ? this.battle.snowing
