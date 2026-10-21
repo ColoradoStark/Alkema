@@ -8,8 +8,8 @@
 // brighter than the art's own colours right beside a fire), so it looks the
 // same as lighting every sprite per pixel. At dusk windows,
 // torches and the towns on the map light up; fires and lanterns burn all day,
-// but you only see their light once it's dark. A soft glow (a Phaser
-// PointLight) hangs in the air round each lamp at night.
+// but you only see their light once it's dark. A soft glow hangs in the air
+// round each lamp at night.
 //
 // The map is drawn at a quarter of the screen's resolution and smoothed when
 // it's laid over (light has no hard edges), so it costs a phone very little;
@@ -26,7 +26,8 @@ export const DAY_MS = 24 * 60 * 1000;
 
 const SCALE = 4;               // the light map's pixels are this many screen pixels across
 const DEPTH = 26.5;            // over the world and the trees' crowns; under the place names, glows, snow and effects
-const GLOW_TEX = 'fx-light';   // a soft round light, white: tinted and scaled for each lamp
+const GLOW_TEX = 'fx-light';
+const GLOW_AIR = 0.55;         // how bright the glow in the air round a lamp is, at midnight   // a soft round light, white: tinted and scaled for each lamp
 
 // Ambient light by the hour, outdoors and in: [hour, colour], blended between
 const SKY = [[0, 0x262e58], [4.5, 0x262e58], [6, 0x9c7c90], [7.5, 0xffffff], [17.5, 0xffffff], [19, 0xe8a878], [20.5, 0x262e58], [24, 0x262e58]];
@@ -105,15 +106,43 @@ function glowTexture(scene, radius) {
             const dist2 = dx * dx + dy * dy + 0.01;
             const diffuse = 0.1 / Math.sqrt(dist2);
             const att = Math.max(0, Math.min(1, 1 - dist2 / (rad * rad)));
-            const v = Math.round(255 * diffuse * att);
+            // White, the light in its alpha: added, it's the same as grey on black, but its edges are
+            // see-through, so no phone can show its square (as black corners would, drawn any other way)
             const i = (y * GLOW_SIZE + x) * 4;
-            img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
-            img.data[i + 3] = 255;
+            img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+            img.data[i + 3] = Math.round(255 * Math.min(1, diffuse * att));
         }
     }
     ctx.putImageData(img, 0, 0);
     tex.refresh();
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     return key;
+}
+
+/**
+ * The glow hanging in the air round a lamp at night: a soft round light, white,
+ * fading to nothing well before its edge (tinted to the lamp's colour and added).
+ * (Phaser's PointLight did this, but drew as a hard square on phones.)
+ */
+const AIR_GLOW = `${GLOW_TEX}-air`;
+function airGlowTexture(scene) {
+    if (scene.textures.exists(AIR_GLOW)) return AIR_GLOW;
+    const tex = scene.textures.createCanvas(AIR_GLOW, GLOW_SIZE, GLOW_SIZE);
+    const ctx = tex.getContext();
+    const img = ctx.createImageData(GLOW_SIZE, GLOW_SIZE);
+    const h = GLOW_SIZE / 2;
+    for (let y = 0; y < GLOW_SIZE; y++) {
+        for (let x = 0; x < GLOW_SIZE; x++) {
+            const r = Math.min(1, Math.hypot(x + 0.5 - h, y + 0.5 - h) / (h - 1));
+            const i = (y * GLOW_SIZE + x) * 4;
+            img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+            img.data[i + 3] = Math.round(255 * (1 - r) ** 2);
+        }
+    }
+    ctx.putImageData(img, 0, 0);
+    tex.refresh();
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    return AIR_GLOW;
 }
 
 /**
@@ -166,7 +195,8 @@ export class DayNight {
         const def = LAMPS[kind];
         const lamp = { kind, def, x, y: y - (def.lift || 0), phase: Math.random() * 100, off: false, strength: 0, art: null, glow: null };
         if (def.art) lamp.art = this._fire(def.art, x, y, kind);
-        lamp.glow = this.scene.add.pointlight(x, lamp.y, def.colour, def.radius * 0.4, 0, 0.08).setDepth(27).setVisible(false);
+        lamp.glow = this.scene.add.image(x, lamp.y, airGlowTexture(this.scene)).setTint(def.colour)
+            .setScale(def.radius * 0.8 / GLOW_SIZE).setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setVisible(false);
         this.lamps.push(lamp);
         return lamp;
     }
@@ -235,7 +265,7 @@ export class DayNight {
             const flick = 1 + def.flicker * (Math.sin(t * 7.3 + lamp.phase) * 0.6 + Math.sin(t * 13.1 + lamp.phase * 2) * 0.4);
             lamp.strength = def.strength * on * flick;
             if (lamp.glow) {
-                lamp.glow.intensity = 0.12 * dark * flick;
+                lamp.glow.setAlpha(Math.min(1, GLOW_AIR * dark * flick));
                 lamp.glow.setVisible(!lamp.off && dark > 0.05);
             }
         }

@@ -123,6 +123,79 @@ test.describe('Day and night', () => {
         expect(night).toBeGreaterThan(noon * 1.3);
     });
 
+    test('a light has no edge: past its reach, even in the corners of its glow, the night is just the night, and lights overlapping only add', async ({ page }) => {
+        await enterWorld(page);
+        await hour(page, 0);
+        // The light map round your own light (it follows you at night): just past its reach, in the
+        // corner of the square its glow is drawn in, against well clear of it
+        // ...and a watchman's lantern just beside you (another light, of another size): where their
+        // squares overlap and past their reach, nothing is darker than the night
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight;
+            window.__lantern = dn.addLamp(dn.hero.x - 60, dn.hero.y + 60 + 22, 'carried');
+        });
+        await page.waitForTimeout(300);
+        const sample = () => page.evaluate(() => new Promise(resolve => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight, view = gs.cameras.main.worldView;
+            const SCALE = 4, L = window.__lantern;
+            const at = (x, y) => [Math.round((x - view.x) / SCALE), Math.round((y - view.y) / SCALE)];
+            const h = dn.hero, r = 150, q = 96;
+            const points = {
+                middle: at(h.x, h.y),
+                heroCorner: at(h.x + r * 0.85, h.y - r * 0.85),           // in your light's square, past its reach
+                lanternCorner: at(L.x - q * 0.88, L.y + q * 0.88),        // in the lantern's, past its reach (and yours)
+                clear: at(h.x + 154, h.y + 196),                           // clear of both
+            };
+            const out = {};
+            const keys = Object.keys(points);
+            const next = () => {
+                if (!keys.length) return resolve({ out, onMap: Object.values(points).every(([x, y]) => x >= 0 && y >= 0 && x < dn.map.width && y < dn.map.height) });
+                const k = keys.shift();
+                dn.map.snapshotPixel(...points[k], c => { out[k] = [c.red, c.green, c.blue]; next(); });
+            };
+            next();
+        }));
+        const { out, onMap } = await sample();
+        expect(onMap).toBe(true);
+        const lum = ([r, g, b]) => 0.3 * r + 0.59 * g + 0.11 * b;
+        expect(lum(out.middle)).toBeGreaterThan(lum(out.clear) + 20);                 // your light is there
+        for (const k of ['heroCorner', 'lanternCorner']) {
+            expect(Math.abs(lum(out[k]) - lum(out.clear)), `${k} ${out[k]} vs clear ${out.clear}`).toBeLessThan(3);
+        }
+        // Nowhere darker than the plain night
+        for (const [k, c] of Object.entries(out)) expect(lum(c), `${k} ${c} vs clear ${out.clear}`).toBeGreaterThanOrEqual(lum(out.clear) - 2);
+    });
+
+    test("a lamp's light, and the glow in the air round it, fade to nothing at their edges: no square to show on a phone", async ({ page }) => {
+        await enterWorld(page);
+        await hour(page, 0);
+        const r = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight;
+            const lamp = dn.addLamp(dn.hero.x - 60, dn.hero.y + 60, 'carried');
+            // Phaser's PointLight drew as a hard square on phones (their GPUs work its falloff out too coarsely)
+            const pointLights = gs.children.list.filter(o => o.type === 'PointLight').length;
+            // Every glow picture: see-through at its edges, so even drawn without adding light it leaves no square
+            const edges = [];
+            for (const key of gs.textures.getTextureKeys().filter(k => k.startsWith('fx-light') || k === lamp.glow?.texture?.key)) {
+                const img = gs.textures.get(key).getSourceImage();
+                const c = document.createElement('canvas');
+                c.width = img.width; c.height = img.height;
+                const ctx = c.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const d = ctx.getImageData(0, 0, img.width, img.height).data;
+                let edge = 0;
+                for (let i = 0; i < img.width; i++) {
+                    for (const [x, y] of [[i, 0], [i, img.height - 1], [0, i], [img.width - 1, i]]) edge = Math.max(edge, d[(y * img.width + x) * 4 + 3]);
+                }
+                edges.push([key, edge]);
+            }
+            return { pointLights, glow: lamp.glow?.type, edges };
+        });
+        expect(r.pointLights).toBe(0);
+        expect(r.glow).toBe('Image');
+        for (const [key, edge] of r.edges) expect(edge, key).toBe(0);
+    });
+
     test("windows and torches light up after dark; a hearth's fire burns day and night, and goes with the room", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
@@ -152,7 +225,7 @@ test.describe('Day and night', () => {
         const left = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             return { lamps: gs.dayNight.lamps.length, town: gs.town.lamps.length + gs.overworld.lamps.length,
-                glows: gs.children.list.filter(o => o.type === 'PointLight').length,
+                glows: gs.children.list.filter(o => o.texture?.key === 'fx-light-air').length,
                 fires: gs.children.list.filter(o => /^fx-(flames|torch|campfire)$/.test(o.texture?.key)).length };
         });
         expect(left.lamps).toBe(left.town);
