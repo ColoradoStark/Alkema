@@ -92,26 +92,41 @@ export class Foe {
         }
     }
 
+    /** Its animation of a move, facing the way it faces (or the way it's drawn, if not that way too); null if it hasn't one. */
     _anim(name) {
-        // Not every move is drawn facing away: those face you
         const own = `${this.key}-${name}-${this.side}`;
-        return this.scene.anims.exists(own) ? own : `${this.key}-${name}-s`;
+        if (this.scene.anims.exists(own)) return own;
+        return this.scene.anims.exists(`${this.key}-${name}-s`) ? `${this.key}-${name}-s` : null;
     }
 
-    /** Standing about: mostly shifting its weight, now and then its cloak stirs. */
+    /** Standing about: shifting its weight, and now and then its idle (a cloak stirring, a bone rattling). */
     _next() {
         if (this.dead) return;
         this.busy = false;
-        this.sprite.play(this._anim(Math.random() < 0.25 ? 'breeze' : 'stand'));
+        const idle = Math.random() < 0.25 && this._anim('breeze');
+        this.sprite.play(idle || this._anim('stand'));
     }
 
     _once(name) {
-        if (this.dead) return;
+        if (this.dead) return false;
+        const anim = this._anim(name);
+        if (!anim) return false;
         this.busy = true;
-        this.sprite.play(this._anim(name));
+        this.sprite.play(anim);
+        return true;
     }
 
     attack() { this._once('attack'); }
+
+    /** Walking (Wesnoth's movement animation), till it's told to stand again. */
+    walk() {
+        const anim = this._anim('move');
+        if (!anim || this.dead) return;
+        this.busy = true;
+        this.sprite.play({ key: anim, repeat: -1 });
+    }
+
+    stand() { this._next(); }
 
     hurt() {
         this._once('defend');
@@ -119,12 +134,19 @@ export class Foe {
         this.scene.time.delayedCall(70, () => this.sprite.active && this.sprite.clearTint());
     }
 
-    /** Falls, and stays down. Resolves once it has. */
+    /** Falls, and stays down (or, with no death of its own drawn, fades away). Resolves once it has. */
     die() {
         this.busy = true;
         this.dead = true;
-        this.sprite.play(this._anim('die'));
-        return new Promise(resolve => this.sprite.once('animationcomplete', resolve));
+        const anim = this._anim('die');
+        if (anim) {
+            this.sprite.play(anim);
+            return new Promise(resolve => this.sprite.once('animationcomplete', resolve));
+        }
+        this.sprite.stop();
+        return new Promise(resolve => this.scene.tweens.add({
+            targets: this.sprite, alpha: 0, y: this.sprite.y + 4, duration: 600, ease: 'Quad.easeIn', onComplete: resolve,
+        }));
     }
 
     setDepthAt() {

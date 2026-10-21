@@ -310,6 +310,9 @@ test.describe('Living world', () => {
             const { world } = gs, me = gs.localPlayer.sprite, T = 32, n = world.n, FEET = 23;
             const sea = (tx, ty) => world.isSailable(tx * T + 16, ty * T + 16);
             const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+            // No band of foes steps in on the way (one waits by a landing up the river from Riverhold:
+            // walking into it is a fight, not what this is about)
+            gs.encounters.update = () => null;
             // Shores all round the world, met from every side
             const spots = [];
             for (let ty = 7; ty < n - 7; ty += 11) for (let tx = 7; tx < n - 7; tx += 13)

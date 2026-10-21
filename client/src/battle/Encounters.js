@@ -13,9 +13,21 @@ import { sortDepth } from '../world/Forest.js';
 import { wrapDelta } from '../world/Overworld.js';
 import { audio } from '../audio/audio.js';
 
+// Where bands wait (feet), each of one kind of foe, 1 to 8 of them (a new number each time it's met).
+// Round Riverhold, where you set out, to meet them all: the undead up the river to the north, the
+// goblins out on the grass across it to the west, an orc band and a shadow just south of the gate.
 export const FOES = [
-    // feet; on the grass a few steps from Riverhold's gate. A band of 1 to 8 (each time it's met, a new number)
     { kind: 'grunt', x: 6224, y: 11190, band: [1, 8] },
+    { kind: 'shadow', x: 6416, y: 11254, band: [1, 8] },
+    { kind: 'skeleton', x: 6480, y: 10838, band: [1, 8] },
+    { kind: 'ghost', x: 6384, y: 10806, band: [1, 8] },
+    { kind: 'skeleton-rider', x: 6448, y: 10742, band: [1, 8] },
+    { kind: 'bone-knight', x: 6480, y: 10646, band: [1, 8] },
+    { kind: 'nightgaunt', x: 6512, y: 10550, band: [1, 8] },
+    { kind: 'spearman', x: 5776, y: 11158, band: [1, 8] },
+    { kind: 'wolf-rider', x: 5744, y: 11254, band: [1, 8] },
+    { kind: 'goblin-knight', x: 5776, y: 11350, band: [1, 8] },
+    { kind: 'direwolf-rider', x: 5744, y: 11446, band: [1, 8] },
 ];
 const NEAR = 900;               // a foe's sheet loads when you're this close
 const FAR = 1300;               // and goes when you're this far

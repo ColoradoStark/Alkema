@@ -38,6 +38,15 @@ async function fight(page, count) {
     });
 }
 
+/** Stand just below the lowest of the band still standing. */
+const belowOne = (page) => page.evaluate(() => {
+    const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, m = b.party[0];
+    const f = b.foes.filter(f => f.hp > 0).sort((a, c) => c.cell[1] - a.cell[1])[0];
+    m.cell = [f.cell[0], f.cell[1] + 1];
+    const at = b.feetOf(m.cell);
+    m.who.sprite.setPosition(at.x, at.y - 23);
+});
+
 const asClass = (page, cls) => page.evaluate((cls) => {
     const ui = window.__PHASER_GAME.scene.getScene('UIScene');
     ui.spellbook = new ui.spellbook.constructor({ spells: ui.inventory.catalogue.spells, heroClass: cls });
@@ -102,6 +111,7 @@ test.describe('Spells', () => {
         for (const cls of ['mage', 'cleric', 'ranger', 'warrior', 'thief']) {
             await yourTurn(page);
             await asClass(page, cls);
+            await belowOne(page);         // (the last spell may have felled the one you stood by)
             const before = { hp: await hp(), mp: await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').mp.now) };
             const fx = page.evaluate(() => new Promise(resolve => {
                 const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -178,5 +188,28 @@ test.describe('Spells', () => {
         await asClass(page, 'cleric');
         expect(await castFromMenu(page, 'turn-undead')).toBe(false);
         expect((await menu(page)).texts).toContain('No undead here');
+    });
+
+    test("a cleric's Turn Undead sears every skeleton on the field; a mage's Orcbane finds no orcs or goblins among them", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.find(s => s.kind === 'skeleton')?.foe, null, { timeout: 30000 });
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), spot = gs.encounters.spots.find(s => s.kind === 'skeleton');
+            spot.count = 4;
+            gs.enterBattle(spot);
+        });
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
+        await page.evaluate(() => { Object.assign(window.__PHASER_GAME.scene.getScene('UIScene').mp, { now: 99, max: 99 }); window.__PHASER_GAME.scene.getScene('GameScene').battle.held = false; });
+        await yourTurn(page);
+        await asClass(page, 'mage');
+        expect(await castFromMenu(page, 'orcbane')).toBe(false);
+        expect((await menu(page)).texts).toContain('No orcs or goblins here');
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').castMenu.close());
+        await asClass(page, 'cleric');
+        expect(await castFromMenu(page, 'turn-undead')).toBe(true);
+        await yourTurn(page);
+        const hp = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes.map(f => f.hp) ?? []);
+        expect(hp.length ? hp.every(h => h < 34) : true).toBe(true);        // every skeleton seared (or all fell)
     });
 });

@@ -735,7 +735,9 @@ const SPELLS = {
      */
     bane: {
         can(m, spell) {
-            return this.standing.some(f => spell.races.includes(f.foe.spec.race)) ? null : `No ${spell.races.join(' or ')} here`;
+            const many = { orc: 'orcs', goblin: 'goblins', undead: 'undead' };
+            return this.standing.some(f => spell.races.includes(f.foe.spec.race)) ? null
+                : `No ${spell.races.map(r => many[r] || r).join(' or ')} here`;
         },
         async run(m, spell, at) {
             const marked = this.standing.filter(f => spell.races.includes(f.foe.spec.race))
