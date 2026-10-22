@@ -19,26 +19,27 @@ test.describe('Foes', () => {
     test('a band of every kind waits round Riverhold, each in view of where you set out, orcs and goblins and the undead', async ({ page }) => {
         await enterWorld(page);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.filter(s => s.foe).length),
-            { timeout: 30000 }).toBe(11);
+            { timeout: 30000 }).toBe(12);
         const seen = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), foes = gs.cache.json.get('battle').foes;
             return gs.encounters.spots.map(s => ({ kind: s.kind, race: foes[s.kind].race, walks: !!foes[s.kind].anims['move-s'], visible: s.foe.sprite.visible,
                 away: Math.round(Math.hypot(s.x - 6320, s.y - 11143)) }));
         });
-        expect(new Set(seen.map(s => s.kind)).size).toBe(11);
+        expect(new Set(seen.map(s => s.kind)).size).toBe(12);
         expect(seen.every(s => s.visible)).toBe(true);
         expect(seen.every(s => s.away < 900)).toBe(true);
         expect(seen.filter(s => s.race === 'undead').length).toBeGreaterThanOrEqual(6);
         expect(seen.filter(s => s.race === 'goblin').length).toBe(5);
-        expect(seen.every(s => s.walks)).toBe(true);             // the Orcish Grunt couldn't walk: the Pillager took its post
+        expect(seen.filter(s => !s.walks).map(s => s.kind)).toEqual(['grunt']);      // the one without Wesnoth's walk: it slides
         expect(seen[0].kind).toBe('pillager');
+        expect(seen.filter(s => s.race === 'orc').map(s => s.kind)).toEqual(['grunt']);
     });
 
     test('foes are drawn over the trees, in the world and on the battle map, so one in the woods is never lost among them', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.filter(s => s.foe).length),
-            { timeout: 30000 }).toBe(11);
+            { timeout: 30000 }).toBe(12);
         // In the world: over every tree in view, and over one standing right in front of each
         const world = await page.evaluate(async () => {
             const { sortDepth } = await import('/src/world/Forest.js');
@@ -66,11 +67,32 @@ test.describe('Foes', () => {
         expect(battle.lowest).toBeGreaterThan(battle.top);
     });
 
+    test('the grunts, with no walk of their own, still close in: sliding on their standing frame, a tile a turn', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.find(s => s.kind === 'grunt')?.foe),
+            { timeout: 30000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), spot = gs.encounters.spots.find(s => s.kind === 'grunt');
+            spot.count = 3;
+            gs.enterBattle(spot);
+        });
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
+        const where = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.foes.map(f => ({ cell: f.cell.join(), y: Math.round(f.foe.y) })));
+        const before = await where();
+        // Your turn goes by: they come on
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle._next());
+        await page.waitForFunction(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; return b.phase !== 'foes' && !b.foes.some(f => f.moving); }, null, { timeout: 15000 });
+        const after = await where();
+        expect(after.every((f, i) => f.cell !== before[i].cell && f.y > before[i].y)).toBe(true);
+    });
+
     test('every kind can be fought: in its band on the battle map, it reels when struck and falls (or fades) when slain', async ({ page }) => {
         test.setTimeout(240000);
         await enterWorld(page);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.filter(s => s.foe).length),
-            { timeout: 30000 }).toBe(11);
+            { timeout: 30000 }).toBe(12);
         const kinds = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.map(s => s.kind));
         for (const kind of kinds) {
             await page.evaluate((kind) => {

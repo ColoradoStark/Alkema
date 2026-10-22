@@ -98,11 +98,13 @@ BATTLES
 The foes you fight round Riverhold are The Battle for Wesnoth's
 (https://www.wesnoth.org) unit art, by the Wesnoth unit artists (the
 full list of contributors is in data/core/about.cfg of the Wesnoth
-repository): the Goblin Pillager, Spearman, Wolf Rider, Goblin Knight
-and Direwolf Rider; the Skeleton, Skeleton Rider, Bone Knight, Ghost,
+repository): the Orcish Grunt; the Goblin Pillager, Spearman, Wolf
+Rider, Goblin Knight and Direwolf Rider; the Skeleton, Skeleton Rider, Bone Knight, Ghost,
 Shadow and Nightgaunt. Their standing, idle, walking, attack, defend and
 death frames are used, scaled up a quarter, with their team colour mapped
-to LPC cloth (maroon for goblins, purple for the undead).
+to LPC cloth (maroon for orcs and goblins, purple for the undead; the
+grunt's every colour mapped to the LPC character palettes, and its dropped
+sword drawn into its last death frames).
   License: GNU GPL version 2 or later
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/units
 The battle maps are laid out from the same Wesnoth grass, snow and
