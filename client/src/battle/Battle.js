@@ -20,6 +20,7 @@
 
 import { Foe, OVER_TREES } from './Foe.js';
 import { decide } from './Tactics.js';
+import { seat } from './Formation.js';
 import { Player } from '../sprites/Player.js';
 import { Spellbook } from '../magic/Spellbook.js';
 import { availableMoves } from '../creator/Showcase.js';
@@ -157,18 +158,19 @@ export class Battle {
         this.trees = map.trees.map(t => scene.add.image(t.x, t.y, 'world-trees', t.frame)
             .setOrigin(0.5, 1).setDepth(sortDepth(scene, t.y)));
 
-        // Your party, in its places: you first
+        // Your party, each in their class's place (Formation.js): you first
         const hero = scene.localPlayer;
         hero.sprite.body.moves = false;     // you step a tile at a time here, as they do
         const ui = scene.scene.get('UIScene');
         const catalogue = ui?.inventory?.catalogue;
-        this.party = [{ who: hero, name: (hero.characterData?.name || 'You').split(' ')[0], cell: [...map.party[0]], attack: null,
-            get book() { return ui?.spellbook; } }];      // your own spells, as they stand
         this.companions = companions;
-        companions.forEach((p, i) => {
-            const folk = (scene.cache.json.get(`folk-${p.town}`) || []).find(f => f.id === p.id);
-            if (!folk) return;
-            const cell = [...map.party[i + 1]];
+        const here = companions.map(p => ({ p, folk: (scene.cache.json.get(`folk-${p.town}`) || []).find(f => f.id === p.id) })).filter(c => c.folk);
+        const heroClass = ui?.inventory?.stats?.class || hero.characterData?.character_class;
+        const seats = seat([heroClass, ...here.map(c => c.p.heroClass)], data.partyRoles).map(i => [...map.party[i]]);
+        this.party = [{ who: hero, name: (hero.characterData?.name || 'You').split(' ')[0], cell: seats[0], attack: null,
+            get book() { return ui?.spellbook; } }];      // your own spells, as they stand
+        here.forEach(({ p, folk }, i) => {
+            const cell = seats[i + 1];
             const at = this.feetOf(cell);
             const who = new Player(scene, at.x, at.y - FEET, `party-${p.id}`, folk.character, false);
             who.nameText.setVisible(false);

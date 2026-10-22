@@ -135,7 +135,11 @@ test.describe('Battle', () => {
         await walkInto(page, 3);
         let s = await state(page);
         const map = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').maps.grass);
-        expect(s.battle).toMatchObject({ country: 'grass', cols: 11, rows: 14, width: 352, height: 448, party: 1, hero: map.party[0] });
+        // You stand in your class's place (the front row for a warrior, thief or ranger; behind for a mage or cleric)
+        const roles = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').partyRoles);
+        const cls = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.stats?.class
+            || window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.character_class);
+        expect(s.battle).toMatchObject({ country: 'grass', cols: 11, rows: 14, width: 352, height: 448, party: 1, hero: map.party[roles.findIndex(r => r.includes(cls))] });
         expect(s.battle.foes).toHaveLength(3);
         for (const f of s.battle.foes) {
             expect(f).toMatchObject({ hp: 44, maxHp: 44, bar: true });   // a Goblin Pillager's, as Wesnoth has it
@@ -336,7 +340,14 @@ test.describe('Battle', () => {
         await expect.poll(async () => (await party()).members.every(m => m.drawn), { timeout: 20000 }).toBe(true);
         let p = await party();
         expect(p.members.map(m => m.cls).slice(1)).toEqual(['cleric', 'mage', 'ranger']);
-        expect(p.members.map(m => m.cell)).toEqual(map.party);
+        // Each in their class's place: you take yours, and if a companion shares your class, they fill the one left
+        const { roles, cls } = await page.evaluate(() => ({ roles: window.__PHASER_GAME.cache.json.get('battle').partyRoles,
+            cls: window.__PHASER_GAME.scene.getScene('UIScene').inventory?.stats?.class }));
+        const want = ['cleric', 'mage', 'ranger'].map(c => map.party[roles.findIndex(r => r.includes(c))]);
+        const mine = map.party[roles.findIndex(r => r.includes(cls))];
+        expect(p.members[0].cell).toEqual(mine);
+        expect(new Set(p.members.map(m => m.cell.join())).size).toBe(4);
+        p.members.slice(1).forEach((m, i) => { if (want[i].join() !== mine.join()) expect(m.cell).toEqual(want[i]); });
         expect(p.members.slice(1).every(m => m.life.now === m.life.max && m.life.max > 0)).toBe(true);
         // Each of you with a bar of hit points over your head, as the foes have
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.party.every(m => m.bar?.visible))).toBe(true);

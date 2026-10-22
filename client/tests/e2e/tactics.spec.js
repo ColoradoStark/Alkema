@@ -69,3 +69,24 @@ test.describe('Foe tactics', () => {
         expect(await decide(page, { cell: [5, 3] }, ring, [[[5, 10]]])).toEqual({ act: 'wait' });
     });
 });
+
+test.describe('Party formation', () => {
+    const ROLES = [['warrior'], ['thief', 'ranger'], ['mage'], ['cleric']];
+    const seat = (page, classes) => page.evaluate(async ({ classes, roles }) => (await import('/src/battle/Formation.js')).seat(classes, roles), { classes, roles: ROLES });
+    test.beforeEach(async ({ page }) => { await page.goto('/'); });
+
+    test("each takes their class's place: warrior and thief or ranger in front, mage and cleric behind", async ({ page }) => {
+        expect(await seat(page, ['warrior', 'cleric', 'mage', 'ranger'])).toEqual([0, 3, 2, 1]);
+        expect(await seat(page, ['thief', 'cleric', 'mage', 'ranger'])).toEqual([1, 3, 2, 0]);
+    });
+
+    test('two of a class: the first takes the place, the other fills one no one claimed, the front first', async ({ page }) => {
+        expect(await seat(page, ['mage', 'cleric', 'mage', 'ranger'])).toEqual([2, 3, 0, 1]);
+        expect(await seat(page, ['ranger', 'ranger'])).toEqual([1, 0]);
+    });
+
+    test('a smaller party keeps its places, the rest stay empty', async ({ page }) => {
+        expect(await seat(page, ['cleric'])).toEqual([3]);
+        expect(await seat(page, ['mage', 'warrior'])).toEqual([2, 0]);
+    });
+});
