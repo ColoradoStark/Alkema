@@ -10,6 +10,9 @@ import { sortDepth } from '../world/Forest.js';
 
 export const foeKey = kind => `foe-${kind}`;
 
+/** Foes are drawn over the trees (sorted among themselves), so one in the woods isn't lost among them. */
+const OVER_TREES = 2;
+
 /** Load a foe's sheet and make its animations (resolves at once if it's here already). */
 export function loadFoe(scene, kind) {
     const key = foeKey(kind);
@@ -150,7 +153,7 @@ export class Foe {
     }
 
     setDepthAt() {
-        this.sprite.setDepth(sortDepth(this.scene, this.y));
+        this.sprite.setDepth(sortDepth(this.scene, this.y) + OVER_TREES);
     }
 
     setVisible(on) {

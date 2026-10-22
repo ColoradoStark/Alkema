@@ -33,6 +33,38 @@ test.describe('Foes', () => {
         expect(seen.filter(s => s.kind !== 'grunt').every(s => s.walks)).toBe(true);
     });
 
+    test('foes are drawn over the trees, in the world and on the battle map, so one in the woods is never lost among them', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots.filter(s => s.foe).length),
+            { timeout: 30000 }).toBe(11);
+        // In the world: over every tree in view, and over one standing right in front of each
+        const world = await page.evaluate(async () => {
+            const { sortDepth } = await import('/src/world/Forest.js');
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const trees = gs.overworld.forest.pool.filter(t => t.visible).map(t => t.depth);
+            return {
+                trees: trees.length, top: Math.max(...trees), lowest: Math.min(...gs.encounters.spots.map(s => s.foe.sprite.depth)),
+                hidden: gs.encounters.spots.filter(s => s.foe.sprite.depth <= sortDepth(gs, s.foe.sprite.y + 48)).map(s => s.kind),
+            };
+        });
+        expect(world.trees).toBeGreaterThan(0);
+        expect(world.lowest).toBeGreaterThan(world.top);
+        expect(world.hidden).toEqual([]);
+        // On a battle map in the woods
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), spot = gs.encounters.spots.find(s => s.kind === 'shadow');
+            spot.count = 8;
+            gs.enterBattle(spot);
+        });
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
+        const battle = await page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            return { top: Math.max(...b.trees.map(t => t.depth)), lowest: Math.min(...b.foes.map(f => f.foe.sprite.depth)) };
+        });
+        expect(battle.lowest).toBeGreaterThan(battle.top);
+    });
+
     test('every kind can be fought: in its band on the battle map, it reels when struck and falls (or fades) when slain', async ({ page }) => {
         test.setTimeout(240000);
         await enterWorld(page);
