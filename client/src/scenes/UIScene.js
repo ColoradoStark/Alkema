@@ -330,7 +330,7 @@ export class UIScene extends Scene {
         // In a fight: which spell (or skill)? Then it's cast as your turn
         if (gameScene?.battle) {
             if (this.castMenu.visible) this.castMenu.close();
-            else if (gameScene.battle.canAct && this.spellbook) this.castMenu.open(this.spellbook, gameScene.battle);
+            else if (gameScene.battle.canAct && gameScene.battle.active.book) this.castMenu.open(gameScene.battle.active.book, gameScene.battle);
             return;
         }
         if (!gameScene?.localPlayer || gameScene.localPlayer.sailing || this.bottomControls.coolingDown) return;

@@ -163,7 +163,6 @@ export class Player {
         }
 
         const dir = this.sprite.currentDirection || 'down';
-        this.sprite.playAnimation('spellcast', dir);
         this.playAttackSound('spellcast');
 
         const finishCast = () => {
@@ -171,6 +170,12 @@ export class Player {
             this.isAttacking = false;
             this.sprite.stopAnimation();
         };
+        // No casting on their sheet (townsfolk baked with only a walk and a weapon): they raise their
+        // weapon instead, or just stand, but never stay stuck mid-cast
+        if (!['spellcast', 'thrust', 'slash'].some(anim => this.sprite.playAnimation(anim, dir))) {
+            this.scene.time.delayedCall(350, finishCast);
+            return;
+        }
 
         this.sprite.onAnimationComplete(finishCast);
         setTimeout(finishCast, 500);

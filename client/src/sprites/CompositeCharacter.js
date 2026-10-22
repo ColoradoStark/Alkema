@@ -136,7 +136,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             // Keep only the latest request — there's no point replaying a stale walk
             // once a newer attack or idle arrives.
             this._pendingAnimation = { animName, direction: direction || this.currentDirection || 'down' };
-            return;
+            return true;
         }
 
         const dir = direction || this.currentDirection || 'down';
@@ -148,12 +148,12 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             const instead = attackInstead(animName, this.spriteMeta);
             if (instead) result = resolveAnimationKey(this.scene, this.animationKey, instead, dir, this.spriteMeta);
         }
-        if (!result) return;
+        if (!result) return false;     // not on their sheet
 
         if (result.oversized) {
             if (!this.oversizedSprite) {
                 const anim = this.scene.anims.get(result.key);
-                if (!anim || !anim.frames.length) return;
+                if (!anim || !anim.frames.length) return false;
                 const osTextureKey = anim.frames[0].textureKey;
                 this.oversizedSprite = this.scene.add.sprite(0, 0, osTextureKey, 0);
                 this.addAt(this.oversizedSprite, 1);
@@ -169,6 +169,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             this.sprite.play(result.key, true);
             this.usingOversized = false;
         }
+        return true;
     }
 
     /**

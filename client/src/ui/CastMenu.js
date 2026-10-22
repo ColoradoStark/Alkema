@@ -34,7 +34,8 @@ export class CastMenu {
         const panel = s.add.graphics();
         panel.fillStyle(0x291709, 0.96).fillRoundedRect(x0, y0, W, h, 6);
         panel.lineStyle(2, 0xc8a04a, 1).strokeRoundedRect(x0, y0, W, h, 6);
-        const title = s.add.text(x0 + W / 2, y0 + 12, book.magic ? 'Cast which spell?' : 'Use which skill?', {
+        const who = battle.party.length > 1 ? `${battle.active.name}: ` : '';      // whose turn, in a party
+        const title = s.add.text(x0 + W / 2, y0 + 12, `${who}${book.magic ? 'Cast which spell?' : 'Use which skill?'}`, {
             fontFamily: 'Alagard, monospace', fontSize: '16px', color: '#fbf236',
         }).setOrigin(0.5, 0);
         this.container.add([shade, panel, title]);

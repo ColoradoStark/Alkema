@@ -15,11 +15,12 @@ export class Spellbook {
      * @param {object} opts
      * @param {object} opts.spells  every class's spells: { mage: [...], ... }
      * @param {string} opts.heroClass  'warrior', 'mage', 'ranger', 'thief' or 'cleric'
+     * @param {boolean} [opts.saved]  the hero's own (kept in their save); a companion's isn't
      */
-    constructor({ spells, heroClass }) {
+    constructor({ spells, heroClass, saved: own = true }) {
         this.heroClass = heroClass;
         this.list = spells?.[heroClass] || [];
-        const saved = account.current?.data?.spells;
+        const saved = own ? account.current?.data?.spells : null;
         // What they know: { spell id: rank }; never less than what's open at level 1
         this.known = { ...(saved?.known || {}) };
         for (const id of Object.keys(this.known)) if (!this.spell(id)) delete this.known[id];
@@ -30,7 +31,7 @@ export class Spellbook {
                 learned = true;
             }
         }
-        if (learned) account.updateProgress({ spells: { known: { ...this.known } } });
+        if (learned && own) account.updateProgress({ spells: { known: { ...this.known } } });
     }
 
     spell(id) {

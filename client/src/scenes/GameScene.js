@@ -11,7 +11,7 @@ import { Town, TOWNS, preloadTown, forgetFires } from '../world/Town.js';
 import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
-import { Battle, battleCountry, loadBattleMap } from '../battle/Battle.js';
+import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
 import { Encounters } from '../battle/Encounters.js';
 import { OVER_TREES } from '../battle/Foe.js';
 
@@ -83,6 +83,7 @@ export class GameScene extends Scene {
         this.battle = null;
         // Foes out in the world, and what they leave behind
         this.encounters = new Encounters(this);
+        this.companions = [...PARTY];      // who fights beside you (Battle.js PARTY: the user's cleric, mage and ranger)
         this.events.once('shutdown', () => this.encounters.destroy());
         // Your ship, at anchor off the port of Saltmere, bow out to sea
         this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
@@ -361,7 +362,7 @@ export class GameScene extends Scene {
         this._changingRoom = this._fighting = true;
         try {
             const country = battleCountry(this.overworld, spot.x, spot.y);
-            await loadBattleMap(this, country);
+            await loadBattleMap(this, country, this.companions);
             this.localPlayer.setVelocity(0, 0);
             // You'll be back a step from where it stood, the way you came (clear of the chest it leaves)
             const away = { x: wrapDelta(spot.x, me.x), y: wrapDelta(spot.y, me.y + FEET) };
@@ -375,7 +376,7 @@ export class GameScene extends Scene {
             this.mooredShip.setVisible(false);
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
-            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, onEnd: (result, how) => this.leaveBattle(result, how) });
+            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, companions: this.companions, onEnd: (result, how) => this.leaveBattle(result, how) });
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
             cam.stopFollow();
@@ -414,7 +415,7 @@ export class GameScene extends Scene {
             cam.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
             cam.centerOn(at.x, at.y);
             const hp = this.scene.get('UIScene')?.hp;
-            if (result === 'fallen' && hp) hp.now = Math.max(1, hp.now);
+            if (hp) hp.now = Math.max(1, hp.now);       // fallen (your party won without you, or none of you stood): you come to
             this.encounters.after(from.spot, result, slain);
             cam.fadeIn(FADE_MS);
         } catch (err) {

@@ -9,7 +9,7 @@
 // hurt runs off the map, and leaves no gold.
 import { test, expect } from '@playwright/test';
 
-async function enterWorld(page) {
+async function enterWorld(page, { party = false } = {}) {
     await page.goto('/');
     await page.waitForFunction(() => {
         const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
@@ -18,6 +18,8 @@ async function enterWorld(page) {
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    // Alone (these are about the fight itself), unless the test is about your party
+    if (!party) await page.evaluate(async () => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
 }
 
 const state = (page) => page.evaluate(() => {
@@ -312,6 +314,71 @@ test.describe('Battle', () => {
         const s = await state(page);
         expect(s.chests).toHaveLength(0);
         expect(s.foe).toBe(null);           // the post's empty a while, as after any win
+    });
+
+    test('a full party: you, a cleric, a mage and a ranger, each in their place, each taking their turn with their own spells, magic and hit points', async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page, { party: true });
+        await sturdy(page);
+        // Sheets loaded for anyone but you (yours grow as you go: a big weapon's swing loads when first made)
+        const sheets = () => page.evaluate(() => {
+            const mine = `sprite_${window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.look}`;
+            return window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('sprite_') && !k.startsWith(mine)).length;
+        });
+        const before = await sheets();
+        await walkInto(page, 3);
+        const map = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').maps.grass);
+        const party = () => page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            return { turn: b.turn, members: b.party.map(m => ({ name: m.name, cell: m.cell, cls: m.book?.heroClass, life: { ...m.life }, magic: { ...m.magic },
+                drawn: m.who.sprite.visible && !!m.who.sprite.sprite })) };
+        });
+        await expect.poll(async () => (await party()).members.every(m => m.drawn), { timeout: 20000 }).toBe(true);
+        let p = await party();
+        expect(p.members.map(m => m.cls).slice(1)).toEqual(['cleric', 'mage', 'ranger']);
+        expect(p.members.map(m => m.cell)).toEqual(map.party);
+        expect(p.members.slice(1).every(m => m.life.now === m.life.max && m.life.max > 0)).toBe(true);
+        // Each of you with a bar of hit points over your head, as the foes have
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.party.every(m => m.bar?.visible))).toBe(true);
+        // Your turn, then each of theirs in order
+        await strike(page);
+        expect((await party()).turn).toBe(1);
+        // The cleric's own spells: Heal mends whoever is most hurt (the ranger, here)
+        await page.evaluate(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; b.party[3].life.now = 5; });
+        const menu = () => page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return { open: ui.castMenu.visible, texts: ui.castMenu.container.list.filter(o => o.type === 'Text').map(o => o.text) };
+        });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
+        expect((await menu()).texts[0]).toBe(`${p.members[1].name}: Cast which spell?`);
+        expect((await menu()).texts).toContain('Heal');
+        await page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); ui.castMenu.close(); ui._castPicked('heal'); });
+        await page.waitForTimeout(100);
+        await yourTurn(page);
+        p = await party();
+        expect(p.members[3].life.now).toBeGreaterThan(5);
+        expect(p.members[1].magic.now).toBeLessThan(p.members[1].magic.max);       // the cleric's magic, not yours
+        expect(p.members[0].magic.now).toBe(p.members[0].magic.max);
+        expect(p.turn).toBe(2);
+        // The mage's own: a fireball at the nearest foe
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
+        expect((await menu()).texts[0]).toBe(`${p.members[2].name}: Cast which spell?`);
+        const hp = async () => (await state(page)).battle.foes.reduce((n, f) => n + f.hp, 0);
+        const was = await hp();
+        await page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); ui.castMenu.close(); ui._castPicked('fireball'); });
+        await page.waitForTimeout(100);
+        await yourTurn(page);
+        expect(await hp()).toBeLessThan(was);
+        expect((await party()).members[2].magic.now).toBeLessThan(p.members[2].magic.max);
+        expect((await party()).turn).toBe(3);
+        // The ranger looses an arrow (or swings at the air), then the foes have their turn, then it's yours again
+        await strike(page);
+        await yourTurn(page);
+        expect((await party()).turn).toBe(0);
+        // Leaving, your companions go, and their sheets with them
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
+        await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
+        await expect.poll(sheets, { timeout: 10000 }).toBe(before);
     });
 
     test('a band fills the front row first, its middle place first of all, then the places behind at random', async ({ page }) => {

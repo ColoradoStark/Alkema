@@ -16,6 +16,8 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook, null, { timeout: 20000 });
+    // Alone: these are about your spells (a companion's turn would come between yours)
+    await page.evaluate(async () => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
 }
 
 /** Into a fight with a band of `count`, standing just below the lowest of them, with magic to spare. */

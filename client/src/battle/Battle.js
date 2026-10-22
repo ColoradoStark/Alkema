@@ -1,7 +1,7 @@
 // A battle, Ultima III style: walk into a band of foes out in the world and
 // you're on a map of your own, a grid of 11 x 14 tiles (the game's portrait
 // view), a clearing in the country you met them in. Your party (one to four;
-// for now just you: companions come later, from PARTY) starts below, where
+// you and your companions, GameScene.companions, from PARTY) starts below, where
 // Ultima IV's put it, and one to eight foes in three rows above (tools/battlegen.py).
 //
 // It goes in turns, as Ultima III's did: each of your party in order takes one
@@ -21,6 +21,7 @@
 import { Foe, OVER_TREES } from './Foe.js';
 import { decide } from './Tactics.js';
 import { Player } from '../sprites/Player.js';
+import { Spellbook } from '../magic/Spellbook.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { sortDepth } from '../world/Forest.js';
 import { Ship } from '../world/Ship.js';
@@ -32,8 +33,7 @@ const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
 const STEP_MS = 200;            // a tile's walk
 const FOOT = 26;                // where in its tile someone stands
 const HIT_CHANCE = 0.85;
-const COMPANION_ATTACK = 6;     // your companions' blows (they have no gear of their own yet)
-const COMPANION_HP = 20;
+const COMPANION_HP = 20;        // anyone in the party without hit points of their own
 const ATTACK_MS = 650;          // a swing, start to finish, before the next turn
 const FOE_TURN_MS = 450;        // a foe's swing
 const FOE_HIT_CHANCE = 0.6;     // a foe's blow lands this often
@@ -47,9 +47,19 @@ const DIRS = { '1,0': 'right', '-1,0': 'left', '0,1': 'down', '0,-1': 'up' };
 
 /**
  * Your companions in a fight, up to three: townsfolk as tools/bake_folk.py
- * made them, e.g. { town: 'riverhold', id: 'wren' }. None yet: you fight alone.
+ * made them (their map's folk file and id), in the order they take their
+ * turns after you, with their class's level-1 numbers as server/src/stats.json
+ * reckons them (hit points: hit die + strength; magic: their spell attribute's
+ * share; spell: a quarter of it; attack: a plain weapon's 3 + a quarter of
+ * strength, or a bow's dexterity; defence: a fifth of dexterity). They come to
+ * every fight fresh. The user
+ * asked for a cleric, a mage and a ranger.
  */
-export const PARTY = [];
+export const PARTY = [
+    { town: 'riverhold', id: 'wanderer3', heroClass: 'cleric', hp: 17, mp: 17, spell: 4, attack: 5, defence: 3 },      // the Pilgrim, an elf
+    { town: 'riverhold-hermitage', id: 'hermit', heroClass: 'mage', hp: 16, mp: 19, spell: 4, attack: 6, defence: 2 },  // the Hermit
+    { town: 'riverhold-inn', id: 'traveller', heroClass: 'ranger', hp: 22, mp: 7, spell: 3, attack: 7, defence: 3 },     // the Traveller
+];
 
 const groundKey = country => `battle-${country}`;
 const FX = 'spell-fx';           // the spells' effects: Wesnoth's projectiles and halos (tools/spellgen.py)
@@ -83,14 +93,14 @@ export function battleCountry(overworld, x, y) {
     return overworld.forest.depthAt(x, y) > 0 ? 'forest' : 'grass';
 }
 
-/** Load a battle map's ground, who's in your party, and the spells' effects (tools/spellgen.py). */
-export function loadBattleMap(scene, country) {
+/** Load a battle map's ground, your companions (PARTY entries), and the spells' effects (tools/spellgen.py). */
+export function loadBattleMap(scene, country, companions = []) {
     const files = [{ type: 'image', key: groundKey(country), url: `/battle/${scene.cache.json.get('battle').maps[country].ground}` },
         { type: 'atlas', key: FX, url: ['/spells/fx.png', '/spells/fx.json'] },
         { type: 'json', key: FX_ANIMS, url: '/spells/fx.json' },
         { type: 'spritesheet', key: ICONS, url: ['/spells/icons.png', { frameWidth: 64, frameHeight: 64 }] },
         { type: 'json', key: ICONS_INDEX, url: '/spells/icons.json' }];
-    for (const town of new Set(PARTY.map(p => p.town))) files.push({ type: 'json', key: `folk-${town}`, url: `/folk/${town}.json` });
+    for (const town of new Set(companions.map(p => p.town))) files.push({ type: 'json', key: `folk-${town}`, url: `/folk/${town}.json` });
     const wanted = files.filter(f => f.type === 'json' ? !scene.cache.json.exists(f.key) : !scene.textures.exists(f.key));
     if (!wanted.length) return Promise.resolve();
     return new Promise((resolve, reject) => {
@@ -121,9 +131,10 @@ export class Battle {
      * @param {string} opts.country  'grass', 'forest' or 'snow'
      * @param {string} opts.kind  the foes ('pillager')
      * @param {number} opts.count  how many (1 to 8)
+     * @param {object[]} [opts.companions]  who fights beside you (PARTY entries)
      * @param {(result: 'won'|'fled'|'fallen', how: {slain: number}) => void} opts.onEnd
      */
-    constructor(scene, { country, kind, count = 1, onEnd }) {
+    constructor(scene, { country, kind, count = 1, companions = [], onEnd }) {
         this.scene = scene;
         this.country = country;
         this.onEnd = onEnd;
@@ -149,8 +160,12 @@ export class Battle {
         // Your party, in its places: you first
         const hero = scene.localPlayer;
         hero.sprite.body.moves = false;     // you step a tile at a time here, as they do
-        this.party = [{ who: hero, name: (hero.characterData?.name || 'You').split(' ')[0], cell: [...map.party[0]], attack: null }];
-        PARTY.forEach((p, i) => {
+        const ui = scene.scene.get('UIScene');
+        const catalogue = ui?.inventory?.catalogue;
+        this.party = [{ who: hero, name: (hero.characterData?.name || 'You').split(' ')[0], cell: [...map.party[0]], attack: null,
+            get book() { return ui?.spellbook; } }];      // your own spells, as they stand
+        this.companions = companions;
+        companions.forEach((p, i) => {
             const folk = (scene.cache.json.get(`folk-${p.town}`) || []).find(f => f.id === p.id);
             if (!folk) return;
             const cell = [...map.party[i + 1]];
@@ -160,18 +175,21 @@ export class Battle {
             who.sprite.body.moves = false;
             who.sprite.setDirection('up');
             who.sprite.stopAnimation();
-            this.party.push({ who, name: (folk.character.name || folk.role).split(' ')[0], cell, attack: COMPANION_ATTACK,
-                life: { now: COMPANION_HP, max: COMPANION_HP }, defence: 0 });
+            const book = new Spellbook({ spells: catalogue?.spells, heroClass: p.heroClass, saved: false });
+            this.party.push({ who, name: (folk.character.name || folk.role).split(' ')[0], cell, attack: p.attack, book,
+                life: { now: p.hp, max: p.hp }, magic: { now: p.mp, max: p.mp }, spellPower: p.spell, defence: p.defence });
         });
         this.turn = 0;
         // Your spells' power, your magic and hit points (the hero's own: UIScene.mp, .hp), your
         // defence, and how long each spell or skill must rest
-        const ui = scene.scene.get('UIScene');
         this.party[0].spellPower = ui?.inventory?.stats?.spell ?? 0;
         this.party[0].magic = ui?.mp || { now: 0, max: 0 };
         this.party[0].life = ui?.hp || { now: COMPANION_HP, max: COMPANION_HP };
         this.party[0].defence = ui?.inventory?.stats?.defence ?? 0;
-        for (const m of this.party) m.rest = {};
+        for (const m of this.party) {
+            m.rest = {};
+            m.bar = scene.add.graphics().setDepth(39);      // their hit points, over their head
+        }
         fxAnims(scene);
 
         // The band in its rows (tools/battlegen.py FOE_PLACES): the front row, nearest you, fills
@@ -249,6 +267,18 @@ export class Battle {
         f.bar.fillStyle(colour, 1).fillRect(x, y, Math.ceil(w * k), h);
     }
 
+    /** A party member's hit points over their head (gone once they've left the map). */
+    _drawLife(m) {
+        m.bar.clear();
+        if (m.out && !m.fallen) return;
+        const w = 26, h = 3, { x, y } = m.who.sprite;
+        const k = Math.max(0, m.life.now / m.life.max);
+        const colour = k > 0.5 ? 0x53bf71 : k > 0.25 ? 0xe7a820 : 0xcd2429;
+        m.bar.fillStyle(0x1d131e, 1).fillRect(x - w / 2 - 1, y - 33, w + 2, h + 2);
+        m.bar.fillStyle(0x400b1f, 1).fillRect(x - w / 2, y - 32, w, h);
+        m.bar.fillStyle(colour, 1).fillRect(x - w / 2, y - 32, Math.ceil(w * k), h);
+    }
+
     _drawMarker() {
         this.marker.clear();
         const m = this.active;
@@ -266,9 +296,10 @@ export class Battle {
         return this.fighting.find(m => m.cell[0] === c && m.cell[1] === r) || null;
     }
 
-    /** Can't step there: someone stands there. */
+    /** Can't step there: someone stands there, or one of yours lies fallen there. */
     _blocked(cell) {
-        return !!this.foeAt(cell) || !!this._memberAt(cell);
+        return !!this.foeAt(cell) || !!this._memberAt(cell)
+            || this.party.some(m => m.fallen && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
     }
 
     _beside(a, b) {
@@ -292,7 +323,7 @@ export class Battle {
         const to = [m.cell[0] + sx, m.cell[1] + sy];
         const foe = this.foeAt(to);
         if (foe) return this.attack(foe);
-        if (this._memberAt(to)) {
+        if (this._blocked(to)) {
             m.who.sprite.setDirection(dir);
             m.who.sprite.stopAnimation();
             return;
@@ -602,8 +633,7 @@ export class Battle {
     cast(id) {
         if (!this.canAct) return false;
         const m = this.active;
-        const book = m.who === this.scene.localPlayer ? this.scene.scene.get('UIScene')?.spellbook : null;
-        const spell = book?.spell(id), at = book?.at(id);
+        const spell = m.book?.spell(id), at = m.book?.at(id);
         if (!spell || !at) return false;
         const why = this.whyNot(spell, at);
         if (why) return this.say(`${why}.`), false;
@@ -707,6 +737,7 @@ export class Battle {
         const feetAll = this.party.map(m => ({ x: m.who.sprite.x, y: m.who.sprite.y + FEET }));
         for (const m of this.party) {
             if (m.who !== this.scene.localPlayer) m.who.sprite.setDepth(sortDepth(this.scene, m.who.sprite.y + FEET) + OVER_TREES);
+            this._drawLife(m);
         }
         for (const t of this.trees) {
             const behind = feetAll.some(p => p.y < t.y && p.y > t.y - t.height * 0.75 && Math.abs(p.x - t.x) < t.width * 0.22);
@@ -733,6 +764,7 @@ export class Battle {
         }
         // Your companions go, and their sheets with them; you walk as you did
         for (const m of this.party) {
+            m.bar.destroy();
             if (m.who === this.scene.localPlayer) {
                 m.who.sprite.body.moves = true;
                 m.who.sprite.setAlpha(1);
@@ -741,6 +773,7 @@ export class Battle {
             }
         }
         if (this.scene.textures.exists(groundKey(this.country))) this.scene.textures.remove(groundKey(this.country));
+        for (const town of new Set(this.companions.map(p => p.town))) this.scene.cache.json.remove(`folk-${town}`);
         forgetFx(this.scene);
     }
 }
@@ -772,17 +805,19 @@ const SPELLS = {
         },
     },
 
-    /** Mend your wounds. */
+    /** Mend the wounds of whoever in the party is most hurt (the caster, if no one is). */
     heal: {
         async run(m, spell, at) {
+            const hurt = ({ life }) => life ? 1 - life.now / life.max : 0;
+            const who = [...this.fighting].sort((a, b) => hurt(b) - hurt(a))[0] || m;
             m.who.playCast();
             audio.play('holy');
-            const me = m.who.sprite;
-            await this._fx('healing', me.x, me.y);
+            const them = who.who.sprite;
+            await this._fx('healing', them.x, them.y);
             const mend = this._spellBlow(m, at);
-            if (m.life) m.life.now = Math.min(m.life.max, m.life.now + mend);
-            this.scene.effects.floatText(me.x, me.y - 30, `+${mend}`, '#7ee07e', 20);
-            this.say(`${spell.name}: ${m.name} is mended.${this._mpWords(m)}`);
+            if (who.life) who.life.now = Math.min(who.life.max, who.life.now + mend);
+            this.scene.effects.floatText(them.x, them.y - 30, `+${mend}`, '#7ee07e', 20);
+            this.say(`${spell.name}: ${who.name} is mended.${this._mpWords(m)}`);
             await this._wait(250);
         },
     },
