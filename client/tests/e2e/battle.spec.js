@@ -79,10 +79,17 @@ async function step(page, dir) {
     await yourTurn(page);
 }
 
-/** Press attack (at whoever's beside you, or the air), then wait till it's your turn again. */
+/**
+ * Press attack at whoever's in reach, then wait till it's your turn again; with no one in reach
+ * (attack is greyed out), let the turn go by instead (the tests' way of standing your ground).
+ */
 async function strike(page) {
     await yourTurn(page);
-    await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle?.attack());
+    await page.evaluate(() => {
+        const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+        if (b?.canStrike) b.attack();
+        else if (b && !b.over) b._next();
+    });
     await page.waitForTimeout(50);
     await yourTurn(page);
 }
@@ -390,6 +397,38 @@ test.describe('Battle', () => {
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
         await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
         await expect.poll(sheets, { timeout: 10000 }).toBe(before);
+    });
+
+    test("with no one in reach the attack button is greyed out, and pressed, it says to move closer and the turn isn't spent", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await walkInto(page, 1);
+        await yourTurn(page);
+        const look = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), b = gs.battle, ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return { ready: ui.bottomControls.attackReady, alpha: ui.bottomControls.attackButton.alpha, said: b.log.visible ? b.log.text : '',
+                turn: b.turn, phase: b.phase, foe: b.foes[0].cell.join(), hero: b.party[0].cell.join() };
+        });
+        // The lone foe stands front and centre, out of reach of your place (and not in line with it)
+        let s = await look();
+        expect(s.ready).toBe(false);
+        expect(s.alpha).toBeLessThan(1);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAttack());
+        await page.waitForTimeout(600);
+        const after = await look();
+        expect(after.said).toBe('Move closer to attack');
+        expect({ turn: after.turn, phase: after.phase, foe: after.foe, hero: after.hero }).toEqual({ turn: s.turn, phase: s.phase, foe: s.foe, hero: s.hero });
+        // Beside one, it's ready
+        await page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, f = b.foes[0], [c, r] = b.party[0].cell;
+            f.cell = [c, r - 1];
+            const at = b.feetOf(f.cell);
+            f.foe.sprite.setPosition(at.x, at.y);
+        });
+        await page.waitForTimeout(200);
+        s = await look();
+        expect(s.ready).toBe(true);
+        expect(s.alpha).toBe(1);
     });
 
     test('a band fills the front row first, its middle place first of all, then the places behind at random', async ({ page }) => {

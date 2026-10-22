@@ -257,6 +257,9 @@ export class UIScene extends Scene {
                 }
             }
         }
+        // In a fight, attack is greyed out while there's no one in reach
+        const battle = this.scene.get('GameScene')?.battle;
+        this.bottomControls.setAttackReady(!battle || battle.over || battle.phase === 'foes' || battle.canStrike);
         this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
         if (!inFight) this.castMenu.close();
         const dayNight = this.scene.get('GameScene')?.dayNight;
@@ -316,8 +319,7 @@ export class UIScene extends Scene {
         }
         const gameScene = this.scene.get('GameScene');
         if (gameScene?.battle) {
-            gameScene.battle.attack();
-            this.quests.record('attack');
+            if (gameScene.battle.attack() !== false) this.quests.record('attack');
         } else if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
             gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');

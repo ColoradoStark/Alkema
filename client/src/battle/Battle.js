@@ -380,12 +380,24 @@ export class Battle {
         return first(ahead) || first(reach.filter(f => this._beside(m.cell, f.cell))) || first(reach);
     }
 
-    /** The attack button, or walking into a foe: whoever's turn it is turns to it and swings (or shoots). */
+    /** Whoever's turn it is has a foe in reach (beside them, or in line with a bow): the attack button isn't greyed. */
+    get canStrike() {
+        return !this.over && !!this.active && !!this._target(this.active);
+    }
+
+    /**
+     * The attack button, or walking into a foe: whoever's turn it is turns to it and swings (or
+     * shoots). With no one in reach, it says so and the turn isn't spent (false).
+     */
     attack(into = null) {
-        if (this.over || this.busy || this.phase === 'foes') return;
+        if (this.over || this.busy || this.phase === 'foes') return false;
         const m = this.active;
         const who = m.who;
         let target = this._target(m, into);
+        if (!target) {
+            this.say('Move closer to attack');
+            return false;
+        }
         if (target) {
             const dc = target.cell[0] - m.cell[0], dr = target.cell[1] - m.cell[1];
             const dir = Math.abs(dc) > Math.abs(dr) ? DIRS[`${Math.sign(dc)},0`] : DIRS[`0,${Math.sign(dr)}`];
@@ -413,6 +425,7 @@ export class Battle {
             this.busy = false;
             if (!this.over) this._next();
         });
+        return true;
     }
 
     /** A blow lands, or doesn't. */
