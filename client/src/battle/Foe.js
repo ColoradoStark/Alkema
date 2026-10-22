@@ -64,7 +64,7 @@ export class Foe {
      * @param {Phaser.Scene} scene
      * @param {number} x  where its feet are
      * @param {number} y
-     * @param {string} kind  'grunt'
+     * @param {string} kind  'pillager'
      */
     constructor(scene, x, y, kind) {
         this.scene = scene;

@@ -109,7 +109,7 @@ export class Battle {
      * @param {Phaser.Scene} scene
      * @param {object} opts
      * @param {string} opts.country  'grass', 'forest' or 'snow'
-     * @param {string} opts.kind  the foes ('grunt')
+     * @param {string} opts.kind  the foes ('pillager')
      * @param {number} opts.count  how many (1 to 8)
      * @param {(result: 'won'|'fled') => void} opts.onEnd
      */

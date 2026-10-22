@@ -151,8 +151,8 @@ test.describe('Memory', () => {
             me.body.reset(me.x, me.y);
         });
         await expect.poll(() => page.evaluate(() => ({
-            sheet: window.__PHASER_GAME.textures.exists('foe-grunt'),
-            anims: window.__PHASER_GAME.anims.exists('foe-grunt-stand-s'),
+            sheet: window.__PHASER_GAME.textures.exists('foe-pillager'),
+            anims: window.__PHASER_GAME.anims.exists('foe-pillager-stand-s'),
         })), { timeout: 10000 }).toEqual({ sheet: false, anims: false });
     });
 

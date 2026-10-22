@@ -15,9 +15,9 @@ import { audio } from '../audio/audio.js';
 
 // Where bands wait (feet), each of one kind of foe, 1 to 8 of them (a new number each time it's met).
 // Round Riverhold, where you set out, to meet them all: the undead up the river to the north, the
-// goblins out on the grass across it to the west, an orc band and a shadow just south of the gate.
+// goblins out on the grass across it to the west, goblin pillagers and a shadow just south of the gate.
 export const FOES = [
-    { kind: 'grunt', x: 6224, y: 11190, band: [1, 8] },
+    { kind: 'pillager', x: 6224, y: 11190, band: [1, 8] },
     { kind: 'shadow', x: 6416, y: 11254, band: [1, 8] },
     { kind: 'skeleton', x: 6480, y: 10838, band: [1, 8] },
     { kind: 'ghost', x: 6384, y: 10806, band: [1, 8] },

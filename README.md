@@ -100,13 +100,13 @@ Other races and classes are reserved for NPCs and enemies.
 
 Fights are fought Ultima III style, on a battle map of their own:
 
-- Bands of one to eight foes wait round Riverhold, where you set out, each its leader standing watch: an orc band just outside the gate; goblins on the grass across the river to the west (Goblin Spearmen, Wolf Riders, Goblin Knights, Direwolf Riders); the undead up the river to the north and at the wood's edge to the south (Skeletons, Skeleton Riders, Bone Knights, Ghosts, Shadows, Nightgaunts). All are The Battle for Wesnoth's units, standing a head taller than you, with their own idle, attack, hit and death animations
+- Bands of one to eight foes wait round Riverhold, where you set out, each its leader standing watch: Goblin Pillagers (on wolves, with torches) just outside the gate; more goblins on the grass across the river to the west (Goblin Spearmen, Wolf Riders, Goblin Knights, Direwolf Riders); the undead up the river to the north and at the wood's edge to the south (Skeletons, Skeleton Riders, Bone Knights, Ghosts, Shadows, Nightgaunts). All are The Battle for Wesnoth's units, standing a head taller than you, with their own walk, idle, attack, hit and death animations
 - Walk into it and you're on a portrait battle map, 11 by 14 tiles, of the country you met it in (grassland, forest or snow): a clearing in the woods with a trodden path, wildflowers, stones or mushrooms, laid out from the same Wesnoth grass, snow and trees as the world map, with battle music
-- Everyone starts where Ultima IV's combat maps put them: the orcs scattered across the top of the field (crowded to one side in a forest), you below
-- It goes in turns: you take a step or an attack (a box marks whose turn it is), then the orcs take theirs. Walk into an orc, or press attack beside one, to strike; a bow or sling shoots down a row or column and stops in the first orc. Damage numbers fly, each orc's HP bar drains, they reel when hit and swing back (their blows don't land yet), and fall with Wesnoth's death animation. You walk among the trees, which thin when you're behind one
-- Fights at night are fought by moonlight: blue, but you can see every orc
+- Everyone starts where Ultima IV's combat maps put them: the foes scattered across the top of the field (crowded to one side in a forest), you below
+- It goes in turns: you take a step or an attack (a box marks whose turn it is), then the foes take theirs. Walk into a foe, or press attack beside one, to strike; a bow or sling shoots down a row or column and stops in the first foe. Damage numbers fly, each foe's HP bar drains, they reel when hit and swing back (their blows don't land yet), and fall with Wesnoth's death animation. You walk among the trees, which thin when you're behind one
+- Fights at night are fought by moonlight: blue, but you can see every foe
 - Walk off any side of the map to flee
-- Beat them all and you're back in the world, where a chest has dropped where they stood: gold for each orc and, likelier the bigger the band, a piece of gear any shop will buy. A new band is at the post a couple of minutes later
+- Beat them all and you're back in the world, where a chest has dropped where they stood: gold for each foe and, likelier the bigger the band, a piece of gear any shop will buy. A new band is at the post a couple of minutes later
 
 ## Spells
 

@@ -29,8 +29,9 @@ test.describe('Foes', () => {
         expect(seen.every(s => s.visible)).toBe(true);
         expect(seen.every(s => s.away < 900)).toBe(true);
         expect(seen.filter(s => s.race === 'undead').length).toBeGreaterThanOrEqual(6);
-        expect(seen.filter(s => s.race === 'goblin').length).toBe(4);
-        expect(seen.filter(s => s.kind !== 'grunt').every(s => s.walks)).toBe(true);
+        expect(seen.filter(s => s.race === 'goblin').length).toBe(5);
+        expect(seen.every(s => s.walks)).toBe(true);             // the Orcish Grunt couldn't walk: the Pillager took its post
+        expect(seen[0].kind).toBe('pillager');
     });
 
     test('foes are drawn over the trees, in the world and on the battle map, so one in the woods is never lost among them', async ({ page }) => {

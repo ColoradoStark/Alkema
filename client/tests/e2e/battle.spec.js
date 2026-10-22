@@ -1,8 +1,8 @@
-// Battles, Ultima III style: a band of one to eight orcs (Wesnoth's Orcish
-// Grunt, recoloured to our palette) waits on the grass outside Riverhold's
+// Battles, Ultima III style: a band of one to eight goblins (Wesnoth's Goblin
+// Pillager, on a wolf with a torch) waits on the grass outside Riverhold's
 // gate. Walk into it and you're on a battle map of the country you met it in,
 // in portrait, with battle music, everyone where Ultima IV's combat maps put
-// them. It goes in turns: you take a step or an attack, then the orcs (they
+// them. It goes in turns: you take a step or an attack, then the goblins (they
 // swing, but don't hurt yet). Strike them down (HP bars, damage numbers) and
 // you're back in the world beside a chest of gold. Walk off the map and you flee.
 import { test, expect } from '@playwright/test';
@@ -101,11 +101,11 @@ async function walkTo(page, cell) {
 }
 
 test.describe('Battle', () => {
-    test('walk into a band of three orcs: a portrait grass map, battle music, everyone in their places; strike them down a turn at a time, and a chest of gold waits back in the world', async ({ page }) => {
+    test('walk into a band of three goblins: a portrait grass map, battle music, everyone in their places; strike them down a turn at a time, and a chest of gold waits back in the world', async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);
         const before = await state(page);
-        expect(before.foe.anim).toMatch(/^foe-grunt-(stand|breeze)-[ns]$/);    // the band's leader, shifting its weight
+        expect(before.foe.anim).toMatch(/^foe-pillager-(stand|breeze)-[ns]$/);    // the band's leader, shifting its weight
         expect(before.count).toBeGreaterThanOrEqual(1);
         expect(before.count).toBeLessThanOrEqual(8);
 
@@ -116,7 +116,7 @@ test.describe('Battle', () => {
         expect(s.battle.foes).toHaveLength(3);
         for (const f of s.battle.foes) {
             expect(map.places).toContainEqual(f.cell);          // each in one of Ultima IV's places for foes
-            expect(f).toMatchObject({ hp: 38, maxHp: 38, bar: true });
+            expect(f).toMatchObject({ hp: 44, maxHp: 44, bar: true });   // a Goblin Pillager's, as Wesnoth has it
         }
         expect(new Set(s.battle.foes.map(f => f.cell.join())).size).toBe(3);
         await expect.poll(async () => (await state(page)).music, { timeout: 30000 }).toEqual(['music-frantic']);
@@ -144,7 +144,7 @@ test.describe('Battle', () => {
             }
         }
         expect(damage.length).toBeGreaterThanOrEqual(3);
-        expect(damage.reduce((a, b) => a + b, 0)).toBe(3 * 38);
+        expect(damage.reduce((a, b) => a + b, 0)).toBe(3 * 44);
 
         // Back in the world where you met them, the battle map let go, and a chest where they stood
         await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
@@ -210,7 +210,7 @@ test.describe('Battle', () => {
         const s = await state(page);
         expect(s.battle.foes).toHaveLength(8);
         expect(new Set(s.battle.foes.map(f => f.cell.join())).size).toBe(8);
-        expect(s.battle.foes.every(f => f.bar && f.hp === 38)).toBe(true);
+        expect(s.battle.foes.every(f => f.bar && f.hp === 44)).toBe(true);
         // Down and off the bottom of the map, a step a turn
         for (let i = 0; i < 8 && (await state(page)).room === 'battle'; i++) await step(page, 'down');
         await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
