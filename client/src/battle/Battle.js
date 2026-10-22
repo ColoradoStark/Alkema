@@ -149,7 +149,7 @@ export class Battle {
         this.snowing = country === 'snow';
         this.over = false;
         this.busy = false;          // someone's moving or swinging: the next turn waits
-        this.held = true;           // the way you walked in: let go of it before you take a step
+        this.held = true;           // the way you walked in, or your last step: let go of it before the next
 
         this.ground = scene.add.image(0, 0, groundKey(country)).setOrigin(0, 0).setDepth(-10);
         this.frame = scene.add.rectangle(0, 0, this.width, this.height).setOrigin(0, 0)
@@ -310,8 +310,10 @@ export class Battle {
 
     /**
      * Your move, every frame (GameScene.handlePlayerMovement): a step for
-     * whoever's turn it is (held, a step each turn). Into a foe is an attack
-     * on it; off the map, they leave the fight.
+     * whoever's turn it is, a press a step: hold a way down and only the one
+     * whose turn it is steps (the next waits for you to let go, so a held
+     * finger never walks the whole party). Into a foe is an attack on it; off
+     * the map, they leave the fight.
      */
     move(dx, dy) {
         if (!dx && !dy) {
@@ -324,13 +326,17 @@ export class Battle {
         const dir = DIRS[`${sx},${sy}`];
         const to = [m.cell[0] + sx, m.cell[1] + sy];
         const foe = this.foeAt(to);
-        if (foe) return this.attack(foe);
+        if (foe) {
+            this.held = true;
+            return this.attack(foe);
+        }
         if (this._blocked(to)) {
             m.who.sprite.setDirection(dir);
             m.who.sprite.stopAnimation();
             return;
         }
         const off = to[0] < 0 || to[1] < 0 || to[0] >= this.cols || to[1] >= this.rows;
+        this.held = true;
         this._walk(m, to, dir, () => {
             if (off) this._leave(m);
             else m.cell = to;

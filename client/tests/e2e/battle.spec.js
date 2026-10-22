@@ -431,6 +431,33 @@ test.describe('Battle', () => {
         expect(s.alpha).toBe(1);
     });
 
+    test('holding a way down takes one step: the next of you waits for you to let go, so a held finger never walks the whole party', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, { party: true });
+        await sturdy(page);
+        await walkInto(page, 1);
+        await yourTurn(page);
+        const cells = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.party.map(m => m.cell.join()));
+        const keys = 'window.__PHASER_GAME.scene.getScene("UIScene").bottomControls.movementKeys';
+        const start = await cells();
+        // Held for long enough to walk all four of you
+        await page.evaluate(`${keys}.up = true`);
+        await page.waitForTimeout(2500);
+        let now = await cells();
+        expect(now.filter((c, i) => c !== start[i]).length).toBe(1);
+        expect(now[0]).not.toBe(start[0]);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.turn)).toBe(1);
+        // Let go and press again: the next of you steps
+        await page.evaluate(`${keys}.up = false`);
+        await page.waitForTimeout(100);
+        await page.evaluate(`${keys}.up = true`);
+        await page.waitForTimeout(1500);
+        await page.evaluate(`${keys}.up = false`);
+        now = await cells();
+        expect(now.filter((c, i) => c !== start[i]).length).toBe(2);
+        expect(now[1]).not.toBe(start[1]);
+    });
+
     test('a band fills the front row first, its middle place first of all, then the places behind at random', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
