@@ -166,6 +166,29 @@ test.describe('Day and night', () => {
         for (const [k, c] of Object.entries(out)) expect(lum(c), `${k} ${c} vs clear ${out.clear}`).toBeGreaterThanOrEqual(lum(out.clear) - 2);
     });
 
+    test("a lantern inside the square of your own light keeps its light: your light only adds to it, never cuts a box out of it", async ({ page }) => {
+        await enterWorld(page);
+        await hour(page, 0);
+        // A watchman's lantern just inside the edge of your light's square (seen on an iPhone in
+        // Riverhold: past that edge his light was bright, inside it cut away, a hard dark box round you)
+        await page.evaluate(() => {
+            const dn = window.__PHASER_GAME.scene.getScene('GameScene').dayNight;
+            window.__lantern = dn.addLamp(dn.hero.x + 120, dn.hero.y + 22, 'carried');
+        });
+        await page.waitForTimeout(300);
+        const r = await page.evaluate(() => new Promise(resolve => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight, view = gs.cameras.main.worldView, L = window.__lantern;
+            const at = (x, y) => [Math.round((x - view.x) / 4), Math.round((y - view.y) / 4)];
+            // Either side of the square's edge (150 from you), nearer the lantern inside it
+            const pts = { inside: at(dn.hero.x + 144, L.y), outside: at(dn.hero.x + 156, L.y) };
+            const out = {};
+            const ks = Object.keys(pts);
+            const next = () => { if (!ks.length) return resolve(out); const k = ks.shift(); dn.map.snapshotPixel(...pts[k], c => { out[k] = c.red + c.green + c.blue; next(); }); };
+            next();
+        }));
+        expect(r.inside, `inside ${r.inside} vs outside ${r.outside}`).toBeGreaterThan(r.outside);
+    });
+
     test("a lamp's light, and the glow in the air round it, fade to nothing at their edges: no square to show on a phone", async ({ page }) => {
         await enterWorld(page);
         await hour(page, 0);

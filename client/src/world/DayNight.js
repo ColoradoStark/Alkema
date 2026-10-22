@@ -159,6 +159,20 @@ function overbright(renderer) {
     return OVERBRIGHT.get(renderer);
 }
 
+/**
+ * Light added to light, and nothing else. (Phaser's ADD blend is ONE, DST_ALPHA: it scales what's
+ * already there by its alpha, so a lamp stamped over another cut a dark square out of its light.)
+ */
+const ADDITIVE = new WeakMap();
+function additive(renderer) {
+    if (renderer.type !== Phaser.WEBGL) return Phaser.BlendModes.ADD;
+    if (!ADDITIVE.has(renderer)) {
+        const gl = renderer.gl;
+        ADDITIVE.set(renderer, renderer.addBlendMode([gl.ONE, gl.ONE], gl.FUNC_ADD));
+    }
+    return ADDITIVE.get(renderer);
+}
+
 export class DayNight {
     /** @param {Phaser.Scene} scene */
     constructor(scene) {
@@ -178,7 +192,7 @@ export class DayNight {
         this.half = this.map.blendMode !== Phaser.BlendModes.MULTIPLY;   // the map holds half the light
         this.map.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);     // smooth, though the game is pixel art
         for (const def of Object.values(LAMPS)) glowTexture(scene, def.radius);    // made up front: a few KB, kept till the scene goes
-        this.stamp = scene.make.image({ key: glowTexture(scene, LAMPS.hero.radius), add: false }).setBlendMode(Phaser.BlendModes.ADD);
+        this.stamp = scene.make.image({ key: glowTexture(scene, LAMPS.hero.radius), add: false }).setBlendMode(additive(scene.sys.renderer));
         this.hero = { kind: 'hero', def: LAMPS.hero, x: 0, y: 0, phase: 0, off: true, strength: 0 };
         scene.events.once('shutdown', () => this.destroy());
     }
@@ -196,7 +210,7 @@ export class DayNight {
         const lamp = { kind, def, x, y: y - (def.lift || 0), phase: Math.random() * 100, off: false, strength: 0, art: null, glow: null };
         if (def.art) lamp.art = this._fire(def.art, x, y, kind);
         lamp.glow = this.scene.add.image(x, lamp.y, airGlowTexture(this.scene)).setTint(def.colour)
-            .setScale(def.radius * 0.8 / GLOW_SIZE).setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setVisible(false);
+            .setScale(def.radius * 0.8 / GLOW_SIZE).setBlendMode(additive(this.scene.sys.renderer)).setDepth(27).setVisible(false);
         this.lamps.push(lamp);
         return lamp;
     }
