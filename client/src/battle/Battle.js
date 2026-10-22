@@ -1,8 +1,8 @@
 // A battle, Ultima III style: walk into a band of foes out in the world and
 // you're on a map of your own, a grid of 11 x 14 tiles (the game's portrait
 // view), a clearing in the country you met them in. Your party (one to four;
-// for now just you: companions come later, from PARTY) and one to eight foes
-// start where Ultima IV's combat maps put them (tools/battlegen.py).
+// for now just you: companions come later, from PARTY) starts below, where
+// Ultima IV's put it, and one to eight foes in three rows above (tools/battlegen.py).
 //
 // It goes in turns, as Ultima III's did: each of your party in order takes one
 // step or one attack (a box marks whose turn it is), then the foes have their
@@ -33,6 +33,7 @@ const ATTACK_MS = 650;          // a swing, start to finish, before the next tur
 const FOE_TURN_MS = 450;        // each foe's turn
 const OVER_MS = 2200;           // from the last foe falling to the world again
 const SHOT_DELAY_MS = 200;      // from pressing attack to the arrow or stone leaving (Player.playAttack)
+const FRONT = 3;                // places in the front row of foes (listed first in a map's places)
 const DIRS = { '1,0': 'right', '-1,0': 'left', '0,1': 'down', '0,-1': 'up' };
 
 /**
@@ -160,9 +161,11 @@ export class Battle {
         for (const m of this.party) m.rest = {};
         fxAnims(scene);
 
-        // The band, each in one of the foes' places, at random (as Ultima IV did)
-        const places = Phaser.Utils.Array.Shuffle([...map.places]);
-        this.foes = places.slice(0, Math.max(1, Math.min(count, places.length, 8))).map(cell => {
+        // The band in its rows (tools/battlegen.py FOE_PLACES): the front row, nearest you, fills
+        // first, its middle place first of all; the rest take the places behind at random
+        const [middle, ...sides] = map.places.slice(0, FRONT);
+        const places = [middle, ...Phaser.Utils.Array.Shuffle(sides), ...Phaser.Utils.Array.Shuffle(map.places.slice(FRONT))];
+        this.foes = places.slice(0, Math.max(1, Math.min(count, places.length))).map(cell => {
             const at = this.feetOf(cell);
             const foe = new Foe(scene, at.x, at.y, kind);
             foe.setDepthAt();

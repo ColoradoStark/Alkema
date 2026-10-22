@@ -115,10 +115,10 @@ test.describe('Battle', () => {
         expect(s.battle).toMatchObject({ country: 'grass', cols: 11, rows: 14, width: 352, height: 448, party: 1, hero: map.party[0] });
         expect(s.battle.foes).toHaveLength(3);
         for (const f of s.battle.foes) {
-            expect(map.places).toContainEqual(f.cell);          // each in one of Ultima IV's places for foes
             expect(f).toMatchObject({ hp: 44, maxHp: 44, bar: true });   // a Goblin Pillager's, as Wesnoth has it
         }
-        expect(new Set(s.battle.foes.map(f => f.cell.join())).size).toBe(3);
+        // Three: the front row, nearest you, filled first
+        expect(s.battle.foes.map(f => f.cell.join()).sort()).toEqual(map.places.slice(0, 3).map(c => c.join()).sort());
         await expect.poll(async () => (await state(page)).music, { timeout: 30000 }).toEqual(['music-frantic']);
         expect(await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -203,13 +203,38 @@ test.describe('Battle', () => {
         expect((await light()).lum).toBeLessThan(0.25);
     });
 
+    test('a band fills the front row first, its middle place first of all, then the places behind at random', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const fight = (count) => page.evaluate(async (count) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), spot = gs.encounters.spots[0];
+            spot.count = count;
+            await gs.enterBattle(spot);
+            const cells = gs.battle.foes.map(f => f.cell.join());
+            await gs.battle.end('fled');
+            await new Promise(res => { const t = setInterval(() => { if (!gs.battle && !gs._changingRoom) { clearInterval(t); res(); } }, 50); });
+            return cells;
+        }, count);
+        const places = (await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').maps)).grass.places.map(c => c.join());
+        expect(await fight(1)).toEqual([places[0]]);
+        const behind = new Set();
+        for (let i = 0; i < 4; i++) {
+            const cells = await fight(5);
+            expect(cells.slice().sort()).toEqual(expect.arrayContaining(places.slice(0, 3)));
+            expect(new Set(cells).size).toBe(5);
+            for (const c of cells) if (!places.slice(0, 3).includes(c)) behind.add(c);
+        }
+        expect(behind.size).toBeGreaterThan(2);         // the two behind are chosen at random
+    });
+
     test('a band of eight, each in its own place with its own HP bar; walk off the map and you flee, and they wait for you to step away', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await walkInto(page, 8);
         const s = await state(page);
+        const map = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').maps.grass);
         expect(s.battle.foes).toHaveLength(8);
-        expect(new Set(s.battle.foes.map(f => f.cell.join())).size).toBe(8);
+        expect(s.battle.foes.map(f => f.cell.join()).sort()).toEqual(map.places.map(c => c.join()).sort());     // every place filled
         expect(s.battle.foes.every(f => f.bar && f.hp === 44)).toBe(true);
         // Down and off the bottom of the map, a step a turn
         for (let i = 0; i < 8 && (await state(page)).room === 'battle'; i++) await step(page, 'down');
