@@ -13,6 +13,7 @@ import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
 import { Battle, battleCountry, loadBattleMap } from '../battle/Battle.js';
 import { Encounters } from '../battle/Encounters.js';
+import { OVER_TREES } from '../battle/Foe.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -130,7 +131,8 @@ export class GameScene extends Scene {
             if (player !== this.localPlayer) this.keepNearby(player);
             if (player && player.update) player.update(delta);
             // Heroes and trees sort by where they stand, so you pass in front of and behind each other
-            if (player?.sprite && !player.sailing) player.sprite.setDepth(sortDepth(this, player.sprite.y + FEET));
+            // (in a fight, among the foes, over the trees as they are)
+            if (player?.sprite && !player.sailing) player.sprite.setDepth(sortDepth(this, player.sprite.y + FEET) + (this.battle ? OVER_TREES : 0));
         });
     }
 
@@ -373,7 +375,7 @@ export class GameScene extends Scene {
             this.mooredShip.setVisible(false);
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
-            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, onEnd: result => this.leaveBattle(result) });
+            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, onEnd: (result, how) => this.leaveBattle(result, how) });
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
             cam.stopFollow();
@@ -388,8 +390,11 @@ export class GameScene extends Scene {
         }
     }
 
-    /** Won or fled: back in the world where you met the foe (and, won, a chest where it stood). */
-    async leaveBattle(result) {
+    /**
+     * Won, fled or fallen: back in the world where you met the foe (won, a chest where it stood,
+     * for those slain; fallen, you come to with a single hit point).
+     */
+    async leaveBattle(result, { slain } = {}) {
         const from = this._battleFrom;
         this._changingRoom = true;
         try {
@@ -408,7 +413,9 @@ export class GameScene extends Scene {
             this._arriveAt(at, from.y < from.spot.y ? 'down' : 'up', res?.players);
             cam.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
             cam.centerOn(at.x, at.y);
-            this.encounters.after(from.spot, result);
+            const hp = this.scene.get('UIScene')?.hp;
+            if (result === 'fallen' && hp) hp.now = Math.max(1, hp.now);
+            this.encounters.after(from.spot, result, slain);
             cam.fadeIn(FADE_MS);
         } catch (err) {
             console.warn('Could not leave the battle', err);

@@ -11,6 +11,7 @@ import { Spellbook } from '../magic/Spellbook.js';
 import { CastMenu } from '../ui/CastMenu.js';
 
 const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often
+const HP_BACK_MS = 3000;      // ...and a hit point this often
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -77,9 +78,11 @@ export class UIScene extends Scene {
         // Their class's spells (or a fighter's battle skills), and the one they have ready
         const heroClass = gear.stats?.class || this.scene.get('GameScene')?.localPlayer?.characterData?.character_class;
         this.spellbook = new Spellbook({ spells: catalogue.spells, heroClass });
-        // Their magic: full to start, spent casting, coming back slowly out of a fight
+        // Their magic and hit points: full to start, spent casting and lost to blows in a fight, coming back slowly out of one
         const mp = gear.stats?.mp?.max || 0;
         this.mp = { now: mp, max: mp };
+        const hp = gear.stats?.hp?.max || 1;
+        this.hp = { now: hp, max: hp };
         this.gear = new GearScreen({
             inventory: this.inventory,
             hero: () => this.scene.get('GameScene')?.localPlayer?.characterData,
@@ -243,8 +246,18 @@ export class UIScene extends Scene {
                 this.mp.now++;
             }
         }
-        const hp = this.inventory?.stats?.hp;
-        this.topBar.setBars(hp?.now ?? 1, hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
+        if (this.hp) {
+            const max = this.inventory?.stats?.hp?.max;
+            if (max && max !== this.hp.max) this.hp = Object.assign(this.hp, { max, now: Math.min(this.hp.now, max) });
+            if (!inFight && this.hp.now < this.hp.max) {
+                this._hpBack = (this._hpBack || 0) + delta;
+                if (this._hpBack >= HP_BACK_MS) {
+                    this._hpBack = 0;
+                    this.hp.now++;
+                }
+            }
+        }
+        this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
         if (!inFight) this.castMenu.close();
         const dayNight = this.scene.get('GameScene')?.dayNight;
         if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);

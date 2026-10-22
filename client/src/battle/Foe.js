@@ -10,8 +10,9 @@ import { sortDepth } from '../world/Forest.js';
 
 export const foeKey = kind => `foe-${kind}`;
 
-/** Foes are drawn over the trees (sorted among themselves), so one in the woods isn't lost among them. */
-const OVER_TREES = 2;
+/** Foes are drawn over the trees (sorted among themselves, and in a fight among your party), so one in the woods isn't lost among them. */
+export const OVER_TREES = 2;
+const BODY_MS = 700;        // the slain lie this long before they fade
 
 /** Load a foe's sheet and make its animations (resolves at once if it's here already). */
 export function loadFoe(scene, kind) {
@@ -137,14 +138,21 @@ export class Foe {
         this.scene.time.delayedCall(70, () => this.sprite.active && this.sprite.clearTint());
     }
 
-    /** Falls, and stays down (or, with no death of its own drawn, fades away). Resolves once it has. */
+    /**
+     * Falls (Wesnoth's death), then fades away, leaving its tile clear (with no death of its own
+     * drawn, it just fades). Resolves once it has fallen.
+     */
     die() {
         this.busy = true;
         this.dead = true;
         const anim = this._anim('die');
         if (anim) {
             this.sprite.play(anim);
-            return new Promise(resolve => this.sprite.once('animationcomplete', resolve));
+            return new Promise(resolve => this.sprite.once('animationcomplete', () => {
+                resolve();
+                this.scene.tweens.add({ targets: this.sprite, alpha: 0, delay: BODY_MS, duration: 500,
+                    onComplete: () => this.sprite.active && this.sprite.setVisible(false) });
+            }));
         }
         this.sprite.stop();
         return new Promise(resolve => this.scene.tweens.add({

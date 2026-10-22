@@ -2,9 +2,11 @@
 // Pillager, on a wolf with a torch) waits on the grass outside Riverhold's
 // gate. Walk into it and you're on a battle map of the country you met it in,
 // in portrait, with battle music, everyone where Ultima IV's combat maps put
-// them. It goes in turns: you take a step or an attack, then the goblins (they
-// swing, but don't hurt yet). Strike them down (HP bars, damage numbers) and
-// you're back in the world beside a chest of gold. Walk off the map and you flee.
+// them. It goes in turns: you take a step or an attack, then the goblins close
+// in, as a wave, and strike (their blows hurt: fall, and you come to back in
+// the world). Strike them down (HP bars, damage numbers) and you're back in the
+// world beside a chest of gold. Walk off the map and you flee; a goblin badly
+// hurt runs off the map, and leaves no gold.
 import { test, expect } from '@playwright/test';
 
 async function enterWorld(page) {
@@ -75,6 +77,25 @@ async function step(page, dir) {
     await yourTurn(page);
 }
 
+/** Press attack (at whoever's beside you, or the air), then wait till it's your turn again. */
+async function strike(page) {
+    await yourTurn(page);
+    await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle?.attack());
+    await page.waitForTimeout(50);
+    await yourTurn(page);
+}
+
+/** Can't be hurt (so a test isn't about staying alive), and (`attack`) strikes as hard as asked. */
+async function sturdy(page, attack) {
+    await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 15000 });
+    await page.evaluate((attack) => {
+        const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+        Object.assign(ui.hp, { now: 9999, max: 9999 });
+        ui.inventory.stats.hp = { now: 9999, max: 9999 };
+        if (attack) ui.inventory.stats.attack = attack;
+    }, attack);
+}
+
 /** Walk, a step at a time, to a cell (the shortest way round anyone in the way). */
 async function walkTo(page, cell) {
     const path = await page.evaluate(([gc, gr]) => {
@@ -125,25 +146,19 @@ test.describe('Battle', () => {
             return { ground: gs.overworld.groundLayer.visible, others: gs.players.size, minimap: window.__PHASER_GAME.scene.getScene('UIScene').minimap.map.visible };
         })).toEqual({ ground: false, others: 1, minimap: false });
 
-        // A strong hero, so the test isn't long: up to each orc in turn, and strike it from below till it falls
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 15000 });
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.attack = 30; });
+        // A strong hero who can't be hurt, so the test isn't long: stand your ground, and strike
+        // whoever comes (each falls to one blow, so none is hurt enough to run)
+        await sturdy(page, 999);
         const damage = [];
-        for (let n = 0; n < 3; n++) {
-            s = await state(page);
-            const target = s.battle.foes.filter(f => f.hp > 0).sort((a, b) => b.cell[1] - a.cell[1])[0];
-            const below = [target.cell[0], target.cell[1] + 1];
-            await walkTo(page, below);
-            for (let i = 0; i < 20; i++) {
-                const hp = (await state(page)).battle?.foes.find(f => f.cell.join() === target.cell.join())?.hp ?? 0;
-                if (!hp) break;
-                await step(page, 'up');               // walking into it is an attack
-                const after = (await state(page)).battle?.foes.find(f => f.cell.join() === target.cell.join())?.hp ?? 0;
-                if (after < hp) damage.push(hp - after);
-                if ((await state(page)).battle) expect((await state(page)).battle.hero).toEqual(below);    // it stands its ground
-            }
+        for (let i = 0; i < 40 && (await state(page)).room === 'battle' && (await state(page)).battle; i++) {
+            const before = (await state(page)).battle.foes.reduce((n, f) => n + f.hp, 0);
+            await strike(page);
+            const now = (await state(page)).battle;
+            if (!now) break;
+            const after = now.foes.reduce((n, f) => n + f.hp, 0);
+            if (after < before) damage.push(before - after);
         }
-        expect(damage.length).toBeGreaterThanOrEqual(3);
+        expect(damage.length).toBe(3);
         expect(damage.reduce((a, b) => a + b, 0)).toBe(3 * 44);
 
         // Back in the world where you met them, the battle map let go, and a chest where they stood
@@ -203,6 +218,102 @@ test.describe('Battle', () => {
         expect((await light()).lum).toBeLessThan(0.25);
     });
 
+    test('after your turn the band closes in, as a wave, riders two tiles at a time; the whole band moves in a moment', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await sturdy(page);
+        await walkInto(page, 8);
+        const apart = (s) => s.battle.foes.map(f => Math.max(Math.abs(f.cell[0] - s.battle.hero[0]), Math.abs(f.cell[1] - s.battle.hero[1])));
+        const before = apart(await state(page));
+        await yourTurn(page);
+        const t0 = Date.now();
+        await step(page, 'left');
+        const took = Date.now() - t0;
+        const after = apart(await state(page));
+        // Each closed in (you stepped one way: riders come two), the front ones fastest
+        const closer = before.map((d, i) => d - after[i]);
+        expect(closer.filter(n => n >= 1).length).toBeGreaterThanOrEqual(6);
+        expect(Math.max(...closer)).toBeGreaterThanOrEqual(2);
+        // Eight foes, but not eight turns' wait: your step and theirs in well under three seconds
+        expect(took).toBeLessThan(3000);
+        // Never two on one tile, turn after turn, you and the band
+        const tiles = () => page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            if (!b) return null;
+            return { cells: [...b.standing.map(f => f.cell.join()), ...b.party.map(m => m.cell.join())] };
+        });
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.attack = 999; });
+        for (let i = 0; i < 6; i++) {
+            await strike(page);
+            const t = await tiles();
+            if (!t) break;
+            expect(new Set(t.cells).size, t.cells.join(' ')).toBe(t.cells.length);
+        }
+
+    });
+
+    test('their blows hurt: your hit points drop, and at none you fall, and come to in the world with one, the band waiting', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').hp, null, { timeout: 15000 });
+        const hp = () => page.evaluate(() => ({ ...window.__PHASER_GAME.scene.getScene('UIScene').hp }));
+        const full = await hp();
+        expect(full.now).toBe(full.max);
+        expect(full.max).toBeGreaterThan(1);
+        await walkInto(page, 8);
+        // Worn down to a few hit points, the band upon you: stand there till you fall
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').hp.now = 3; });
+        let hurt = false;
+        for (let i = 0; i < 30 && (await state(page)).room === 'battle'; i++) {
+            await strike(page);
+            if ((await hp()).now < 3) hurt = true;
+        }
+        expect(hurt).toBe(true);
+        await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
+        await expect.poll(async () => !(await state(page)).changing, { timeout: 5000 }).toBe(true);
+        const s = await state(page);
+        expect((await hp()).now).toBeGreaterThanOrEqual(1);
+        expect((await hp()).now).toBeLessThan(5);
+        expect(s.chests).toHaveLength(0);                 // no spoils for falling
+        expect(s.foe).toBeTruthy();                       // the band still at its post
+        // Out of the fight, your hit points come back
+        const was = (await hp()).now;
+        await expect.poll(async () => (await hp()).now, { timeout: 10000 }).toBeGreaterThan(was);
+    });
+
+    test('the slain fall and then fade away, leaving no body on a tile', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await sturdy(page);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), spot = gs.encounters.spots.find(s => s.kind === 'skeleton');
+            spot.count = 3;
+            gs.enterBattle(spot);
+        });
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
+        const seen = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.foes
+            .filter(f => f.hp <= 0).map(f => f.foe.sprite.visible && f.foe.sprite.alpha > 0.05));
+        await page.evaluate(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; b._hit(b.foes[0], 999, 'Hit!'); });
+        await page.waitForTimeout(300);
+        expect(await seen()).toEqual([true]);            // falling: Wesnoth's death, played out
+        await expect.poll(seen, { timeout: 5000 }).toEqual([false]);
+    });
+
+    test('a goblin badly hurt runs off the map: gone, the fight is won, but it leaves no gold', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await sturdy(page);
+        await walkInto(page, 1);
+        await page.evaluate(() => { const f = window.__PHASER_GAME.scene.getScene('GameScene').battle.foes[0]; f.hp = 5; });
+        // You keep away (a step this way, a step back): it runs for the edge
+        for (let i = 0; i < 12 && (await state(page)).room === 'battle' && (await state(page)).battle; i++) await step(page, i % 2 ? 'right' : 'left');
+        await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');
+        await expect.poll(async () => !(await state(page)).changing, { timeout: 5000 }).toBe(true);
+        const s = await state(page);
+        expect(s.chests).toHaveLength(0);
+        expect(s.foe).toBe(null);           // the post's empty a while, as after any win
+    });
+
     test('a band fills the front row first, its middle place first of all, then the places behind at random', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
@@ -230,12 +341,20 @@ test.describe('Battle', () => {
     test('a band of eight, each in its own place with its own HP bar; walk off the map and you flee, and they wait for you to step away', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
+        await sturdy(page);
         await walkInto(page, 8);
         const s = await state(page);
         const map = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').maps.grass);
         expect(s.battle.foes).toHaveLength(8);
         expect(s.battle.foes.map(f => f.cell.join()).sort()).toEqual(map.places.map(c => c.join()).sort());     // every place filled
         expect(s.battle.foes.every(f => f.bar && f.hp === 44)).toBe(true);
+        // You sort among them by where you stand (the band, above you, behind you), and like them over the trees
+        const depths = await page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            return { me: b.party[0].who.sprite.depth, foes: Math.max(...b.foes.map(f => f.foe.sprite.depth)), trees: Math.max(...b.trees.map(t => t.depth)) };
+        });
+        expect(depths.me).toBeGreaterThan(depths.foes);
+        expect(depths.me).toBeGreaterThan(depths.trees);
         // Down and off the bottom of the map, a step a turn
         for (let i = 0; i < 8 && (await state(page)).room === 'battle'; i++) await step(page, 'down');
         await expect.poll(async () => (await state(page)).room, { timeout: 15000 }).toBe('world');

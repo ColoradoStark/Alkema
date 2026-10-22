@@ -7,17 +7,21 @@
 // It goes in turns, as Ultima III's did: each of your party in order takes one
 // step or one attack (a box marks whose turn it is), then the foes have their
 // turn. Walk into a foe, or press attack beside it, to strike it (or shoot it
-// from down a row or column); walk off any side to leave the fight. For now
-// only you fight: the foes swing at whoever's beside them, but their blows
-// don't land yet. Beat them all and you've won; all of you gone, you've fled.
+// from down a row or column); walk off any side to leave the fight. The foes
+// close in and strike (Tactics.js: riders come fast, spirits drift, a shadow
+// slips behind you, a goblin badly hurt runs), moving as a wave, each swing
+// played out. Beat them all (or see them run) and you've won; struck down,
+// you've fallen; all of you gone off the map, you've fled.
 //
 // GameScene shows a Battle the way it shows a Town: it's the world while
 // you're in it (collide, update, destroy). The map's ground and your party's
 // sheets are loaded as you go in and let go as you come out; its trees are
 // the overworld's.
 
-import { Foe } from './Foe.js';
+import { Foe, OVER_TREES } from './Foe.js';
+import { decide } from './Tactics.js';
 import { Player } from '../sprites/Player.js';
+import { availableMoves } from '../creator/Showcase.js';
 import { sortDepth } from '../world/Forest.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
@@ -29,8 +33,13 @@ const STEP_MS = 200;            // a tile's walk
 const FOOT = 26;                // where in its tile someone stands
 const HIT_CHANCE = 0.85;
 const COMPANION_ATTACK = 6;     // your companions' blows (they have no gear of their own yet)
+const COMPANION_HP = 20;
 const ATTACK_MS = 650;          // a swing, start to finish, before the next turn
-const FOE_TURN_MS = 450;        // each foe's turn
+const FOE_TURN_MS = 450;        // a foe's swing
+const FOE_HIT_CHANCE = 0.6;     // a foe's blow lands this often
+const FOE_STEP_MS = 230;        // a foe's walk, a tile
+const WAVE_MS = 150;            // the band moves as a wave: each foe sets off this long after the one before
+const FALL_MS = 1600;           // from your falling to the world again
 const OVER_MS = 2200;           // from the last foe falling to the world again
 const SHOT_DELAY_MS = 200;      // from pressing attack to the arrow or stone leaving (Player.playAttack)
 const FRONT = 3;                // places in the front row of foes (listed first in a map's places)
@@ -112,7 +121,7 @@ export class Battle {
      * @param {string} opts.country  'grass', 'forest' or 'snow'
      * @param {string} opts.kind  the foes ('pillager')
      * @param {number} opts.count  how many (1 to 8)
-     * @param {(result: 'won'|'fled') => void} opts.onEnd
+     * @param {(result: 'won'|'fled'|'fallen', how: {slain: number}) => void} opts.onEnd
      */
     constructor(scene, { country, kind, count = 1, onEnd }) {
         this.scene = scene;
@@ -151,13 +160,17 @@ export class Battle {
             who.sprite.body.moves = false;
             who.sprite.setDirection('up');
             who.sprite.stopAnimation();
-            this.party.push({ who, name: (folk.character.name || folk.role).split(' ')[0], cell, attack: COMPANION_ATTACK });
+            this.party.push({ who, name: (folk.character.name || folk.role).split(' ')[0], cell, attack: COMPANION_ATTACK,
+                life: { now: COMPANION_HP, max: COMPANION_HP }, defence: 0 });
         });
         this.turn = 0;
-        // Your spells' power, your magic (the hero's own pool: UIScene.mp), and how long each spell or skill must rest
+        // Your spells' power, your magic and hit points (the hero's own: UIScene.mp, .hp), your
+        // defence, and how long each spell or skill must rest
         const ui = scene.scene.get('UIScene');
         this.party[0].spellPower = ui?.inventory?.stats?.spell ?? 0;
         this.party[0].magic = ui?.mp || { now: 0, max: 0 };
+        this.party[0].life = ui?.hp || { now: COMPANION_HP, max: COMPANION_HP };
+        this.party[0].defence = ui?.inventory?.stats?.defence ?? 0;
         for (const m of this.party) m.rest = {};
         fxAnims(scene);
 
@@ -169,7 +182,8 @@ export class Battle {
             const at = this.feetOf(cell);
             const foe = new Foe(scene, at.x, at.y, kind);
             foe.setDepthAt();
-            const f = { foe, cell: [...cell], hp: foe.spec.hp, maxHp: foe.spec.hp, bar: scene.add.graphics().setDepth(39) };
+            const f = { foe, cell: [...cell], hp: foe.spec.hp, maxHp: foe.spec.hp, bar: scene.add.graphics().setDepth(39),
+                moves: foe.spec.moves || 'walk', flees: !!foe.spec.flees, damage: foe.spec.damage || 4, gone: false };
             this._drawBar(f);
             return f;
         });
@@ -209,9 +223,14 @@ export class Battle {
         return this.party.filter(m => !m.out);
     }
 
-    /** Those of the band still standing. */
+    /** Those of the band still on the field (not slain, not run off). */
     get standing() {
-        return this.foes.filter(f => f.hp > 0);
+        return this.foes.filter(f => f.hp > 0 && !f.gone);
+    }
+
+    /** How many of the band have been slain. */
+    get slain() {
+        return this.foes.filter(f => f.hp <= 0).length;
     }
 
     say(text, ms = 2600) {
@@ -400,7 +419,7 @@ export class Battle {
         this._fell(f);
     }
 
-    /** One of the band falls (and stays down); the last to fall wins you the fight. */
+    /** One of the band falls (and stays down); the last on the field to fall wins you the fight. */
     async _fell(f) {
         audio.play('foe_down');
         this.scene.tweens.add({ targets: f.bar, alpha: 0, duration: 400 });
@@ -412,8 +431,15 @@ export class Battle {
         }
         this.over = true;
         this._drawMarker();
-        this.say(this.foes.length > 1 ? `The ${this.name}s are slain!` : `The ${this.name} is slain!`);
+        this.say(this.slain > 1 ? `The ${this.name}s are slain!` : `The ${this.name} is slain!`);
         await f.foe.die();
+        this._won();
+    }
+
+    /** The field is clear of them: victory, and back to the world. */
+    _won() {
+        this.over = true;
+        this._drawMarker();
         audio.play('victory');
         this.scene.time.delayedCall(OVER_MS - 800, () => this.end('won'));
     }
@@ -421,7 +447,7 @@ export class Battle {
     /** On to whoever's next in the party; after the last of you, the foes' turn. */
     _next() {
         if (this.over) return;
-        if (!this.fighting.length) return this.end('fled');
+        if (!this.fighting.length) return this.end(this.party.some(m => m.fallen) ? 'fallen' : 'fled');
         for (let i = this.turn + 1; i < this.party.length; i++) {
             if (!this.party[i].out) {
                 this.turn = i;
@@ -431,29 +457,124 @@ export class Battle {
         this._foesTurn();
     }
 
-    /** Each foe in turn swings at one of yours beside it (their blows don't land yet). */
+    /**
+     * The foes' turn: each in turn (nearest you first) strikes, closes in,
+     * slips behind you or runs (Tactics.js). Moves set off as a wave, a moment
+     * apart; a swing is played out before the next foe goes.
+     */
     async _foesTurn() {
         this.phase = 'foes';
         this._drawMarker();
-        for (const f of this.standing) {
-            if (this.over) return;
-            const near = this.fighting.find(m => this._beside(m.cell, f.cell));
-            if (!near) continue;
-            const at = near.who.sprite;
-            f.foe.face(at.x, at.y + FEET);
-            f.foe.attack();
-            audio.play('swing', { volume: 0.8 });
-            await new Promise(r => this.scene.time.delayedCall(330, r));
-            if (this.over) return;
-            this.scene.effects.floatText(at.x, at.y - 29, 'Miss', '#c4b59f', 15);
-            audio.play('block', { volume: 0.6 });
-            await new Promise(r => this.scene.time.delayedCall(FOE_TURN_MS - 330, r));
+        const away = f => Math.min(...this.fighting.map(m => Math.max(Math.abs(m.cell[0] - f.cell[0]), Math.abs(m.cell[1] - f.cell[1]))));
+        const moving = [];
+        for (const f of [...this.standing].sort((a, b) => away(a) - away(b))) {
+            if (this.over || !this.fighting.length) break;
+            if (f.hp <= 0 || f.gone) continue;
+            const plan = decide(f, { cols: this.cols, rows: this.rows, foes: this.standing, party: this.fighting, fallen: this.party.filter(m => m.fallen) });
+            if (plan.act === 'attack') {
+                await this._foeStrike(f, plan.target);
+            } else if (plan.act === 'move') {
+                moving.push(this._foeWalk(f, plan.path, plan.away));
+                await this._wait(WAVE_MS);
+            } else if (plan.act === 'slip') {
+                await this._foeSlip(f, plan.to);
+            }
         }
+        await Promise.all(moving);
         if (this.over) return;
+        if (!this.fighting.length) return this._next();
+        if (!this.standing.length) return this._won();
         // A round gone: spells and skills rest a turn less
         for (const m of this.party) for (const id in m.rest) if (--m.rest[id] <= 0) delete m.rest[id];
         this.phase = 'party';
         this.turn = this.party.findIndex(m => !m.out);
+    }
+
+    /** A foe walks a path, a tile at a time (its cell is the last at once, so the next foe knows); off the map, it's gone. */
+    async _foeWalk(f, path, away) {
+        const last = path[path.length - 1];
+        f.cell = [...last];
+        if (away) f.gone = true;
+        f.moving = true;
+        f.foe.walk();
+        for (const cell of path) {
+            const to = this.feetOf(cell);
+            f.foe.face(to.x, to.y);
+            await new Promise(resolve => this.scene.tweens.add({ targets: f.foe.sprite, x: to.x, y: to.y, duration: FOE_STEP_MS, onComplete: resolve }));
+        }
+        f.moving = false;
+        if (!away) {
+            f.foe.stand();
+            this._drawBar(f);
+            return;
+        }
+        // Off the map: it's run, and it's gone
+        this.say(`The ${this.name} runs away!`);
+        await new Promise(resolve => this.scene.tweens.add({ targets: [f.foe.sprite, f.bar], alpha: 0, duration: 250, onComplete: resolve }));
+        f.foe.setVisible(false);
+    }
+
+    /** A shadow's slip: gone in a swirl of dark, and there again behind one of you. */
+    async _foeSlip(f, to) {
+        const s = f.foe.sprite;
+        audio.play('poof', { volume: 0.7 });
+        this._fx('dark-magic', s.x, s.y - f.foe.tall / 2);
+        f.cell = [...to];
+        await this._wait(200);
+        s.setAlpha(0);
+        f.bar.setAlpha(0);
+        const at = this.feetOf(to);
+        s.setPosition(at.x, at.y);
+        await this._wait(200);
+        this._fx('dark-magic', at.x, at.y - f.foe.tall / 2);
+        await this._wait(120);
+        s.setAlpha(1);
+        f.bar.setAlpha(1);
+        this._drawBar(f);
+        this.say(`The ${this.name} slips behind ${this.fighting.length > 1 ? 'you' : this.fighting[0].name}!`);
+        await this._wait(250);
+    }
+
+    /** A foe swings at one of yours beside it: it lands (their defence takes some of it) or misses. */
+    async _foeStrike(f, m) {
+        const at = m.who.sprite;
+        f.foe.face(at.x, at.y + FEET);
+        f.foe.attack();
+        audio.play('swing', { volume: 0.8 });
+        await this._wait(330);
+        if (this.over) return;
+        if (Math.random() > FOE_HIT_CHANCE) {
+            this.scene.effects.floatText(at.x, at.y - 29, 'Miss', '#c4b59f', 15);
+            audio.play('block', { volume: 0.6 });
+        } else {
+            const blow = Math.round(f.damage * (0.7 + Math.random() * 0.6));
+            this._wound(m, Math.max(1, blow - Math.floor((m.defence || 0) / 2)), `The ${this.name} hits ${m.name}!`);
+        }
+        await this._wait(FOE_TURN_MS - 330);
+    }
+
+    /** Damage to one of yours: their number flies, they flinch; at nothing left they fall, out of the fight. */
+    _wound(m, damage, words) {
+        const s = m.who.sprite;
+        m.life.now = Math.max(0, m.life.now - damage);
+        this.scene.effects.floatText(s.x, s.y - 29, String(damage), '#ff6a5a', 20);
+        m.who.playSound?.('hurt');
+        s.setTintFill?.(0xff4040);
+        this.scene.time.delayedCall(90, () => s.active && s.clearTint?.());
+        if (m.life.now > 0) {
+            this.say(`${words} ${damage} damage.`);
+            return;
+        }
+        m.out = true;
+        m.fallen = true;
+        this.say(`${words} ${m.name} falls!`);
+        if (availableMoves(m.who.characterData || {})('hurt')) s.playAnimation('hurt', 'down');
+        else this.scene.tweens.add({ targets: s, alpha: 0.35, duration: 400 });
+        if (!this.fighting.length) {
+            this.over = true;
+            this._drawMarker();
+            this.scene.time.delayedCall(FALL_MS, () => this.end('fallen'));
+        }
     }
 
     // ------------------------------------------------ spells and skills
@@ -564,7 +685,7 @@ export class Battle {
         this._ended = true;
         this.over = true;
         if (result === 'fled') this.say('You flee!');
-        this.onEnd?.(result);
+        this.onEnd?.(result, { slain: this.slain });
     }
 
     // ------------------------------------------------ as GameScene's world
@@ -585,14 +706,16 @@ export class Battle {
         // Each of you sorts among the trees; a tree one of you is behind thins (as in the world's woods)
         const feetAll = this.party.map(m => ({ x: m.who.sprite.x, y: m.who.sprite.y + FEET }));
         for (const m of this.party) {
-            if (m.who !== this.scene.localPlayer) m.who.sprite.setDepth(sortDepth(this.scene, m.who.sprite.y + FEET));
+            if (m.who !== this.scene.localPlayer) m.who.sprite.setDepth(sortDepth(this.scene, m.who.sprite.y + FEET) + OVER_TREES);
         }
         for (const t of this.trees) {
             const behind = feetAll.some(p => p.y < t.y && p.y > t.y - t.height * 0.75 && Math.abs(p.x - t.x) < t.width * 0.22);
             t.setAlpha(behind ? 0.55 : 1);
         }
-        // The band watches the nearest of you
+        // The band sorts among itself as it moves, its bars going with it, and watches the nearest of you
         for (const f of this.standing) {
+            f.foe.setDepthAt();
+            if (f.moving) this._drawBar(f);
             if (f.foe.busy) continue;
             const near = feetAll.reduce((a, p) => (!a || Math.hypot(p.x - f.foe.x, p.y - f.foe.y) < Math.hypot(a.x - f.foe.x, a.y - f.foe.y) ? p : a), null);
             if (near) f.foe.face(near.x, near.y);
@@ -649,14 +772,16 @@ const SPELLS = {
         },
     },
 
-    /** Mend your wounds (the band can't wound you yet: you'll see it once they can). */
+    /** Mend your wounds. */
     heal: {
         async run(m, spell, at) {
             m.who.playCast();
             audio.play('holy');
             const me = m.who.sprite;
             await this._fx('healing', me.x, me.y);
-            this.scene.effects.floatText(me.x, me.y - 30, `+${this._spellBlow(m, at)}`, '#7ee07e', 20);
+            const mend = this._spellBlow(m, at);
+            if (m.life) m.life.now = Math.min(m.life.max, m.life.now + mend);
+            this.scene.effects.floatText(me.x, me.y - 30, `+${mend}`, '#7ee07e', 20);
             this.say(`${spell.name}: ${m.name} is mended.${this._mpWords(m)}`);
             await this._wait(250);
         },

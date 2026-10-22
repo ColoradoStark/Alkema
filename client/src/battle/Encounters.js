@@ -120,17 +120,21 @@ export class Encounters {
         for (const c of this.chests) c.sprite.setVisible(on);
     }
 
-    /** Back from fighting the foe at `spot`: won, a chest where it stood; fled, it waits for you to step off. */
-    after(spot, result) {
+    /**
+     * Back from fighting the foe at `spot`: won, a chest where it stood with gold for each slain
+     * (none if they all ran); fled or fallen, it waits for you to step off.
+     */
+    after(spot, result, slain = spot.count) {
         if (result !== 'won') {
             spot.waiting = true;
-            return;
+            return null;
         }
         spot.foe?.destroy();
         spot.foe = null;
         spot.backAt = this.scene.time.now + RESPAWN_MS;
-        const won = spot.count;
+        const won = slain;                      // those that ran away leave nothing
         spot.count = rollBand(spot.band);       // whoever comes back next time
+        if (!won) return null;
         const sprite = this.scene.add.sprite(spot.x, spot.y - 40, 'cc-chests', CHEST_FRAMES.shut).setOrigin(0.5, 0.9);
         const chest = { x: spot.x, y: spot.y, sprite, open: false, landed: false, loot: rollLoot(won) };
         this.chests.push(chest);
