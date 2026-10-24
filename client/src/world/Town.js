@@ -157,10 +157,16 @@ export class Town {
         this.rand = Math.random;      // what a barrel holds is rolled with this (tests fix it)
         this.foes = [];
         this.refresh();
-        for (const plan of data.foes || []) {
-            if (scene.flags?.[plan.flag]) continue;
+        // (a boss is gone for good once beaten, its flag kept; the rest are gone till you next come down: GameScene.slain)
+        for (const [i, post] of (data.foes || []).entries()) {
+            const plan = { ...post, id: `${key}:${i}` };
+            if (scene.flags?.[plan.flag] || scene.slain?.has(plan.id)) continue;
             loadFoe(scene, plan.kind).then(() => {
-                if (this.gone || scene.flags?.[plan.flag]) return;
+                if (this.gone) {        // came after you'd gone: let it go (unless it's where you are now, or whom you're fighting)
+                    if (scene.fighting !== plan.kind && !scene.town?.data.foes?.some(p => p.kind === plan.kind)) forgetFoe(scene, plan.kind);
+                    return;
+                }
+                if (scene.flags?.[plan.flag]) return;
                 const foe = new Foe(scene, plan.x, plan.y, plan.kind);
                 this.foes.push({ plan, foe, armed: false });
             }).catch(err => console.warn('No foe here', err));
@@ -271,7 +277,7 @@ export class Town {
             if (d > FOE_TOUCH * 3) f.armed = true;
             if (f.armed && d < FOE_TOUCH) {
                 f.armed = false;
-                this.scene.enterBattle({ ...f.plan, count: 1, country: 'cave', town: this.key });
+                this.scene.enterBattle({ ...f.plan, count: f.plan.count ?? 1, country: 'cave', town: this.key });
             }
         }
     }

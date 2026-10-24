@@ -2,7 +2,7 @@
 // out by hand: beside you it strikes; else it closes in the shortest way
 // round anyone in the way; riders come two tiles a turn, spirits drift
 // diagonally, a shadow slips behind you, and a goblin badly hurt runs for the
-// edge while the undead never do.
+// edge while the undead never do; Duelyst's side-on foes strike from a corner.
 import { test, expect } from '@playwright/test';
 
 /** decide() on a field: the foe `f` (its cell and ways), others in the band, and your party. */
@@ -30,6 +30,23 @@ test.describe('Foe tactics', () => {
         expect(plan.act).toBe('move');
         expect(plan.path).toHaveLength(1);
         expect([[4, 3], [6, 3]]).toContainEqual(plan.path[0]);
+    });
+
+    test("Duelyst's side-on foes strike from your corner: square beside you, one steps round to a diagonal first", async ({ page }) => {
+        // At your corner: it strikes
+        expect(await decide(page, { cell: [4, 5], side: true }, [], [[[5, 6]]])).toEqual({ act: 'attack', target: 0 });
+        // Right above you: a step aside to your corner, not a swing
+        expect(await decide(page, { cell: [5, 5], side: true }, [], [[[5, 6]]])).toEqual({ act: 'move', path: [[4, 5]] });
+        // Coming from afar it makes for a corner, not the tile in front of you
+        const far = await decide(page, { cell: [5, 2], side: true, moves: 'ride' }, [], [[[5, 6]]]);
+        expect(far.act).toBe('move');
+        const end = far.path[far.path.length - 1];
+        expect(Math.abs(end[0] - 5) === 1 && Math.abs(end[1] - 6) === 1 || far.path.length === 2).toBe(true);
+        // Drifting, it goes straight to the corner
+        expect(await decide(page, { cell: [5, 4], side: true, moves: 'drift' }, [], [[[5, 6]]])).toEqual({ act: 'move', path: [[4, 5]] });
+        // Square beside you and boxed in, both corners taken: it swings as it is
+        expect(await decide(page, { cell: [5, 5], side: true }, [[4, 5], [6, 5], [5, 4], [4, 4], [6, 4]], [[[5, 6]]], 0.99, [[4, 6], [6, 6], [4, 7], [6, 7]]))
+            .toEqual({ act: 'attack', target: 0 });
     });
 
     test('a rider comes two tiles a turn, and stops once it is beside you', async ({ page }) => {

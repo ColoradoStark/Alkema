@@ -6,8 +6,11 @@
 //   drift   a tile any way, diagonals too (spirits)
 //   shadow  drifting, and now and then slipping round behind you
 // A goblin badly hurt runs for the nearest edge instead, and is gone if it
-// gets off the map (`flees`); the undead never run. Never two on one tile:
-// it steps only where no one stands, or lies fallen.
+// gets off the map (`flees`); the undead never run. Duelyst's foes (`side`:
+// drawn side-on, with one attack swung side-on) strike only from a diagonal,
+// where that swing looks right (the user's): beside you square on, one steps
+// round to a corner first. Never two on one tile: it steps only where no one
+// stands, or lies fallen.
 //
 // Pure: it reads the field and says what to do; Battle plays it out.
 
@@ -21,7 +24,7 @@ const key = ([c, r]) => `${c},${r}`;
 const beside = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) === 1;
 
 /**
- * @param {object} f  the foe: { cell, hp, maxHp, moves, flees }
+ * @param {object} f  the foe: { cell, hp, maxHp, moves, flees, side }
  * @param {object} field  { cols, rows, foes: those standing (f among them), party: those of yours still fighting (each with `cell`),
  *   fallen: those of yours lying where they fell (no one steps there) }
  * @param {() => number} [rng]
@@ -36,7 +39,9 @@ export function decide(f, field, rng = Math.random) {
     const free = cell => on(cell) && !taken.has(key(cell));
     const dirs = f.moves === 'drift' || f.moves === 'shadow' ? ANY : STRAIGHT;
     const steps = f.moves === 'ride' ? 2 : 1;
-    const near = party.filter(m => beside(m.cell, f.cell));
+    // Where it can strike from: beside you, or (side-on) at your corner
+    const strikes = f.side ? (a, b) => Math.abs(a[0] - b[0]) === 1 && Math.abs(a[1] - b[1]) === 1 : beside;
+    const near = party.filter(m => strikes(m.cell, f.cell));
     const weakest = list => [...list].sort((a, b) => (a.life?.now ?? 0) - (b.life?.now ?? 0))[0];
 
     // Badly hurt, a goblin runs for the nearest edge (off it, it's gone)
@@ -61,9 +66,12 @@ export function decide(f, field, rng = Math.random) {
         if (free(behind)) return { act: 'slip', to: behind, target: nearest };
     }
 
-    // Close in: the shortest way to a place beside any of you
-    const goal = c => party.some(m => beside(m.cell, c));
+    // Close in: the shortest way to a place it can strike any of you from
+    const goal = c => party.some(m => strikes(m.cell, c));
     let path = shortest(f.cell, dirs, free, goal);
+    // Side-on and square beside one of you with no corner to get to: it strikes as it is
+    const square = party.filter(m => beside(m.cell, f.cell));
+    if (!path && square.length) return { act: 'attack', target: weakest(square) };
     // No way through (hemmed in): as near as it can get
     if (!path) path = closest(f.cell, dirs, free, party);
     if (!path || !path.length) return { act: 'wait' };

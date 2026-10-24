@@ -205,7 +205,7 @@ export class Battle {
             foe.setDepthAt();
             const hp = foe.spec.hp * (boss ? BOSS_HP : 1);      // a dungeon's boss: the same foe, harder to put down
             const f = { foe, cell: [...cell], hp, maxHp: hp, bar: scene.add.graphics().setDepth(39),
-                moves: foe.spec.moves || 'walk', flees: !!foe.spec.flees, damage: foe.spec.damage || 4, gone: false };
+                moves: foe.spec.moves || 'walk', flees: !!foe.spec.flees, side: !!foe.spec.side, damage: foe.spec.damage || 4, gone: false };
             this._drawBar(f);
             return f;
         });

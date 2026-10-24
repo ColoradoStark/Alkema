@@ -160,6 +160,41 @@ test.describe('Gloomwater Grotto', () => {
         expect(out).toBeLessThan(80);
     });
 
+    test("Duelyst's Vanar keep the grotto: walk into a band and you fight them all in the cave; beaten, they're gone till you come down again, and what they carried is yours", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await goTo(page, 'gloomwater-1');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
+        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(2);
+        // Toned down from Duelyst's colours, and side-on
+        const spec = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').foes.snowchaser);
+        expect(spec).toMatchObject({ side: true, look: 'grey', name: 'Snowchaser' });
+        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
+        await expect.poll(() => page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            return b && { country: b.country, foes: b.foes.length, side: b.foes.every(f => f.side), names: [...new Set(b.foes.map(f => f.foe.name))] };
+        }), { timeout: 20000 }).toEqual({ country: 'cave', foes: band.count, side: true, names: ['Snowchaser'] });
+        const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
+        await page.evaluate(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; b.foes.forEach(f => { f.hp = 0; }); b.end('won'); });
+        await expect.poll(() => level(page), { timeout: 20000 }).toBe('gloomwater-1');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold), { timeout: 5000 }).toBeGreaterThan(gold);
+        await page.waitForTimeout(800);
+        const left = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind));
+        expect(left).not.toContain('snowchaser');
+        expect(left).toContain('snowchaser-lpc');
+        expect((await flags(page))).toEqual({});       // nothing kept: they'll be back
+        // Out and down again: back at their post
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            await gs.leaveTown();
+        });
+        await expect.poll(() => level(page), { timeout: 15000 }).toBe(null);
+        await goTo(page, 'gloomwater-1');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind).sort()), { timeout: 20000 })
+            .toEqual(['snowchaser', 'snowchaser-lpc']);
+    });
+
     test('the font of clear water makes you whole', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

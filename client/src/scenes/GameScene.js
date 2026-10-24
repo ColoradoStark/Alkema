@@ -12,7 +12,7 @@ import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
 import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
-import { Encounters } from '../battle/Encounters.js';
+import { Encounters, rollLoot } from '../battle/Encounters.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
@@ -280,6 +280,7 @@ export class GameScene extends Scene {
         const { arrive, facing } = this.cache.json.get(`town-${key}`) || {};
         if (!arrive) return;
         this._townPlace = place;
+        this.slain = new Set();         // a dungeon's bands are all back at their posts each time you come
         await this.changeMap(key, arrive, facing || 'right');
     }
 
@@ -407,7 +408,7 @@ export class GameScene extends Scene {
      */
     async leaveBattle(result, { slain } = {}) {
         const from = this._battleFrom;
-        if (from.spot.town) return this._backToLevel(from, result);
+        if (from.spot.town) return this._backToLevel(from, result, slain);
         this._changingRoom = true;
         try {
             const at = { x: from.x, y: from.y - FEET };
@@ -436,19 +437,38 @@ export class GameScene extends Scene {
         }
     }
 
-    /** Back from a dungeon's fight to the level it was fought on (won, the foe gone for good). */
-    async _backToLevel(from, result) {
+    /**
+     * Back from a dungeon's fight to the level it was fought on. Won: a boss is gone for good (its flag),
+     * any other band till you next come down (`slain`, cleared as you enter), and what they carried is yours.
+     */
+    async _backToLevel(from, result, beaten = from.spot.count) {
         this.battle.destroy();
         this.battle = null;
         this.world = null;
         this.fighting = null;
-        if (result === 'won') this.setFlag(from.spot.flag);
+        const won = result === 'won';
+        if (won && from.spot.flag) this.setFlag(from.spot.flag);
+        else if (won) (this.slain ??= new Set()).add(from.spot.id);
         this.localPlayer.nameText.setVisible(true);
         const hp = this.scene.get('UIScene')?.hp;
         if (hp) hp.now = Math.max(1, hp.now);
         this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
         await this.changeMap(from.spot.town, [from.x, from.y], from.y < from.spot.y ? 'down' : 'up');
         if (!this.town) forgetFoe(this, from.spot.kind);
+        if (won && !from.spot.flag && beaten) this._spoils(rollLoot(beaten));
+    }
+
+    /** What a band beaten in a dungeon carried, straight into your pack: coins, and now and then something to sell. */
+    _spoils({ gold, item }) {
+        const inventory = this.scene.get('UIScene')?.inventory;
+        inventory?.loot(gold, item);
+        audio.play('coins');
+        const me = this.localPlayer?.sprite;
+        if (!me) return;
+        this.effects?.coinBurst(me.x, me.y - 18, me.y + FEET);
+        this.effects?.floatText(me.x, me.y - 40, `+${gold} gold`, '#fbf236', 18);
+        const name = inventory?.item(item)?.name;
+        if (name) this.time.delayedCall(450, () => this.effects?.floatText(me.x, me.y - 40, name, '#fff6e0', 16));
     }
 
     /** What you've opened, drained and won in the dungeons, kept with your hero. */

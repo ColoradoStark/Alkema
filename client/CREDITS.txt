@@ -110,6 +110,15 @@ grunt's every colour mapped to the LPC character palettes, and its dropped
 sword drawn into its last death frames).
   License: GNU GPL version 2 or later
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/units
+The foes in Gloomwater Grotto are Duelyst's Vanar (the Snowchaser, Ice
+Hornet, Crystal Beetle, Water Elemental, Kindred Hunter and Water Bear),
+by Counterplay Games' artists, released by Open Duelyst under CC0. Their
+breathing, idle, run, attack, hit and death frames are used, toned down
+from Duelyst's colours (less colour, darker, warmer); one copy of each is also matched to the LPC
+palettes. The Snowchaser, Ice Hornet, Crystal Beetle, Water Elemental,
+Kindred Hunter and Water Bear are scaled up a quarter.
+  License: CC0 1.0 Universal (public domain dedication)
+  https://github.com/open-duelyst/duelyst/tree/main/app/resources/units
 The battle maps are laid out from the same Wesnoth grass, snow and
 trees as the world map (below), with Wesnoth's dirt and its ground
 decorations (flowers, stones, rocks, mushrooms, snow) by its terrain

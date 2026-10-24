@@ -163,6 +163,39 @@ test.describe('Memory', () => {
         })), { timeout: 10000 }).toEqual({ sheet: false, anims: false });
     });
 
+    test("down the grotto with its Vanar at their posts: each level under budget, and every foe's sheet let go on the way out", async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        const base = await settled(page);
+        const report = [];
+        for (const key of ['gloomwater-1', 'gloomwater-2', 'gloomwater-3', 'gloomwater-4']) {
+            await page.evaluate(async (key) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                if (!gs.town) {
+                    const { WORLD } = await import('/src/world/places.js');
+                    await gs.enterPlace(WORLD.places.find(p => p.name === 'Gloomwater Grotto'));
+                }
+                if (gs.town.key !== key) {
+                    const { arrive } = await (await fetch(`/towns/${key}.json`)).json();
+                    await gs.changeMap(key, arrive, 'up');
+                }
+            }, key);
+            // Every band at its post, drawn
+            await expect.poll(() => page.evaluate(() => {
+                const t = window.__PHASER_GAME.scene.getScene('GameScene').town;
+                return t && `${t.key}: ${t.foes.length} of ${t.data.foes.length}`;
+            }), { timeout: 30000 }).toMatch(new RegExp(`^${key}: (\\d+) of \\1$`));
+            report.push({ key, mb: Math.round((await held(page)).mb - base.mb) });
+        }
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
+        const after = await held(page);
+        console.log('the grotto', JSON.stringify(report));
+        for (const r of report) expect.soft(r.mb, r.key).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')))).toEqual([]);
+    });
+
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);
