@@ -128,6 +128,17 @@ export class UIScene extends Scene {
         if (me) this.scene.get('GameScene').effects?.floatText(me.x, me.y - 30, 'Healed', '#7ee07e', 18);
     }
 
+    /** A line across the top of the screen for a moment: what just happened (a gate opens, a level's name). */
+    notice(text, ms = 3600) {
+        this._notice?.destroy();
+        const t = this._notice = this.add.text(this.scale.width / 2, 104, text, {
+            fontFamily: 'Alagard', fontSize: '15px', color: '#fff6e0', align: 'center',
+            backgroundColor: '#1d131ee0', padding: { x: 10, y: 6 }, wordWrap: { width: this.scale.width - 48 },
+        }).setOrigin(0.5, 0).setDepth(60).setAlpha(0);
+        this.tweens.add({ targets: t, alpha: 1, duration: 200 });
+        this.tweens.add({ targets: t, alpha: 0, delay: ms, duration: 500, onComplete: () => t.destroy() });
+    }
+
     /** A shopkeeper at their counter: their shop, if they keep one here. */
     _shopOf(folk) {
         const town = this.scene.get('GameScene')?.town;

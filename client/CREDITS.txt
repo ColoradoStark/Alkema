@@ -1381,6 +1381,37 @@ contributed by William.Thompsonj.
   https://opengameart.org/content/lpc-dungeon-elements
 
 ======================================================================
+GLOOMWATER GROTTO (THE DUNGEON)
+======================================================================
+
+The grotto's levels (tools/dungeongen.py) blend The Battle for Wesnoth's
+terrain with LPC things, as the battle maps do:
+
+wesnoth-cave/ (the cave floor, the earthy floor, the dark flagstones and the
+rough cave wall) and wesnoth-mushrooms/ (the mushroom groves, on dry ground and
+in the water): The Battle for Wesnoth's terrain art, taken unchanged from
+data/core/images/terrain/cave and data/core/images/terrain/forest
+(https://github.com/wesnoth/wesnoth), by the Wesnoth terrain artists (the
+full list of contributors is in data/core/about.cfg of the Wesnoth
+repository). The stones, rocks and little mushrooms strewn on the floor are
+Wesnoth's embellishments (see BATTLES).
+  License: GNU GPL version 2 or later
+
+ladder.png: from the LPC Base Assets' mountains.png by Lanea Zimmerman
+(Sharm).
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+
+The iron gate, the stone font, the pillars, the mossy pillars, the great
+carved head, the boulder, the waterfall (darkened for the cave), the reeds,
+the gravestones and the planks of the steps down are from the LPC atlas
+(tools/worldgen-sources/terrain_atlas.png: Lanea Zimmerman (Sharm), Jetrel,
+Daniel Eddeland and others; credits in tools/worldgen-sources/ATLAS-CREDITS.txt).
+The chests, the dock, the bridge's planks and rails, the rowboat, the crates
+and barrels, the skulls and bones are the towns' (tools/towngen-sources,
+credits in TOWN-CREDITS.txt).
+
+======================================================================
 FIRE (CAMPFIRES, TORCHES AND HEARTHS)
 ======================================================================
 

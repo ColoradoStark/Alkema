@@ -13,7 +13,8 @@ import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
 import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
 import { Encounters } from '../battle/Encounters.js';
-import { OVER_TREES } from '../battle/Foe.js';
+import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
+import { account } from '../account/account.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -111,6 +112,7 @@ export class GameScene extends Scene {
         this.world?.update(delta, feet);
         if (this.dayNight) {
             this.dayNight.indoors = !!this.town?.indoors;
+            this.dayNight.underground = !!this.town?.data.dark;
             this.dayNight.moonlit = !!this.battle;
             this.dayNight.update(delta, feet);
         }
@@ -307,8 +309,9 @@ export class GameScene extends Scene {
             this.mooredShip.setVisible(false);
             this.encounters.setVisible(false);
             this.town = this.world = new Town(this, key);
-            this.cameras.main.setBackgroundColor(this.town.indoors ? '#0c080e' : '#1d5d8c');
+            this.cameras.main.setBackgroundColor(this.town.indoors || this.town.data.dark ? '#0c080e' : '#1d5d8c');
             this._arriveAt(at, facing, res.players);
+            if (this.town.data.name) this.scene.get('UIScene')?.notice?.(this.town.data.name, 2600);   // a dungeon level's name
             this.cameras.main.setBounds(0, 0, this.town.width, this.town.height);
             this.cameras.main.centerOn(at.x, at.y);
             this.cameras.main.fadeIn(FADE_MS);
@@ -358,10 +361,10 @@ export class GameScene extends Scene {
     /** To the battle map for the country you met the foe in (Ultima III style), a room of your own on the server. */
     async enterBattle(spot) {
         const me = this.localPlayer?.sprite;
-        if (!me || this._changingRoom || this.town || this.battle) return;
+        if (!me || this._changingRoom || this.battle || (this.town && !spot.town)) return;
         this._changingRoom = this._fighting = true;
         try {
-            const country = battleCountry(this.overworld, spot.x, spot.y);
+            const country = spot.country || battleCountry(this.overworld, spot.x, spot.y);
             await loadBattleMap(this, country, this.companions);
             this.localPlayer.setVelocity(0, 0);
             // You'll be back a step from where it stood, the way you came (clear of the chest it leaves)
@@ -372,11 +375,17 @@ export class GameScene extends Scene {
             const res = await this.networkManager.request('change-room', { battle: true, x: col * 32 + 16, y: row * 32 });
             if (!res?.ok) return;
             await this._fadeOut();
+            if (spot.town) {         // a dungeon's foe: the level goes while you fight, and comes back after
+                this.fighting = spot.kind;
+                this._dropTown();
+                this.town = null;
+            }
             this.overworld.setVisible(false);
             this.mooredShip.setVisible(false);
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
-            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, companions: this.companions, onEnd: (result, how) => this.leaveBattle(result, how) });
+            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, boss: spot.boss, name: spot.name,
+                companions: this.companions, onEnd: (result, how) => this.leaveBattle(result, how) });
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
             cam.stopFollow();
@@ -397,6 +406,7 @@ export class GameScene extends Scene {
      */
     async leaveBattle(result, { slain } = {}) {
         const from = this._battleFrom;
+        if (from.spot.town) return this._backToLevel(from, result);
         this._changingRoom = true;
         try {
             const at = { x: from.x, y: from.y - FEET };
@@ -423,6 +433,70 @@ export class GameScene extends Scene {
         } finally {
             this._changingRoom = false;
         }
+    }
+
+    /** Back from a dungeon's fight to the level it was fought on (won, the foe gone for good). */
+    async _backToLevel(from, result) {
+        this.battle.destroy();
+        this.battle = null;
+        this.world = null;
+        this.fighting = null;
+        if (result === 'won') this.setFlag(from.spot.flag);
+        this.localPlayer.nameText.setVisible(true);
+        const hp = this.scene.get('UIScene')?.hp;
+        if (hp) hp.now = Math.max(1, hp.now);
+        this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
+        await this.changeMap(from.spot.town, [from.x, from.y], from.y < from.spot.y ? 'down' : 'up');
+        if (!this.town) forgetFoe(this, from.spot.kind);
+    }
+
+    /** What you've opened, drained and won in the dungeons, kept with your hero. */
+    get flags() {
+        this._flags ??= { ...(account.current?.data?.flags || {}) };
+        return this._flags;
+    }
+
+    setFlag(name) {
+        if (!name || this.flags[name]) return;
+        this.flags[name] = true;
+        account.updateProgress({ flags: { ...this.flags } });
+        this.town?.refresh();
+    }
+
+    /**
+     * A dungeon's gate, chest, lock or font you've walked up to (tools/dungeongen.py `switches`):
+     * a barred gate opens from its barred side; a lock to its key; a chest gives up what's in it;
+     * the font makes you whole.
+     */
+    useSwitch(sw, feet) {
+        const ui = this.scene.get('UIScene');
+        const say = text => text && ui?.notice?.(text);
+        if (sw.kind === 'font') {
+            ui?._healed?.();
+            return say(sw.says);
+        }
+        if (this.flags[sw.flag]) return;
+        if (sw.kind === 'bar' && Math.sign(feet.y - sw.y) !== Math.sign(sw.from[1] - sw.y)) {
+            audio.play('block');
+            return say(sw.locked);
+        }
+        if (sw.kind === 'lock' && !this.flags[sw.needs]) {
+            audio.play('block');
+            return say(sw.locked);
+        }
+        if (sw.kind === 'chest') {
+            audio.play('chest_open');
+            if (sw.gold) audio.play('coins');
+            ui?.inventory?.loot(sw.gold || 0, sw.item || null);
+            const name = sw.item && ui?.inventory?.item(sw.item)?.name;
+            if (sw.gold) this.effects?.coinBurst(sw.x, sw.y - 14, sw.y + 6);
+            this.effects?.floatText(sw.x, sw.y - 30, [sw.gold && `+${sw.gold} gold`, name].filter(Boolean).join('  '), '#fbf236', 16);
+        } else {
+            audio.play('latch');
+        }
+        this.setFlag(sw.flag);
+        if (sw.key) this.setFlag(sw.key);
+        say(sw.says);
     }
 
     /** Take down the town or room showing, and let go of everything it loaded. */

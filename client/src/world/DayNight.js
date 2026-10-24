@@ -33,6 +33,8 @@ const GLOW_AIR = 0.55;         // how bright the glow in the air round a lamp is
 const SKY = [[0, 0x262e58], [4.5, 0x262e58], [6, 0x9c7c90], [7.5, 0xffffff], [17.5, 0xffffff], [19, 0xe8a878], [20.5, 0x262e58], [24, 0x262e58]];
 // A battle is fought by moonlight, never darker than this (Ultima III's night fights were as clear as day's)
 const MOONLIT = 0xa8b8e0;
+// Underground (a dungeon level's `dark`): no hour reaches it; only its own lamps, and your light
+const UNDERGROUND = 0x343c52;
 const INDOORS = [[0, 0x4a4262], [5.5, 0x4a4262], [7.5, 0xd8d0c8], [18, 0xd8d0c8], [20.5, 0x4a4262], [24, 0x4a4262]];
 
 /**
@@ -51,6 +53,7 @@ export const LAMPS = {
     lantern: { radius: 96, colour: 0xffd890, strength: 1.4, flicker: 0.04 },
     carried: { radius: 96, colour: 0xffd890, strength: 1.2, flicker: 0.06, dark: true, lift: 22 },     // a lantern in someone's hand
     candle: { radius: 56, colour: 0xffd27a, strength: 1.2, flicker: 0.1 },
+    glow: { radius: 78, colour: 0x7fe8c8, strength: 1.1, flicker: 0.03 },      // cave mushrooms, a font of clear water
     hero: { radius: 150, colour: 0xfff0d8, strength: 0.9, flicker: 0, dark: true },      // your own light
 };
 
@@ -185,6 +188,7 @@ export class DayNight {
         this.hourOverride = null;     // tests: stop the clock at an hour
         this.indoors = false;
         this.moonlit = false;         // in a battle: night no darker than moonlight
+        this.underground = false;     // down a dungeon: dark whatever the hour
         this.lamps = [];
         this.dark = 0;
         this.ambient = 0xffffff;
@@ -272,6 +276,10 @@ export class DayNight {
             this.ambient = lift(16) | lift(8) | lift(0);
         }
         this.dark = darkness(blend(SKY, hour));
+        if (this.underground) {
+            this.ambient = UNDERGROUND;
+            this.dark = 0.9;
+        }
         const dark = this.indoors ? Math.max(this.dark, 0.35) : this.dark;
         const t = this.scene.time.now / 1000;
         this.hero.off = !feet;

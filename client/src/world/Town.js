@@ -10,6 +10,7 @@ import { DEPTH } from './Overworld.js';
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
 import { FIRE_ART } from './DayNight.js';
+import { Foe, loadFoe, forgetFoe } from '../battle/Foe.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
 const TALK_REACH = 64;         // stand this close to someone and they speak
@@ -39,7 +40,16 @@ const WATER_FRAME_MS = 260;
 export const TOWNS = {
     Riverhold: 'riverhold', Seacombe: 'seacombe', Fernwick: 'fernwick', Ashby: 'ashby',
     Tumbledown: 'tumbledown', "Gull's Rest": 'gulls_rest', 'Castle Dunmere': 'dunmere',
+    'Gloomwater Grotto': 'gloomwater-1',
 };
+
+const TOUCH = 44;               // a dungeon's gate, chest, lock or font: walk up against it and you work it (its solid edge, cell-rounded, holds you this far off)
+const FOE_TOUCH = 24;           // ...and a foe there: this close and you're fighting
+
+/** Whether a flag condition ('flag' or '!flag') holds (GameScene.flags: what's been opened, won, drained). */
+export function holds(when, flags) {
+    return when.startsWith('!') ? !flags[when.slice(1)] : !!flags[when];
+}
 
 /**
  * Work townsfolk do with the tool in their hands, made from the moves on
@@ -119,6 +129,25 @@ export class Town {
             return glint;
         }) : [];
 
+        // A dungeon's (tools/dungeongen.py): its water's own tint, what comes and goes with a flag (a gate,
+        // a chest shut and open, a drained hall's floor and its water's walls), what you work, its foes
+        if (data.water && this.water) this.water.setTint(parseInt(data.water.slice(1), 16));
+        this.baseBlocked = this.blocked.slice();
+        this.gated = (data.gated || []).map(g => ({ ...g, image: g.frame == null ? null
+            : scene.add.image(g.left, g.top, `town-${key}-things`, String(g.frame)).setOrigin(0, 0)
+                .setDepth(g.floor ? DEPTH.ground + 0.1 : sortDepth(scene, g.foot)) }));
+        this.switches = data.switches || [];
+        this.foes = [];
+        this.refresh();
+        for (const plan of data.foes || []) {
+            if (scene.flags?.[plan.flag]) continue;
+            loadFoe(scene, plan.kind).then(() => {
+                if (this.gone || scene.flags?.[plan.flag]) return;
+                const foe = new Foe(scene, plan.x, plan.y, plan.kind);
+                this.foes.push({ plan, foe, armed: false });
+            }).catch(err => console.warn('No foe here', err));
+        }
+
         this.folk = [];
         this._waterFrame = 0;
         this._waterTime = 0;
@@ -134,6 +163,46 @@ export class Town {
         const hour = this.hour;
         for (const plan of this.data.folk) {
             if (hereAt(plan, nightFor(plan.id, hour)) && !this.folk.some(f => f.plan.id === plan.id)) this._arrive(plan, false);
+        }
+    }
+
+    /** Show what the flags show, and block what they block. */
+    refresh() {
+        const flags = this.scene.flags || {};
+        this.blocked.set(this.baseBlocked);
+        const c = this.cell;
+        for (const g of this.gated) {
+            const on = holds(g.when, flags);
+            g.image?.setVisible(on);
+            if (!on) continue;
+            for (const [x0, y0, x1, y1] of g.solid || []) {
+                for (let cy = Math.floor(y0 / c); cy < Math.ceil(y1 / c); cy++) {
+                    for (let cx = Math.floor(x0 / c); cx < Math.ceil(x1 / c); cx++) this.blocked[cy * this.cols + cx] = 1;
+                }
+            }
+            for (const [cx, cy] of g.cells || []) this.blocked[cy * this.cols + cx] = 1;
+        }
+    }
+
+    /** A gate, chest, lock or font you've walked up to (once: step away and back to work it again). */
+    _touchSwitch(feet) {
+        const near = this.switches.find(s => Math.hypot(feet.x - s.x, feet.y - s.y) < TOUCH);
+        if (near && near !== this._touched) this.scene.useSwitch?.(near, feet);
+        if (near) this._touched = near;
+        else if (this._touched && Math.hypot(feet.x - this._touched.x, feet.y - this._touched.y) > TOUCH * 2) this._touched = null;
+    }
+
+    /** A dungeon's foe at its post, facing you; walk into it and you're fighting (once you've stepped clear of it). */
+    _watchFoes(feet) {
+        for (const f of this.foes) {
+            f.foe.face(feet.x, feet.y);
+            f.foe.setDepthAt();
+            const d = Math.hypot(feet.x - f.plan.x, feet.y - f.plan.y);
+            if (d > FOE_TOUCH * 3) f.armed = true;
+            if (f.armed && d < FOE_TOUCH) {
+                f.armed = false;
+                this.scene.enterBattle({ ...f.plan, count: 1, country: 'cave', town: this.key });
+            }
         }
     }
 
@@ -247,8 +316,9 @@ export class Town {
      */
     exitAt(x, y, intent) {
         const going = { left: intent.dx < 0, right: intent.dx > 0, up: intent.dy < 0, down: intent.dy > 0 };
-        return this.data.exits.find(({ rect: [ex, ey, ew, eh], dir }) => going[dir]
-            && x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
+        const flags = this.scene.flags || {};
+        return this.data.exits.find(({ rect: [ex, ey, ew, eh], dir, needs }) => (dir === 'any' ? intent.dx || intent.dy : going[dir])
+            && (!needs || flags[needs]) && x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
     }
 
     get arrival() {
@@ -302,6 +372,10 @@ export class Town {
     /** @param {{x: number, y: number}|null} feet  where the local hero stands */
     update(delta, feet = null) {
         for (const t of this.things) t.setDepth(sortDepth(this.scene, t.getData('foot')));
+        if (feet) {
+            if (this.switches.length) this._touchSwitch(feet);
+            if (this.foes.length) this._watchFoes(feet);
+        }
         // A fire sorts like what it stands on (a hearth's flames just in front of the hearth)
         for (const lamp of this.lamps) {
             lamp.art?.setDepth(sortDepth(this.scene, lamp.y + (lamp.def.lift || 0) + (lamp.kind === 'hearth' ? 1 : 0)));
@@ -467,6 +541,12 @@ export class Town {
     }
 
     destroy() {
+        this.gone = true;
+        this.gated.forEach(g => g.image?.destroy());
+        this.foes.forEach(f => f.foe.destroy());
+        for (const kind of new Set((this.data.foes || []).map(p => p.kind))) {
+            if (kind !== this.scene.fighting) forgetFoe(this.scene, kind);     // (not the one you're off to fight)
+        }
         this.water?.destroy();
         this.ground.destroy();
         this.things.forEach(t => t.destroy());

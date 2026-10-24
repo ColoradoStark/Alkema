@@ -31,6 +31,7 @@ import { getRangedAnimation, getWeaponType } from '../sprites/weaponTypes.js';
 import { ARROW_SPEED, ROCK_SPEED } from '../sprites/ProjectileSpawner.js';
 
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
+const BOSS_HP = 4;              // a boss has this many times its kind's hit points
 const STEP_MS = 200;            // a tile's walk
 const FOOT = 26;                // where in its tile someone stands
 const HIT_CHANCE = 0.85;
@@ -135,7 +136,7 @@ export class Battle {
      * @param {object[]} [opts.companions]  who fights beside you (PARTY entries)
      * @param {(result: 'won'|'fled'|'fallen', how: {slain: number}) => void} opts.onEnd
      */
-    constructor(scene, { country, kind, count = 1, companions = [], onEnd }) {
+    constructor(scene, { country, kind, count = 1, boss = false, name = null, companions = [], onEnd }) {
         this.scene = scene;
         this.country = country;
         this.onEnd = onEnd;
@@ -202,12 +203,13 @@ export class Battle {
             const at = this.feetOf(cell);
             const foe = new Foe(scene, at.x, at.y, kind);
             foe.setDepthAt();
-            const f = { foe, cell: [...cell], hp: foe.spec.hp, maxHp: foe.spec.hp, bar: scene.add.graphics().setDepth(39),
+            const hp = foe.spec.hp * (boss ? BOSS_HP : 1);      // a dungeon's boss: the same foe, harder to put down
+            const f = { foe, cell: [...cell], hp, maxHp: hp, bar: scene.add.graphics().setDepth(39),
                 moves: foe.spec.moves || 'walk', flees: !!foe.spec.flees, damage: foe.spec.damage || 4, gone: false };
             this._drawBar(f);
             return f;
         });
-        this.name = this.foes[0].foe.name;
+        this.name = name || this.foes[0].foe.name;
 
         // Whose turn it is: a box round them, as Ultima III drew it
         this.marker = scene.add.graphics().setDepth(38);
@@ -219,7 +221,8 @@ export class Battle {
             backgroundColor: '#1d131ecc', padding: { x: 8, y: 4 }, align: 'center',
         }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(41);
         const n = this.foes.length;
-        this.say(n > 1 ? `${n} ${this.name}s!` : `${/^[AEIOU]/.test(this.name) ? 'An' : 'A'} ${this.name}!`);
+        this.say(boss ? `The ${this.name} rises from the black water!`
+            : n > 1 ? `${n} ${this.name}s!` : `${/^[AEIOU]/.test(this.name) ? 'An' : 'A'} ${this.name}!`);
     }
 
     /** Where someone standing in a cell has their feet. */
