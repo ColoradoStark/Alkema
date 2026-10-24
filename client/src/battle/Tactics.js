@@ -26,7 +26,7 @@ const beside = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) 
 /**
  * @param {object} f  the foe: { cell, hp, maxHp, moves, flees, side }
  * @param {object} field  { cols, rows, foes: those standing (f among them), party: those of yours still fighting (each with `cell`),
- *   fallen: those of yours lying where they fell (no one steps there) }
+ *   fallen: those of yours lying where they fell (no one steps there), water: deep water's cells (only what drifts goes over) }
  * @param {() => number} [rng]
  * @returns {{act: 'attack', target: object} | {act: 'move', path: number[][], away?: boolean} | {act: 'slip', to: number[], target: object} | {act: 'wait'}}
  *   `path`: the cells it steps through in turn; `away`: its last step takes it off the map
@@ -35,9 +35,11 @@ export function decide(f, field, rng = Math.random) {
     const { cols, rows, foes, party } = field;
     if (!party.length) return { act: 'wait' };
     const on = ([c, r]) => c >= 0 && r >= 0 && c < cols && r < rows;
+    const drifts = f.moves === 'drift' || f.moves === 'shadow';
     const taken = new Set([...foes.filter(o => o !== f), ...party, ...(field.fallen || [])].map(o => key(o.cell)));
+    if (!drifts) for (const cell of field.water || []) taken.add(key(cell));
     const free = cell => on(cell) && !taken.has(key(cell));
-    const dirs = f.moves === 'drift' || f.moves === 'shadow' ? ANY : STRAIGHT;
+    const dirs = drifts ? ANY : STRAIGHT;
     const steps = f.moves === 'ride' ? 2 : 1;
     // Where it can strike from: beside you, or (side-on) at your corner
     const strikes = f.side ? (a, b) => Math.abs(a[0] - b[0]) === 1 && Math.abs(a[1] - b[1]) === 1 : beside;

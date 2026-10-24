@@ -831,6 +831,64 @@
      7,
      11
     ]
+   ],
+   "water": [
+    [
+     0,
+     5
+    ],
+    [
+     0,
+     6
+    ],
+    [
+     0,
+     7
+    ],
+    [
+     0,
+     8
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     1,
+     6
+    ],
+    [
+     1,
+     7
+    ],
+    [
+     1,
+     8
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     9,
+     12
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     11
+    ],
+    [
+     10,
+     12
+    ]
    ]
   },
   "snow": {
@@ -3010,10 +3068,10 @@
    "flees": false,
    "side": true,
    "look": "grey",
-   "frameWidth": 100,
-   "frameHeight": 55,
-   "feet": 45,
-   "tall": 31,
+   "frameWidth": 130,
+   "frameHeight": 71,
+   "feet": 59,
+   "tall": 41,
    "anims": {
     "stand-s": [
      [
@@ -3367,10 +3425,10 @@
    "flees": false,
    "side": true,
    "look": "lpc",
-   "frameWidth": 100,
-   "frameHeight": 55,
-   "feet": 45,
-   "tall": 31,
+   "frameWidth": 130,
+   "frameHeight": 71,
+   "feet": 59,
+   "tall": 41,
    "anims": {
     "stand-s": [
      [
@@ -3724,10 +3782,10 @@
    "flees": false,
    "side": true,
    "look": "grey",
-   "frameWidth": 125,
-   "frameHeight": 95,
-   "feet": 71,
-   "tall": 49,
+   "frameWidth": 162,
+   "frameHeight": 123,
+   "feet": 93,
+   "tall": 64,
    "anims": {
     "stand-s": [
      [
@@ -4097,10 +4155,10 @@
    "flees": false,
    "side": true,
    "look": "lpc",
-   "frameWidth": 125,
-   "frameHeight": 95,
-   "feet": 71,
-   "tall": 49,
+   "frameWidth": 162,
+   "frameHeight": 123,
+   "feet": 93,
+   "tall": 64,
    "anims": {
     "stand-s": [
      [
@@ -4470,10 +4528,10 @@
    "flees": false,
    "side": true,
    "look": "grey",
-   "frameWidth": 122,
-   "frameHeight": 118,
-   "feet": 103,
-   "tall": 28,
+   "frameWidth": 159,
+   "frameHeight": 154,
+   "feet": 134,
+   "tall": 37,
    "anims": {
     "stand-s": [
      [
@@ -4883,10 +4941,10 @@
    "flees": false,
    "side": true,
    "look": "lpc",
-   "frameWidth": 122,
-   "frameHeight": 118,
-   "feet": 103,
-   "tall": 28,
+   "frameWidth": 159,
+   "frameHeight": 154,
+   "feet": 134,
+   "tall": 37,
    "anims": {
     "stand-s": [
      [
@@ -5296,10 +5354,10 @@
    "flees": false,
    "side": true,
    "look": "grey",
-   "frameWidth": 92,
-   "frameHeight": 76,
-   "feet": 69,
-   "tall": 54,
+   "frameWidth": 120,
+   "frameHeight": 99,
+   "feet": 90,
+   "tall": 71,
    "anims": {
     "stand-s": [
      [
@@ -5581,10 +5639,10 @@
    "flees": false,
    "side": true,
    "look": "lpc",
-   "frameWidth": 92,
-   "frameHeight": 76,
-   "feet": 69,
-   "tall": 54,
+   "frameWidth": 120,
+   "frameHeight": 99,
+   "feet": 90,
+   "tall": 71,
    "anims": {
     "stand-s": [
      [
@@ -5866,10 +5924,10 @@
    "flees": false,
    "side": true,
    "look": "grey",
-   "frameWidth": 122,
-   "frameHeight": 106,
-   "feet": 103,
-   "tall": 48,
+   "frameWidth": 159,
+   "frameHeight": 138,
+   "feet": 134,
+   "tall": 63,
    "anims": {
     "stand-s": [
      [
@@ -6175,10 +6233,10 @@
    "flees": false,
    "side": true,
    "look": "lpc",
-   "frameWidth": 122,
-   "frameHeight": 106,
-   "feet": 103,
-   "tall": 48,
+   "frameWidth": 159,
+   "frameHeight": 138,
+   "feet": 134,
+   "tall": 63,
    "anims": {
     "stand-s": [
      [
@@ -6484,10 +6542,10 @@
    "flees": false,
    "side": true,
    "look": "grey",
-   "frameWidth": 125,
-   "frameHeight": 87,
-   "feet": 82,
-   "tall": 46,
+   "frameWidth": 162,
+   "frameHeight": 113,
+   "feet": 106,
+   "tall": 59,
    "anims": {
     "stand-s": [
      [
@@ -6857,10 +6915,10 @@
    "flees": false,
    "side": true,
    "look": "lpc",
-   "frameWidth": 125,
-   "frameHeight": 87,
-   "feet": 82,
-   "tall": 46,
+   "frameWidth": 162,
+   "frameHeight": 113,
+   "feet": 106,
+   "tall": 59,
    "anims": {
     "stand-s": [
      [

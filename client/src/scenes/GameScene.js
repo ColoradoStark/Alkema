@@ -117,9 +117,10 @@ export class GameScene extends Scene {
             this.dayNight.moonlit = !!this.battle;
             this.dayNight.update(delta, feet);
         }
+        // (between a dungeon's fight and its level you're nowhere: your feet aren't on the world's map, whose top corner is the snowy north)
         const snowing = this.battle ? this.battle.snowing
-            : this.town ? !!this.town.data.snow : !!feet && this.overworld.isSnowy(feet.x, feet.y);
-        this.snowfall?.update(delta, snowing, this.dayNight?.ambient, this.battle ? 'battle' : this.town?.key ?? 'world');
+            : this.town ? !!this.town.data.snow : this.world === this.overworld && !!feet && this.overworld.isSnowy(feet.x, feet.y);
+        this.snowfall?.update(delta, snowing, this.dayNight?.ambient, this.battle ? 'battle' : this.town?.key ?? (this.world ? 'world' : 'between'));
         this.updateMusic(delta, feet);
         this.updateSailing();
         this.updatePlaceVisit();

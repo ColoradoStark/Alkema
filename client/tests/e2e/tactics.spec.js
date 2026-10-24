@@ -6,14 +6,14 @@
 import { test, expect } from '@playwright/test';
 
 /** decide() on a field: the foe `f` (its cell and ways), others in the band, and your party. */
-const decide = (page, f, others, party, rng = 0.99, fallen = []) => page.evaluate(async ({ f, others, party, rng, fallen }) => {
+const decide = (page, f, others, party, rng = 0.99, fallen = [], water = []) => page.evaluate(async ({ f, others, party, rng, fallen, water }) => {
     const { decide } = await import('/src/battle/Tactics.js');
     const foe = { hp: 40, maxHp: 40, moves: 'walk', flees: false, ...f };
     const band = [foe, ...others.map(cell => ({ cell, hp: 10, maxHp: 10 }))];
     const ours = party.map(([cell, now]) => ({ cell, life: { now: now ?? 20, max: 20 } }));
-    const plan = decide(foe, { cols: 11, rows: 14, foes: band, party: ours, fallen: fallen.map(cell => ({ cell })) }, () => rng);
+    const plan = decide(foe, { cols: 11, rows: 14, foes: band, party: ours, fallen: fallen.map(cell => ({ cell })), water }, () => rng);
     return { ...plan, target: plan.target ? ours.indexOf(plan.target) : undefined };
-}, { f, others, party, rng, fallen });
+}, { f, others, party, rng, fallen, water });
 
 test.describe('Foe tactics', () => {
     test.beforeEach(async ({ page }) => { await page.goto('/'); });
@@ -78,6 +78,18 @@ test.describe('Foe tactics', () => {
         expect(plan.path[0]).not.toEqual([5, 4]);
         const ride = await decide(page, { cell: [5, 3], moves: 'ride' }, [], [[[5, 8]]], 0.99, [[5, 5]]);
         expect(ride.path).not.toContainEqual([5, 5]);
+    });
+
+    test("the cave's water: one on foot goes round it, a goblin can't run off the edge through it, what drifts goes over", async ({ page }) => {
+        const pool = [[4, 4], [5, 4], [6, 4]];
+        const plan = await decide(page, { cell: [5, 3] }, [], [[[5, 6]]], 0.99, [], pool);
+        expect(plan.act).toBe('move');
+        expect([[4, 3], [6, 3]]).toContainEqual(plan.path[0]);
+        expect(await decide(page, { cell: [5, 3], moves: 'drift' }, [], [[[5, 6]]], 0.99, [], pool)).toEqual({ act: 'move', path: [[5, 4]] });
+        // At the left edge with the water on it: it runs the long way round, not straight off
+        const run = await decide(page, { cell: [1, 7], flees: true, hp: 2 }, [], [[[5, 12]]], 0.99, [], [[0, 6], [0, 7], [0, 8]]);
+        expect(run.act).toBe('move');
+        expect(run.path[0]).not.toEqual([0, 7]);
     });
 
     test('hemmed in with no way through, it gets as near as it can, or waits', async ({ page }) => {

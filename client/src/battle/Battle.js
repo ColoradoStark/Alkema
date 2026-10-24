@@ -154,6 +154,8 @@ export class Battle {
         this.width = this.cols * this.tile;
         this.height = this.rows * this.tile;
         this.snowing = country === 'snow';
+        this.waterCells = map.water || [];         // deep (the cave's): no one steps in but what drifts
+        this.water = new Set(this.waterCells.map(([c, r]) => `${c},${r}`));
         this.over = false;
         this.busy = false;          // someone's moving or swinging: the next turn waits
         this.held = true;           // the way you walked in, or your last step: let go of it before the next
@@ -309,7 +311,7 @@ export class Battle {
 
     /** Can't step there: someone stands there, or one of yours lies fallen there. */
     _blocked(cell) {
-        return !!this.foeAt(cell) || !!this._memberAt(cell)
+        return !!this.foeAt(cell) || !!this._memberAt(cell) || this.water.has(`${cell[0]},${cell[1]}`)
             || this.party.some(m => m.fallen && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
     }
 
@@ -556,7 +558,7 @@ export class Battle {
         for (const f of [...this.standing].sort((a, b) => away(a) - away(b))) {
             if (this.over || !this.fighting.length) break;
             if (f.hp <= 0 || f.gone) continue;
-            const plan = decide(f, { cols: this.cols, rows: this.rows, foes: this.standing, party: this.fighting, fallen: this.party.filter(m => m.fallen) });
+            const plan = decide(f, { cols: this.cols, rows: this.rows, foes: this.standing, party: this.fighting, fallen: this.party.filter(m => m.fallen), water: this.waterCells });
             if (plan.act === 'attack') {
                 await this._foeStrike(f, plan.target);
             } else if (plan.act === 'move') {

@@ -195,7 +195,7 @@ test.describe('Gloomwater Grotto', () => {
             .toEqual(['snowchaser', 'snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
     });
 
-    test('a won fight ends in a short victory scene in the battle (a stinger, Victory!, the spoils), and nothing follows you onto the map', async ({ page }) => {
+    test('a won fight ends in a short victory scene in the battle (a stinger, Victory!, the spoils), and nothing follows you onto the map (no snow either: the user had none near)', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await goTo(page, 'gloomwater-1');
@@ -211,7 +211,10 @@ test.describe('Gloomwater Grotto', () => {
             window.__played = [];
             const stinger = audio.stinger.bind(audio);
             audio.stinger = (name) => { window.__played.push(name); return stinger(name); };
-            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            window.__snow = 0;           // (on the way back the level is loading: you're nowhere, not in the snowy north)
+            gs.events.on('postupdate', () => { window.__snow = Math.max(window.__snow, gs.snowfall.emitter?.getAliveParticleCount() ?? 0); });
+            const b = gs.battle;
             b.foes.forEach(f => { f.hp = 0; });
             b._won();
         });
@@ -232,6 +235,33 @@ test.describe('Gloomwater Grotto', () => {
             return gs.children.list.filter(o => o.type === 'ParticleEmitter' && o.getAliveParticleCount() > 0 && !o.emitting).length;
         });
         expect(alive).toBe(0);
+        expect(await page.evaluate(() => window.__snow)).toBe(0);
+    });
+
+    test("the cave fight's water: you can't wade into it, and it closes some of the ways out, not all", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+        await goTo(page, 'gloomwater-1');
+        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
+        const step = (cell, dx) => page.evaluate(async ([cell, dx]) => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            const m = b.active;
+            m.cell = cell;
+            b.held = false;
+            b.busy = false;
+            b.move(dx, 0);
+            await new Promise(r => setTimeout(r, 700));
+            return { cell: m.cell, out: !!m.out };
+        }, [cell, dx]);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.water.has('0,7'))).toBe(true);
+        // Beside the pool on the left: a step into it goes nowhere
+        expect(await step([1, 5], -1)).toEqual({ cell: [1, 5], out: false });
+        // Up on the left where it's dry, off the edge you go
+        expect((await step([0, 3], -1)).out).toBe(true);
     });
 
     test('the font of clear water makes you whole', async ({ page }) => {
