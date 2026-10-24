@@ -22,6 +22,13 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
     // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
+    await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+        me.setPosition(6320, 11120);
+        me.body.reset(6320, 11120);
+        gs.cameras.main.centerOn(6320, 11120);
+    });
 }
 
 /** Pictures held, decoded (MB), and painted portraits and voice clips held. */

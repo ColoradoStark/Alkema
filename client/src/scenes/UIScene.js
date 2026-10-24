@@ -1,3 +1,4 @@
+import { audio } from '../audio/audio.js';
 import { Scene, BlendModes } from 'phaser';
 import { TopBar } from '../ui/TopBar.js';
 import { BottomControls } from '../ui/BottomControls.js';
@@ -49,6 +50,7 @@ export class UIScene extends Scene {
         };
         this.dialogue.onChoice = (who, answer) => {
             this._toShop = answer === 'yes' && this._shopOf(who) ? who : null;
+            if (answer === 'yes' && who?.plan?.heals) this._healed(who);
         };
 
         this._setupKeyboard();
@@ -115,6 +117,15 @@ export class UIScene extends Scene {
             says,
             portrait: listed.has(sid) ? portraitUrl(sid, nightNow(this, folk)) : null,
         });
+    }
+
+    /** A healer you said yes to (Castle Dunmere's, for nothing): hit points and magic full again. */
+    _healed(folk) {
+        if (this.hp) this.hp.now = this.hp.max;
+        if (this.mp) this.mp.now = this.mp.max;
+        audio.play('holy');
+        const me = this.scene.get('GameScene')?.localPlayer?.sprite;
+        if (me) this.scene.get('GameScene').effects?.floatText(me.x, me.y - 30, 'Healed', '#7ee07e', 18);
     }
 
     /** A shopkeeper at their counter: their shop, if they keep one here. */

@@ -1341,6 +1341,46 @@ The fishermen's rod and the woodcutters' axe are from "[LPC] Hand Tools" by
 bluecarrot16 and others, drawn by the character generator.
 
 ======================================================================
+CASTLE DUNMERE
+======================================================================
+
+Castle Dunmere (tools/castlegen.py) is put together from these LPC sets,
+besides the town's own (above):
+
+castle-walls.png, castle-outside.png and castle-floors.png (the curtain
+walls and their battlements, the gate arch, the round towers under their
+cones, the keep's tall windows, pilasters and double door, the tiled
+floors and the red carpet): the castle work in the LPC Base Assets by
+Daniel Armstrong (HughSpectrum).
+bridges.png (the drawbridge's planks and rails): the LPC Base Assets by
+Lanea Zimmerman (Sharm).
+  License: CC-BY-SA 3.0 / GPL 3.0
+  https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+
+castle-interior.png (the castle rooms' walls, cornice, damask and
+wainscot, the parquet and slate floors, the red rug, the dais, the royal
+bed, the great hearth, the candelabra, the columns, the clock, the sofa
+and armchair, the portraits, the landscape and the arched windows and
+doors): "LPC: Interior Castle Tiles" by Lanea Zimmerman (Sharm).
+  License: CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0
+  https://opengameart.org/content/lpc-interior-castle-tiles
+
+city-inside.png (the throne, the braziers, the red banners, the bust and
+its column, the cell walls and bars, the cloth-covered tables, the
+cupboard, the mirror, the stools, the cobbled floor): "[LPC] City inside"
+by Reemax, Tuomo Untinen, Lanea Zimmerman (Sharm), Daniel Armstrong
+(HughSpectrum) and Guido Bos (per-piece credits in its credits.txt: the
+throne, braziers, banners, bust and cell walls are Tuomo Untinen's).
+  License: CC-BY-SA 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-city-inside
+
+dungeon-things.png (the straw, the skeleton, the bones and chains, the
+rough table and stool): "[LPC] Dungeon Elements" by Lanea Zimmerman (Sharm),
+contributed by William.Thompsonj.
+  License: CC-BY 3.0 / GPL 3.0 / GPL 2.0 / OGA-BY 3.0
+  https://opengameart.org/content/lpc-dungeon-elements
+
+======================================================================
 FIRE (CAMPFIRES, TORCHES AND HEARTHS)
 ======================================================================
 

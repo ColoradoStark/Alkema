@@ -18,6 +18,13 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook, null, { timeout: 20000 });
     // Alone: these are about your spells (a companion's turn would come between yours)
     await page.evaluate(async () => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+    // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
+    await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+        me.setPosition(6320, 11120);
+        me.body.reset(6320, 11120);
+        gs.cameras.main.centerOn(6320, 11120);
+    });
 }
 
 /** Into a fight with a band of `count`, standing just below the lowest of them, with magic to spare. */

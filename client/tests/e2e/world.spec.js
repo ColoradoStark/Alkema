@@ -130,6 +130,9 @@ test.describe('Living world', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const { world } = gs, { forest } = world;
             const me = gs.localPlayer.sprite;
+            // Round Riverhold, where heroes started before the start moved to Castle Dunmere: Dunmere's beside
+            // the hills, and the pines dotted up a range's lower slopes stand on rock, which blocks on its own
+            me.setPosition(6320, 11120);
             // Trees are sprites standing on their feet: check every one within 40 tiles of the start
             let trees = 0, blocked = 0;
             for (const bucket of forest.buckets) {
@@ -217,8 +220,12 @@ test.describe('Living world', () => {
 
     test('walking up to a place asks whether to enter; No closes it', async ({ page }) => {
         await enterWorld(page);
-        // New heroes start just below Riverhold: walk up into it
+        // On the road just below Riverhold (where heroes started before the start moved to Castle Dunmere): walk up into it
         await page.evaluate(async () => {
+            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            me.setPosition(6320, 11120);
+            me.body.reset(6320, 11120);
+            await new Promise(r => setTimeout(r, 300));
             const keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
             keys.up = true;
             await new Promise(r => setTimeout(r, 1200));

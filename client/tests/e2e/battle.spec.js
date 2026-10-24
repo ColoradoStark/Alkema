@@ -20,6 +20,15 @@ async function enterWorld(page, { party = false } = {}) {
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     // Alone (these are about the fight itself), unless the test is about your party
     if (!party) await page.evaluate(async () => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+    // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
+    await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+        me.setPosition(6320, 11120);
+        me.body.reset(6320, 11120);
+        gs.cameras.main.centerOn(6320, 11120);
+    });
+    // ...where the band outside the gate loads as you come near
+    await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots[0].foe?.sprite?.anims?.currentAnim, null, { timeout: 30000 });
 }
 
 const state = (page) => page.evaluate(() => {
