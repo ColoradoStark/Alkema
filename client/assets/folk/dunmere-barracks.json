@@ -484,7 +484,7 @@
   "role": "Stablehand",
   "character": {
    "id": "dunmere-stablehand",
-   "name": "Wynen Nolan",
+   "name": "Daron Carter",
    "body_type": "male",
    "race": "human",
    "character_class": "peasant",
@@ -953,7 +953,7 @@
   "role": "Knight",
   "character": {
    "id": "dunmere-knight",
-   "name": "Briora River",
+   "name": "Arina Swift",
    "body_type": "female",
    "race": "human",
    "character_class": "warrior",

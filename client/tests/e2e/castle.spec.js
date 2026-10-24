@@ -62,7 +62,7 @@ test.describe('Castle Dunmere', () => {
         // Everyone's there at once (baked), and the watch walk
         const folk = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
             .map(f => ({ id: f.plan.id, role: f.plan.role, walks: !!f.plan.wander, x: Math.round(f.sprite.x), y: Math.round(f.sprite.y) })));
-        await expect.poll(() => folk().then(f => f.length), { timeout: 30000 }).toBe(18);
+        await expect.poll(() => folk().then(f => f.length), { timeout: 30000 }).toBe(17);
         const before = await folk();
         expect(before.filter(f => /guard|warden/i.test(f.role)).length).toBe(6);
         expect(before.filter(f => f.role === 'Watchman' && f.walks).length).toBe(4);
@@ -72,14 +72,14 @@ test.describe('Castle Dunmere', () => {
         expect(moved.length).toBeGreaterThanOrEqual(4);
     });
 
-    test('through the keep door to the throne room: the Duke before his throne, and doors and stairs to the rest of the keep', async ({ page }) => {
+    test("through the keep door: one floor to walk round, up the carpet to the Duke, the treasure room under guard, and stairs up and down", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await goTo(page, 'dunmere');
         // Up to the keep's door, and walk in
         await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const exit = gs.town.data.exits.find(e => e.to === 'dunmere-hall');
+            const exit = gs.town.data.exits.find(e => e.to === 'dunmere-keep');
             const me = gs.localPlayer.sprite;
             me.setPosition(exit.rect[0] + exit.rect[2] / 2, exit.rect[1] + 40 - 23);
             me.body.reset(me.x, me.y);
@@ -88,25 +88,45 @@ test.describe('Castle Dunmere', () => {
             for (let i = 0; i < 60 && gs.town?.key === 'dunmere'; i++) await new Promise(r => setTimeout(r, 50));
             keys.up = false;
         });
-        await expect.poll(() => where(page), { timeout: 15000 }).toBe('dunmere-hall');
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => f.plan.role).sort()),
-            { timeout: 30000 }).toEqual(['Courtier', 'Courtier', 'Door guard', 'Door guard', 'Duke of Dunmere', 'Royal guard', 'Royal guard', 'Steward']);
-        const hall = await page.evaluate(() => {
+        await expect.poll(() => where(page), { timeout: 15000 }).toBe('dunmere-keep');
+        const roles = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => f.plan.role));
+        await expect.poll(() => roles().then(r => r.length), { timeout: 30000 }).toBe(18);
+        const r = (await roles()).sort();
+        for (const [role, n] of [['Duke of Dunmere', 1], ['Jester', 1], ['Treasury guard', 4], ['Royal guard', 2], ['Door guard', 2]])
+            expect(r.filter(x => x === role).length, role).toBe(n);
+        const keep = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const duke = gs.town.folk.find(f => f.plan.id === 'duke');
-            return { indoors: gs.town.indoors, exits: gs.town.data.exits.map(e => e.to).sort(), duke: duke.name,
-                lit: gs.town.lamps.length };
+            const jester = gs.town.folk.find(f => f.plan.id === 'jester');
+            return { indoors: gs.town.indoors, exits: gs.town.data.exits.map(e => e.to).sort(), w: gs.town.width, h: gs.town.height,
+                jester: jester.sprite.characterData.selections.filter(s => ['hat', 'legs', 'hair'].includes(s.type)).map(s => s.item).sort() };
         });
-        expect(hall).toEqual({ indoors: true, exits: ['dunmere', 'dunmere-chambers', 'dunmere-dungeon', 'dunmere-feast', 'dunmere-library'],
-            duke: 'Aldric', lit: 4 });
-        // Each room behind the hall: who's there
-        const rooms = { 'dunmere-feast': ['Cook', 'Knight', 'Servant'], 'dunmere-library': ['Court mage', 'Scribe'],
-            'dunmere-chambers': ['Duchess of Dunmere', 'Handmaiden'], 'dunmere-dungeon': ['Jailer', 'Prisoner', 'Prisoner'] };
-        for (const [key, roles] of Object.entries(rooms)) {
+        expect(keep).toMatchObject({ indoors: true, exits: ['dunmere', 'dunmere-cells', 'dunmere-chambers'], jester: ['hair_long', 'hat_holiday_christmas'] });
+        expect(keep.w).toBeGreaterThan(1500);
+        // Straight up the carpet from the door, through the entrance hall into the throne room, to the Duke
+        const walk = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const me = gs.localPlayer.sprite, duke = gs.town.folk.find(f => f.plan.id === 'duke');
+            const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            const from = me.y;
+            keys.up = true;
+            for (let i = 0; i < 200 && me.y > duke.sprite.y + 60 && !gs.scene.get('UIScene').dialogue.visible; i++) await new Promise(r => setTimeout(r, 50));
+            keys.up = false;
+            return { walked: Math.round(from - me.y), short: Math.round(me.y - duke.sprite.y), still: gs.town.key };
+        });
+        expect(walk.still).toBe('dunmere-keep');
+        expect(walk.walked).toBeGreaterThan(600);           // through the doorway between the two halls
+        expect(walk.short).toBeLessThan(6 * 32);            // in the throne room before him (the jester may stop you to talk)
+        // ...and if she did, hear her out (you can't walk anywhere while someone's talking to you)
+        for (let i = 0; i < 12 && await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.visible); i++) {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(200);
+        }
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.visible)).toBe(false);
+        // Upstairs and down: who's there
+        for (const [key, want] of Object.entries({ 'dunmere-chambers': ['Duchess of Dunmere', 'Handmaiden'], 'dunmere-cells': ['Jailer'] })) {
             await goTo(page, key);
-            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => f.plan.role).sort()),
-                { timeout: 30000 }).toEqual(roles);
-            await goTo(page, 'dunmere-hall');
+            await expect.poll(() => roles().then(r => r.sort()), { timeout: 30000 }).toEqual(want);
+            await goTo(page, 'dunmere-keep');
         }
     });
 
