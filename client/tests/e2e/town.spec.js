@@ -96,6 +96,27 @@ test.describe('Riverhold', () => {
         // After dark the warden's night portrait is up instead, and it takes the day one's place (one each held)
         const held = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.constructor.portraitsHeld());
         const heldByDay = await held();
+        // ...but each at their own hour, when they go in (or, for the watch, light their lantern), not when the sky
+        // turns: at dusk, already dark, the guard who's latest to turn is still by day till then
+        const late = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const turns = (id) => {     // Town.js nightFor(): when they turn in at dusk
+                let h = 0;
+                for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+                return 19.25 + (h % 1000) / 1000 * 1.5;
+            };
+            const f = gs.town.folk.filter(f => f.plan.id.startsWith('guard') && f.plan.night !== 'away')
+                .sort((a, b) => turns(b.plan.id) - turns(a.plan.id))[0];
+            gs.dayNight.hourOverride = turns(f.plan.id) - 0.05;
+            const ui = gs.scene.get('UIScene');
+            ui._lastTalk = null;
+            ui.talkTo(f);
+            return { id: f.sprite.characterData.id, at: gs.dayNight.hourOverride };
+        });
+        expect(late.at).toBeGreaterThan(19.9);       // the sky's night by then (DayNight isNight)
+        await expect.poll(() => talk().then(t => t.portrait), { timeout: 30000 }).toContain(`/portraits/${late.id}.webp`);
+        while ((await talk()).open) await page.keyboard.press('Space');
+
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 23; });
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');

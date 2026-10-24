@@ -113,7 +113,7 @@ export class UIScene extends Scene {
             name: (folk.name || '').split(' ')[0],
             role: folk.plan.role,
             says,
-            portrait: listed.has(sid) ? portraitUrl(sid, nightNow(this)) : null,
+            portrait: listed.has(sid) ? portraitUrl(sid, nightNow(this, folk)) : null,
         });
     }
 

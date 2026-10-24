@@ -7,7 +7,7 @@
 // Anyone with a painted portrait (tools/portraits.py) shows that instead,
 // filling the whole screen above the box: /portraits/<their sprite id>.webp,
 // listed in /portraits/portraits.json, and after dark their night painting,
-// <id>-night.webp (only the one for the hour is held). It's drawn as a page layer over the
+// <id>-night.webp, from when they go in for the night (only one is held). It's drawn as a page layer over the
 // canvas, so it's sharp at the screen's own resolution rather than the
 // game's 352 px. Some also have a short voiced clip for each line
 // (tools/talkies.py, listed in /portraits/talk.json): it plays over the
@@ -19,6 +19,7 @@ import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
 import { resolveAnimationKey } from '../sprites/AnimationFactory.js';
 import { isNight } from '../world/DayNight.js';
+import { nightFor } from '../world/Town.js';
 
 const INK = 0x222034;
 const GOLD = 0xfbf236;
@@ -30,8 +31,16 @@ const TYPE_MS = 18;            // per letter
 const PAGE = 80;               // letters per page, at most (two lines)
 
 export const portraitUrl = (id, night = false) => `/portraits/${id}${night ? '-night' : ''}.webp`;
-/** Whether the night paintings are the ones to show now (the game's clock). */
-export const nightNow = (scene) => isNight(scene.scene.get('GameScene')?.dayNight?.hour ?? 12);
+/**
+ * Whether the night painting is the one to show now: by the sky, or for someone
+ * from a town by their own hour (Town.js nightFor), the one they go in at or light
+ * their lantern by; on their way in or out they're still where they were.
+ */
+export function nightNow(scene, folk = null) {
+    const hour = scene.scene.get('GameScene')?.dayNight?.hour ?? 12;
+    if (!folk?.plan) return isNight(hour);
+    return nightFor(folk.plan.id, hour) !== !!folk.going;
+}
 const CLIP_FORMATS = [['webm', 'video/webm'], ['mp4', 'video/mp4']];
 
 const painted = new Map();     // sprite id -> its painted portrait (an <img>, .night: which one), fetched with their town
@@ -230,7 +239,7 @@ export class Dialogue {
         this.name.setText(name);
         this.role.setText(folk.plan.role || '');
         const id = folk.sprite?.characterData?.id;
-        loadPortraits(this.scene, [id]);       // the time of day turned since they were fetched: the other one, now
+        loadPortraits(this.scene, [id], nightNow(this.scene, folk));     // their hour turned since they were fetched: the other one, now
         const img = painted.get(id);
         this._layout(!!img?.naturalWidth);
         this.pages = this._script(folk);
