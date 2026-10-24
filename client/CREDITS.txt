@@ -113,12 +113,15 @@ sword drawn into its last death frames).
 The foes in Gloomwater Grotto are Duelyst's Vanar (the Snowchaser, Ice
 Hornet, Crystal Beetle, Water Elemental, Kindred Hunter and Water Bear),
 by Counterplay Games' artists, released by Open Duelyst under CC0. Their
-breathing, idle, run, attack, hit and death frames are used, toned down
-from Duelyst's colours (less colour, darker, warmer); one copy of each is also matched to the LPC
+breathing, idle, run, attack, hit and death frames are used, recoloured
+to match the brightness and saturation of the LPC character art; one copy of each is also matched to the LPC
 palettes. The Snowchaser, Ice Hornet, Crystal Beetle, Water Elemental,
 Kindred Hunter and Water Bear are scaled up a quarter.
   License: CC0 1.0 Universal (public domain dedication)
   https://github.com/open-duelyst/duelyst/tree/main/app/resources/units
+The cave battle map is drawn with Gloomwater Grotto's art (credited below:
+Wesnoth's cave floors and rough wall and mushroom groves, the LPC atlas's
+boulders, mushrooms and reeds, Sharm's bones and skulls).
 The battle maps are laid out from the same Wesnoth grass, snow and
 trees as the world map (below), with Wesnoth's dirt and its ground
 decorations (flowers, stones, rocks, mushrooms, snow) by its terrain
