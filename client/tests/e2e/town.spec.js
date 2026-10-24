@@ -436,6 +436,39 @@ test.describe('Riverhold', () => {
         expect((await ui()).t).toBeLessThan(2);
     });
 
+    test('after dark Wren says her lines in her night clips, over her night painting, and her day ones are let go', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'wren')),
+            { timeout: 60000 }).toBe(true);
+        const talk = (hour) => page.evaluate((hour) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.dayNight.hourOverride = hour;
+            const ui = gs.scene.get('UIScene');
+            if (ui.dialogue.visible) ui.dialogue.close();
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'wren'));
+        }, hour);
+        const ui = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { open: d.visible, portrait: d.showing, clip: d.clip?.currentSrc || '', playing: !!d.clip && !d.clip.paused && d.clip.currentTime > 0,
+                lines: d.clips.size, night: d.clips.night, held: d.constructor.portraitsHeld(),
+                over: d.clip ? Math.abs(d.clip.getBoundingClientRect().height - d.still.getBoundingClientRect().height) : -1 };
+        });
+        await talk(12);
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, night: false, clip: expect.stringMatching(/riverhold-wren-01\.(webm|mp4)$/) });
+        const byDay = await ui();
+        expect(byDay.over).toBeLessThan(2);      // the clip is the whole painting, laid over it
+        await talk(23);
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, night: true, lines: 11,
+            portrait: expect.stringContaining('/portraits/riverhold-wren-night.webp'), clip: expect.stringMatching(/riverhold-wren-01-night\.(webm|mp4)$/) });
+        const byNight = await ui();
+        expect(byNight.held).toBe(byDay.held);    // the night set took the day set's place
+        expect(byNight.over).toBeLessThan(2);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    });
+
     test('Wren, just inside the gate, talks a line at a time, with back, a log, and asks to come with you', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

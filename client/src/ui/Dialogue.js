@@ -12,7 +12,9 @@
 // game's 352 px. Some also have a short voiced clip for each line
 // (tools/talkies.py, listed in /portraits/talk.json): it plays over the
 // painting, which is its first frame, while the line is up, and fades back
-// to the painting when it ends. A line too long for one page turns its pages
+// to the painting when it ends. After dark (by the same hour as the
+// painting) the line's night clip plays instead, made from the night
+// painting; only the one set for the hour is held. A line too long for one page turns its pages
 // as it's said: talk.json has when each of its words is spoken.
 
 import { addPanelBackground } from './panelBackground.js';
@@ -44,19 +46,13 @@ export function nightNow(scene, folk = null) {
 const CLIP_FORMATS = [['webm', 'video/webm'], ['mp4', 'video/mp4']];
 
 const painted = new Map();     // sprite id -> its painted portrait (an <img>, .night: which one), fetched with their town
-const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>), made when you first talk to them
+const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>; .night: which set), made when you first talk to them
 
 /** Let go of these people's portraits and voiced lines (their town is left behind). */
 export function forgetPortraits(ids) {
     for (const id of ids) {
         painted.delete(id);
-        for (const v of voiced.get(id)?.values() || []) {
-            v.pause();
-            v.remove();
-            v.replaceChildren();
-            v.load();          // drops what it had buffered
-        }
-        voiced.delete(id);
+        dropClips(id);
     }
 }
 
@@ -239,13 +235,14 @@ export class Dialogue {
         this.name.setText(name);
         this.role.setText(folk.plan.role || '');
         const id = folk.sprite?.characterData?.id;
-        loadPortraits(this.scene, [id], nightNow(this.scene, folk));     // their hour turned since they were fetched: the other one, now
+        const night = nightNow(this.scene, folk);
+        loadPortraits(this.scene, [id], night);     // their hour turned since they were fetched: the other one, now
         const img = painted.get(id);
         this._layout(!!img?.naturalWidth);
         this.pages = this._script(folk);
         this.page = 0;
         this.seen = 0;
-        this.clips = clipsOf(this.scene, folk.sprite?.characterData?.id);
+        this.clips = clipsOf(this.scene, id, night);
         if (img?.naturalWidth) this._showPainted(img);
         else {
             this._portrait(folk);
@@ -325,7 +322,8 @@ export class Dialogue {
         const w = Math.max(W, H / aspect);
         const at = { left: `${(W - w) / 2}px`, top: `${(H - w * aspect) * 0.22}px`, width: `${w}px` };
         Object.assign(this.still.style, at, { height: `${w * img.naturalHeight / img.naturalWidth}px` });
-        if (this.clip) Object.assign(this.clip.style, at, { height: `${w * aspect}px` });
+        const clip = this.clip;     // a clip of the painting's top part, or all of it
+        if (clip) Object.assign(clip.style, at, { height: `${w * (clip.videoHeight / clip.videoWidth || aspect)}px` });
     }
 
     /** Play the clip of the line this page is from, from the start; a page further into the same line lets it play on. */
@@ -621,12 +619,29 @@ function pages(lines) {
     });
 }
 
-/** Someone's clips, line by line (an empty Map if they have none). Made once, and fetched as soon as they're made. */
-function clipsOf(scene, id) {
+/** Let go of someone's clips. */
+function dropClips(id) {
+    for (const v of voiced.get(id)?.values() || []) {
+        v.pause();
+        v.remove();
+        v.replaceChildren();
+        v.load();          // drops what it had buffered
+    }
+    voiced.delete(id);
+}
+
+/**
+ * Someone's clips, line by line (an empty Map if they have none): by night each
+ * line's night clip where it has one. Made once for the hour, and fetched as soon as
+ * they're made; the other hour's are let go.
+ */
+function clipsOf(scene, id, night = false) {
     const listed = id && scene.cache.json.get('talk')?.[id];
     if (!listed) return new Map();
-    if (!voiced.has(id)) {
-        voiced.set(id, new Map(Object.entries(listed).map(([line, { clip: file, at }]) => {
+    if (voiced.get(id)?.night !== night) {
+        dropClips(id);
+        const set = new Map(Object.entries(listed).map(([line, said]) => {
+            const { clip: file, at } = (night && said.night) || said;
             const v = document.createElement('video');
             v.said = at || [];        // when each word of the line is said (s)
             v.playsInline = true;
@@ -647,7 +662,9 @@ function clipsOf(scene, id) {
                 setTimeout(() => { v.style.transition = 'opacity 140ms'; }, 460);
             });
             return [line, v];
-        })));
+        }));
+        set.night = night;
+        voiced.set(id, set);
     }
     return voiced.get(id);
 }
