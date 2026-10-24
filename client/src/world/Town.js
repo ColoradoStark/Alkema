@@ -152,7 +152,7 @@ export class Town {
             : scene.add.image(g.left, g.top, `town-${key}-things`, String(g.frame)).setOrigin(0, 0)
                 .setDepth(g.floor ? DEPTH.ground + 0.1 : sortDepth(scene, g.foot)) }));
         this.switches = data.switches || [];
-        // Barrels a swing breaks (tools/towngen.py `breaks`): back whole when you come again
+        // Barrels, crates and pots a swing breaks (tools/towngen.py `breaks`): back whole when you come again
         this.breaks = (data.breaks || []).map(b => ({ ...b, image: this.things[b.thing], broken: false }));
         this.rand = Math.random;      // what a barrel holds is rolled with this (tests fix it)
         this.foes = [];
@@ -203,7 +203,7 @@ export class Town {
     }
 
     /**
-     * A swing (or a shot) from feet, facing `dir`: the nearest barrel in front of you within reach breaks.
+     * A swing (or a shot) from feet, facing `dir`: the nearest barrel, crate or pot in front of you within reach breaks.
      * @returns {boolean} whether one did
      */
     strike(feet, dir, shot = false) {
@@ -225,7 +225,7 @@ export class Town {
         return !!hit;
     }
 
-    /** A barrel in pieces: splinters and dust, the crash, and (maybe) something inside. */
+    /** A barrel, crate or pot in pieces: splinters (or shards) and dust, the crash, and (maybe) something inside. */
     _smash(b) {
         b.broken = true;
         const img = b.image, foot = img.getData('foot');
@@ -239,7 +239,7 @@ export class Town {
         }
         this.refresh();
         const s = this.scene;
-        s.effects?.smash(x, y, foot);
+        s.effects?.smash(x, y, foot, b.kind);
         s.cameras.main.shake(90, 0.004);
         audio.play('smash', { volume: 0.9 });
         const { gold, item } = barrelLoot(this.rand);

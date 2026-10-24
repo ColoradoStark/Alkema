@@ -1,4 +1,5 @@
-// Barrels break (the user's: they wanted to smash them): swing at one in a town or a dungeon and it goes
+// Barrels, crates and clay pots break (the user's: they wanted to smash them, and more to do exploring):
+// swing at one in a town or a dungeon and it goes
 // to pieces with a crash, splinters and dust; the ground it stood on is free; sometimes there's gold or
 // something a shop will buy inside. They're whole again the next time you come.
 import { test, expect } from '@playwright/test';
@@ -95,6 +96,27 @@ test.describe('Barrels', () => {
         await expect.poll(() => page.evaluate(() => !window.__PHASER_GAME.scene.getScene('GameScene').town), { timeout: 15000 }).toBe(true);
         await enter(page, 'Riverhold');
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.breaks.every(b => !b.broken && b.image.visible))).toBe(true);
+    });
+
+    test('crates and clay pots break too: a crate in Riverhold, a pot in the grotto', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await enter(page, 'Riverhold');
+        const crate = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.breaks.findIndex(b => b.kind === 'crate'));
+        expect(crate).toBeGreaterThanOrEqual(0);
+        expect(await swingAt(page, crate, 'below', 0.2)).toMatchObject({ broken: true, shown: false, smash: true });
+        await page.evaluate(async () => { await window.__PHASER_GAME.scene.getScene('GameScene').leaveTown(); });
+        await expect.poll(() => page.evaluate(() => !window.__PHASER_GAME.scene.getScene('GameScene').town), { timeout: 15000 }).toBe(true);
+        await enter(page, 'Gloomwater Grotto');
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { arrive } = await (await fetch('/towns/gloomwater-2.json')).json();
+            await gs.changeMap('gloomwater-2', arrive, 'down');
+        });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key), { timeout: 15000 }).toBe('gloomwater-2');
+        const pot = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.breaks.findIndex(b => b.kind === 'pot'));
+        expect(pot).toBeGreaterThanOrEqual(0);
+        expect(await swingAt(page, pot, 'below', 0.99)).toMatchObject({ broken: true, smash: true, gold: 0 });
     });
 
     test("a barrel in the grotto: smashed, and sometimes there's something a shop will buy in it", async ({ page }) => {

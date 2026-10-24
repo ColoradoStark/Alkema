@@ -177,7 +177,7 @@ test.describe('Castle Dunmere', () => {
             const t = window.__PHASER_GAME.scene.getScene('GameScene').town;
             return { tint: t.water?.tintTopLeft, barrels: t.breaks.length };
         });
-        expect(court).toEqual({ tint: 0x28302f, barrels: 5 });
+        expect(court).toEqual({ tint: 0x28302f, barrels: 9 });      // barrels and crates
         const roles = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => f.plan.role));
         await expect.poll(() => roles().then(r => r.length), { timeout: 30000 }).toBe(16);
         expect((await roles()).filter(r => r === 'Watchman').length).toBe(4);

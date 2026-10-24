@@ -129,11 +129,12 @@ export class StageEffects {
         }
     }
 
-    /** Something wooden smashed to pieces (a barrel): a burst of splinters and dust, the staves falling about. */
-    smash(x, y, groundY = y + 24) {
+    /** Something smashed to pieces: a barrel or a crate in a burst of splinters and dust, a clay pot more dust than shards. */
+    smash(x, y, groundY = y + 24, kind = 'barrel') {
         this.ground.y = groundY;
-        this.splinters.explode(20, x, y);
-        this.dust.explode(7, x, y + 6);
+        const pot = kind === 'pot';
+        this.splinters.explode(pot ? 6 : 20, x, y);
+        this.dust.explode(pot ? 12 : 7, x, y + 6);
         this.sparks.explode(4, x, y);
     }
 
