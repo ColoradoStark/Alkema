@@ -424,5 +424,155 @@
     ]
    }
   }
+ },
+ "riverhold-healer-healer": {
+  "Come in out of the sun. The sick and the hurt are welcome here.": {
+   "clip": "riverhold-healer-healer-01",
+   "at": [
+    0.0,
+    0.96,
+    1.22,
+    1.46,
+    1.64,
+    1.78,
+    3.08,
+    3.14,
+    3.48,
+    3.94,
+    4.08,
+    4.58,
+    5.24,
+    5.58
+   ],
+   "night": {
+    "clip": "riverhold-healer-healer-01-night",
+    "at": [
+     0.0,
+     0.68,
+     1.02,
+     1.42,
+     1.62,
+     1.76,
+     3.0,
+     3.06,
+     3.42,
+     3.94,
+     4.08,
+     4.6,
+     5.24,
+     5.58
+    ]
+   }
+  }
+ },
+ "dunmere-chapel-healer": {
+  "Shall I tend your wounds?": {
+   "clip": "dunmere-chapel-healer-02",
+   "at": [
+    2.52,
+    3.16,
+    3.38,
+    3.64,
+    3.94
+   ],
+   "night": {
+    "clip": "dunmere-chapel-healer-02-night",
+    "at": [
+     2.52,
+     3.16,
+     3.46,
+     3.76,
+     4.04
+    ]
+   }
+  },
+  "The Duke keeps this chapel open to all comers. Rest a moment.": {
+   "clip": "dunmere-chapel-healer-01",
+   "at": [
+    0.0,
+    1.36,
+    1.68,
+    2.12,
+    2.46,
+    2.82,
+    3.28,
+    3.54,
+    3.78,
+    5.4,
+    5.58,
+    5.78
+   ],
+   "night": {
+    "clip": "dunmere-chapel-healer-01-night",
+    "at": [
+     0.0,
+     1.04,
+     1.32,
+     1.74,
+     2.08,
+     2.48,
+     3.04,
+     3.38,
+     3.72,
+     5.38,
+     5.54,
+     5.78
+    ]
+   }
+  },
+  "There. Hurts gone, and your strength back. Go carefully.": {
+   "clip": "dunmere-chapel-healer-03",
+   "at": [
+    0.0,
+    2.12,
+    2.28,
+    2.56,
+    3.4,
+    3.54,
+    3.9,
+    5.4,
+    5.58
+   ],
+   "night": {
+    "clip": "dunmere-chapel-healer-03-night",
+    "at": [
+     0.0,
+     2.14,
+     2.34,
+     2.56,
+     3.48,
+     3.64,
+     3.98,
+     5.52,
+     5.68
+    ]
+   }
+  },
+  "As you like. The door is always open.": {
+   "clip": "dunmere-chapel-healer-04",
+   "at": [
+    0.0,
+    1.12,
+    1.3,
+    2.6,
+    2.84,
+    3.12,
+    3.38,
+    3.8
+   ],
+   "night": {
+    "clip": "dunmere-chapel-healer-04-night",
+    "at": [
+     0.0,
+     1.04,
+     1.22,
+     2.58,
+     2.8,
+     3.08,
+     3.38,
+     3.82
+    ]
+   }
+  }
  }
 }

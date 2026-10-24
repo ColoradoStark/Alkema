@@ -232,4 +232,27 @@ test.describe('Castle Dunmere', () => {
         await talk(23);
         await expect.poll(shown, { timeout: 30000 }).toMatch(/\/portraits\/dunmere-keep-duke-night\.webp$/);
     });
+
+    test('Maren the healer says her lines in clips, her night ones after dark', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await goTo(page, 'dunmere-chapel');
+        const talk = (hour) => page.evaluate((hour) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            gs.dayNight.hourOverride = hour;
+            if (ui.dialogue.visible) ui.dialogue.close();
+            ui._lastTalk = null;
+            ui.dialogue.answers.delete('healer');
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'healer'));
+        }, hour);
+        const ui = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { clip: d.clip?.currentSrc || '', playing: !!d.clip && !d.clip.paused && d.clip.currentTime > 0, lines: d.clips.size };
+        });
+        await talk(12);
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, lines: 4, clip: expect.stringMatching(/dunmere-chapel-healer-01\.(webm|mp4)$/) });
+        await talk(23);
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, lines: 4, clip: expect.stringMatching(/dunmere-chapel-healer-01-night\.(webm|mp4)$/) });
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    });
 });
