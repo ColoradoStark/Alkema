@@ -166,7 +166,7 @@ test.describe('Gloomwater Grotto', () => {
         await goTo(page, 'gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
         const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(2);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
         // Toned down from Duelyst's colours, and side-on
         const spec = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').foes.snowchaser);
         expect(spec).toMatchObject({ side: true, look: 'grey', name: 'Snowchaser' });
@@ -180,9 +180,9 @@ test.describe('Gloomwater Grotto', () => {
         await expect.poll(() => level(page), { timeout: 20000 }).toBe('gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold), { timeout: 5000 }).toBeGreaterThan(gold);
         await page.waitForTimeout(800);
-        const left = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind));
-        expect(left).not.toContain('snowchaser');
-        expect(left).toContain('snowchaser-lpc');
+        // That band gone; the other three still at their posts
+        const left = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind).sort());
+        expect(left).toEqual(['snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
         expect((await flags(page))).toEqual({});       // nothing kept: they'll be back
         // Out and down again: back at their post
         await page.evaluate(async () => {
@@ -192,7 +192,7 @@ test.describe('Gloomwater Grotto', () => {
         await expect.poll(() => level(page), { timeout: 15000 }).toBe(null);
         await goTo(page, 'gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind).sort()), { timeout: 20000 })
-            .toEqual(['snowchaser', 'snowchaser-lpc']);
+            .toEqual(['snowchaser', 'snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
     });
 
     test('the font of clear water makes you whole', async ({ page }) => {
