@@ -93,6 +93,24 @@ test.describe('Riverhold', () => {
         expect(await page.locator('.story-portrait').isVisible()).toBe(false);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.container.visible)).toBe(true);
 
+        // After dark the warden's night portrait is up instead, and it takes the day one's place (one each held)
+        const held = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.constructor.portraitsHeld());
+        const heldByDay = await held();
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 23; });
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const ui = gs.scene.get('UIScene');
+            ui._lastTalk = null;     // (you'd walk off first)
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'guard1'));
+        });
+        await expect.poll(talk, { timeout: 30000 })
+            .toEqual({ open: true, role: 'Gate warden', portrait: expect.stringContaining('/portraits/riverhold-guard1-night.webp') });
+        expect(await held()).toBe(heldByDay);
+        await page.keyboard.press('Space');
+        await page.keyboard.press('Space');
+        await expect.poll(() => talk().then(t => t.open)).toBe(false);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+
         // Back to the gate and out
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');

@@ -6,7 +6,8 @@
 // on a backdrop drawn from the colours they're wearing, in a gold frame.
 // Anyone with a painted portrait (tools/portraits.py) shows that instead,
 // filling the whole screen above the box: /portraits/<their sprite id>.webp,
-// listed in /portraits/portraits.json. It's drawn as a page layer over the
+// listed in /portraits/portraits.json, and after dark their night painting,
+// <id>-night.webp (only the one for the hour is held). It's drawn as a page layer over the
 // canvas, so it's sharp at the screen's own resolution rather than the
 // game's 352 px. Some also have a short voiced clip for each line
 // (tools/talkies.py, listed in /portraits/talk.json): it plays over the
@@ -17,6 +18,7 @@
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
 import { resolveAnimationKey } from '../sprites/AnimationFactory.js';
+import { isNight } from '../world/DayNight.js';
 
 const INK = 0x222034;
 const GOLD = 0xfbf236;
@@ -27,10 +29,12 @@ const BUST = { x: 12, y: 6, w: 40, h: 40 };   // the part of a 64 px sprite fram
 const TYPE_MS = 18;            // per letter
 const PAGE = 80;               // letters per page, at most (two lines)
 
-export const portraitUrl = (id) => `/portraits/${id}.webp`;
+export const portraitUrl = (id, night = false) => `/portraits/${id}${night ? '-night' : ''}.webp`;
+/** Whether the night paintings are the ones to show now (the game's clock). */
+export const nightNow = (scene) => isNight(scene.scene.get('GameScene')?.dayNight?.hour ?? 12);
 const CLIP_FORMATS = [['webm', 'video/webm'], ['mp4', 'video/mp4']];
 
-const painted = new Map();     // sprite id -> its painted portrait (an <img>), fetched with their town
+const painted = new Map();     // sprite id -> its painted portrait (an <img>, .night: which one), fetched with their town
 const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>), made when you first talk to them
 
 /** Let go of these people's portraits and voiced lines (their town is left behind). */
@@ -47,14 +51,15 @@ export function forgetPortraits(ids) {
     }
 }
 
-/** Fetch the painted portraits of these people (sprite ids), for those who have one. */
-export function loadPortraits(scene, ids) {
+/** Fetch the painted portraits of these people (sprite ids), for those who have one: by day or by night, in place of the other. */
+export function loadPortraits(scene, ids, night = nightNow(scene)) {
     const listed = new Set(scene.cache.json.get('portraits') || []);
     for (const id of ids) {
-        if (!id || !listed.has(id) || painted.has(id)) continue;
+        if (!id || !listed.has(id) || painted.get(id)?.night === night) continue;
         const img = new Image();
         img.decoding = 'async';
-        img.src = portraitUrl(id);
+        img.night = night;
+        img.src = portraitUrl(id, night);
         painted.set(id, img);
     }
 }
@@ -224,7 +229,9 @@ export class Dialogue {
         const name = folk.name || '';
         this.name.setText(name);
         this.role.setText(folk.plan.role || '');
-        const img = painted.get(folk.sprite?.characterData?.id);
+        const id = folk.sprite?.characterData?.id;
+        loadPortraits(this.scene, [id]);       // the time of day turned since they were fetched: the other one, now
+        const img = painted.get(id);
         this._layout(!!img?.naturalWidth);
         this.pages = this._script(folk);
         this.page = 0;

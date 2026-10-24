@@ -66,6 +66,11 @@ export function hourAt(now = Date.now()) {
     return ((now % DAY_MS) + DAY_MS) % DAY_MS / DAY_MS * 24;
 }
 
+/** Whether it's night at an hour: the sky more than half way to midnight's dark (portraits' night paintings). */
+export function isNight(hour) {
+    return darkness(blend(SKY, hour)) > 0.5;
+}
+
 function blend(stops, hour) {
     for (let i = 1; i < stops.length; i++) {
         const [h1, c1] = stops[i];

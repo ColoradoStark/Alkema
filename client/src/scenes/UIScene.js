@@ -4,7 +4,7 @@ import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
 import { EnterPrompt } from '../ui/EnterPrompt.js';
-import { Dialogue, portraitUrl } from '../ui/Dialogue.js';
+import { Dialogue, portraitUrl, nightNow } from '../ui/Dialogue.js';
 import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
 import { Spellbook } from '../magic/Spellbook.js';
@@ -113,7 +113,7 @@ export class UIScene extends Scene {
             name: (folk.name || '').split(' ')[0],
             role: folk.plan.role,
             says,
-            portrait: listed.has(sid) ? portraitUrl(sid) : null,
+            portrait: listed.has(sid) ? portraitUrl(sid, nightNow(this)) : null,
         });
     }
 
