@@ -436,6 +436,23 @@ test.describe('Riverhold', () => {
         expect((await ui()).t).toBeLessThan(2);
     });
 
+    test('everyone in Fernwick has a painted portrait, by day and by night', async ({ page }) => {
+        test.setTimeout(60000);
+        await page.goto('/');
+        const missing = await page.evaluate(async () => {
+            const listed = new Set(await (await fetch('/portraits/portraits.json')).json());
+            const out = [];
+            for (const key of ['fernwick', 'fernwick-farmhouse', 'fernwick-cottage', 'fernwick-weaver', 'fernwick-woodcutter'])
+                for (const f of await (await fetch(`/folk/${key}.json`)).json()) {
+                    if (!listed.has(f.character.id)) out.push(f.character.id);
+                    else for (const end of ['', '-night'])
+                        if (!(await fetch(`/portraits/${f.character.id}${end}.webp`, { method: 'HEAD' })).ok) out.push(f.character.id + end);
+                }
+            return out;
+        });
+        expect(missing).toEqual([]);
+    });
+
     test("Riverhold's healer asks if she should see to your wounds, mends you on a yes, and asks again next time", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
