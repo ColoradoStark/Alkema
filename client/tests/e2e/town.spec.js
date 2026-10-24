@@ -436,6 +436,43 @@ test.describe('Riverhold', () => {
         expect((await ui()).t).toBeLessThan(2);
     });
 
+    test("Riverhold's healer asks if she should see to your wounds, mends you on a yes, and asks again next time", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { arrive } = await (await fetch('/towns/riverhold-healer.json')).json();
+            await gs.enterPlace({ name: 'Riverhold', x: 6320, y: 11116 });
+            await gs.changeMap('riverhold-healer', arrive, 'up');
+        });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'healer')?.sprite),
+            { timeout: 60000 }).toBe(true);
+        const d = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { open: d.visible, choices: d.choices.style.display !== 'none', text: d.text.text };
+        });
+        for (const visit of [1, 2]) {
+            const max = await page.evaluate(() => {
+                const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+                ui.hp.now = 1;
+                ui._lastTalk = null;
+                ui.talkTo(window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'healer'));
+                return ui.hp.max;
+            });
+            for (let i = 0; i < 10 && !(await d()).choices; i++) {
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(150);
+            }
+            await expect.poll(d).toMatchObject({ choices: true, text: 'Shall I see to your wounds?' });
+            await page.locator('.story-choices button', { hasText: 'Yes' }).click();
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now), `visit ${visit}`).toBe(max);
+            while ((await d()).open) {
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(150);
+            }
+        }
+    });
+
     test('after dark Wren says her lines in her night clips, over her night painting, and her day ones are let go', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

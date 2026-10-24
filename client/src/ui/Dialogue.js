@@ -48,6 +48,30 @@ const CLIP_FORMATS = [['webm', 'video/webm'], ['mp4', 'video/mp4']];
 const painted = new Map();     // sprite id -> its painted portrait (an <img>, .night: which one), fetched with their town
 const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>; .night: which set), made when you first talk to them
 
+/**
+ * On an iPhone (every browser there is Safari's WebKit) a video may play with sound only once a tap
+ * has started it; started any other way it's refused, and the clip plays silent. So at each touch,
+ * every clip held that a tap hasn't started yet is started and stopped at once, and one playing
+ * silent for want of a tap gets its voice back.
+ */
+function unlockClips() {
+    if (audio.mode === 'off') return;
+    for (const set of voiced.values()) {
+        for (const v of set.values()) {
+            if (v.wanted && v.muted) v.muted = false;
+            if (v.unlocked || v.wanted) continue;
+            v.unlocked = true;
+            v.muted = false;
+            v.play().then(() => {
+                if (v.wanted) return;           // asked for meanwhile: let it play
+                v.pause();
+                v.currentTime = 0;
+            }, () => { v.unlocked = false; });
+        }
+    }
+}
+for (const e of ['touchend', 'click', 'keydown']) document.addEventListener(e, unlockClips, true);
+
 /** Let go of these people's portraits and voiced lines (their town is left behind). */
 export function forgetPortraits(ids) {
     for (const id of ids) {
@@ -333,6 +357,7 @@ export class Dialogue {
         this._stopClip();
         if (!clip || !this.painting || this.showing !== this.painting.src) return;
         this.clip = clip;
+        clip.wanted = true;
         clip.currentTime = page.more ? Math.max(0, (clip.said[page.word] ?? 0) - 0.15) : 0;    // back to a later page: from its words
         clip.muted = audio.mode === 'off';
         clip.style.opacity = '0';
@@ -372,6 +397,7 @@ export class Dialogue {
         const clip = this.clip;
         if (!clip) return;
         this.clip = null;
+        clip.wanted = false;
         clip.pause();
         clip.style.opacity = '0';
     }

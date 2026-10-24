@@ -326,8 +326,8 @@ export class UIScene extends Scene {
     /** Story mode with someone you walked into (unless you've only just finished talking). */
     talkTo(folk) {
         if (this.dialogue.visible || this.enterPrompt.visible || this.gear?.visible || folk === this._lastTalk) return;
-        // A shopkeeper asks every time whether you'd like to see their wares
-        if (this._shopOf(folk)) this.dialogue.answers.delete(folk.plan.id);
+        // A shopkeeper asks every time whether you'd like to see their wares, a healer whether you'd be mended
+        if (this._shopOf(folk) || folk.plan?.heals) this.dialogue.answers.delete(folk.plan.id);
         this.bottomControls.container.setVisible(false);     // the story box takes their place
         for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
         this.dialogue.open(folk);

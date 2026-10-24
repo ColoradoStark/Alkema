@@ -162,6 +162,24 @@ test.describe('Castle Dunmere', () => {
         expect(mended).toEqual({ hp: hurt.hpMax, hpMax: hurt.hpMax, mp: hurt.mpMax, mpMax: hurt.mpMax });
         await page.keyboard.press('Enter');
         await expect.poll(d).toMatchObject({ text: 'There. Hurts gone, and your strength back. Go carefully.' });
+        // Hurt again and back to her: she asks again, and mends you again
+        while ((await d()).open) {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(150);
+        }
+        await page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            ui.hp.now = 1;
+            ui._lastTalk = null;
+            ui.talkTo(window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'healer'));
+        });
+        for (let i = 0; i < 10 && !(await d()).choices; i++) {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(150);
+        }
+        await expect.poll(d).toMatchObject({ choices: true, text: 'Shall I tend your wounds?' });
+        await page.locator('.story-choices button', { hasText: 'Yes' }).click();
+        expect((await bars()).hp).toBe(hurt.hpMax);
     });
 
     test("Castle Grimhold, Dunmere's dark twin: its moat black, its black guard on watch, Lord Varek and his jester, demons and the dead in its cells", async ({ page }) => {
@@ -254,5 +272,27 @@ test.describe('Castle Dunmere', () => {
         await talk(23);
         await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, lines: 4, clip: expect.stringMatching(/dunmere-chapel-healer-01-night\.(webm|mp4)$/) });
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    });
+
+    test("a clip an iPhone made play silent gets its voice at the next touch, and every clip of hers is readied for sound", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await goTo(page, 'dunmere-chapel');
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'healer'));
+        });
+        const clips = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
+            return { playing: !!d.clip && !d.clip.paused, muted: d.clip?.muted,
+                others: [...d.clips.values()].filter(v => v !== d.clip).map(v => ({ unlocked: !!v.unlocked, paused: v.paused, at: v.currentTime })) };
+        });
+        await expect.poll(() => clips().then(c => c.playing), { timeout: 30000 }).toBe(true);
+        // What Safari does to a clip started without a tap
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').dialogue.clip.muted = true; });
+        await page.keyboard.press('Shift');
+        await expect.poll(clips, { timeout: 10000 }).toEqual({ playing: true, muted: false,
+            others: Array(3).fill({ unlocked: true, paused: true, at: 0 }) });
     });
 });

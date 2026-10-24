@@ -463,6 +463,100 @@
      5.58
     ]
    }
+  },
+  "Shall I see to your wounds?": {
+   "clip": "riverhold-healer-healer-02",
+   "at": [
+    3.14,
+    3.62,
+    3.82,
+    4.06,
+    4.22,
+    4.4
+   ],
+   "night": {
+    "clip": "riverhold-healer-healer-02-night",
+    "at": [
+     3.14,
+     3.62,
+     3.82,
+     4.06,
+     4.22,
+     4.4
+    ]
+   }
+  },
+  "Hold still. There, good as new. Mind yourself on the river road.": {
+   "clip": "riverhold-healer-healer-03",
+   "at": [
+    0.7,
+    1.32,
+    2.74,
+    3.32,
+    3.4,
+    3.54,
+    4.7,
+    4.98,
+    5.32,
+    5.58,
+    5.68,
+    5.86
+   ],
+   "night": {
+    "clip": "riverhold-healer-healer-03-night",
+    "at": [
+     0.0,
+     0.76,
+     2.58,
+     3.26,
+     3.38,
+     3.54,
+     4.74,
+     4.98,
+     5.32,
+     5.58,
+     5.68,
+     5.86
+    ]
+   }
+  },
+  "Then sit a while in the shade, at least. The sun is cruel today.": {
+   "clip": "riverhold-healer-healer-04",
+   "at": [
+    0.0,
+    0.8,
+    1.1,
+    1.26,
+    1.46,
+    1.74,
+    1.88,
+    2.56,
+    2.74,
+    3.94,
+    4.06,
+    4.36,
+    4.72,
+    5.18
+   ],
+   "night": {
+    "clip": "riverhold-healer-healer-04-night",
+    "at": [
+     0.0,
+     0.82,
+     1.1,
+     1.26,
+     1.46,
+     1.78,
+     1.9,
+     2.68,
+     2.82,
+     4.0,
+     4.1,
+     4.4,
+     4.74,
+     5.18
+    ]
+   }
   }
  },
  "dunmere-chapel-healer": {
