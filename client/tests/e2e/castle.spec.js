@@ -257,6 +257,44 @@ test.describe('Castle Dunmere', () => {
         await expect.poll(shown, { timeout: 30000 }).toMatch(/\/portraits\/dunmere-keep-duke-night\.webp$/);
     });
 
+    test("everyone in Grimhold has a painted portrait, and after dark Lady Morwen's is her night one", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const missing = await page.evaluate(async () => {
+            const listed = new Set(await (await fetch('/portraits/portraits.json')).json());
+            const out = [];
+            for (const key of ['grimhold', 'grimhold-keep', 'grimhold-barracks', 'grimhold-chambers', 'grimhold-cells'])
+                for (const f of await (await fetch(`/folk/${key}.json`)).json()) if (!listed.has(f.character.id)) out.push(f.character.id);
+            return out;
+        });
+        expect(missing).toEqual([]);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Castle Grimhold'));
+        });
+        await expect.poll(() => where(page), { timeout: 15000 }).toBe('grimhold');
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { arrive } = await (await fetch('/towns/grimhold-chambers.json')).json();
+            await gs.changeMap('grimhold-chambers', arrive, 'up');
+        });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'lady')?.sprite),
+            { timeout: 60000 }).toBe(true);
+        const talk = (hour) => page.evaluate((hour) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            gs.dayNight.hourOverride = hour;
+            if (ui.dialogue.visible) ui.dialogue.close();
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'lady'));
+        }, hour);
+        const shown = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.showing || '');
+        await talk(12);
+        await expect.poll(shown, { timeout: 30000 }).toMatch(/\/portraits\/grimhold-chambers-lady\.webp$/);
+        await talk(23);
+        await expect.poll(shown, { timeout: 30000 }).toMatch(/\/portraits\/grimhold-chambers-lady-night\.webp$/);
+    });
+
     test('Maren the healer says her lines in clips, her night ones after dark', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
