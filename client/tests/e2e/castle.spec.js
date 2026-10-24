@@ -33,9 +33,15 @@ async function goTo(page, key) {
 }
 
 test.describe('Castle Dunmere', () => {
-    test("new heroes start at the castle's drawbridge, are asked in, and find the courtyard full: the guard walking their beat", async ({ page }) => {
+    test("on the road below the castle's drawbridge you're asked in, and find the courtyard full: the guard walking their beat", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
+        await page.evaluate(() => {         // (where new heroes started, before the user moved the start to the grotto)
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(10928, 10224);
+            me.body.reset(10928, 10224);
+            gs.cameras.main.centerOn(10928, 10224);
+        });
         const prompt = () => page.evaluate(() => {
             const p = window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt;
             return { visible: p.visible, title: p.title.text };

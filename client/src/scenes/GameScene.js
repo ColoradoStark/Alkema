@@ -25,6 +25,7 @@ const SETTLE_MS = 600;          // just aboard, she won't put you ashore again (
 const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 const FADE_MS = 260;            // going into a town or out again
+const ROOM_WAIT_MS = 6000;      // how long to wait for the server to move you to another room before going anyway
 const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
 const BACK_OFF = 40;            // back from a fight, you stand this far from where the foe stood
 
@@ -304,8 +305,7 @@ export class GameScene extends Scene {
         try {
             await this._loadTown(key);
             const at = { x: feet[0], y: feet[1] - FEET };
-            const res = await this.networkManager.request('change-room', { town: key, ...at });
-            if (!res?.ok) return;
+            const res = await this._room({ town: key, ...at });
             await this._fadeOut();
             this._dropTown();
             this.overworld.setVisible(false);
@@ -313,7 +313,7 @@ export class GameScene extends Scene {
             this.encounters.setVisible(false);
             this.town = this.world = new Town(this, key);
             this.cameras.main.setBackgroundColor(this.town.indoors || this.town.data.dark ? '#0c080e' : '#1d5d8c');
-            this._arriveAt(at, facing, res.players);
+            this._arriveAt(at, facing, res?.players);
             if (this.town.data.name) this.scene.get('UIScene')?.notice?.(this.town.data.name, 2600);   // a dungeon level's name
             this.cameras.main.setBounds(0, 0, this.town.width, this.town.height);
             this.cameras.main.centerOn(at.x, at.y);
@@ -326,13 +326,23 @@ export class GameScene extends Scene {
         }
     }
 
+    /**
+     * Tell the server you've moved to another room (who's there with you comes back), or null. The maps
+     * are the game's own: with the server gone (a deploy restarts it) or not knowing you, you go anyway
+     * (the user was left on black after a fight), alone, rather than wait or stay nowhere.
+     */
+    async _room(where) {
+        if (!this.networkManager?.connected) return null;
+        const res = await this.networkManager.request('change-room', where, ROOM_WAIT_MS).catch(() => null);
+        return res?.ok ? res : null;
+    }
+
     async leaveTown() {
         const place = this._townPlace;
         this._changingRoom = true;
         try {
             const at = { x: place.x, y: place.y - FEET };
-            const res = await this.networkManager.request('change-room', { town: null, ...at });
-            if (!res?.ok) return;
+            const res = await this._room({ town: null, ...at });
             await this._fadeOut();
             this._dropTown();
             forgetFires(this);
@@ -343,7 +353,7 @@ export class GameScene extends Scene {
             this.encounters.setVisible(true);
             this.cameras.main.setBackgroundColor('#1d5d8c');
             this.cameras.main.removeBounds();
-            this._arriveAt(at, 'down', res.players);
+            this._arriveAt(at, 'down', res?.players);
             this.cameras.main.centerOn(at.x, at.y);
             this._place = place;     // standing at the gate: don't ask to go straight back in
             this.cameras.main.fadeIn(FADE_MS);
@@ -375,8 +385,7 @@ export class GameScene extends Scene {
             const k = BACK_OFF / (Math.hypot(away.x, away.y) || 1);
             this._battleFrom = { x: spot.x + away.x * k, y: spot.y + (away.x || away.y ? away.y * k : -BACK_OFF), spot, country };
             const [col, row] = this.cache.json.get('battle').maps[country].party[0];
-            const res = await this.networkManager.request('change-room', { battle: true, x: col * 32 + 16, y: row * 32 });
-            if (!res?.ok) return;
+            const res = await this._room({ battle: true, x: col * 32 + 16, y: row * 32 });
             await this._fadeOut();
             if (spot.town) {         // a dungeon's foe: the level goes while you fight, and comes back after
                 this.fighting = spot.kind;
@@ -393,7 +402,7 @@ export class GameScene extends Scene {
             cam.setBackgroundColor('#000000');
             cam.stopFollow();
             this.localPlayer.nameText.setVisible(false);      // no names over the fight (it would cover the foe)
-            this._arriveAt(this.battle.heroAt, 'up', res.players);
+            this._arriveAt(this.battle.heroAt, 'up', res?.players);
             cam.centerOn(this.battle.width / 2, this.battle.height / 2);
             cam.fadeIn(FADE_MS);
         } catch (err) {
@@ -413,7 +422,7 @@ export class GameScene extends Scene {
         this._changingRoom = true;
         try {
             const at = { x: from.x, y: from.y - FEET };
-            const res = await this.networkManager.request('change-room', { town: null, ...at }).catch(() => null);
+            const res = await this._room({ town: null, ...at });
             await this._fadeOut();
             this.battle.destroy();
             this.battle = null;

@@ -455,10 +455,17 @@ test.describe('Battle', () => {
         });
         const heard = () => page.evaluate(() => window.__heard.splice(0));
         // The spell menu opens and closes with a sound; attack with no one in reach is refused with one
-        await page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); ui.handleAbility(); ui.handleAbility(); ui.handleAttack(); });
+        // (from a corner no foe is in line with: a hero with a bow would otherwise have a shot)
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), b = gs.battle, ui = gs.scene.get('UIScene');
+            const m = b.party[0], to = b.feetOf([0, 13]);
+            m.cell = [0, 13];
+            m.who.sprite.setPosition(to.x, to.y - 23);
+            ui.handleAbility(); ui.handleAbility(); ui.handleAttack();
+        });
         expect(await heard()).toEqual(['menu_open', 'menu_close', 'error']);
         // A step: a footstep, and a click as the turn passes on to the next of you
-        await step(page, 'left');
+        await step(page, 'up');
         expect(await heard()).toEqual(['step_grass', 'select']);
         // The rest of you stand your ground; the orcs close in, step by step; then a chime: your party's turn
         for (let i = 0; i < 3; i++) await strike(page);

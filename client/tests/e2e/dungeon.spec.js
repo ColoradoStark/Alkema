@@ -264,6 +264,25 @@ test.describe('Gloomwater Grotto', () => {
         expect((await step([0, 3], -1)).out).toBe(true);
     });
 
+    test("the server gone mid-fight (a deploy restarts it): won, you're still put back on the level, not left in the dark", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+        await goTo(page, 'gloomwater-1');
+        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.networkManager.request = async () => ({ ok: false, error: 'not-joined' });       // as after a restart: it doesn't know you
+            const b = gs.battle;
+            b.foes.forEach(f => { f.hp = 0; });
+            b._won();
+        });
+        await expect.poll(() => level(page), { timeout: 8000 }).toBe('gloomwater-1');
+    });
+
     test('the font of clear water makes you whole', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
