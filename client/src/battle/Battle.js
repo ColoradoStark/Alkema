@@ -360,7 +360,7 @@ export class Battle {
         this.busy = true;
         const sprite = m.who.sprite, f = this.feetOf(to);
         sprite.playAnimation('walk', dir);
-        audio.play('step_grass', { volume: 0.45 });
+        audio.play(this.country === 'cave' ? 'step' : 'step_grass', { volume: 0.45 });
         this.scene.tweens.add({
             targets: sprite, x: f.x, y: f.y - FEET, duration: STEP_MS,
             onComplete: () => {
@@ -413,6 +413,7 @@ export class Battle {
         let target = this._target(m, into);
         if (!target) {
             this.say('Move closer to attack');
+            audio.play('error', { volume: 0.6 });
             return false;
         }
         if (target) {
@@ -428,6 +429,7 @@ export class Battle {
             }
         }
         this.busy = true;
+        audio.play('tap');          // your action, chosen
         const ranged = !!getRangedAnimation(who.characterData);
         // A shot flies as far as its mark and stops in it; the blow lands when it gets there
         const me = who.sprite;
@@ -539,6 +541,7 @@ export class Battle {
         for (let i = this.turn + 1; i < this.party.length; i++) {
             if (!this.party[i].out) {
                 this.turn = i;
+                audio.play('select', { volume: 0.5 });        // on to the next of you
                 return;
             }
         }
@@ -576,6 +579,7 @@ export class Battle {
         for (const m of this.party) for (const id in m.rest) if (--m.rest[id] <= 0) delete m.rest[id];
         this.phase = 'party';
         this.turn = this.party.findIndex(m => !m.out);
+        audio.play('ting', { volume: 0.45 });         // your party's turn again
     }
 
     /** A foe walks a path, a tile at a time (its cell is the last at once, so the next foe knows); off the map, it's gone. */
@@ -588,6 +592,7 @@ export class Battle {
         for (const cell of path) {
             const to = this.feetOf(cell);
             f.foe.face(to.x, to.y);
+            if (f.moves !== 'drift' && f.moves !== 'shadow') audio.play('step', { volume: 0.3, rate: 0.85 });     // (what drifts floats, unheard)
             await new Promise(resolve => this.scene.tweens.add({ targets: f.foe.sprite, x: to.x, y: to.y, duration: FOE_STEP_MS, onComplete: resolve }));
         }
         f.moving = false;

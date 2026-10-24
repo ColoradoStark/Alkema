@@ -440,6 +440,33 @@ test.describe('Battle', () => {
         expect(s.alpha).toBe(1);
     });
 
+    test("you hear it: a chime when it's your party's turn again, a click as it passes to each of you, footsteps (yours and theirs), the spell menu and a refusal", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, { party: true });
+        await sturdy(page);
+        await walkInto(page, 3);
+        await yourTurn(page);
+        await page.evaluate(async () => {
+            const { audio } = await import('/src/audio/audio.js');
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            window.__heard = [];
+            const play = audio.play.bind(audio);
+            audio.play = (name, ...rest) => { window.__heard.push(`${b.phase === 'foes' ? 'foes:' : ''}${name}`); return play(name, ...rest); };
+        });
+        const heard = () => page.evaluate(() => window.__heard.splice(0));
+        // The spell menu opens and closes with a sound; attack with no one in reach is refused with one
+        await page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); ui.handleAbility(); ui.handleAbility(); ui.handleAttack(); });
+        expect(await heard()).toEqual(['menu_open', 'menu_close', 'error']);
+        // A step: a footstep, and a click as the turn passes on to the next of you
+        await step(page, 'left');
+        expect(await heard()).toEqual(['step_grass', 'select']);
+        // The rest of you stand your ground; the orcs close in, step by step; then a chime: your party's turn
+        for (let i = 0; i < 3; i++) await strike(page);
+        const after = await heard();
+        expect(after.filter(n => n === 'foes:step').length).toBeGreaterThan(0);
+        expect(after[after.length - 1]).toBe('ting');
+    });
+
     test('holding a way down takes one step: the next of you waits for you to let go, so a held finger never walks the whole party', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page, { party: true });

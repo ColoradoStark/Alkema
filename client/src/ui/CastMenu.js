@@ -4,6 +4,8 @@
 // of magic or still resting says so; one still to learn is greyed with the
 // level it comes at. Tap one to cast it (as the turn), or Cancel.
 
+import { audio } from '../audio/audio.js';
+
 const W = 300;
 const ROW = 46;
 const ICON = 36;
@@ -69,7 +71,8 @@ export class CastMenu {
             if (usable) {
                 bg.setInteractive({ useHandCursor: true });
                 bg.on('pointerdown', () => {
-                    this.close();
+                    this.close(true);
+                    audio.play('confirm', { volume: 0.7 });
                     this.onPick(spell.id);
                 });
             }
@@ -84,10 +87,13 @@ export class CastMenu {
         this.container.add(cancel);
         this.container.setVisible(true);
         this.visible = true;
+        audio.play('menu_open');
     }
 
-    close() {
+    /** Put away (`picked`: a spell was chosen, and says so itself). */
+    close(picked = false) {
         if (!this.visible) return;
+        if (!picked) audio.play('menu_close');
         this.container.setVisible(false).removeAll(true);
         this.visible = false;
     }
