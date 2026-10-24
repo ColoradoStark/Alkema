@@ -20,6 +20,7 @@
 
 import { Foe, OVER_TREES } from './Foe.js';
 import { decide } from './Tactics.js';
+import { rollLoot } from './Encounters.js';
 import { seat } from './Formation.js';
 import { Player } from '../sprites/Player.js';
 import { Spellbook } from '../magic/Spellbook.js';
@@ -42,7 +43,7 @@ const FOE_HIT_CHANCE = 0.6;     // a foe's blow lands this often
 const FOE_STEP_MS = 230;        // a foe's walk, a tile
 const WAVE_MS = 150;            // the band moves as a wave: each foe sets off this long after the one before
 const FALL_MS = 1600;           // from your falling to the world again
-const OVER_MS = 2200;           // from the last foe falling to the world again
+const VICTORY_MS = 2600;        // the victory scene, from the last foe falling to the world again
 const SHOT_DELAY_MS = 200;      // from pressing attack to the arrow or stone leaving (Player.playAttack)
 const FRONT = 3;                // places in the front row of foes (listed first in a map's places)
 const DIRS = { '1,0': 'right', '-1,0': 'left', '0,1': 'down', '0,-1': 'up' };
@@ -134,12 +135,17 @@ export class Battle {
      * @param {string} opts.kind  the foes ('pillager')
      * @param {number} opts.count  how many (1 to 8)
      * @param {object[]} [opts.companions]  who fights beside you (PARTY entries)
-     * @param {(result: 'won'|'fled'|'fallen', how: {slain: number}) => void} opts.onEnd
+     * @param {boolean} [opts.spoils]  what the band carried is yours at once, shown in the victory scene (a dungeon's
+     *   fights; out in the world a band leaves a chest instead)
+     * @param {(result: 'won'|'fled'|'fallen', how: {slain: number, loot: object|null}) => void} opts.onEnd
      */
-    constructor(scene, { country, kind, count = 1, boss = false, name = null, companions = [], onEnd }) {
+    constructor(scene, { country, kind, count = 1, boss = false, name = null, companions = [], spoils = false, onEnd }) {
         this.scene = scene;
         this.country = country;
         this.onEnd = onEnd;
+        this.spoils = spoils;
+        this.loot = null;
+        audio.prepareStinger('victory');
         const data = scene.cache.json.get('battle');
         const map = data.maps[country];
         this.tile = data.tile;
@@ -491,12 +497,37 @@ export class Battle {
         this._won();
     }
 
-    /** The field is clear of them: victory, and back to the world. */
+    /**
+     * The field is clear of them: a moment's victory (the user's: quick, with a stinger, no
+     * particles), then back to the world. The field dims, Victory! comes up over it with who fell
+     * and what they carried (a dungeon's band: it goes straight into your pack), and those of you
+     * still standing raise their weapons.
+     */
     _won() {
         this.over = true;
         this._drawMarker();
-        audio.play('victory');
-        this.scene.time.delayedCall(OVER_MS - 800, () => this.end('won'));
+        if (this.spoils && this.slain) this.loot = rollLoot(this.slain);
+        audio.stinger('victory');
+        const s = this.scene, cx = this.width / 2, cy = this.height * 0.36;
+        const text = (y, words, size, color) => s.add.text(cx, y, words, {
+            fontFamily: 'Alagard', fontSize: `${size}px`, color, stroke: '#222034', strokeThickness: size > 20 ? 6 : 4, align: 'center',
+        }).setOrigin(0.5);
+        const lines = [text(cy, 'Victory!', 40, '#fbf236'),
+            text(cy + 38, this.slain > 1 ? `The ${this.name}s are slain!` : `The ${this.name} is slain!`, 16, '#fff6e0')];
+        if (this.loot) {
+            lines.push(text(cy + 64, `+${this.loot.gold} gold`, 18, '#fbf236'));
+            const found = s.scene.get('UIScene')?.inventory?.item(this.loot.item)?.name;
+            if (found) lines.push(text(cy + 88, found, 16, '#fff6e0'));
+        }
+        const dim = s.add.rectangle(0, 0, this.width, this.height, 0x0c0814, 0.4).setOrigin(0, 0).setAlpha(0);
+        this.victory = s.add.container(0, 0, [dim, ...lines]).setDepth(60);
+        s.tweens.add({ targets: dim, alpha: 1, duration: 250 });
+        lines.forEach((t, i) => {
+            t.setScale(0.5).setAlpha(0);
+            s.tweens.add({ targets: t, scale: 1, alpha: 1, delay: 80 + i * 140, duration: 260, ease: 'Back.easeOut' });
+        });
+        for (const m of this.party) if (!m.out) m.who.playCast();
+        s.time.delayedCall(VICTORY_MS, () => this.end('won'));
     }
 
     /** On to whoever's next in the party; after the last of you, the foes' turn. */
@@ -739,7 +770,8 @@ export class Battle {
         this._ended = true;
         this.over = true;
         if (result === 'fled') this.say('You flee!');
-        this.onEnd?.(result, { slain: this.slain });
+        if (result !== 'won') audio.forgetStinger('victory');
+        this.onEnd?.(result, { slain: this.slain, loot: this.loot });
     }
 
     // ------------------------------------------------ as GameScene's world
@@ -782,6 +814,7 @@ export class Battle {
         this._sayTimer?.remove();
         this.scene.tweens.killTweensOf(this.marker);
         [this.ground, this.frame, this.log, this.marker, ...this.trees].forEach(o => o.destroy());
+        this.victory?.destroy();
         for (const f of this.foes) {
             f.bar.destroy();
             f.foe.destroy();

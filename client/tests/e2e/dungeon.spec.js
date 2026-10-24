@@ -176,7 +176,7 @@ test.describe('Gloomwater Grotto', () => {
             return b && { country: b.country, foes: b.foes.length, side: b.foes.every(f => f.side), names: [...new Set(b.foes.map(f => f.foe.name))] };
         }), { timeout: 20000 }).toEqual({ country: 'cave', foes: band.count, side: true, names: ['Snowchaser'] });
         const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
-        await page.evaluate(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; b.foes.forEach(f => { f.hp = 0; }); b.end('won'); });
+        await page.evaluate(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; b.foes.forEach(f => { f.hp = 0; }); b._won(); });
         await expect.poll(() => level(page), { timeout: 20000 }).toBe('gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold), { timeout: 5000 }).toBeGreaterThan(gold);
         await page.waitForTimeout(800);
@@ -193,6 +193,45 @@ test.describe('Gloomwater Grotto', () => {
         await goTo(page, 'gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind).sort()), { timeout: 20000 })
             .toEqual(['snowchaser', 'snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
+    });
+
+    test('a won fight ends in a short victory scene in the battle (a stinger, Victory!, the spoils), and nothing follows you onto the map', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await goTo(page, 'gloomwater-1');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
+        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
+        const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
+        // The last of them falls (as a real blow ends it)
+        await page.evaluate(async () => {
+            const { audio } = await import('/src/audio/audio.js');
+            window.__played = [];
+            const stinger = audio.stinger.bind(audio);
+            audio.stinger = (name) => { window.__played.push(name); return stinger(name); };
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            b.foes.forEach(f => { f.hp = 0; });
+            b._won();
+        });
+        const scene = await page.evaluate(() => {
+            const v = window.__PHASER_GAME.scene.getScene('GameScene').battle.victory;
+            return v && { shown: v.visible, lines: v.list.filter(o => o.text).map(o => o.text) };
+        });
+        expect(scene.shown).toBe(true);
+        expect(scene.lines[0]).toBe('Victory!');
+        expect(scene.lines.join(' ')).toMatch(/\+\d+ gold/);
+        expect(await page.evaluate(() => window.__played)).toEqual(['victory']);
+        // ...short: back on the level within a few seconds, the gold in your pack, and no coins, sparks or dust following you
+        await expect.poll(() => level(page), { timeout: 6000 }).toBe('gloomwater-1');
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold)).toBeGreaterThan(gold);
+        await page.waitForTimeout(300);
+        const alive = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return gs.children.list.filter(o => o.type === 'ParticleEmitter' && o.getAliveParticleCount() > 0 && !o.emitting).length;
+        });
+        expect(alive).toBe(0);
     });
 
     test('the font of clear water makes you whole', async ({ page }) => {

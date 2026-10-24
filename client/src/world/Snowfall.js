@@ -3,8 +3,10 @@
 // A few hundred flakes at most, drifting down over the view. They're drawn on
 // the screen but move with the world: when the camera moves the flakes move the
 // other way, so you walk through the snow rather than carry it with you. Flakes
-// that drift off one side come back in at the other. Out of the snow the
-// emitter stops; once the last flake has landed, it and its texture are let go.
+// that drift off one side come back in at the other. Walk out of the snow and the
+// emitter stops, the last flakes landing; go somewhere else (into a town, a
+// dungeon, a fight) and they're gone at once: it's another sky. Once the last
+// flake has landed, the emitter and its texture are let go.
 
 const TEXTURE = 'fx-snowflake';
 const DEPTH = 29;              // over the trees' crowns and the forest's gloom
@@ -18,6 +20,7 @@ export class Snowfall {
         this.falling = false;
         this._idle = 0;
         this._cam = null;
+        this._place = null;
     }
 
     _start() {
@@ -45,8 +48,10 @@ export class Snowfall {
         this._idle = 0;
     }
 
-    /** Snow falls (or stops) here; light: the ambient colour it falls in. */
-    update(delta, snowing, light = 0xffffff) {
+    /** Snow falls (or stops) here; light: the ambient colour it falls in; place: where you are ('world', a map's key, 'battle'). */
+    update(delta, snowing, light = 0xffffff, place = null) {
+        const moved = place !== this._place;
+        this._place = place;
         // Flakes catch what light there is: paler than the ground, even at night
         const ch = s => 255 - Math.round((255 - ((light >> s) & 255)) * 0.4);
         const tint = (ch(16) << 16) | (ch(8) << 8) | ch(0);
@@ -57,6 +62,7 @@ export class Snowfall {
             if (snowing) this.emitter.start();
             else this.emitter.stop();
         }
+        if (moved && !snowing) this.emitter.killAll();      // somewhere else: none of that sky's snow follows you
         this.emitter.particleTint = tint;
 
         // The flakes keep their place in the world as the camera moves (not across a wrap, which jumps)

@@ -12,7 +12,7 @@ import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
 import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
-import { Encounters, rollLoot } from '../battle/Encounters.js';
+import { Encounters } from '../battle/Encounters.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
@@ -119,7 +119,7 @@ export class GameScene extends Scene {
         }
         const snowing = this.battle ? this.battle.snowing
             : this.town ? !!this.town.data.snow : !!feet && this.overworld.isSnowy(feet.x, feet.y);
-        this.snowfall?.update(delta, snowing, this.dayNight?.ambient);
+        this.snowfall?.update(delta, snowing, this.dayNight?.ambient, this.battle ? 'battle' : this.town?.key ?? 'world');
         this.updateMusic(delta, feet);
         this.updateSailing();
         this.updatePlaceVisit();
@@ -387,7 +387,7 @@ export class GameScene extends Scene {
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
             this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, boss: spot.boss, name: spot.name,
-                companions: this.companions, onEnd: (result, how) => this.leaveBattle(result, how) });
+                companions: this.companions, spoils: !!spot.town && !spot.flag, onEnd: (result, how) => this.leaveBattle(result, how) });
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
             cam.stopFollow();
@@ -406,9 +406,9 @@ export class GameScene extends Scene {
      * Won, fled or fallen: back in the world where you met the foe (won, a chest where it stood,
      * for those slain; fallen, you come to with a single hit point).
      */
-    async leaveBattle(result, { slain } = {}) {
+    async leaveBattle(result, { slain, loot } = {}) {
         const from = this._battleFrom;
-        if (from.spot.town) return this._backToLevel(from, result, slain);
+        if (from.spot.town) return this._backToLevel(from, result, loot);
         this._changingRoom = true;
         try {
             const at = { x: from.x, y: from.y - FEET };
@@ -439,9 +439,10 @@ export class GameScene extends Scene {
 
     /**
      * Back from a dungeon's fight to the level it was fought on. Won: a boss is gone for good (its flag),
-     * any other band till you next come down (`slain`, cleared as you enter), and what they carried is yours.
+     * any other band till you next come down (`slain`, cleared as you enter), and what they carried (shown in
+     * the battle's victory scene) is in your pack.
      */
-    async _backToLevel(from, result, beaten = from.spot.count) {
+    async _backToLevel(from, result, loot = null) {
         this.battle.destroy();
         this.battle = null;
         this.world = null;
@@ -455,20 +456,7 @@ export class GameScene extends Scene {
         this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
         await this.changeMap(from.spot.town, [from.x, from.y], from.y < from.spot.y ? 'down' : 'up');
         if (!this.town) forgetFoe(this, from.spot.kind);
-        if (won && !from.spot.flag && beaten) this._spoils(rollLoot(beaten));
-    }
-
-    /** What a band beaten in a dungeon carried, straight into your pack: coins, and now and then something to sell. */
-    _spoils({ gold, item }) {
-        const inventory = this.scene.get('UIScene')?.inventory;
-        inventory?.loot(gold, item);
-        audio.play('coins');
-        const me = this.localPlayer?.sprite;
-        if (!me) return;
-        this.effects?.coinBurst(me.x, me.y - 18, me.y + FEET);
-        this.effects?.floatText(me.x, me.y - 40, `+${gold} gold`, '#fbf236', 18);
-        const name = inventory?.item(item)?.name;
-        if (name) this.time.delayedCall(450, () => this.effects?.floatText(me.x, me.y - 40, name, '#fff6e0', 16));
+        if (won && loot) this.scene.get('UIScene')?.inventory?.loot(loot.gold, loot.item);
     }
 
     /** What you've opened, drained and won in the dungeons, kept with your hero. */
