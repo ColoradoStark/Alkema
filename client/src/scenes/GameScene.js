@@ -15,6 +15,7 @@ import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js
 import { Encounters } from '../battle/Encounters.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
+import { getRangedAnimation } from '../sprites/weaponTypes.js';
 
 const WALK_SPEED = 160;
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
@@ -683,6 +684,9 @@ export class GameScene extends Scene {
     }
 
     emitAttack() {
+        // In a town or a dungeon, what's in front of you breaks (a barrel)
+        const me = this.localPlayer?.sprite;
+        if (this.town && me) this.town.strike({ x: me.x, y: me.y + FEET }, me.currentDirection || 'down', !!getRangedAnimation(this.localPlayer.characterData));
         if (this.networkManager?.socket?.connected) {
             this.networkManager.socket.emit('player-attack', {
                 direction: this.localPlayer.sprite.currentDirection || 'down',

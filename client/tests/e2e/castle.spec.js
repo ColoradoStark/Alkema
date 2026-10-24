@@ -163,4 +163,46 @@ test.describe('Castle Dunmere', () => {
         await page.keyboard.press('Enter');
         await expect.poll(d).toMatchObject({ text: 'There. Hurts gone, and your strength back. Go carefully.' });
     });
+
+    test("Castle Grimhold, Dunmere's dark twin: its moat black, its black guard on watch, Lord Varek and his jester, demons and the dead in its cells", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Castle Grimhold'));
+        });
+        await expect.poll(() => where(page), { timeout: 15000 }).toBe('grimhold');
+        const court = await page.evaluate(() => {
+            const t = window.__PHASER_GAME.scene.getScene('GameScene').town;
+            return { tint: t.water?.tintTopLeft, barrels: t.breaks.length };
+        });
+        expect(court).toEqual({ tint: 0x28302f, barrels: 5 });
+        const roles = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.map(f => f.plan.role));
+        await expect.poll(() => roles().then(r => r.length), { timeout: 30000 }).toBe(16);
+        expect((await roles()).filter(r => r === 'Watchman').length).toBe(4);
+        const helms = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
+            .filter(f => /guard|warden|Watchman/.test(f.plan.role)).map(f => f.sprite.characterData.selections.find(s => s.type === 'hat')?.item));
+        expect(new Set(helms)).toEqual(new Set(['hat_helmet_greathelm']));
+
+        for (const [key, want] of Object.entries({
+            'grimhold-keep': ['Lord of Grimhold', 'Jester', 'Necromancer', 'Chamberlain'],
+            'grimhold-cells': ['Demon', 'Demon', 'Demon', 'Executioner', 'Jailer', 'Skeleton', 'Skeleton', 'Skeleton'],
+        })) {
+            await page.evaluate(async (key) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                const { arrive } = await (await fetch(`/towns/${key}.json`)).json();
+                await gs.changeMap(key, arrive, 'up');
+            }, key);
+            await expect.poll(() => where(page), { timeout: 15000 }).toBe(key);
+            await expect.poll(() => roles().then(r => r.length), { timeout: 30000 }).toBeGreaterThan(want.length - 1);
+            const r = await roles();
+            for (const role of want) expect(r, role).toContain(role);
+            if (key === 'grimhold-cells') expect(r.sort()).toEqual(want);
+        }
+        // The demons: wings, horns and tails, the generator's demon race
+        const demons = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk
+            .filter(f => f.plan.role === 'Demon').map(f => f.sprite.characterData.selections.map(s => s.item).filter(i => /wings|horns|tail/.test(i)).sort()));
+        expect(demons).toEqual(Array(3).fill(['hat_accessory_horns_upward', 'tail_dragon', 'wings_bat']));
+    });
 });

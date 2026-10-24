@@ -65,6 +65,9 @@ Sound effects
     License: CC0
     https://opengameart.org/content/80-cc0-rpg-sfx
     https://opengameart.org/content/80-cc0-creature-sfx
+  Independent.nu: 35 wooden cracks, hits, destructions (a barrel smashed)
+    License: CC0
+    https://opengameart.org/content/35-wooden-crackshitsdestructions
   Remaining effects (summon shimmer, chimes, spells, fanfare) were
     synthesized for Alkema.
 

@@ -129,6 +129,14 @@ export class StageEffects {
         }
     }
 
+    /** Something wooden smashed to pieces (a barrel): a burst of splinters and dust, the staves falling about. */
+    smash(x, y, groundY = y + 24) {
+        this.ground.y = groundY;
+        this.splinters.explode(20, x, y);
+        this.dust.explode(7, x, y + 6);
+        this.sparks.explode(4, x, y);
+    }
+
     /** A one-frame white star where metal meets metal. */
     _flash(x, y) {
         const flash = this.scene.add.image(x, y, 'fx-glint', 1).setScale(5).setDepth(this.depth + 1).setBlendMode('ADD');

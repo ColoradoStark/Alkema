@@ -11,6 +11,7 @@ import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
 import { FIRE_ART } from './DayNight.js';
 import { Foe, loadFoe, forgetFoe } from '../battle/Foe.js';
+import { audio } from '../audio/audio.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
 const TALK_REACH = 64;         // stand this close to someone and they speak
@@ -40,11 +41,25 @@ const WATER_FRAME_MS = 260;
 export const TOWNS = {
     Riverhold: 'riverhold', Seacombe: 'seacombe', Fernwick: 'fernwick', Ashby: 'ashby',
     Tumbledown: 'tumbledown', "Gull's Rest": 'gulls_rest', 'Castle Dunmere': 'dunmere',
-    'Gloomwater Grotto': 'gloomwater-1',
+    'Castle Grimhold': 'grimhold', 'Gloomwater Grotto': 'gloomwater-1',
 };
 
 const TOUCH = 44;               // a dungeon's gate, chest, lock or font: walk up against it and you work it (its solid edge, cell-rounded, holds you this far off)
 const FOE_TOUCH = 24;           // ...and a foe there: this close and you're fighting
+
+// A barrel smashed (the user's): most hold nothing, some a few coins, now and then something a shop will buy
+const BARREL = { gold: 0.35, item: 0.08, coins: [3, 14] };
+const BARREL_FINDS = ['dagger', 'mace', 'spear', 'wooden-shield', 'mail-coif', 'iron-helm', 'leather-armour',
+    'ember-crystal', 'frost-crystal', 'spark-crystal', 'mending-crystal'];
+const REACH = { melee: 52, shot: 280 };      // a swing reaches this far in front of you; an arrow or a stone, this far
+
+/** What's in a barrel: { gold, item } (either may be nothing). */
+export function barrelLoot(rand = Math.random) {
+    const r = rand();
+    if (r < BARREL.item) return { gold: 0, item: BARREL_FINDS[Math.floor(rand() * BARREL_FINDS.length)] };
+    if (r < BARREL.item + BARREL.gold) return { gold: BARREL.coins[0] + Math.floor(rand() * (BARREL.coins[1] - BARREL.coins[0] + 1)), item: null };
+    return { gold: 0, item: null };
+}
 
 /** Whether a flag condition ('flag' or '!flag') holds (GameScene.flags: what's been opened, won, drained). */
 export function holds(when, flags) {
@@ -137,6 +152,9 @@ export class Town {
             : scene.add.image(g.left, g.top, `town-${key}-things`, String(g.frame)).setOrigin(0, 0)
                 .setDepth(g.floor ? DEPTH.ground + 0.1 : sortDepth(scene, g.foot)) }));
         this.switches = data.switches || [];
+        // Barrels a swing breaks (tools/towngen.py `breaks`): back whole when you come again
+        this.breaks = (data.breaks || []).map(b => ({ ...b, image: this.things[b.thing], broken: false }));
+        this.rand = Math.random;      // what a barrel holds is rolled with this (tests fix it)
         this.foes = [];
         this.refresh();
         for (const plan of data.foes || []) {
@@ -182,6 +200,58 @@ export class Town {
             }
             for (const [cx, cy] of g.cells || []) this.blocked[cy * this.cols + cx] = 1;
         }
+    }
+
+    /**
+     * A swing (or a shot) from feet, facing `dir`: the nearest barrel in front of you within reach breaks.
+     * @returns {boolean} whether one did
+     */
+    strike(feet, dir, shot = false) {
+        const [dx, dy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[dir] || [0, 1];
+        const reach = shot ? REACH.shot : REACH.melee;
+        const fx = feet.x, fy = feet.y - 8;           // from about your middle, low
+        let hit = null, best = Infinity;
+        for (const b of this.breaks) {
+            if (b.broken) continue;
+            const [x0, y0, x1, y1] = b.solid[0] || [b.image.x, b.image.y, b.image.x + b.image.width, b.image.getData('foot')];
+            const cx = Math.max(x0, Math.min(fx, x1)), cy = Math.max(y0, Math.min(fy, y1));   // its nearest point
+            const along = (cx - fx) * dx + (cy - fy) * dy, side = Math.abs((cx - fx) * dy - (cy - fy) * dx);
+            if (along >= -6 && along <= reach && side <= 20 && along < best) {
+                best = along;
+                hit = b;
+            }
+        }
+        if (hit) this._smash(hit);
+        return !!hit;
+    }
+
+    /** A barrel in pieces: splinters and dust, the crash, and (maybe) something inside. */
+    _smash(b) {
+        b.broken = true;
+        const img = b.image, foot = img.getData('foot');
+        const x = img.x + img.width / 2, y = foot - img.height * 0.45;
+        img.setVisible(false);
+        const c = this.cell;
+        for (const [x0, y0, x1, y1] of b.solid) {
+            for (let cy = Math.floor(y0 / c); cy < Math.ceil(y1 / c); cy++) {
+                for (let cx = Math.floor(x0 / c); cx < Math.ceil(x1 / c); cx++) this.baseBlocked[cy * this.cols + cx] = 0;
+            }
+        }
+        this.refresh();
+        const s = this.scene;
+        s.effects?.smash(x, y, foot);
+        s.cameras.main.shake(90, 0.004);
+        audio.play('smash', { volume: 0.9 });
+        const { gold, item } = barrelLoot(this.rand);
+        if (!gold && !item) return;
+        const ui = s.scene.get('UIScene');
+        ui?.inventory?.loot(gold, item);
+        if (gold) {
+            s.effects?.coinBurst(x, y, foot + 4);
+            audio.play('coins');
+        }
+        const name = item && ui?.inventory?.item(item)?.name;
+        s.time.delayedCall(220, () => s.effects?.floatText(x, y - 18, gold ? `+${gold} gold` : name || item, gold ? '#fbf236' : '#fff6e0', 16));
     }
 
     /** A gate, chest, lock or font you've walked up to (once: step away and back to work it again). */

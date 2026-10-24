@@ -528,6 +528,21 @@
    "start": 82.3018,
    "end": 83.9318,
    "loop": false
+  },
+  "smash_1": {
+   "start": 84.3018,
+   "end": 85.9018,
+   "loop": false
+  },
+  "smash_2": {
+   "start": 86.3018,
+   "end": 87.9018,
+   "loop": false
+  },
+  "smash_3": {
+   "start": 88.3018,
+   "end": 89.9018,
+   "loop": false
   }
  }
 }
