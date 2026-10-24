@@ -205,4 +205,31 @@ test.describe('Castle Dunmere', () => {
             .filter(f => f.plan.role === 'Demon').map(f => f.sprite.characterData.selections.map(s => s.item).filter(i => /wings|horns|tail/.test(i)).sort()));
         expect(demons).toEqual(Array(3).fill(['hat_accessory_horns_upward', 'tail_dragon', 'wings_bat']));
     });
+
+    test("everyone in the castle has a painted portrait, and after dark the Duke's is his night one", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        // Everyone the castle's maps put anywhere, by their sprite, is listed
+        const missing = await page.evaluate(async () => {
+            const listed = new Set(await (await fetch('/portraits/portraits.json')).json());
+            const out = [];
+            for (const key of ['dunmere', 'dunmere-keep', 'dunmere-chapel', 'dunmere-barracks', 'dunmere-chambers', 'dunmere-cells'])
+                for (const f of await (await fetch(`/folk/${key}.json`)).json()) if (!listed.has(f.character.id)) out.push(f.character.id);
+            return out;
+        });
+        expect(missing).toEqual([]);
+        await goTo(page, 'dunmere-keep');
+        const talk = (hour) => page.evaluate((hour) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            gs.dayNight.hourOverride = hour;
+            if (ui.dialogue.visible) ui.dialogue.close();
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'duke'));
+        }, hour);
+        const shown = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.showing || '');
+        await talk(12);
+        await expect.poll(shown, { timeout: 30000 }).toMatch(/\/portraits\/dunmere-keep-duke\.webp$/);
+        await talk(23);
+        await expect.poll(shown, { timeout: 30000 }).toMatch(/\/portraits\/dunmere-keep-duke-night\.webp$/);
+    });
 });
