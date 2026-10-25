@@ -107,7 +107,7 @@ export class UIScene extends Scene {
     _openShop(folk) {
         const shop = this._shopOf(folk);
         if (!shop || !this.gear) return;
-        for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
+        this.bottomControls.release();
         const sid = folk.sprite.characterData?.id;
         const listed = new Set(this.cache.json.get('portraits') || []);
         const says = folk.plan.ask?.yes?.at(-1) || [].concat(folk.plan.says || '')[0];
@@ -297,6 +297,13 @@ export class UIScene extends Scene {
 
         if (this.cursors.up.isDown || this.wasd.W.isDown || keys.up) dy = -1;
         else if (this.cursors.down.isDown || this.wasd.S.isDown || keys.down) dy = 1;
+        // The pad's stick, any way you push it; a turn-based fight takes it as the arrow nearest
+        const stick = this.bottomControls.stick;
+        if (stick) {
+            ({ dx, dy } = stick);
+            const fight = this.scene.get('GameScene')?.battle;
+            if (fight && !fight.realtime) [dx, dy] = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
+        }
 
         const me = gameScene.localPlayer.sprite;
         if (this.dialogue.visible || this.gear?.visible || this.castMenu.visible) {        // the world waits while someone's talking, you're shopping, or choosing a spell
@@ -329,7 +336,7 @@ export class UIScene extends Scene {
         // A shopkeeper asks every time whether you'd like to see their wares, a healer whether you'd be mended
         if (this._shopOf(folk) || folk.plan?.heals) this.dialogue.answers.delete(folk.plan.id);
         this.bottomControls.container.setVisible(false);     // the story box takes their place
-        for (const k in this.bottomControls.movementKeys) this.bottomControls.movementKeys[k] = false;
+        this.bottomControls.release();
         this.dialogue.open(folk);
     }
 

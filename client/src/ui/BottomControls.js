@@ -4,6 +4,9 @@ import { audio } from '../audio/audio.js';
 // Bottom controls panel: D-pad (movement), action buttons (attack, ability), tab bar.
 // Exposes `movementKeys` state and `activeTab`, invokes callbacks for actions and tab switches.
 
+const STICK_DEAD = 7;       // px from the pad's middle where the stick's still
+const STICK_REACH = 30;     // how far the thumb goes from the middle
+
 export class BottomControls {
     constructor(scene, { onAttack, onAbility, onTabChange }) {
         this.scene = scene;
@@ -32,11 +35,19 @@ export class BottomControls {
         this._buildTabBar();
     }
 
+    /**
+     * The D-pad, and a joystick too (the user's): the arrows and their ring as they were, and the gold
+     * thumb in the middle follows your finger anywhere on the pad (and on past it while you hold), so you
+     * can walk any way, between the arrows too; a finger on an arrow is still a step its way. The
+     * arrows light for the way you're pushing. `stick` is that way (a unit vector), or null.
+     */
     _buildDPad() {
         const s = this.scene;
         const dpadX = 64;
         const dpadY = 60;
         const btnSpacing = 35;
+        this._pad = { x: dpadX, y: dpadY };
+        this.stick = null;
 
         const dpadBg = s.add.graphics();
         dpadBg.fillStyle(0x3d2510, 0.5);
@@ -45,13 +56,58 @@ export class BottomControls {
         dpadBg.strokeCircle(dpadX, dpadY, 50);
         this.container.add(dpadBg);
 
+        this._arrows = {};
         this._createArrowButton(dpadX, dpadY - btnSpacing, 'up');
         this._createArrowButton(dpadX, dpadY + btnSpacing, 'down');
         this._createArrowButton(dpadX - btnSpacing, dpadY, 'left');
         this._createArrowButton(dpadX + btnSpacing, dpadY, 'right');
 
-        const center = s.add.circle(dpadX, dpadY, 8, 0xc8a04a, 0.8);
-        this.container.add(center);
+        // The thumb: a ring round the gold centre, dragged about
+        this._thumb = s.add.container(dpadX, dpadY);
+        const ring = s.add.circle(0, 0, 15, 0xc8a04a, 0.25).setStrokeStyle(2, 0xc8a04a, 0.9);
+        this._thumb.add([ring, s.add.circle(0, 0, 8, 0xc8a04a, 0.8)]);
+        this.container.add(this._thumb);
+
+        const hit = s.add.circle(dpadX, dpadY, 58, 0x000000, 0).setInteractive();
+        this.container.add(hit);
+        hit.on('pointerdown', (pointer) => {
+            this._finger = pointer.id;
+            this._steer(pointer);
+        });
+        s.input.on('pointermove', (pointer) => { if (pointer.id === this._finger) this._steer(pointer); });
+        const lift = (pointer) => { if (pointer.id === this._finger) this.release(); };
+        s.input.on('pointerup', lift);
+        s.input.on('pointerupoutside', lift);
+    }
+
+    /** Point the stick from the pad's middle to the finger. */
+    _steer(pointer) {
+        const dx = pointer.x - (this.container.x + this._pad.x), dy = pointer.y - (this.container.y + this._pad.y);
+        const d = Math.hypot(dx, dy);
+        if (d < STICK_DEAD) {               // on the middle: still
+            this.stick = null;
+            this._thumb.setPosition(this._pad.x, this._pad.y);
+        } else {
+            this.stick = { dx: dx / d, dy: dy / d };
+            const r = Math.min(d, STICK_REACH);
+            this._thumb.setPosition(this._pad.x + this.stick.dx * r, this._pad.y + this.stick.dy * r);
+        }
+        this._lightArrows();
+    }
+
+    /** Let go of the stick and every arrow (a finger lifted, or the box that takes their place opening). */
+    release() {
+        this._finger = null;
+        this.stick = null;
+        for (const k in this.movementKeys) this.movementKeys[k] = false;
+        this._thumb?.setPosition(this._pad.x, this._pad.y);
+        this._lightArrows();
+    }
+
+    _lightArrows() {
+        const st = this.stick;
+        const way = { up: st && -st.dy, down: st && st.dy, left: st && -st.dx, right: st && st.dx };
+        for (const [dir, bg] of Object.entries(this._arrows)) this._drawArrowBg(bg, way[dir] > 0.38 || this.movementKeys[dir]);
     }
 
     _createArrowButton(x, y, direction) {
@@ -60,30 +116,14 @@ export class BottomControls {
 
         const bg = s.add.graphics();
         this._drawArrowBg(bg, false);
+        this._arrows[direction] = bg;
 
         const arrow = s.add.graphics();
         arrow.lineStyle(3, 0xffffff, 1);
         arrow.fillStyle(0xffffff, 1);
         this._drawArrowShape(arrow, direction);
 
-        const hitArea = s.add.rectangle(0, 0, 33, 33, 0x000000, 0);
-        hitArea.setInteractive();
-
-        container.add([bg, arrow, hitArea]);
-
-        hitArea.on('pointerdown', () => {
-            this._drawArrowBg(bg, true);
-            this.movementKeys[direction] = true;
-        });
-        hitArea.on('pointerup', () => {
-            this._drawArrowBg(bg, false);
-            this.movementKeys[direction] = false;
-        });
-        hitArea.on('pointerout', () => {
-            this._drawArrowBg(bg, false);
-            this.movementKeys[direction] = false;
-        });
-
+        container.add([bg, arrow]);
         this.container.add(container);
     }
 

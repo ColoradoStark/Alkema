@@ -182,7 +182,7 @@ Also in the world:
 - Attack and spellcast broadcasting
 - Equipment changes reflected in real time
 - Player join/leave events
-- Mobile-responsive layout with touch controls
+- Mobile-responsive layout with touch controls: the D-pad is a joystick too, its arrows a step their way and the thumb in its middle dragged any way you like, between the arrows too; attack with another finger as you go
 - A round minimap showing the land around you, other players, and the way to your current quest
 - Starter quests that teach the controls, then walk you round all five villages (Fernwick, hidden in the woods, then Seacombe, Ashby, snowy Tumbledown and the harbour of Gull's Rest), then to a castle and a dungeon's mouth; every new hero starts them fresh
 - A short cooldown on the ability button, shown as a filling gold ring

@@ -75,6 +75,8 @@ const config = {
             debug: false
         }
     },
+    // A finger on the pad and another on attack at once (Phaser listens to one touch unless told)
+    input: { activePointers: 3 },
     scene: [BootScene, PreloadScene, CreateScene, GameScene, UIScene],
     audio: {
         disableWebAudio: false

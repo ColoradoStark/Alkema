@@ -213,8 +213,10 @@ export class Player {
             
             let direction = null;
             
-            // Determine direction based on velocity
-            if (Math.abs(vx) > Math.abs(vy)) {
+            // Determine direction based on velocity; near a diagonal (the pad's stick) keep facing as you were till the other way clearly wins
+            const was = this.sprite.currentDirection;
+            const lean = was === 'left' || was === 'right' ? 1.2 : was === 'up' || was === 'down' ? 1 / 1.2 : 1;
+            if (Math.abs(vx) * lean > Math.abs(vy)) {
                 // Horizontal movement is stronger
                 if (vx < 0) direction = 'left';
                 else if (vx > 0) direction = 'right';
