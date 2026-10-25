@@ -138,11 +138,13 @@ export class Battle {
      * @param {boolean} [opts.spoils]  what the band carried is yours at once, shown in the victory scene (a dungeon's
      *   fights; out in the world a band leaves a chest instead)
      * @param {(result: 'won'|'fled'|'fallen', how: {slain: number, loot: object|null}) => void} opts.onEnd
+     * @param {() => void} [opts.onWon] the last foe has fallen (the victory scene begins)
      */
-    constructor(scene, { country, kind, count = 1, boss = false, name = null, companions = [], spoils = false, onEnd }) {
+    constructor(scene, { country, kind, count = 1, boss = false, name = null, companions = [], spoils = false, onEnd, onWon }) {
         this.scene = scene;
         this.country = country;
         this.onEnd = onEnd;
+        this.onWon = onWon;
         this.spoils = spoils;
         this.loot = null;
         audio.prepareStinger('victory');
@@ -512,6 +514,7 @@ export class Battle {
         this._drawMarker();
         if (this.spoils && this.slain) this.loot = rollLoot(this.slain);
         audio.stinger('victory');
+        this.onWon?.();
         const s = this.scene, cx = this.width / 2, cy = this.height * 0.36;
         const text = (y, words, size, color) => s.add.text(cx, y, words, {
             fontFamily: 'Alagard', fontSize: `${size}px`, color, stroke: '#222034', strokeThickness: size > 20 ? 6 : 4, align: 'center',

@@ -195,7 +195,7 @@ test.describe('Gloomwater Grotto', () => {
             .toEqual(['snowchaser', 'snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
     });
 
-    test('a won fight ends in a short victory scene in the battle (a stinger, Victory!, the spoils), and nothing follows you onto the map (no snow either: the user had none near)', async ({ page }) => {
+    test('a won fight ends in a short victory scene in the battle (a stinger, Victory!, the spoils), and nothing follows you onto the map (no snow either: the user had none near), nor are you left on the black on the way', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await goTo(page, 'gloomwater-1');
@@ -214,6 +214,10 @@ test.describe('Gloomwater Grotto', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             window.__snow = 0;           // (on the way back the level is loading: you're nowhere, not in the snowy north)
             gs.events.on('postupdate', () => { window.__snow = Math.max(window.__snow, gs.snowfall.emitter?.getAliveParticleCount() ?? 0); });
+            // ...and never you alone on the black while the level loads (the user saw it, a second or two after the stinger)
+            window.__bare = 0;
+            const cam = gs.cameras.main;
+            gs.events.on('postupdate', () => { if (!gs.battle && !gs.town && !(cam.fadeEffect.isComplete && cam.fadeEffect.alpha > 0.99)) window.__bare++; });
             const b = gs.battle;
             b.foes.forEach(f => { f.hp = 0; });
             b._won();
@@ -236,6 +240,7 @@ test.describe('Gloomwater Grotto', () => {
         });
         expect(alive).toBe(0);
         expect(await page.evaluate(() => window.__snow)).toBe(0);
+        expect(await page.evaluate(() => window.__bare)).toBe(0);
     });
 
     test("the cave fight's water: you can't wade into it, and it closes some of the ways out, not all", async ({ page }) => {

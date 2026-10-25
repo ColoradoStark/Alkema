@@ -300,13 +300,13 @@ export class GameScene extends Scene {
      * Go to a town map or a room (`key`), feet at `feet` [x, y]: a room of its own
      * on the server, so you see only who's there with you.
      */
-    async changeMap(key, feet, facing) {
+    async changeMap(key, feet, facing, { faded = false } = {}) {
         this._changingRoom = true;
         try {
             await this._loadTown(key);
             const at = { x: feet[0], y: feet[1] - FEET };
             const res = await this._room({ town: key, ...at });
-            await this._fadeOut();
+            if (!faded) await this._fadeOut();
             this._dropTown();
             this.overworld.setVisible(false);
             this.mooredShip.setVisible(false);
@@ -397,7 +397,8 @@ export class GameScene extends Scene {
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
             this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, boss: spot.boss, name: spot.name,
-                companions: this.companions, spoils: !!spot.town && !spot.flag, onEnd: (result, how) => this.leaveBattle(result, how) });
+                companions: this.companions, spoils: !!spot.town && !spot.flag, onEnd: (result, how) => this.leaveBattle(result, how),
+                onWon: () => spot.town && this._loadTown(spot.town).catch(() => null) });     // (the level you'll be back on, as Victory! shows)
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
             cam.stopFollow();
@@ -453,6 +454,8 @@ export class GameScene extends Scene {
      * the battle's victory scene) is in your pack.
      */
     async _backToLevel(from, result, loot = null) {
+        // The fight fades out as the level comes (begun in the victory scene): you're never alone on the black
+        await Promise.all([this._loadTown(from.spot.town).catch(() => null), this._fadeOut()]);
         this.battle.destroy();
         this.battle = null;
         this.world = null;
@@ -464,7 +467,7 @@ export class GameScene extends Scene {
         const hp = this.scene.get('UIScene')?.hp;
         if (hp) hp.now = Math.max(1, hp.now);
         this.cameras.main.startFollow(this.localPlayer.sprite, true, 0.1, 0.1);
-        await this.changeMap(from.spot.town, [from.x, from.y], from.y < from.spot.y ? 'down' : 'up');
+        await this.changeMap(from.spot.town, [from.x, from.y], from.y < from.spot.y ? 'down' : 'up', { faded: true });
         if (!this.town) forgetFoe(this, from.spot.kind);
         if (won && loot) this.scene.get('UIScene')?.inventory?.loot(loot.gold, loot.item);
     }
