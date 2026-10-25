@@ -91,6 +91,7 @@ export class UIScene extends Scene {
             request,
             gameWidth: this.scale.width,
             onClose: () => this.bottomControls.activeTab !== 'map' && this.bottomControls.switchTab('map'),
+            spellbook: () => this.spellbook,
         });
         this.events.once('shutdown', () => this.gear?.close());
     }
@@ -361,7 +362,7 @@ export class UIScene extends Scene {
         // In a fight: which spell (or skill)? Then it's cast as your turn
         if (gameScene?.battle) {
             if (this.castMenu.visible) this.castMenu.close();
-            else if (gameScene.battle.realtime) gameScene.battle.say('No spells in a real-time fight yet');
+            else if (gameScene.battle.realtime) gameScene.battle.castEquipped() && this.quests.record('cast');      // the spell you equipped
             else if (gameScene.battle.canAct && gameScene.battle.active.book) this.castMenu.open(gameScene.battle.active.book, gameScene.battle);
             return;
         }

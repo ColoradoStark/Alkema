@@ -516,7 +516,7 @@ test.describe('Battle', () => {
         const places = (await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').maps)).grass.places.map(c => c.join());
         expect(await fight(1)).toEqual([places[0]]);
         const behind = new Set();
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 8; i++) {      // (four was too few: the same two behind all four times, one run in a thousand, failed it)
             const cells = await fight(5);
             expect(cells.slice().sort()).toEqual(expect.arrayContaining(places.slice(0, 3)));
             expect(new Set(cells).size).toBe(5);

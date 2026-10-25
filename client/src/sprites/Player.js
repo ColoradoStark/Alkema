@@ -7,6 +7,19 @@ import { Ship } from '../world/Ship.js';
 
 const STEP_MS = 330; // footstep spacing while walking
 
+/**
+ * Which way someone walking (vx, vy) faces: sideways unless they're going within 15 degrees of
+ * straight up or down (the user's: a diagonal looks better side-on), holding a little past it the
+ * way they already face, so a wavering thumb doesn't flicker them. Null standing still.
+ */
+const SIDEWAYS = Math.tan(15 * Math.PI / 180), STILL_SIDEWAYS = Math.tan(11 * Math.PI / 180);
+export function facingOf(vx, vy, was = null) {
+    if (!vx && !vy) return null;
+    const side = was === 'left' || was === 'right' ? STILL_SIDEWAYS : SIDEWAYS;
+    if (Math.abs(vx) > Math.abs(vy) * side) return vx < 0 ? 'left' : 'right';
+    return vy < 0 ? 'up' : 'down';
+}
+
 export class Player {
     constructor(scene, x, y, id, characterData, isLocal = false) {
         this.scene = scene;
@@ -211,21 +224,8 @@ export class Player {
             }
             this.sprite.body.setVelocity(vx, vy);
             
-            let direction = null;
-            
-            // Determine direction based on velocity; near a diagonal (the pad's stick) keep facing as you were till the other way clearly wins
-            const was = this.sprite.currentDirection;
-            const lean = was === 'left' || was === 'right' ? 1.2 : was === 'up' || was === 'down' ? 1 / 1.2 : 1;
-            if (Math.abs(vx) * lean > Math.abs(vy)) {
-                // Horizontal movement is stronger
-                if (vx < 0) direction = 'left';
-                else if (vx > 0) direction = 'right';
-            } else if (vy !== 0) {
-                // Vertical movement is stronger or equal
-                if (vy < 0) direction = 'up';
-                else if (vy > 0) direction = 'down';
-            }
-            
+            const direction = facingOf(vx, vy, this.sprite.currentDirection);
+
             if (vx !== 0 || vy !== 0) {
                 // Moving - play walk animation with direction
                 if (direction) {

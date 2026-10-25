@@ -79,3 +79,40 @@ test('drag the thumb any way and you walk that way, attack with another finger a
     expect(d.y - c.y).toBeGreaterThan(20);
     expect(Math.abs(d.x - c.x)).toBeLessThan(2);
 });
+
+test("pushing the stick off straight up by more than 15 degrees faces you sideways (the user's), and you walk a fifth slower than you did, easing into it", async ({ page }) => {
+    test.setTimeout(120000);
+    await enterWorld(page);
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    const facing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.currentDirection);
+    const centre = await onPage(page, 64, 60);
+    for (const [deg, want] of [[20, 'right'], [8, 'up'], [-25, 'left'], [-6, 'up']]) {
+        const a = deg * Math.PI / 180;
+        const p = await onPage(page, 64 + 30 * Math.sin(a), 60 - 30 * Math.cos(a));
+        await touch('touchStart', [{ x: centre.x, y: centre.y, id: 1 }]);
+        await touch('touchMove', [{ x: p.x, y: p.y, id: 1 }]);
+        await page.waitForTimeout(300);
+        expect(await facing(), `${deg} degrees`).toBe(want);
+        await touch('touchEnd', []);
+        await page.waitForTimeout(200);
+    }
+    // A second's walk: a fifth slower than the 160 a second it was, and slow at first
+    const walked = await page.evaluate(async () => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+        const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+        const clock = gs.time, x0 = me.x, t0 = clock.now;
+        keys.right = true;
+        let early = null;
+        while (clock.now - t0 < 1000) {
+            await new Promise(r => requestAnimationFrame(r));
+            if (early === null && clock.now - t0 >= 100) early = (me.x - x0) / ((clock.now - t0) / 1000);
+        }
+        const whole = (me.x - x0) / ((clock.now - t0) / 1000);
+        keys.right = false;
+        return { early, whole };
+    });
+    expect(walked.whole).toBeGreaterThan(100);
+    expect(walked.whole).toBeLessThan(132);         // (128 a second, less the easing in)
+    expect(walked.early).toBeLessThan(0.75 * 128);  // the first tenth of a second slower
+});

@@ -13,6 +13,7 @@ import { ANIM_ROWS, attackInstead } from '../../sprites/AnimationFactory.js';
 import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes.js';
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
+import { ICONS } from '../../magic/Spellbook.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -45,6 +46,13 @@ function el(tag, className, attrs = {}) {
     return node;
 }
 
+let iconRows = null;
+/** Which row of the spell icons' sheet is which spell (fetched once). */
+function spellRows() {
+    iconRows ??= fetch(ICONS.json).then(r => r.json()).then(j => j.rows || {}, () => ({}));
+    return iconRows;
+}
+
 const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -62,9 +70,12 @@ export class GearScreen {
      * @param {(event, data, timeout) => Promise} opts.request
      * @param {number} opts.gameWidth
      * @param {() => void} opts.onClose
+     * @param {() => import('../../magic/Spellbook.js').Spellbook} [opts.spellbook]  the hero's spells (the Magic tab)
      */
-    constructor({ inventory, hero, request, gameWidth, onClose }) {
+    constructor({ inventory, hero, request, gameWidth, onClose, spellbook }) {
         this.inventory = inventory;
+        this.spellbook = spellbook;
+        this.equipTab = 'gear';
         this.hero = hero;
         this.request = request;
         this.gameWidth = gameWidth;
@@ -334,6 +345,23 @@ export class GearScreen {
     // ------------------------------------------------------------------ equip
 
     _renderEquip(panel) {
+        // Two tabs (the user's): your gear, and your magic
+        const tabs = el('div', 'gear-tabs');
+        for (const [key, label] of [['gear', 'Gear'], ['magic', 'Magic']]) {
+            const t = el('button', `gear-tab${this.equipTab === key ? ' is-current' : ''}`, { type: 'button', text: label });
+            t.addEventListener('click', () => {
+                if (this.equipTab === key) return;
+                audio.play('page', { volume: 0.6 });
+                this.equipTab = key;
+                this.picking = null;
+                this.spellPick = null;
+                this.notice = '';
+                this.render();
+            });
+            tabs.append(t);
+        }
+        panel.append(tabs);
+        if (this.equipTab === 'magic') return this._renderMagic(panel);
         const inv = this.inventory;
         panel.append(this._heroStage());
 
@@ -382,6 +410,89 @@ export class GearScreen {
             }
             panel.append(pick);
         }
+    }
+
+    // ------------------------------------------------------------------ magic
+
+    /**
+     * Every spell of their class (a fighter's or a thief's skills), each with the ranks it grows
+     * through (the level each comes at, lit as they know it); tap one to read it, and equip it: the
+     * blue button casts it in a real-time fight.
+     */
+    _renderMagic(panel) {
+        const book = this.spellbook?.();
+        if (!book?.list.length) {
+            panel.append(el('div', 'gear-empty', { text: 'No spells yet.' }));
+            return;
+        }
+        const list = el('div', 'gear-list gear-spells');
+        for (const spell of book.list) {
+            const rank = book.rankOf(spell.id);
+            const on = book.equipped === spell.id;
+            const card = el('button', `gear-spell${on ? ' is-equipped' : ''}${this.spellPick === spell.id ? ' is-current' : ''}${rank ? '' : ' is-locked'}`,
+                { type: 'button', 'data-spell': spell.id });
+            const words = el('span', 'gear-spell-words');
+            const name = el('span', 'gear-spell-name', { text: spell.name });
+            if (on) name.append(el('span', 'gear-spell-on', { text: 'Equipped' }));
+            const path = el('span', 'gear-ranks');
+            spell.ranks.forEach((r, i) => {
+                const chip = el('span', `gear-rank${i < rank ? ' is-known' : ''}`);
+                chip.append(el('b', '', { text: ['I', 'II', 'III'][i] }), ` Lv ${r.level}`);
+                path.append(chip);
+            });
+            words.append(name, path);
+            card.append(this._spellIcon(spell.id, !rank), words);
+            card.addEventListener('click', () => {
+                audio.play('page', { volume: 0.6 });
+                this.spellPick = this.spellPick === spell.id ? null : spell.id;
+                this.notice = '';
+                this.render();
+            });
+            list.append(card);
+        }
+        panel.append(list);
+
+        const spell = this.spellPick && book.spell(this.spellPick);
+        if (!spell) return;
+        const rank = book.rankOf(spell.id);
+        const card = el('div', 'gear-detail gear-detail--spell');
+        const words = el('div', 'gear-detail-words');
+        words.append(el('div', 'gear-detail-name', { text: spell.name }));
+        spell.ranks.forEach((r, i) => {
+            const numbers = [r.mp ? `${r.mp} MP` : 'no MP', `rests ${r.cd}s`].join(' · ');
+            const line = el('div', `gear-rank-line${i < rank ? ' is-known' : ''}`);
+            line.append(el('b', '', { text: `${['I', 'II', 'III'][i]} · Lv ${r.level}` }), ` ${r.text} `, el('span', 'gear-rank-numbers', { text: numbers }));
+            words.append(line);
+        });
+        card.append(words);
+        const buttons = el('div', 'gear-actions');
+        const on = book.equipped === spell.id;
+        const b = el('button', 'gear-btn gear-btn--go', { type: 'button', text: on ? 'Equipped' : 'Equip' });
+        b.disabled = on || !book.canEquip(spell.id);
+        b.addEventListener('click', () => {
+            if (!book.equip(spell.id)) return;
+            audio.play('equip_mage', { volume: 0.6 });
+            this.notice = `${spell.name} is on the blue button.`;
+            this.render();
+        });
+        buttons.append(b);
+        if (!rank) buttons.append(el('div', 'gear-detail-note', { text: `Learned at level ${spell.ranks[0].level}.` }));
+        else if (!spell.kind) buttons.append(el('div', 'gear-detail-note', { text: 'Not ready to cast yet.' }));
+        card.append(buttons);
+        panel.append(card);
+    }
+
+    /** A spell's painted icon (a row of the icons' sheet). */
+    _spellIcon(id, dim) {
+        const box = el('span', `gear-icon gear-spell-icon${dim ? ' is-dim' : ''}`);
+        spellRows().then(rows => {
+            if (rows[id] === undefined) return;
+            box.style.backgroundImage = `url(${ICONS.url})`;
+            box.style.backgroundSize = '36px auto';
+            box.style.backgroundPosition = `0 ${-rows[id] * 36}px`;
+            box.classList.add('has-art');
+        });
+        return box;
     }
 
     /** The hero, large, on a little lit stage: turn them round, tap them to see their weapon swing. */

@@ -166,7 +166,7 @@ export class BottomControls {
 
         this.attackButton = this._createActionButton(btnX - spacing / 2, btnY, btnSize, 'sword', 0x8b0000, 0xff0000, () => this.onAttack?.());
         this.attackReady = true;
-        this._createActionButton(btnX + spacing / 2, btnY, btnSize, 'scroll', 0x00008b, 0x0000ff, () => this.onAbility?.());
+        this.abilityButton = this._createActionButton(btnX + spacing / 2, btnY, btnSize, 'scroll', 0x00008b, 0x0000ff, () => this.onAbility?.());
 
         // Cooldown on the ability: a shade sweeping away, a gold ring filling, seconds left
         this._cooldown = { x: btnX + spacing / 2, y: btnY, r: btnSize / 2, until: 0, ms: 0 };
@@ -177,6 +177,20 @@ export class BottomControls {
         }).setOrigin(0.5);
         this.container.add([this._cooldownShade, this._cooldownRing, this._cooldownText]);
         this.scene.events.on('update', () => this._drawCooldown());
+    }
+
+    /** The blue button shows a spell's icon (a frame of `key`), or its scroll again (null). */
+    showSpell(key, frame) {
+        const button = this.abilityButton;
+        if (!button) return;
+        this._spellIcon?.destroy();
+        this._spellIcon = null;
+        const scroll = button.list[1];
+        if (key && this.scene.textures.exists(key)) {
+            this._spellIcon = this.scene.add.image(0, 0, key, frame).setDisplaySize(44, 44);
+            button.addAt(this._spellIcon, 2);
+        }
+        scroll?.setVisible(!this._spellIcon);
     }
 
     /** Start the ability cooldown. */

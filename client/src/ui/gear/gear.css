@@ -202,6 +202,59 @@
 .gear-icon--big { width: 56px; height: 56px; }
 .gear-icon--big img { width: 48px; height: 48px; }
 
+/* ---------- Magic: every spell, and the ranks it grows through ---------- */
+
+.gear-spell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 3px 8px 3px 3px;
+    text-align: left;
+    background: rgba(41, 23, 9, 0.85);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #6a4a18;
+}
+.gear-spell:hover { box-shadow: inset 0 0 0 1px var(--brass); }
+.gear-spell.is-current { background: #4a3012; box-shadow: inset 0 0 0 2px #dab040; }
+.gear-spell.is-equipped { box-shadow: inset 0 0 0 2px #639bff; }
+.gear-spell.is-locked .gear-spell-name { color: var(--muted); }
+.gear-spell-icon { background-repeat: no-repeat; image-rendering: auto; }
+.gear-spell-icon.is-dim { filter: grayscale(0.85) brightness(0.6); }
+.gear-spell-words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gear-spell-name { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.gear-spell-on {
+    font-family: 'Romulus', monospace;
+    font-size: 10px;
+    color: #fff;
+    background: #2a4a8a;
+    padding: 0 4px;
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px #639bff;
+}
+.gear-ranks { display: flex; gap: 3px; align-items: center; }
+.gear-ranks .gear-rank + .gear-rank::before { content: '›'; color: var(--muted); margin-right: 3px; }
+.gear-rank {
+    font-family: 'Romulus', monospace;
+    font-size: 11px;
+    color: #6a5a48;
+}
+.gear-rank b { font-weight: normal; padding: 0 3px; border-radius: 2px; background: #1f1208; box-shadow: inset 0 0 0 1px #4a3a28; }
+.gear-rank.is-known { color: var(--parchment); }
+.gear-rank.is-known b { color: #fbf236; background: #4a3012; box-shadow: inset 0 0 0 1px #dab040; }
+.gear-detail--spell { align-items: flex-start; }
+.gear-rank-line {
+    font-family: 'Romulus', monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #7a6650;
+    margin-top: 2px;
+}
+.gear-rank-line b { font-weight: normal; color: #8a7058; }
+.gear-rank-line.is-known { color: var(--parchment); }
+.gear-rank-line.is-known b { color: var(--gold); }
+.gear-rank-numbers { color: var(--muted); white-space: nowrap; }
+
 /* ---------- The selected thing ---------- */
 
 .gear-detail {

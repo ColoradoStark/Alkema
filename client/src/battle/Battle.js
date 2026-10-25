@@ -65,6 +65,8 @@ export const PARTY = [
 ];
 
 const groundKey = country => `battle-${country}`;
+const SPELL_SWELL = 1.4;        // how much bigger a melee spell swings
+const SPELL_SHAKE = [150, 0.006];     // a starter spell, cast by you: a light shake (ms, intensity)
 const FX = 'spell-fx';           // the spells' effects: Wesnoth's projectiles and halos (tools/spellgen.py)
 const FX_ANIMS = 'spell-fx-anims';   // the same file, for its list of animations (the atlas keeps only its frames)
 const ICONS = 'spell-icons';            // the cast menu's icons (tools/spellgen.py)
@@ -204,6 +206,20 @@ export class Battle {
             m.bar = scene.add.graphics().setDepth(39);      // their hit points, over their head
         }
         fxAnims(scene);
+        // The spells' particles (the GameScene's own sparks, glints and motes): sparks along a swing and
+        // off a blow, motes rising from a mending, glints in a burst. Made for the fight, gone with it.
+        this.sparks = scene.add.particles(0, 0, 'fx-streak', {
+            speed: { min: 50, max: 190 }, angle: { min: 0, max: 360 }, lifespan: { min: 180, max: 380 },
+            scale: 2, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+        }).setDepth(FX_DEPTH + 1);
+        this.motes = scene.add.particles(0, 0, 'cc-spark', {
+            speedX: { min: -18, max: 18 }, speedY: { min: -70, max: -25 }, lifespan: { min: 550, max: 900 },
+            scale: { start: 1.8, end: 0.6 }, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+        }).setDepth(FX_DEPTH + 1);
+        this.glints = scene.add.particles(0, 0, 'fx-glint', {
+            anim: { anims: ['fx-glint-twinkle'], randomFrame: true }, speed: { min: 40, max: 150 }, angle: { min: 0, max: 360 },
+            lifespan: { min: 350, max: 650 }, scale: { start: 2, end: 1 }, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+        }).setDepth(FX_DEPTH + 1);
 
         this.foes = this._band(map, kind, count, boss);
         this.name = name || this.foes[0].foe.name;
@@ -712,11 +728,61 @@ export class Battle {
         m.magic.now -= at.mp || 0;
         if (at.wait) m.rest[spell.id] = at.wait + 1;      // (the round it's used in counts down too)
         this.busy = true;
+        if (m === this.party[0]) this._shakeFor(spell);
         SPELLS[spell.kind].run.call(this, m, spell, at).then(() => {
             this.busy = false;
             if (!this.over) this._next();
         });
         return true;
+    }
+
+    /** A burst of light of a colour: sparks and glints. */
+    _sparkle(x, y, colour, n = 10) {
+        this.sparks.setParticleTint(colour);
+        this.sparks.explode(n, x, y);
+        this.glints.setParticleTint(colour);
+        this.glints.explode(Math.ceil(n / 2), x, y);
+    }
+
+    /** Motes of a colour rising from a point (a mending). */
+    _rise(x, y, colour, n = 14) {
+        this.motes.setParticleTint(colour);
+        this.motes.explode(n, x, y);
+    }
+
+    /** Lightning from above on a point (feet): Wesnoth's bolt, a flash, sparks, a crack. */
+    _lightning(x, y) {
+        this._fx(`lightning-${1 + Math.floor(Math.random() * 3)}`, x, y + 4, { origin: 0.93, scale: 0.6 });
+        this._fx('white-impact', x, y - 16, { scale: 0.8 });
+        this._sparkle(x, y - 10, 0x9fd0ff, 16);
+        audio.play('zap', { volume: 0.9 });
+        audio.play('hit_blade', { volume: 0.6 });
+    }
+
+    /**
+     * A melee spell's swing (the user's): they swell as they swing it, sparks of its colour along the
+     * arc from one side of the way they face to the other, and the whoosh.
+     */
+    _swell(m, colour) {
+        const s = m.who.sprite;
+        this.scene.tweens.killTweensOf(s, ['scaleX', 'scaleY']);
+        this.scene.tweens.add({ targets: s, scaleX: SPELL_SWELL, scaleY: SPELL_SWELL, duration: 90, ease: 'Back.easeOut',
+            yoyo: true, hold: 300, onComplete: () => s.setScale(1) });
+        const [fx, fy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[s.currentDirection || 'up'], face = Math.atan2(fy, fx);
+        for (let i = 0; i <= 6; i++) {
+            this.scene.time.delayedCall(40 + i * 22, () => {
+                if (!this.sparks.active) return;
+                const a = face - 1.1 + i * (2.2 / 6), r = 30;
+                this.sparks.setParticleTint(colour);
+                this.sparks.emitParticleAt(s.x + Math.cos(a) * r, s.y + 4 + Math.sin(a) * r * 0.8, 3);
+            });
+        }
+        audio.play('swing', { volume: 0.7 });
+    }
+
+    /** A spell you've had from the start, cast by you: the screen shakes a little (the user's). */
+    _shakeFor(spell) {
+        if (spell.ranks[0].level <= 1) this.scene.cameras.main.shake(...SPELL_SHAKE);
     }
 
     /** An effect (fx.json) playing once at a point, then gone. */
@@ -836,6 +902,7 @@ export class Battle {
 
     destroy() {
         this._sayTimer?.remove();
+        for (const e of [this.sparks, this.motes, this.glints]) e?.destroy();
         for (const s of [...(this._effects || [])]) {       // a burst still playing (the game froze, drawing it once its picture went)
             this.scene.tweens.killTweensOf(s);
             s.destroy();
@@ -879,10 +946,12 @@ const SPELLS = {
             m.who.playCast();
             audio.play('cast');
             const me = m.who.sprite;
+            this._sparkle(me.x, me.y - 10, 0xff7a30, 10);
             await this._wait(250);
             audio.play('zap', { volume: 0.7 });
             await this._bolt('fireball', { x: me.x, y: me.y - 8 }, f);
             this._fx('fireball-impact', f.foe.x, f.foe.y, { origin: 0.75 });
+            this._sparkle(f.foe.x, f.foe.y - f.foe.tall / 2, 0xff7a30, 16);
             audio.play('hit', { volume: 0.8 });
             this._hit(f, this._spellBlow(m, at), `${spell.name}!`, '#ffb050');
             this.say(`${this.log.text}${this._mpWords(m)}`);
@@ -898,6 +967,7 @@ const SPELLS = {
             m.who.playCast();
             audio.play('holy');
             const them = who.who.sprite;
+            this._rise(them.x, them.y + 14, 0x7ee07e);
             await this._fx('healing', them.x, them.y);
             const mend = this._spellBlow(m, at);
             if (who.life) who.life.now = Math.min(who.life.max, who.life.now + mend);
@@ -925,6 +995,7 @@ const SPELLS = {
             await this._wait(SHOT_DELAY_MS);
             await this._bolt('fire-missile', { x: me.x, y: me.y - 4 }, f);
             this._fx('fire-burst', f.foe.x, f.foe.y - f.foe.tall / 2);
+            this._sparkle(f.foe.x, f.foe.y - f.foe.tall / 2, 0xff7a30, 12);
             this._hit(f, this._spellBlow(m, at), `${spell.name}!`, '#ffb050');
             this.say(`${this.log.text}${this._mpWords(m)}`);
             await this._wait(450);
@@ -940,13 +1011,43 @@ const SPELLS = {
             const me = m.who.sprite;
             audio.play('summon', { volume: 0.6 });
             await this._fx('flare', me.x, me.y - 6, { scale: 1.3 });
+            this._swell(m, 0xffa040);
             m.who.playAttack(m.who === this.scene.localPlayer ? () => this.scene.emitAttack() : undefined);
             await this._wait(240);
             audio.play('hit_blade');
             this._fx('fire-burst', f.foe.x, f.foe.y - f.foe.tall / 2);
+            this._sparkle(f.foe.x, f.foe.y - f.foe.tall / 2, 0xffa040, 12);
             this.scene.effects.impact('metal', f.foe.x, f.foe.y - f.foe.tall / 2, f.foe.y);
             this._hit(f, this._spellBlow(m, at), `${spell.name}!`);
             await this._wait(450);
+        },
+    },
+
+    /** Smite (the cleric's, the user's): her blow, and lightning from above on the foe; at higher ranks it leaps on. */
+    smite: {
+        can(m) { return this.standing.some(f => this._beside(m.cell, f.cell)) ? null : 'No foe beside you'; },
+        async run(m, spell, at) {
+            const f = this._nearest(m, this.standing.filter(f => this._beside(m.cell, f.cell)));
+            this._face(m, f);
+            audio.play('zap', { volume: 0.5 });
+            this._swell(m, 0x9fd0ff);
+            m.who.playAttack(m.who === this.scene.localPlayer ? () => this.scene.emitAttack() : undefined);
+            await this._wait(240);
+            const rank = m.book?.rankOf(spell.id) || 1;
+            let hit = [f];
+            if (rank >= 3) hit = this.standing.filter(o => this._beside(m.cell, o.cell));
+            else if (rank === 2) {
+                const next = this.standing.find(o => o !== f && this._beside(f.cell, o.cell));
+                if (next) hit.push(next);
+            }
+            for (const o of hit) {
+                if (this.over || o.hp <= 0) continue;
+                this._lightning(o.foe.x, o.foe.y);
+                this._hit(o, this._spellBlow(m, at), `${spell.name}!`, '#bfe4ff');
+                await this._wait(200);
+            }
+            this.say(`${this.log.text}${this._mpWords(m)}`);
+            await this._wait(350);
         },
     },
 
@@ -958,6 +1059,7 @@ const SPELLS = {
             const me = m.who.sprite;
             audio.play('poof');
             this._fx('dark-magic', me.x, me.y);
+            this._sparkle(me.x, me.y, 0xb070ff, 12);
             await this._wait(180);
             me.setAlpha(0);
             await this._wait(220);
@@ -968,9 +1070,11 @@ const SPELLS = {
             await this._wait(150);
             me.setAlpha(1);
             this._face(m, f);
+            this._swell(m, 0xb070ff);
             m.who.playAttack(m.who === this.scene.localPlayer ? () => this.scene.emitAttack() : undefined);
             await this._wait(240);
             audio.play('hit_blade');
+            this._sparkle(f.foe.x, f.foe.y - f.foe.tall / 2, 0xb070ff, 12);
             this._hit(f, this._spellBlow(m, at), `${spell.name}!`, '#c890ff');
             await this._wait(450);
         },
@@ -998,6 +1102,7 @@ const SPELLS = {
             for (const f of marked) {
                 if (this.over) return;
                 this._fx(fx, f.foe.x, f.foe.y, { origin: fx === 'flame-burst' ? 0.9 : 0.5 });
+                this._sparkle(f.foe.x, f.foe.y - f.foe.tall / 2, fx === 'flame-burst' ? 0xff7a30 : 0xfff6c0, 12);
                 audio.play(fx === 'flame-burst' ? 'zap' : 'holy', { volume: 0.6 });
                 await this._wait(220);
                 const slain = at.slay && Math.random() < at.slay;

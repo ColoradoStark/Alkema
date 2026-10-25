@@ -3,7 +3,8 @@
 // catalogue), and which of them they know, to what rank. Every hero knows
 // whatever opens at level 1 (their class's first, and for mages and clerics a
 // bane); the rest wait in the cast menu, greyed with the level they come at.
-// Kept in the hero's save, as their gear is.
+// One is equipped (Equip's Magic tab): the blue button casts it in a real-time
+// fight. Kept in the hero's save, as their gear is.
 
 import { account } from '../account/account.js';
 
@@ -31,7 +32,31 @@ export class Spellbook {
                 learned = true;
             }
         }
-        if (learned && own) account.updateProgress({ spells: { known: { ...this.known } } });
+        // The one the blue button casts in a real-time fight (chosen on Equip's Magic tab): their class's first, to begin with
+        this.own = own;
+        this._equipped = this.rankOf(saved?.equipped) && this.spell(saved.equipped).kind ? saved.equipped : this.list[0]?.id || null;
+        if (learned && own) this._save();
+    }
+
+    get equipped() {
+        return this._equipped;
+    }
+
+    /** Can this spell go on the blue button: known, and made (it has a `kind`)? */
+    canEquip(id) {
+        return !!(this.rankOf(id) && this.spell(id)?.kind);
+    }
+
+    /** Put a spell on the blue button (kept in their save). False if it can't be. */
+    equip(id) {
+        if (!this.canEquip(id)) return false;
+        this._equipped = id;
+        if (this.own) this._save();
+        return true;
+    }
+
+    _save() {
+        account.updateProgress({ spells: { known: { ...this.known }, equipped: this._equipped } });
     }
 
     spell(id) {

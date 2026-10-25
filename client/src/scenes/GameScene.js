@@ -18,7 +18,8 @@ import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 
-const WALK_SPEED = 160;
+const WALK_SPEED = 128;        // px a second (the user's: a fifth slower than the 160 it was)
+const EASE_IN_MS = 250;         // from standing to full speed, easing in (the user's)
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
 const HULL_HALF = 13;           // half the ship's collision box (26 x 26)
 const BOARD_REACH = 96;         // walk towards the ship from this close to go aboard
@@ -644,8 +645,11 @@ export class GameScene extends Scene {
             body.setVelocity(vx, vy);
             if (Math.abs(vx) < 2 && Math.abs(vy) < 2) vx = vy = 0;
         } else {
-            vx = dx * WALK_SPEED;
-            vy = dy * WALK_SPEED;
+            // Easing into a walk: a little at first, full speed by EASE_IN_MS
+            this._pace = dx || dy ? Math.min(1, (this._pace || 0.15) + this.game.loop.delta / EASE_IN_MS) : 0;
+            const pace = this._pace * this._pace * (3 - 2 * this._pace);       // slow away, then up to speed
+            vx = dx * WALK_SPEED * pace;
+            vy = dy * WALK_SPEED * pace;
             this.localPlayer.setVelocity(vx, vy);
         }
 

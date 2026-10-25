@@ -117,7 +117,8 @@ By the sea mouth of Gloomwater Grotto wait four bands of demons (made with the c
 
 - The demons start well back and stand still for a moment and a half as the fight opens, so you can find your hero; then they come on at a walk
 - Move freely, and press attack whenever you like, even on the move: you swing at the demon nearest the way you face, stepping in to it if it's just out of reach; press again mid-swing and the next swing follows (a bow shoots straight at them)
-- Your companions fight on their own: the cleric goes off and fights on her own, and comes to heal whoever is worst hurt, the mage hangs back throwing fire, the ranger keeps their distance and shoots
+- Your companions fight on their own: the cleric goes off and fights on her own, bringing lightning down with her blows now and then, and comes to heal whoever is worst hurt; the mage hangs back throwing fire, and now and then a great fireball; the ranger keeps their distance and shoots, now and then a burning arrow
+- Spells: the blue button casts the spell you equipped (Equip's Magic tab), its icon on the button, and then it rests a few seconds, the button's ring filling as it comes back. Every spell has its own effect, sparks and sound; a melee one (a fighter's Mighty Swing, a cleric's Smite, a thief's Shadowstrike) swings bigger, sparks trailing the blade, and one you've had from the start shakes the screen a little as you cast it. Magic comes back slowly as you fight
 - Every demon's blow is telegraphed: it stops and flashes red before it strikes, so you can step out of reach (and see "Dodged"); a warlock's fire flies where you stood. A brute's swing is slow but heavy, and a blow won't stop it
 - No more than two wind up at you at once; the rest circle, waiting their turn
 - Hits land with a moment's freeze, a flash and a knock back; struck, you can't be struck again for a moment
@@ -127,6 +128,8 @@ By the sea mouth of Gloomwater Grotto wait four bands of demons (made with the c
 
 Every class has six spells (a fighter's and a thief's are battle skills), three ranks each, with painted icons:
 
+- Equip has two tabs, Gear and Magic. Magic shows every spell of your class with the ranks it grows through (the level each comes at, lit once you know it; tap one to read what each rank does, its cost and how long it rests), and equips the one your blue button casts in a real-time fight
+- A cleric also starts with **Smite**: her blow, and lightning from the sky on the foe she strikes (at higher ranks it leaps to a second foe, then strikes every foe beside her)
 - Everyone starts with the first: a mage's **Fireball**, a cleric's **Heal**, a ranger's **Flaming Arrow**, a fighter's **Mighty Swing** and a thief's **Shadowstrike** (gone in a swirl of shadow, and back beside the nearest foe, striking). Skills strike two and a half to three and a half times as hard as a plain blow
 - Mages and clerics also start with a bane, after Ultima III's Repond and Excuun: a mage's **Orcbane** sends fire down on every orc and goblin on the field, one after another, and a cleric's **Turn Undead** does the same to the undead; at their third rank most of those they touch simply fall
 - In a fight, the blue button asks which to cast: your class's six, each at the highest rank you know, with what it costs; those still to learn are greyed with the level they come at. It's cast as your turn, with The Battle for Wesnoth's spell effects
@@ -182,7 +185,7 @@ Also in the world:
 - Attack and spellcast broadcasting
 - Equipment changes reflected in real time
 - Player join/leave events
-- Mobile-responsive layout with touch controls: the D-pad is a joystick too, its arrows a step their way and the thumb in its middle dragged any way you like, between the arrows too; attack with another finger as you go
+- Mobile-responsive layout with touch controls: the D-pad is a joystick too, its arrows a step their way and the thumb in its middle dragged any way you like, between the arrows too (on a diagonal your hero turns side-on); attack with another finger as you go. Your hero eases into a walk rather than leaping to full speed
 - A round minimap showing the land around you, other players, and the way to your current quest
 - Starter quests that teach the controls, then walk you round all five villages (Fernwick, hidden in the woods, then Seacombe, Ashby, snowy Tumbledown and the harbour of Gull's Rest), then to a castle and a dungeon's mouth; every new hero starts them fresh
 - A short cooldown on the ability button, shown as a filling gold ring

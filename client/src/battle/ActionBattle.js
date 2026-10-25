@@ -13,9 +13,14 @@
 // - Hits are felt: a freeze of a few hundredths of a second (hit-stop), a flash, a knock back, the
 //   number, the sound; struck, you can't be struck again for a moment. A blow stops a foe's wind-up,
 //   but not a brute's.
-// - Your companions keep to their roles: the cleric keeps by you, mends whoever is worst hurt and
-//   fights only what comes at her, the mage keeps back and throws fire, the ranger keeps their distance and
-//   shoots. With nothing left to fight they follow you.
+// - Your companions keep to their roles: the cleric goes off and fights, bringing lightning down
+//   with her blows now and then, and comes to mend whoever is worst hurt; the mage keeps back and
+//   throws fire (a great fireball now and then); the ranger keeps their distance and shoots (a burning
+//   arrow now and then). With nothing left to fight they follow you.
+// - Spells (ActionSpells.js): the blue button casts the one you equipped (Equip's Magic tab), then it
+//   rests (the button's cooldown); each has its effect, particles and sound, and a melee one swings
+//   bigger. One you've had from the start shakes the screen a little, when it's you who casts it.
+//   Magic comes back slowly as you fight.
 // Walk off an edge (and keep pushing) to flee. You falling ends the fight, as in the turn-based ones.
 //
 // It's a Battle (the same map, party, victory scene, the world's way in and out), with its own foes:
@@ -23,11 +28,12 @@
 
 import { Battle } from './Battle.js';
 import { OVER_TREES } from './Foe.js';
-import { Player } from '../sprites/Player.js';
+import { Player, facingOf } from '../sprites/Player.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { sortDepth } from '../world/Forest.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
+import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 
 const FEET = Ship.BELOW_HERO;
@@ -51,6 +57,8 @@ const FLEE_MS = 600;            // pushing against an edge this long, you've fle
 const STEP_MS = 330;            // footsteps
 const FALL_MS = 1600;
 const ARROW_SPEED = 320, BOLT_SPEED = 180;
+const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you fight
+const COMPANION_SPELLS = { cleric: 'smite', mage: 'fireball', ranger: 'flaming-arrow' };    // what each casts, now and then, as they fight
 const HOLD_MS = 1500;           // the demons stand this long as the fight opens, while you find yourself (the user's)
 const BACK = 2;                 // rows further back than the turn-based foes' places (the user's: they started too close)
 
@@ -60,6 +68,7 @@ export const DEMON_KINDS = {
     fury: { hp: 28, speed: 40, reach: 40, windup: 420, recover: 650, damage: 4, anim: 'thrust', lunge: 22 },
     warlock: { hp: 24, speed: 26, keep: 140, windup: 800, recover: 1600, damage: 6, anim: 'spellcast', ranged: true },
 };
+for (const kind of Object.values(DEMON_KINDS)) kind.race = 'demon';      // (what a bane looks for)
 const BAND = ['fury', 'brute', 'fury', 'warlock', 'fury', 'brute'];     // a band of n: the first n
 
 const ROLES = { cleric: 'healer', mage: 'caster', ranger: 'archer' };
@@ -167,8 +176,100 @@ export class ActionBattle extends Battle {
             m.slot = FOLLOW[(i - 1) % FOLLOW.length];
             m.ranged = !!getRangedAnimation(m.who.characterData);
         }
+        this.MELEE_REACH = REACH + LUNGE + 10;
+        this.FEET = FEET;
+        this._mpT = 0;
+        for (const m of this.party.slice(1)) m.spellCd = 2500 + Math.random() * 2500;
+        // The blue button shows the spell you equipped
+        const ui = scene.scene.get('UIScene'), book = ui?.spellbook;
+        const row = scene.cache.json.get('spell-icons-index')?.rows?.[book?.equipped];
+        if (row !== undefined) ui.bottomControls.showSpell?.('spell-icons', row);
         this.say(`${this.foes.length} demons! Move, and attack whenever you like.`, 3200);
     }
+
+    // ------------------------------------------------ spells
+
+    /**
+     * The blue button: cast the spell you equipped (Equip's Magic tab), at the rank you know it, if it
+     * isn't resting and you've the magic; then it rests (the button's cooldown). Mid-swing, it comes
+     * as the swing ends.
+     */
+    castEquipped() {
+        const m = this.party[0], ui = this.scene.scene.get('UIScene'), book = ui?.spellbook;
+        if (this.over || m.out || !ui) return false;
+        const spell = book?.spell(book.equipped), at = book?.at(book?.equipped), kind = spell && ACTION_SPELLS[spell.kind];
+        if (!spell || !at || !kind) return this._no('Equip a spell on the Equip page'), false;
+        if (ui.bottomControls.coolingDown) return false;
+        if ((at.mp || 0) > (ui.mp?.now || 0)) return this._no(`${spell.name} needs ${at.mp} MP`), false;
+        const why = kind.can?.call(this, m, spell, at);
+        if (why) return this._no(why), false;
+        if (ui.mp) ui.mp.now -= at.mp || 0;
+        ui.bottomControls.startCooldown(at.cd * 1000);
+        if (m.who.isAttacking) this._queuedSpell = { spell, at };
+        else this._castNow(m, spell, at, true);
+        return true;
+    }
+
+    _no(words) {
+        audio.play('error', { volume: 0.5 });
+        this.say(words, 1600);
+    }
+
+    _castNow(m, spell, at, yours) {
+        if (yours) this._shakeFor(spell);
+        ACTION_SPELLS[spell.kind].run.call(this, m, spell, at, yours);
+    }
+
+    /** A companion casts their own (their class's in COMPANION_SPELLS) when it's ready and it can be. True if they did. */
+    _companionSpell(m) {
+        const id = COMPANION_SPELLS[this.companions[this.party.indexOf(m) - 1]?.heroClass];
+        const spell = id && m.book?.spell(id), at = id && m.book?.at(id), kind = spell && ACTION_SPELLS[spell.kind];
+        if (!kind || m.spellCd > 0 || kind.can?.call(this, m, spell, at)) return false;
+        m.spellCd = at.cd * 1000 * 1.6;      // (a little less often than you could)
+        m.cd = Math.max(m.cd, 900);
+        this._castNow(m, spell, at, false);
+        return true;
+    }
+
+    /**
+     * A melee spell's swing: bigger (they swell as they swing it), sparks of its colour along the arc,
+     * and `onHit(struck)` with every foe before them when it comes down.
+     */
+    _bigSwing(m, colour, yours, onHit, { aim = true } = {}) {
+        const who = m.who, s = who.sprite;
+        if (aim) {
+            const f = this._aim(m, this.MELEE_REACH + 20);
+            if (f) {
+                const me = this._feet(m), d = Math.hypot(f.foe.x - me.x, f.foe.y - me.y);
+                s.setDirection(dirOf(f.foe.x - me.x, f.foe.y - me.y));
+                if (d > REACH - 6) {
+                    const k = Math.min(LUNGE + 16, d - REACH + 10) / d;
+                    this.scene.tweens.add({ targets: s, x: s.x + (f.foe.x - me.x) * k, y: s.y + (f.foe.y - me.y) * k, duration: 110 });
+                }
+            }
+        }
+        who.isAttacking = false;
+        who.playAttack(yours ? () => this.scene.emitAttack() : undefined);
+        this._swell(m, colour);
+        this.scene.time.delayedCall(SWING_HIT_MS + 20, () => {
+            if (this.over || m.out) return;
+            const at = this._feet(m), [ux, uy] = UNIT[s.currentDirection || 'up'];
+            const struck = this.standing.filter(o => {
+                const dx = o.foe.x - at.x, dy = o.foe.y - at.y, d = Math.hypot(dx, dy);
+                return d <= REACH * 1.5 && (d < 18 || (dx * ux + dy * uy) / d >= AIM * 0.6);
+            });
+            for (const o of struck) this._sparkle(o.foe.x, o.foe.y - 22, colour, 10);
+            onHit(struck);
+        });
+    }
+
+    _nearestTo(p) {
+        return [...this.standing].sort((a, b) => Math.hypot(a.foe.x - p.x, a.foe.y - p.y) - Math.hypot(b.foe.x - p.x, b.foe.y - p.y))[0] || null;
+    }
+
+    _dirOf(dx, dy) { return dirOf(dx, dy); }
+
+    _inside(x, y) { return x >= 10 && x <= this.width - 10 && y >= 22 && y <= this.height - 2; }
 
     /** The demons, a band of `count` (BAND), where the turn-based foes would start. */
     _band(map, kind, count) {
@@ -201,7 +302,7 @@ export class ActionBattle extends Battle {
     }
 
     get canStrike() { return !this.over; }
-    get canAct() { return false; }      // (no spells in a real-time fight yet)
+    get canAct() { return false; }      // (no turns: the blue button casts the spell you equipped, castEquipped)
 
     _drawMarker() { this.marker?.clear(); }
 
@@ -215,6 +316,12 @@ export class ActionBattle extends Battle {
             return;
         }
         if (!this.over) {
+            const mp = this.scene.scene.get('UIScene')?.mp;
+            if (mp && mp.now < mp.max && (this._mpT += delta) >= MP_BACK_MS) {
+                this._mpT = 0;
+                mp.now++;
+            }
+            for (const m of this.party.slice(1)) m.spellCd -= delta;
             this._you(delta, dt);
             for (const m of this.party.slice(1)) if (!m.out) this._companion(m, delta, dt);
             if (this.foes.every(f => f.foe.who.sprite.sprite)) this._hold = (this._hold ?? HOLD_MS) - delta;     // (from when they're drawn)
@@ -243,7 +350,7 @@ export class ActionBattle extends Battle {
         if (inside(fx, s.y + FEET) && !this._wet(fx, s.y + FEET)) s.x = fx;
         if (inside(s.x, fy) && !this._wet(s.x, fy)) s.y = fy - FEET;
         if (walk && !who.isAttacking) {
-            if (dx || dy) s.playAnimation('walk', dirOf(dx, dy));
+            if (dx || dy) s.playAnimation('walk', facingOf(dx, dy, s.currentDirection));
             else s.stopAnimation();
         }
     }
@@ -257,6 +364,11 @@ export class ActionBattle extends Battle {
         const m = this.party[0];
         if (m.out) return;
         const who = m.who, { dx, dy } = this.intent;
+        if (this._queuedSpell && !who.isAttacking) {
+            const { spell, at } = this._queuedSpell;
+            this._queuedSpell = null;
+            return this._castNow(m, spell, at, true);
+        }
         if (this._queued && !who.isAttacking) {
             this._queued = false;
             return this._swing(m, true);
@@ -357,20 +469,21 @@ export class ActionBattle extends Battle {
     }
 
     /** Something flying: an arrow, or fire (yours, or a warlock's). It goes the way it was aimed, to its range. */
-    _launch(from, to, kind, side, damage) {
+    _launch(from, to, kind, side, damage, { scale = 1, trail = null, reach = SHOT_REACH + 80, speed = null, onHit = null } = {}) {
         const a = Math.atan2(to.y - from.y, to.x - from.x);
-        const speed = kind === 'arrow' ? ARROW_SPEED : BOLT_SPEED;
+        speed ??= kind === 'arrow' ? ARROW_SPEED : BOLT_SPEED;
         let sprite;
         if (kind === 'arrow' && this.scene.textures.exists('arrow-projectile')) {
             sprite = this.scene.add.sprite(from.x, from.y, 'arrow-projectile', 3 * 13 + 5).setRotation(a);
             audio.play('bow', { volume: 0.5 });
         } else {
-            sprite = this.scene.add.sprite(from.x, from.y, 'spell-fx').play('spell-fx-fireball').setRotation(a + Math.PI / 2);
+            const anim = kind === 'fire-missile' ? 'spell-fx-fire-missile' : 'spell-fx-fireball';
+            sprite = this.scene.add.sprite(from.x, from.y, 'spell-fx').play(anim).setRotation(a + Math.PI / 2).setScale(scale);
             if (side === 'foe') sprite.setTint(0xb070ff);
-            audio.play('zap', { volume: 0.5 });
+            if (!onHit) audio.play('zap', { volume: 0.5 });
         }
         sprite.setDepth(32);
-        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: SHOT_REACH + 80, side, damage, kind });
+        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit });
     }
 
     _fly(dt) {
@@ -380,13 +493,21 @@ export class ActionBattle extends Battle {
             s.sprite.x += s.vx * dt;
             s.sprite.y += s.vy * dt;
             s.left -= step;
+            if (s.trail) {          // a spell's fire trails sparks
+                this.sparks.setParticleTint(s.trail);
+                this.sparks.emitParticleAt(s.sprite.x, s.sprite.y, 1);
+            }
             const near = (x, y) => Math.hypot(s.sprite.x - x, s.sprite.y - (y - 18)) < 16;
             if (s.side === 'party') {
                 const f = this.standing.find(o => near(o.foe.x, o.foe.y));
                 if (f) {
                     s.done = true;
-                    if (s.kind !== 'arrow') this._fx('fireball-impact', f.foe.x, f.foe.y, { origin: 0.75 });
-                    this._strikeFoe(f, s.damage, { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 });
+                    const where = { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 };
+                    if (s.onHit) s.onHit(f, where);
+                    else {
+                        if (s.kind !== 'arrow') this._fx('fireball-impact', f.foe.x, f.foe.y, { origin: 0.75 });
+                        this._strikeFoe(f, s.damage, where);
+                    }
                 }
             } else {
                 const m = this.fighting.find(o => near(o.who.sprite.x, o.who.sprite.y + FEET));
@@ -403,13 +524,14 @@ export class ActionBattle extends Battle {
     }
 
     /** A blow on a foe, from `from` (feet): the number, a flash, a knock back, its wind-up stopped (not a brute's). */
-    _strikeFoe(f, damage, from) {
+    _strikeFoe(f, damage, from, { words = null, colour = '#fff2a8' } = {}) {
         if (f.hp <= 0) return;
         const { foe } = f;
         f.hp = Math.max(0, f.hp - damage);
         audio.play('hit_blade', { volume: 0.8 });
         this.scene.effects.impact('metal', foe.x, foe.y - 22, foe.y);
-        this.scene.effects.floatText(foe.x, foe.y - foe.tall, String(damage), '#fff2a8', 20);
+        this.scene.effects.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
+        if (words) this.scene.effects.floatText(foe.x, foe.y - foe.tall - 18, words, colour, 14);
         tint(foe.who, 0xffffff, true);
         this.scene.time.delayedCall(80, () => f.state === 'windup' ? tint(foe.who, 0xff5050) : tint(foe.who, null));
         this._knock(foe.who, from, f.spec.poise ? KNOCK / 3 : KNOCK);
@@ -518,7 +640,7 @@ export class ActionBattle extends Battle {
             if (m.cd <= 0 && d <= SHOT_REACH) {
                 m.cd = m.role === 'caster' ? 2600 : 1600;
                 who.sprite.setDirection(dirOf(dx, dy));
-                this._swing(m);
+                if (!this._companionSpell(m)) this._swing(m);        // their spell, now and then
             }
             return;
         }
@@ -527,18 +649,21 @@ export class ActionBattle extends Battle {
         who.sprite.setDirection(dirOf(dx, dy));
         if (m.cd <= 0) {
             m.cd = 1200;
-            this._swing(m);
+            if (!this._companionSpell(m)) this._swing(m);            // the cleric's lightning, now and then
         }
     }
 
     /** Healing light on whoever's worst hurt. */
-    _mend(m, them) {
+    _mend(m, them, mend = 6 + (m.spellPower || 0)) {
         m.healCd = 5000;
         m.who.playCast();
         audio.play('holy', { volume: 0.7 });
         const s = them.who.sprite;
         this._fx('healing', s.x, s.y);
-        const mend = 6 + (m.spellPower || 0);
+        this.motes.setParticleTint(SPELL_COLOURS.MEND);
+        this.motes.explode(14, s.x, s.y + 14);
+        this.glints.setParticleTint(0xc8ffc8);
+        this.glints.explode(6, s.x, s.y);
         them.life.now = Math.min(them.life.max, them.life.now + mend);
         this.scene.effects.floatText(s.x, s.y - 30, `+${mend}`, '#7ee07e', 20);
     }
@@ -688,6 +813,7 @@ export class ActionBattle extends Battle {
     }
 
     destroy() {
+        this.scene.scene.get('UIScene')?.bottomControls?.showSpell?.(null);       // (before the icons go)
         this.scene.anims.resumeAll();
         this.shots.forEach(s => s.sprite.destroy());
         this.shots = [];

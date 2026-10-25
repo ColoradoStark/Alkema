@@ -149,6 +149,35 @@ test.describe('Spells', () => {
         expect((await menu(page)).texts.some(t => /^Resting \d/.test(t))).toBe(true);
     });
 
+    test("a cleric's Smite, from the menu: her blow swells, lightning comes down on the foe, and your screen shakes a little", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await fight(page, 3);
+        await yourTurn(page);
+        await asClass(page, 'cleric');
+        await belowOne(page);
+        const hp = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.foes.reduce((n, f) => n + f.hp, 0));
+        const before = await hp();
+        const seen = page.evaluate(() => new Promise(resolve => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            const out = { fx: new Set(), swell: 0, shake: false };
+            const watch = () => {
+                gs.children.list.forEach(c => c.texture?.key === 'spell-fx' && c.anims?.currentAnim && out.fx.add(c.anims.currentAnim.key));
+                out.swell = Math.max(out.swell, me.scaleX);
+                out.shake ||= gs.cameras.main.shakeEffect.isRunning;
+            };
+            gs.events.on('postupdate', watch);
+            setTimeout(() => { gs.events.off('postupdate', watch); resolve({ ...out, fx: [...out.fx] }); }, 2500);
+        }));
+        expect(await castFromMenu(page, 'smite')).toBe(true);
+        const s = await seen;
+        expect(s.fx.some(k => k.startsWith('spell-fx-lightning'))).toBe(true);
+        expect(s.swell).toBeGreaterThan(1.2);
+        expect(s.shake).toBe(true);
+        await yourTurn(page);
+        expect(await hp()).toBeLessThan(before);
+    });
+
     test('a skill hits at least twice as hard as a plain blow', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);

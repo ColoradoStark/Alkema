@@ -237,14 +237,12 @@ test.describe('A real-time fight', () => {
         expect(most).toBeLessThanOrEqual(2);
     });
 
-    test("push on off an edge and you've fled, back on the level with the demons still there; and the spell button says there are no spells in it", async ({ page }) => {
+    test("push on off an edge and you've fled, back on the level with the demons still there", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await toTheDemons(page, { alone: true });
         await fight(page);
         await stage(page, [176, 440]);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAbility());
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.log.text)).toBe('No spells in a real-time fight yet');
         await page.evaluate(async () => {
             const keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
             keys.down = true;
