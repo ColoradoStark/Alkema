@@ -152,9 +152,11 @@ test.describe('Riverhold', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
             keys.left = true;
-            for (let i = 0; i < 100 && gs.town; i++) await new Promise(r => setTimeout(r, 50));
+            for (let i = 0; i < 40 && !gs.scene.get('UIScene').enterPrompt.leaving; i++) await new Promise(r => setTimeout(r, 50));
             keys.left = false;
         });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.leaving), { timeout: 5000 }).toBe(true);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.answer(true));     // "Leave ...?" Yes
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
         const back = await where(page);
         expect(Math.abs(back.x - outside.x)).toBeLessThan(80);
@@ -736,6 +738,8 @@ test.describe('Seacombe', () => {
             me.body.reset(me.x, me.y);
         });
         await hold(page, 'left', 800);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.leaving), { timeout: 5000 }).toBe(true);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.answer(true));     // "Leave ...?" Yes
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
     });
 });
@@ -779,6 +783,8 @@ for (const v of [
                 me.body.reset(me.x, me.y);
             }, v.out);
             await hold(page, v.out.dir, 800);
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.leaving), { timeout: 5000 }).toBe(true);
+            await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.answer(true));     // "Leave ...?" Yes
             await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
         });
     });
@@ -841,6 +847,67 @@ test.describe('Doors', () => {
         await hold(page, 'up', 800);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '')).toBe(says);
         expect((await where(page)).town).toBe('fernwick');
+    });
+});
+
+test.describe('Leaving', () => {
+    // The user wanted to know they were leaving a place: asked, as going in is, with a sound. Not out of a house (that's fine as it is).
+    test("walk out of a village's gate and you're asked if you'd leave: No keeps you there (not asked again till you step away), Yes takes you out with a sound at once", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Fernwick'));
+        });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
+        await page.evaluate(async () => {
+            const { audio } = await import('/src/audio/audio.js');
+            window.__played = [];
+            const play = audio.play.bind(audio);
+            audio.play = (name, opts) => { window.__played.push(name); return play(name, opts); };
+        });
+        const prompt = () => page.evaluate(() => {
+            const p = window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt;
+            return p.visible ? p.title.text : null;
+        });
+        const toGate = () => page.evaluate(() => {
+            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            me.setPosition(120, 27 * 32 - 23);
+            me.body.reset(me.x, me.y);
+        });
+        // Out of a house: no question
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            await gs.changeMap('fernwick-cottage', gs.cache.json.get('town-fernwick').exits.find(e => e.to === 'fernwick-cottage').at, 'up');
+            const out = gs.town.data.exits[0], me = gs.localPlayer.sprite;
+            me.setPosition(out.rect[0] + out.rect[2] / 2, out.rect[1] - 10 - 23);
+            me.body.reset(me.x, me.y);
+        });
+        await hold(page, 'down', 600);
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
+        expect(await prompt()).toBe(null);
+
+        // Out at the gate: asked, and still in the village, standing
+        await toGate();
+        await hold(page, 'left', 1500);
+        expect(await prompt()).toBe('Leave Fernwick?');
+        expect((await where(page)).town).toBe('fernwick');
+        const x = (await where(page)).x;
+        await hold(page, 'left', 400);
+        expect((await where(page)).x).toBe(x);
+        // No: you stay, and pushing on at the gate doesn't ask again
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.answer(false));
+        await hold(page, 'left', 800);
+        expect(await prompt()).toBe(null);
+        expect((await where(page)).town).toBe('fernwick');
+        // Step away and back: asked again; Yes: the sound at once, and out
+        await hold(page, 'right', 600);
+        await hold(page, 'left', 1200);
+        expect(await prompt()).toBe('Leave Fernwick?');
+        await page.evaluate(() => { window.__played = []; window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.answer(true); });
+        expect(await page.evaluate(() => window.__played)).toContain('leave');
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(null);
     });
 });
 

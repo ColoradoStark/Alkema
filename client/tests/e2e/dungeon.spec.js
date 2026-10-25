@@ -149,6 +149,8 @@ test.describe('Gloomwater Grotto', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length)).toBe(0);
         const rope = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.exits.find(e => e.to === null));
         await walkFrom(page, rope.rect[0] + rope.rect[2] / 2, rope.rect[1] + rope.rect[3] + 18, 'up', 1500);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.title.text), { timeout: 5000 }).toBe('Leave Gloomwater Grotto?');
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.answer(true));
         await expect.poll(() => level(page), { timeout: 15000 }).toBe(null);
         // ...out by the grotto's mouth
         const out = await page.evaluate(async () => {

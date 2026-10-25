@@ -307,7 +307,7 @@ export class UIScene extends Scene {
         }
 
         const me = gameScene.localPlayer.sprite;
-        if (this.dialogue.visible || this.gear?.visible || this.castMenu.visible) {        // the world waits while someone's talking, you're shopping, or choosing a spell
+        if (this.dialogue.visible || this.gear?.visible || this.castMenu.visible || this.enterPrompt.leaving) {        // the world waits while someone's talking, you're shopping, choosing a spell, or asked if you'd leave
             gameScene.handlePlayerMovement(0, 0);
             return;
         }

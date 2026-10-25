@@ -553,6 +553,16 @@
    "start": 91.6208,
    "end": 93.0341,
    "loop": false
+  },
+  "leave_1": {
+   "start": 93.4342,
+   "end": 94.1092,
+   "loop": false
+  },
+  "leave_2": {
+   "start": 94.5093,
+   "end": 95.1218,
+   "loop": false
   }
  }
 }

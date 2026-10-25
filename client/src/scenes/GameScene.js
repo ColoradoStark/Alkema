@@ -297,6 +297,15 @@ export class GameScene extends Scene {
         if (!this.town || !me || this._changingRoom) return;
         const intent = this._intent || { dx: 0, dy: 0 };
         const exit = this.town.exitAt(me.x, me.y + FEET, intent);
+        // Out to the world: asked first, as going in is (the user's); not again till you've stepped away from the way out
+        if (this._askedLeave && !this.town.atWayOut(me.x, me.y + FEET)) this._askedLeave = false;
+        if (exit?.to === null) {
+            if (this._askedLeave) return;
+            this._askedLeave = true;
+            this.localPlayer.setVelocity(0, 0);
+            this.scene.get('UIScene')?.enterPrompt?.show(this._townPlace, { leaving: true });
+            return;
+        }
         if (!exit) {
             // A door that won't open says so, once each time you try it (the user wasn't sure which houses open)
             const shut = this.town.shutAt(me.x, me.y + FEET, intent);
@@ -308,8 +317,7 @@ export class GameScene extends Scene {
             return;
         }
         if (exit.door) audio.play('door');      // at once: the room takes a moment to load (the user wasn't sure a door had taken them)
-        if (exit.to === null) this.leaveTown();
-        else this.changeMap(exit.to, exit.at, exit.dir === 'up' ? 'up' : 'down');
+        this.changeMap(exit.to, exit.at, exit.dir === 'up' ? 'up' : 'down');
     }
 
     /**
@@ -356,10 +364,10 @@ export class GameScene extends Scene {
     async leaveTown() {
         const place = this._townPlace;
         this._changingRoom = true;
+        audio.play('leave');        // the gate shutting behind you, at once (the user's: to know you're leaving)
         try {
             const at = { x: place.x, y: place.y - FEET };
-            const res = await this._room({ town: null, ...at });
-            await this._fadeOut();
+            const [res] = await Promise.all([this._room({ town: null, ...at }), this._fadeOut()]);
             this._dropTown();
             forgetFires(this);
             this.town = null;

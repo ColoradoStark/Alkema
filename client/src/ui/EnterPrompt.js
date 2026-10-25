@@ -1,6 +1,7 @@
 // "Enter Riverhold?" — shown when you walk up to a place on the overworld.
 // Yes takes you in where the place has a map of its own (Riverhold so far);
-// elsewhere, and on No, it just closes.
+// elsewhere, and on No, it just closes. And "Leave Riverhold?" as you walk out
+// of its gate (the user's: to know you're leaving): Yes takes you out.
 
 import { addPanelBackground } from './panelBackground.js';
 import { audio } from '../audio/audio.js';
@@ -67,11 +68,15 @@ export class EnterPrompt {
         return { bg, text, zone };
     }
 
-    /** @param {{name: string, type: string}} place */
-    show(place) {
+    /**
+     * @param {{name: string, type: string}} place
+     * @param {{leaving?: boolean}} [opts]  asking whether to leave it (you're at its gate), not go in
+     */
+    show(place, { leaving = false } = {}) {
         this.place = place;
+        this.leaving = leaving;
         this.kind.setText(KINDS[place.type] || '');
-        this.title.setText(`Enter ${place.name}?`);
+        this.title.setText(`${leaving ? 'Leave' : 'Enter'} ${place.name}?`);
         this.container.setVisible(true).setAlpha(0);
         this.scene.tweens.add({ targets: this.container, alpha: 1, duration: 140 });
         audio.play('menu_open', { volume: 0.6 });
@@ -79,14 +84,17 @@ export class EnterPrompt {
 
     hide() {
         this.place = null;
+        this.leaving = false;
         this.container.setVisible(false);
     }
 
     answer(yes) {
         if (!this.visible) return;
-        const place = this.place;
+        const place = this.place, leaving = this.leaving;
         audio.play(yes ? 'confirm' : 'menu_close', { volume: 0.6 });
         this.hide();
-        if (yes) this.scene.scene.get('GameScene')?.enterPlace(place);
+        const game = this.scene.scene.get('GameScene');
+        if (yes && leaving) game?.leaveTown();
+        else if (yes) game?.enterPlace(place);
     }
 }

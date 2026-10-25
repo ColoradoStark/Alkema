@@ -405,6 +405,11 @@ export class Town {
             && (!needs || flags[needs]) && x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
     }
 
+    /** Are a hero's feet at (x, y) in (or right by) a way out to the world (the gate, a dungeon's mouth)? */
+    atWayOut(x, y) {
+        return this.data.exits.some(({ rect: [ex, ey, ew, eh], to }) => to === null && x >= ex - 12 && x <= ex + ew + 12 && y >= ey - 18 && y <= ey + eh + 18);
+    }
+
     /** A door that doesn't open (a barn's, a barred one) that a hero's feet at (x, y) are walking up into: {rect, says}. */
     shutAt(x, y, intent) {
         if (!(intent.dy < 0)) return null;
