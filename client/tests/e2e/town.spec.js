@@ -436,7 +436,7 @@ test.describe('Riverhold', () => {
         expect((await ui()).t).toBeLessThan(2);
     });
 
-    test('everyone in Fernwick, Seacombe and Ashby has a painted portrait, by day and by night', async ({ page }) => {
+    test("everyone in Fernwick, Seacombe, Ashby, Tumbledown and Gull's Rest has a painted portrait, by day and by night", async ({ page }) => {
         test.setTimeout(60000);
         await page.goto('/');
         const missing = await page.evaluate(async () => {
@@ -444,7 +444,9 @@ test.describe('Riverhold', () => {
             const out = [];
             for (const key of ['fernwick', 'fernwick-farmhouse', 'fernwick-cottage', 'fernwick-weaver', 'fernwick-woodcutter',
                 'seacombe', 'seacombe-farmhouse', 'seacombe-cottage', 'seacombe-croft',
-                'ashby', 'ashby-farmhouse', 'ashby-fisherman', 'ashby-hut', 'ashby-netmaker'])
+                'ashby', 'ashby-farmhouse', 'ashby-fisherman', 'ashby-hut', 'ashby-netmaker',
+                'tumbledown', 'tumbledown-longhall', 'tumbledown-fisher', 'tumbledown-trapper', 'tumbledown-woodcutter',
+                'gulls_rest', 'gulls_rest-alehouse', 'gulls_rest-boatwright', 'gulls_rest-fisherman', 'gulls_rest-netloft'])
                 for (const f of await (await fetch(`/folk/${key}.json`)).json()) {
                     if (!listed.has(f.character.id)) out.push(f.character.id);
                     else for (const end of ['', '-night'])
