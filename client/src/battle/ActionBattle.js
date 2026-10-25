@@ -102,13 +102,15 @@ let made = 0;
 
 /** A demon, standing at its post on a level or in the fight: a character from the creator, its feet at (x, y). */
 export class Demon {
-    constructor(scene, x, y, kind) {
+    /** `label`: words over its head (a post's: who comes with you to fight it). */
+    constructor(scene, x, y, kind, label = null) {
         this.scene = scene;
         this.kind = kind;
         this.name = 'demon';
         this.tall = 50;         // feet to the top of its head (its bar goes above)
         this.who = new Player(scene, x, y - FEET, `demon-${++made}`, demonCharacter(scene, kind), false);
-        this.who.nameText.setVisible(false);
+        this.who.nameText.setVisible(!!label);
+        if (label) this.who.sprite.onLoaded = () => this.who.nameText.setText(label);
         this.who.sprite.body && (this.who.sprite.body.moves = false);
         this.who.sprite.setDirection('down');
         this.setDepthAt();

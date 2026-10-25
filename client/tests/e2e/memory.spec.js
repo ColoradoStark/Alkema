@@ -205,10 +205,10 @@ test.describe('Memory', () => {
             const { WORLD } = await import('/src/world/places.js');
             await gs.enterPlace(WORLD.places.find(p => p.name === 'Gloomwater Grotto'));
         });
-        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.foes.some(f => f.plan.action)), { timeout: 20000 }).toBe(true);
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.foes.some(f => f.plan.companions === 3)), { timeout: 20000 }).toBe(true);
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            gs.enterBattle({ ...gs.town.foes.find(f => f.plan.action).plan, country: 'cave', town: gs.town.key });
+            gs.enterBattle({ ...gs.town.foes.find(f => f.plan.companions === 3).plan, country: 'cave', town: gs.town.key });     // (the biggest)
         });
         await expect.poll(() => page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');

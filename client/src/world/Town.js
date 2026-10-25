@@ -164,7 +164,8 @@ export class Town {
             if (scene.flags?.[plan.flag] || scene.slain?.has(plan.id)) continue;
             if (plan.action) {          // demons, for a real-time fight (ActionBattle.js): their brute stands for them
                 loadDemons(scene).then(() => {
-                    if (!this.gone) this.foes.push({ plan, foe: new Demon(scene, plan.x, plan.y, 'brute'), armed: false });
+                    const n = plan.companions, label = n == null ? null : n ? `+${n} companion${n > 1 ? 's' : ''}` : 'Alone';
+                    if (!this.gone) this.foes.push({ plan, foe: new Demon(scene, plan.x, plan.y, 'brute', label), armed: false });
                 }).catch(err => console.warn('No demons here', err));
                 continue;
             }

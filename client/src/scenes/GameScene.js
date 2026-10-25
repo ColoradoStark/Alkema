@@ -382,7 +382,9 @@ export class GameScene extends Scene {
         this._changingRoom = this._fighting = true;
         try {
             const country = spot.country || battleCountry(this.overworld, spot.x, spot.y);
-            await loadBattleMap(this, country, this.companions);
+            // (a post can say how many companions come: the demons' bands, to try the real-time fight alone, then with more)
+            const companions = spot.companions == null ? this.companions : this.companions.slice(0, spot.companions);
+            await loadBattleMap(this, country, companions);
             if (spot.action) await loadDemons(this);        // (a real-time fight, ActionBattle.js)
             this.localPlayer.setVelocity(0, 0);
             // You'll be back a step from where it stood, the way you came (clear of the chest it leaves)
@@ -402,7 +404,7 @@ export class GameScene extends Scene {
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
             this.battle = this.world = new (spot.action ? ActionBattle : Battle)(this, { country, kind: spot.kind, count: spot.count, boss: spot.boss, name: spot.name,
-                companions: this.companions, spoils: !!spot.town && !spot.flag, onEnd: (result, how) => this.leaveBattle(result, how),
+                companions, spoils: !!spot.town && !spot.flag, onEnd: (result, how) => this.leaveBattle(result, how),
                 onWon: () => spot.town && this._loadTown(spot.town).catch(() => null) });     // (the level you'll be back on, as Victory! shows)
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');

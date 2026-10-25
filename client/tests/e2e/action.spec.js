@@ -26,13 +26,14 @@ async function toTheDemons(page, { alone = false } = {}) {
     await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.foes.some(f => f.plan.action)), { timeout: 20000 }).toBe(true);
 }
 
-/** Straight into their fight (walking in is the first test's). */
-async function fight(page) {
-    await page.evaluate(() => {
+/** Straight into the fight of the band for `companions` companions (walking in is the first test's). */
+async function fight(page, companions = 0) {
+    await expect.poll(() => page.evaluate((n) => !!window.__PHASER_GAME.scene.getScene('GameScene').town.foes.find(f => f.plan.companions === n), companions), { timeout: 20000 }).toBe(true);
+    await page.evaluate((n) => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-        const post = gs.town.foes.find(f => f.plan.action).plan;
+        const post = gs.town.foes.find(f => f.plan.companions === n).plan;
         gs.enterBattle({ ...post, country: 'cave', town: gs.town.key });
-    });
+    }, companions);
     await expect.poll(() => page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
         return !!gs.battle?.realtime && !gs._changingRoom && gs.battle.foes.every(f => f.foe.who.sprite.sprite);
@@ -56,10 +57,11 @@ test.describe('A real-time fight', () => {
         test.setTimeout(180000);
         await enterWorld(page);
         await toTheDemons(page);
-        // Up to them from the side (from below is the cave wall), and into them
+        // Up to the band you fight with all three companions, from its right (the clear way in), and into them
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town.foes.find(f => f.plan.companions === 3)), { timeout: 20000 }).toBe(true);
         await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const d = gs.town.foes.find(f => f.plan.action).plan, me = gs.localPlayer.sprite;
+            const d = gs.town.foes.find(f => f.plan.companions === 3).plan, me = gs.localPlayer.sprite;
             me.setPosition(d.x + 130, d.y - 23);
             me.body.reset(me.x, me.y);
             const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
@@ -95,9 +97,8 @@ test.describe('A real-time fight', () => {
         await page.waitForTimeout(1000);
         expect(await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return { post: gs.town.foes.some(f => f.plan.action), file: gs.cache.json.exists('folk-demons'),
-                sheets: gs.textures.getTextureKeys().filter(k => k.includes('demons-')) };
-        })).toEqual({ post: false, file: false, sheets: [] });
+            return { post: gs.town.foes.some(f => f.plan.companions === 3), others: gs.town.foes.filter(f => f.plan.action).length };
+        })).toEqual({ post: false, others: 3 });
     });
 
     test('press attack and you swing at the demon nearest the way you face (stepping in to it); press again mid-swing and the next comes after it', async ({ page }) => {
@@ -158,7 +159,7 @@ test.describe('A real-time fight', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         await toTheDemons(page, { alone: true });
-        await fight(page);
+        await fight(page, 3);       // (the biggest band, six; with your companions sent home)
         await stage(page, [176, 260], [0, 1, 2, 3, 4, 5]);
         const most = await page.evaluate(async () => {
             const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, me = b.party[0];
@@ -190,5 +191,33 @@ test.describe('A real-time fight', () => {
         });
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key ?? null), { timeout: 15000 }).toBe('gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.some(f => f.plan.action)), { timeout: 15000 }).toBe(true);
+    });
+
+    test('four bands by the sea mouth, nearest first: fight one alone, then with one companion, two, and all three, each band bigger, its demon labelled with who comes', async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        await toTheDemons(page);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => f.plan.action).length), { timeout: 20000 }).toBe(4);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => f.plan.action)
+            .sort((a, b) => a.plan.companions - b.plan.companions).map(f => f.foe.who.nameText.visible && f.foe.who.nameText.text)), { timeout: 20000 })
+            .toEqual(['Alone', '+1 companion', '+2 companions', '+3 companions']);
+        const fights = [];
+        for (const n of [0, 1, 2, 3]) {
+            await fight(page, n);
+            fights.push(await page.evaluate(() => {
+                const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+                return { party: b.party.map(m => m.role), foes: b.foes.length };
+            }));
+            await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key ?? null), { timeout: 15000 }).toBe('gloomwater-1');
+        }
+        expect(fights).toEqual([
+            { party: ['you'], foes: 2 },
+            { party: ['you', 'healer'], foes: 3 },
+            { party: ['you', 'healer', 'caster'], foes: 4 },
+            { party: ['you', 'healer', 'caster', 'archer'], foes: 6 },
+        ]);
+        // (and your companions are all still yours, for the turn-based fights)
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').companions.length)).toBe(3);
     });
 });
