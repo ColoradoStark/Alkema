@@ -720,8 +720,15 @@ export class Battle {
     }
 
     /** An effect (fx.json) playing once at a point, then gone. */
+    /** An effect's sprite, kept till it's done, so a fight that ends meanwhile takes it with it (its picture is let go then). */
+    _live(s) {
+        (this._effects ??= new Set()).add(s);
+        s.once('destroy', () => this._effects.delete(s));
+        return s;
+    }
+
     _fx(name, x, y, { origin = 0.5, scale = 1 } = {}) {
-        const s = this.scene.add.sprite(x, y, FX).setOrigin(0.5, origin).setScale(scale).setDepth(FX_DEPTH);
+        const s = this._live(this.scene.add.sprite(x, y, FX).setOrigin(0.5, origin).setScale(scale).setDepth(FX_DEPTH));
         s.play(`${FX}-${name}`);
         s.once('animationcomplete', () => s.destroy());
         return new Promise(resolve => s.once('animationcomplete', resolve));
@@ -730,7 +737,7 @@ export class Battle {
     /** A bolt (looping effect, drawn pointing up) flying from a point to a foe; resolves as it strikes. */
     _bolt(name, from, f) {
         const to = { x: f.foe.x, y: f.foe.y - f.foe.tall / 2 };
-        const s = this.scene.add.sprite(from.x, from.y, FX).setDepth(FX_DEPTH).play(`${FX}-${name}`);
+        const s = this._live(this.scene.add.sprite(from.x, from.y, FX).setDepth(FX_DEPTH).play(`${FX}-${name}`));
         s.setRotation(Math.atan2(to.y - from.y, to.x - from.x) + Math.PI / 2);
         const ms = Math.max(150, Math.hypot(to.x - from.x, to.y - from.y) / BOLT_SPEED * 1000);
         return new Promise(resolve => this.scene.tweens.add({
@@ -829,6 +836,10 @@ export class Battle {
 
     destroy() {
         this._sayTimer?.remove();
+        for (const s of [...(this._effects || [])]) {       // a burst still playing (the game froze, drawing it once its picture went)
+            this.scene.tweens.killTweensOf(s);
+            s.destroy();
+        }
         this.scene.tweens.killTweensOf(this.marker);
         [this.ground, this.frame, this.log, this.marker, ...this.trees].forEach(o => o.destroy());
         this.victory?.destroy();

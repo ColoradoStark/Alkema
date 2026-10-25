@@ -512,6 +512,43 @@ test.describe('Riverhold', () => {
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     });
 
+    test("Meg's clip has her voice the first time you walk up to her, though you've not tapped since you came in (as an iPhone allows)", async ({ page }) => {
+        test.setTimeout(150000);
+        // An iPhone's rule: a video plays with sound only once a tap has started it (that video, not another)
+        // (only while a tap's own events are handled: what's started then, from those handlers, counts as started by it)
+        await page.addInitScript(() => {
+            let tapping = false;
+            for (const e of ['touchend', 'click', 'keydown']) {
+                window.addEventListener(e, (ev) => { if (ev.isTrusted) tapping = true; }, true);
+                window.addEventListener(e, () => setTimeout(() => { tapping = false; }), false);
+            }
+            const play = HTMLMediaElement.prototype.play;
+            HTMLMediaElement.prototype.play = function () {
+                if (tapping) this.__tapped = true;
+                if (!this.muted && !this.__tapped) return Promise.reject(new DOMException('no tap', 'NotAllowedError'));
+                return play.call(this);
+            };
+        });
+        await enterWorld(page);         // (the Play button: a tap, the last before she's met)
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Seacombe'));
+        });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'meg')?.sprite),
+            { timeout: 60000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === 'meg'));
+        });
+        // Caught as it plays (she says it in five seconds), then: with her voice, or silent?
+        await expect.poll(() => page.evaluate(() => {
+            const c = window.__PHASER_GAME.scene.getScene('UIScene').dialogue.clip;
+            return c && !c.paused && c.currentTime > 0 ? (c.muted ? 'silent' : 'voiced') : 'not yet';
+        }), { timeout: 30000, intervals: [50] }).not.toBe('not yet');
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.clip.muted ? 'silent' : 'voiced')).toBe('voiced');
+    });
+
     test("Riverhold's healer asks if she should see to your wounds, mends you on a yes, and asks again next time", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
@@ -686,10 +723,11 @@ test.describe('Seacombe', () => {
         const shut = await page.evaluate(() => {
             const t = window.__PHASER_GAME.scene.getScene('GameScene').town;
             const keeper = t.folk.find(f => f.plan.id === 'seedsman');
-            return { says: keeper.plan.says[0], doors: t.data.exits.filter(e => e.to).map(e => e.to) };
+            return { says: keeper.plan.says[0], doors: t.data.exits.filter(e => e.to).map(e => e.to), barred: t.data.shut.map(d => d.says) };
         });
         expect(shut.says).toMatch(/Shut/);
-        expect(shut.doors.sort()).toEqual(['seacombe-cottage', 'seacombe-croft', 'seacombe-farmhouse']);
+        expect(shut.doors.sort()).toEqual(['seacombe-cottage', 'seacombe-croft', 'seacombe-farmhouse', 'seacombe-house1']);
+        expect(shut.barred).toContain('The door is barred.');
         // Out through the gate and back on the overworld, by Seacombe
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -703,11 +741,11 @@ test.describe('Seacombe', () => {
 });
 
 for (const v of [
-    { name: 'Fernwick', key: 'fernwick', folk: 16, doors: ['cottage', 'farmhouse', 'weaver', 'woodcutter'], out: { x: 40, row: 27, dir: 'left' } },
-    { name: 'Ashby', key: 'ashby', folk: 15, doors: ['farmhouse', 'fisherman', 'hut', 'netmaker'], out: { x: 68 * 32 - 40, row: 26, dir: 'right' } },
-    { name: 'Tumbledown', key: 'tumbledown', folk: 16, doors: ['fisher', 'longhall', 'trapper', 'woodcutter'], out: { x: 40, row: 24, dir: 'left' },
+    { name: 'Fernwick', key: 'fernwick', folk: 16, doors: ['cottage', 'farmhouse', 'house1', 'weaver', 'woodcutter'], out: { x: 40, row: 27, dir: 'left' } },
+    { name: 'Ashby', key: 'ashby', folk: 15, doors: ['farmhouse', 'fisherman', 'house1', 'house2', 'house3', 'hut', 'netmaker'], out: { x: 68 * 32 - 40, row: 26, dir: 'right' } },
+    { name: 'Tumbledown', key: 'tumbledown', folk: 16, doors: ['fisher', 'house1', 'house2', 'house3', 'house4', 'longhall', 'smokehouse', 'trapper', 'woodcutter'], out: { x: 40, row: 24, dir: 'left' },
       chores: ['chop', 'dig', 'fish', 'sit'] },
-    { name: "Gull's Rest", key: 'gulls_rest', folk: 16, doors: ['alehouse', 'boatwright', 'fisherman', 'netloft'], out: { x: 40, row: 26, dir: 'left' },
+    { name: "Gull's Rest", key: 'gulls_rest', folk: 16, doors: ['alehouse', 'boatwright', 'fisherman', 'house1', 'house2', 'house3', 'house4', 'house5', 'netloft', 'smokehouse'], out: { x: 40, row: 26, dir: 'left' },
       chores: ['dig', 'fish', 'sit', 'water'] },
 ]) {
     test.describe(v.name, () => {
@@ -745,6 +783,66 @@ for (const v of [
         });
     });
 }
+
+test.describe('Doors', () => {
+    // The user couldn't tell if a door had taken them: a few seconds of nothing, then the room. Nor which houses open,
+    // nor find the one spot that let them out again.
+    test("a door answers at once (its sound, the fade) however slow the server is; out of a room by any of three tiles; a barn's doors say they're shut", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Fernwick'));
+        });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
+        const exit = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { audio } = await import('/src/audio/audio.js');
+            window.__played = [];
+            const play = audio.play.bind(audio);
+            audio.play = (name, opts) => { window.__played.push(name); return play(name, opts); };
+            const room = gs._room.bind(gs);
+            gs._room = (where) => new Promise(r => setTimeout(() => r(room(where)), 2000));     // a slow server
+            const exit = gs.town.data.exits.find(e => e.to === 'fernwick-cottage');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(exit.rect[0] + exit.rect[2] / 2, exit.rect[1] + 30 - 23);
+            me.body.reset(me.x, me.y);
+            return exit;
+        });
+        const t0 = Date.now();
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = true; });
+        await expect.poll(() => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return window.__played.some(n => n.startsWith('door')) && gs.cameras.main.fadeEffect.isRunning;
+        }), { timeout: 1500, intervals: [16] }).toBe(true);
+        expect(Date.now() - t0).toBeLessThan(1200);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = false; });
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick-cottage');
+
+        // Out by the tile left of the doorway's middle
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), out = gs.town.data.exits[0], me = gs.localPlayer.sprite;
+            me.setPosition(out.rect[0] + 8, out.rect[1] - 10 - 23);
+            me.body.reset(me.x, me.y);
+            window.__played = [];
+        });
+        await hold(page, 'down', 600);
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
+        expect(await page.evaluate(() => window.__played.some(n => n.startsWith('door')))).toBe(true);
+
+        // The barn's big doors: shut, and they say so
+        const says = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), shut = gs.town.data.shut[0], me = gs.localPlayer.sprite;
+            me.setPosition(shut.rect[0] + shut.rect[2] / 2, shut.rect[1] + 30 - 23);
+            me.body.reset(me.x, me.y);
+            return shut.says;
+        });
+        await hold(page, 'up', 800);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '')).toBe(says);
+        expect((await where(page)).town).toBe('fernwick');
+    });
+});
 
 test.describe('Memory', () => {
     // A phone's browser drops a tab that holds too much: after four villages, entering a fifth sent you back to the start

@@ -1,55 +1,55 @@
 [
  {
-  "id": "wanderer2",
-  "role": "Townswoman",
+  "id": "wanderer4",
+  "role": "Washerwoman",
   "character": {
-   "id": "riverhold-wanderer2",
-   "name": "Merdana Shepherd",
+   "id": "riverhold-wanderer4",
+   "name": "Garera Hill",
    "body_type": "female",
    "race": "human",
-   "character_class": "merchant",
+   "character_class": "peasant",
    "selections": [
     {
      "type": "body",
      "item": "body",
-     "variant": "amber",
-     "sprite_path": "body/bodies/female/walk/amber.png",
+     "variant": "light",
+     "sprite_path": "body/bodies/female/walk/light.png",
      "sprite_path_behind": null
     },
     {
      "type": "head",
      "item": "heads_human_female_small",
-     "variant": "amber",
-     "sprite_path": "head/heads/human/female_small/walk/amber.png",
+     "variant": "light",
+     "sprite_path": "head/heads/human/female_small/walk/light.png",
      "sprite_path_behind": null
     },
     {
      "type": "expression",
      "item": "face_neutral",
-     "variant": "amber",
+     "variant": "light",
      "sprite_path": null,
      "sprite_path_behind": null
     },
     {
      "type": "clothes",
-     "item": "torso_clothes_longsleeve2_buttoned",
-     "variant": "purple",
-     "sprite_path": "torso/clothes/longsleeve/longsleeve2_buttoned/female/walk/purple.png",
+     "item": "torso_clothes_tshirt",
+     "variant": "pink",
+     "sprite_path": "torso/clothes/shortsleeve/tshirt/female/walk/pink.png",
      "sprite_path_behind": null
     },
     {
      "type": "legs",
-     "item": "legs_formal",
-     "variant": "maroon",
-     "sprite_path": "legs/formal/thin/walk/maroon.png",
+     "item": "legs_shorts_short",
+     "variant": "pink",
+     "sprite_path": "legs/shorts/short_shorts/thin/walk/pink.png",
      "sprite_path_behind": null
     },
     {
      "type": "hair",
-     "item": "hair_topknot_long2",
-     "variant": "dark brown",
-     "sprite_path": "hair/extensions/ponytails/topknot_long/adult/fg/walk/dark_brown.png",
-     "sprite_path_behind": "hair/extensions/ponytails/topknot_long/adult/bg/walk/dark_brown.png"
+     "item": "hair_pigtails",
+     "variant": "sandy",
+     "sprite_path": "hair/pigtails/adult/walk/sandy.png",
+     "sprite_path_behind": null
     },
     {
      "type": "shadow",
@@ -59,56 +59,49 @@
      "sprite_path_behind": null
     },
     {
-     "type": "belt",
-     "item": "belt_loose",
-     "variant": "white",
-     "sprite_path": "torso/waist/belt_loose/female/walk/white.png",
-     "sprite_path_behind": null
-    },
-    {
-     "type": "necklace",
-     "item": "neck_necklace",
-     "variant": "brass",
-     "sprite_path": "neck/necklace/female/walk/brass.png",
-     "sprite_path_behind": null
-    },
-    {
      "type": "shoes",
      "item": "feet_shoes_basic",
-     "variant": "navy",
-     "sprite_path": "feet/shoes/basic/thin/walk/navy.png",
+     "variant": "rose",
+     "sprite_path": "feet/shoes/basic/thin/walk/rose.png",
      "sprite_path_behind": null
     },
     {
      "type": "hat",
-     "item": "hat_cap_leather",
-     "variant": "maroon",
-     "sprite_path": "hat/cloth/leather_cap/adult/walk/maroon.png",
+     "item": "hat_hood_sack_cloth",
+     "variant": "lavender",
+     "sprite_path": "hat/cloth/hood_sack/adult/walk/lavender.png",
      "sprite_path_behind": null
     },
     {
-     "type": "arms",
-     "item": "arms_armour",
-     "variant": "gold",
-     "sprite_path": "arms/armour/plate/female/walk/gold.png",
+     "type": "weapon",
+     "item": "tool_smash",
+     "variant": "pickaxe",
+     "sprite_path": "tools/smash/universal/female/walk/pickaxe.png",
      "sprite_path_behind": null
     }
    ],
-   "spriteUrl": "/folk/riverhold-wanderer2.png",
+   "spriteUrl": "/folk/riverhold-wanderer4.png",
    "animations": {
     "complete": [
-     "hurt",
-     "shoot",
      "slash",
-     "spellcast",
-     "thrust",
      "walk"
     ]
    },
    "spriteMeta": {
     "custom_animations": {
+     "slash_128": {
+      "y_offset": 3392,
+      "frame_size": 128,
+      "num_frames": 6,
+      "num_directions": 4,
+      "base_animation": "slash"
+     },
      "blanked_animations": [
-      "climb"
+      "thrust",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
      ]
     },
     "animation_coverage": {
@@ -116,8 +109,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -125,8 +118,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -135,25 +128,25 @@
       "oversized": null,
       "weapon_visible": {
        "standard": true,
-       "oversized": true
+       "oversized": false
       },
       "recommended_source": "standard"
      },
      "slash": {
       "standard": true,
-      "oversized": null,
+      "oversized": "slash_128",
       "weapon_visible": {
-       "standard": true,
+       "standard": false,
        "oversized": true
       },
-      "recommended_source": "standard"
+      "recommended_source": "oversized"
      },
      "shoot": {
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -161,8 +154,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -170,8 +163,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -179,8 +172,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -188,8 +181,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -197,8 +190,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -206,8 +199,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -215,8 +208,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -224,8 +217,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -233,8 +226,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -242,8 +235,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      }

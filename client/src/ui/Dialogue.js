@@ -52,24 +52,51 @@ const voiced = new Map();      // sprite id -> Map(line -> its clip, a <video>; 
 
 /**
  * On an iPhone (every browser there is Safari's WebKit) a video may play with sound only once a tap
- * has started it; started any other way it's refused, and the clip plays silent. So at each touch,
- * every clip held that a tap hasn't started yet is started and stopped at once, and one playing
- * silent for want of a tap gets its voice back.
+ * has started it (that one video: it keeps the right when its source changes); started any other way
+ * it's refused, and the clip plays silent. Walking into someone isn't a tap, and their clips are made
+ * then, so the first time they spoke it was silent (the user heard Meg's only the second time). So
+ * clips are played on video players a tap has started already: a few are kept spare (`spare`), each
+ * touch starts and stops every player it hasn't yet, someone's clips are put on spare players, and
+ * a player whose clips are let go goes back to being spare. One playing silent for want of a tap
+ * gets its voice back at the next touch.
  */
+const SPARE = 12;               // more than anyone's lines (11 at most)
+const spare = [];
+
+function player() {
+    const v = document.createElement('video');
+    v.playsInline = true;
+    v.preload = 'auto';
+    v.disablePictureInPicture = true;
+    Object.assign(v.style, { position: 'absolute', opacity: '0', transition: 'opacity 140ms' });
+    // Done: fade back to the painting (its first frame), ready for the next line's
+    v.addEventListener('ended', () => {
+        v.style.transition = 'opacity 450ms';
+        v.style.opacity = '0';
+        setTimeout(() => { v.style.transition = 'opacity 140ms'; }, 460);
+    });
+    return v;
+}
+
 function unlockClips() {
     if (audio.mode === 'off') return;
-    for (const set of voiced.values()) {
-        for (const v of set.values()) {
-            if (v.wanted && v.muted) v.muted = false;
-            if (v.unlocked || v.wanted) continue;
-            v.unlocked = true;
-            v.muted = false;
-            v.play().then(() => {
-                if (v.wanted) return;           // asked for meanwhile: let it play
-                v.pause();
-                v.currentTime = 0;
-            }, () => { v.unlocked = false; });
+    while (spare.length < SPARE) spare.push(player());
+    for (const v of [...spare, ...[...voiced.values()].flatMap(set => [...set.values()])]) {
+        const speaking = v.wanted && !v.paused && !v.ended;
+        if (speaking && v.muted) v.muted = false;
+        if (v.unlocked || speaking) continue;
+        v.unlocked = true;
+        v.muted = false;
+        if (!v.firstChild) {        // a spare one, with nothing to play: loaded in the tap, as WebKit counts it (as Howler unlocks its players)
+            v.load();
+            v.play().catch(() => {});
+            continue;
         }
+        v.play().then(() => {
+            if (v.wanted && !v.ended) return;   // asked for meanwhile: let it play
+            v.pause();
+            v.currentTime = 0;
+        }, () => { v.unlocked = false; });
     }
 }
 for (const e of ['touchend', 'click', 'keydown']) document.addEventListener(e, unlockClips, true);
@@ -655,6 +682,9 @@ function dropClips(id) {
         v.remove();
         v.replaceChildren();
         v.load();          // drops what it had buffered
+        v.wanted = false;
+        v.style.opacity = '0';
+        if (spare.length < SPARE) spare.push(v);       // spare again, still started by its tap
     }
     voiced.delete(id);
 }
@@ -673,11 +703,8 @@ function clipsOf(scene, id, night = false) {
         const ofHour = (said) => (night && 'night' in said ? said.night : said);
         const set = new Map(Object.entries(listed).filter(([, said]) => ofHour(said)?.clip).map(([line, said]) => {
             const { clip: file, at } = ofHour(said);
-            const v = document.createElement('video');
+            const v = spare.pop() || player();
             v.said = at || [];        // when each word of the line is said (s)
-            v.playsInline = true;
-            v.preload = 'auto';
-            v.disablePictureInPicture = true;
             v.dataset.line = line;
             for (const [ext, type] of CLIP_FORMATS) {
                 const src = document.createElement('source');
@@ -685,13 +712,7 @@ function clipsOf(scene, id, night = false) {
                 src.type = type;
                 v.appendChild(src);
             }
-            Object.assign(v.style, { position: 'absolute', opacity: '0', transition: 'opacity 140ms' });
-            // Done: fade back to the painting (its first frame), ready for the next line's
-            v.addEventListener('ended', () => {
-                v.style.transition = 'opacity 450ms';
-                v.style.opacity = '0';
-                setTimeout(() => { v.style.transition = 'opacity 140ms'; }, 460);
-            });
+            v.load();
             return [line, v];
         }));
         set.night = night;

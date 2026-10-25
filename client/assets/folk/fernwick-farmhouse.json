@@ -221,219 +221,6 @@
   }
  },
  {
-  "id": "kit",
-  "role": "Apple boy",
-  "character": {
-   "id": "fernwick-kit",
-   "name": "Kit Fallow",
-   "body_type": "male",
-   "race": "human",
-   "character_class": "peasant",
-   "selections": [
-    {
-     "type": "body",
-     "item": "body",
-     "variant": "amber"
-    },
-    {
-     "type": "head",
-     "item": "heads_human_male",
-     "variant": "amber"
-    },
-    {
-     "type": "expression",
-     "item": "face_neutral",
-     "variant": "amber"
-    },
-    {
-     "type": "clothes",
-     "item": "torso_clothes_tshirt",
-     "variant": "white"
-    },
-    {
-     "type": "legs",
-     "item": "legs_shorts",
-     "variant": "brown"
-    },
-    {
-     "type": "shoes",
-     "item": "feet_shoes_basic",
-     "variant": "brown"
-    },
-    {
-     "type": "hair",
-     "item": "hair_bangs",
-     "variant": "black"
-    },
-    {
-     "type": "backpack",
-     "item": "backpack_basket",
-     "variant": "round"
-    },
-    {
-     "type": "shadow",
-     "item": "shadow",
-     "variant": "shadow"
-    }
-   ],
-   "spriteUrl": "/folk/fernwick-kit.png",
-   "animations": {
-    "complete": [
-     "hurt",
-     "shoot",
-     "slash",
-     "spellcast",
-     "thrust",
-     "walk"
-    ]
-   },
-   "spriteMeta": {
-    "custom_animations": {
-     "blanked_animations": [
-      "climb"
-     ]
-    },
-    "animation_coverage": {
-     "spellcast": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "thrust": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "walk": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "slash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "shoot": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "hurt": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "climb": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "idle": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "jump": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "sit": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "emote": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "run": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "combat_idle": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "backslash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "halfslash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     }
-    }
-   }
-  }
- },
- {
   "id": "dora",
   "role": "Gardener",
   "character": {
@@ -658,12 +445,12 @@
   }
  },
  {
-  "id": "hester",
-  "role": "Village elder",
+  "id": "cole",
+  "role": "Farmer",
   "character": {
-   "id": "fernwick-hester",
-   "name": "Old Hester",
-   "body_type": "female",
+   "id": "fernwick-cole",
+   "name": "Cole Wold",
+   "body_type": "male",
    "race": "human",
    "character_class": "peasant",
    "selections": [
@@ -674,7 +461,7 @@
     },
     {
      "type": "head",
-     "item": "heads_human_female_elderly",
+     "item": "heads_human_male",
      "variant": "amber"
     },
     {
@@ -684,23 +471,28 @@
     },
     {
      "type": "clothes",
-     "item": "torso_clothes_longsleeve2",
+     "item": "torso_clothes_tshirt",
      "variant": "brown"
     },
     {
      "type": "legs",
-     "item": "legs_pants",
-     "variant": "charcoal"
+     "item": "legs_pants2",
+     "variant": "brown"
     },
     {
      "type": "shoes",
-     "item": "feet_shoes_basic",
+     "item": "feet_boots_basic",
      "variant": "brown"
     },
     {
      "type": "hair",
-     "item": "hair_bangs_bun",
+     "item": "hair_plain",
      "variant": "black"
+    },
+    {
+     "type": "weapon",
+     "item": "tool_thrust",
+     "variant": "shovel"
     },
     {
      "type": "shadow",
@@ -708,22 +500,9 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/fernwick-hester.png",
+   "spriteUrl": "/folk/fernwick-cole.png",
    "animations": {
     "complete": [
-     "backslash",
-     "climb",
-     "combat_idle",
-     "emote",
-     "halfslash",
-     "hurt",
-     "idle",
-     "jump",
-     "run",
-     "shoot",
-     "sit",
-     "slash",
-     "spellcast",
      "thrust",
      "walk"
     ]
@@ -731,7 +510,11 @@
    "spriteMeta": {
     "custom_animations": {
      "blanked_animations": [
-      "climb"
+      "slash",
+      "shoot",
+      "climb",
+      "backslash",
+      "halfslash"
      ]
     },
     "animation_coverage": {
@@ -739,8 +522,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -749,7 +532,7 @@
       "oversized": null,
       "weapon_visible": {
        "standard": true,
-       "oversized": true
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -758,7 +541,7 @@
       "oversized": null,
       "weapon_visible": {
        "standard": true,
-       "oversized": true
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -766,8 +549,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -775,8 +558,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -784,8 +567,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -793,8 +576,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -802,8 +585,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -811,8 +594,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -820,8 +603,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -829,8 +612,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -838,8 +621,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -847,8 +630,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -856,8 +639,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      },
@@ -865,8 +648,8 @@
       "standard": true,
       "oversized": null,
       "weapon_visible": {
-       "standard": true,
-       "oversized": true
+       "standard": false,
+       "oversized": false
       },
       "recommended_source": "standard"
      }

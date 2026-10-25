@@ -126,6 +126,25 @@ test.describe('A real-time fight', () => {
         expect(Math.max(...moved)).toBeLessThanOrEqual(45); // the fury, the fastest, at 40 px a second (was 80)
     });
 
+    test("a fight that ends as a fireball lands lets the burst go with it: the game runs on (it froze, drawing a picture already let go)", async ({ page }) => {
+        test.setTimeout(150000);
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
+        await enterWorld(page);
+        await toTheDemons(page);
+        await fight(page, 3);
+        await page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            b._fx('fireball-impact', 176, 200, { origin: 0.75 });
+            b.end('fled');
+        });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key ?? null), { timeout: 15000 }).toBe('gloomwater-1');
+        // ...and out of the grotto: the fade has to run for that
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
+        expect(errors).toEqual([]);
+    });
+
     test('press attack and you swing at the demon nearest the way you face (stepping in to it); press again mid-swing and the next comes after it', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

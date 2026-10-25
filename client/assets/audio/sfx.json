@@ -543,6 +543,16 @@
    "start": 88.3018,
    "end": 89.9018,
    "loop": false
+  },
+  "door_1": {
+   "start": 90.3018,
+   "end": 91.2208,
+   "loop": false
+  },
+  "door_2": {
+   "start": 91.6208,
+   "end": 93.0341,
+   "loop": false
   }
  }
 }

@@ -221,11 +221,11 @@
   }
  },
  {
-  "id": "tom",
-  "role": "Farmer",
+  "id": "will",
+  "role": "Field hand",
   "character": {
-   "id": "seacombe-tom",
-   "name": "Tom Harrow",
+   "id": "seacombe-will",
+   "name": "Will Ashdown",
    "body_type": "male",
    "race": "human",
    "character_class": "peasant",
@@ -247,13 +247,13 @@
     },
     {
      "type": "clothes",
-     "item": "torso_clothes_longsleeve",
-     "variant": "white"
+     "item": "torso_clothes_tshirt",
+     "variant": "tan"
     },
     {
      "type": "legs",
      "item": "legs_pants",
-     "variant": "brown"
+     "variant": "charcoal"
     },
     {
      "type": "shoes",
@@ -262,18 +262,18 @@
     },
     {
      "type": "hair",
-     "item": "hair_plain",
-     "variant": "dark brown"
+     "item": "hair_messy1",
+     "variant": "chestnut"
     },
     {
      "type": "overalls",
-     "item": "torso_aprons_overalls",
-     "variant": "leather"
+     "item": "torso_aprons_suspenders",
+     "variant": "brown"
     },
     {
      "type": "weapon",
      "item": "tool_thrust",
-     "variant": "watering"
+     "variant": "hoe"
     },
     {
      "type": "shadow",
@@ -281,7 +281,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/seacombe-tom.png",
+   "spriteUrl": "/folk/seacombe-will.png",
    "animations": {
     "complete": [
      "thrust",
@@ -294,12 +294,6 @@
       "slash",
       "shoot",
       "climb",
-      "idle",
-      "jump",
-      "sit",
-      "emote",
-      "run",
-      "combat_idle",
       "backslash",
       "halfslash"
      ]
@@ -437,219 +431,6 @@
       "weapon_visible": {
        "standard": false,
        "oversized": false
-      },
-      "recommended_source": "standard"
-     }
-    }
-   }
-  }
- },
- {
-  "id": "jory",
-  "role": "Farm lad",
-  "character": {
-   "id": "seacombe-jory",
-   "name": "Jory Wheeler",
-   "body_type": "male",
-   "race": "human",
-   "character_class": "peasant",
-   "selections": [
-    {
-     "type": "body",
-     "item": "body",
-     "variant": "light"
-    },
-    {
-     "type": "head",
-     "item": "heads_human_male",
-     "variant": "light"
-    },
-    {
-     "type": "expression",
-     "item": "face_neutral",
-     "variant": "light"
-    },
-    {
-     "type": "clothes",
-     "item": "torso_clothes_tshirt",
-     "variant": "white"
-    },
-    {
-     "type": "legs",
-     "item": "legs_shorts",
-     "variant": "brown"
-    },
-    {
-     "type": "shoes",
-     "item": "feet_shoes_basic",
-     "variant": "brown"
-    },
-    {
-     "type": "hair",
-     "item": "hair_bangs",
-     "variant": "light brown"
-    },
-    {
-     "type": "backpack",
-     "item": "backpack_basket",
-     "variant": "round"
-    },
-    {
-     "type": "shadow",
-     "item": "shadow",
-     "variant": "shadow"
-    }
-   ],
-   "spriteUrl": "/folk/seacombe-jory.png",
-   "animations": {
-    "complete": [
-     "hurt",
-     "shoot",
-     "slash",
-     "spellcast",
-     "thrust",
-     "walk"
-    ]
-   },
-   "spriteMeta": {
-    "custom_animations": {
-     "blanked_animations": [
-      "climb"
-     ]
-    },
-    "animation_coverage": {
-     "spellcast": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "thrust": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "walk": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "slash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "shoot": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "hurt": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "climb": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "idle": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "jump": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "sit": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "emote": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "run": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "combat_idle": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "backslash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
-      },
-      "recommended_source": "standard"
-     },
-     "halfslash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": true
       },
       "recommended_source": "standard"
      }

@@ -311,14 +311,14 @@ test.describe('Day and night', () => {
         await expect.poll(async () => (await folk()).length, { timeout: 120000 }).toBe(0);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('sprite_seacombe-tom'))).toBe(false);
 
-        // ...and he's at home in the farmhouse, with Gran
-        await goTo(page, 'seacombe-farmhouse');
-        await expect.poll(async () => (await folk()).map(f => f.id).sort()).toEqual(expect.arrayContaining(['gran', 'tom']));
+        // ...and he's at home, in the house by the farmhouse (every house can be gone into now, and the village sleeps across them)
+        await goTo(page, 'seacombe-house1');
+        await expect.poll(async () => (await folk()).map(f => f.id).sort()).toEqual(expect.arrayContaining(['tom']));
 
-        // Morning: he's off out of the door to work; Gran stays in
+        // Morning: he's off out of the door to work, and so is everyone who slept there
         await hour(page, 9);
         await expect.poll(async () => (await folk()).find(f => f.id === 'tom')?.going ?? 'gone').toBeTruthy();
-        await expect.poll(async () => (await folk()).map(f => f.id), { timeout: 60000 }).toEqual(['gran']);
+        await expect.poll(async () => (await folk()).map(f => f.id), { timeout: 60000 }).toEqual([]);
     });
 
     test("the Riverhold watch keep their posts all night, the watchmen walking their beat with a lantern", async ({ page }) => {

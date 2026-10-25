@@ -434,11 +434,11 @@
   }
  },
  {
-  "id": "mabel",
-  "role": "Woodcutter's sister",
+  "id": "hester",
+  "role": "Village elder",
   "character": {
-   "id": "fernwick-mabel",
-   "name": "Mabel Thorne",
+   "id": "fernwick-hester",
+   "name": "Old Hester",
    "body_type": "female",
    "race": "human",
    "character_class": "peasant",
@@ -450,7 +450,7 @@
     },
     {
      "type": "head",
-     "item": "heads_human_female",
+     "item": "heads_human_female_elderly",
      "variant": "amber"
     },
     {
@@ -460,237 +460,13 @@
     },
     {
      "type": "clothes",
-     "item": "torso_clothes_blouse",
-     "variant": "white"
-    },
-    {
-     "type": "legs",
-     "item": "legs_skirts_plain",
+     "item": "torso_clothes_longsleeve2",
      "variant": "brown"
-    },
-    {
-     "type": "shoes",
-     "item": "feet_shoes_basic",
-     "variant": "brown"
-    },
-    {
-     "type": "hair",
-     "item": "hair_long_tied",
-     "variant": "black"
-    },
-    {
-     "type": "overalls",
-     "item": "torso_aprons_apron_full",
-     "variant": "white"
-    },
-    {
-     "type": "weapon",
-     "item": "tool_thrust",
-     "variant": "watering"
-    },
-    {
-     "type": "shadow",
-     "item": "shadow",
-     "variant": "shadow"
-    }
-   ],
-   "spriteUrl": "/folk/fernwick-mabel.png",
-   "animations": {
-    "complete": [
-     "thrust",
-     "walk"
-    ]
-   },
-   "spriteMeta": {
-    "custom_animations": {
-     "blanked_animations": [
-      "slash",
-      "shoot",
-      "climb",
-      "idle",
-      "jump",
-      "sit",
-      "emote",
-      "run",
-      "combat_idle",
-      "backslash",
-      "halfslash"
-     ]
-    },
-    "animation_coverage": {
-     "spellcast": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "thrust": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "walk": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": true,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "slash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "shoot": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "hurt": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "climb": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "idle": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "jump": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "sit": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "emote": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "run": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "combat_idle": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "backslash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     },
-     "halfslash": {
-      "standard": true,
-      "oversized": null,
-      "weapon_visible": {
-       "standard": false,
-       "oversized": false
-      },
-      "recommended_source": "standard"
-     }
-    }
-   }
-  }
- },
- {
-  "id": "abel",
-  "role": "Cowman",
-  "character": {
-   "id": "fernwick-abel",
-   "name": "Abel Croft",
-   "body_type": "male",
-   "race": "human",
-   "character_class": "peasant",
-   "selections": [
-    {
-     "type": "body",
-     "item": "body",
-     "variant": "amber"
-    },
-    {
-     "type": "head",
-     "item": "heads_human_male",
-     "variant": "amber"
-    },
-    {
-     "type": "expression",
-     "item": "face_neutral",
-     "variant": "amber"
-    },
-    {
-     "type": "clothes",
-     "item": "torso_clothes_tshirt",
-     "variant": "white"
     },
     {
      "type": "legs",
      "item": "legs_pants",
-     "variant": "brown"
+     "variant": "charcoal"
     },
     {
      "type": "shoes",
@@ -699,13 +475,8 @@
     },
     {
      "type": "hair",
-     "item": "hair_balding",
+     "item": "hair_bangs_bun",
      "variant": "black"
-    },
-    {
-     "type": "overalls",
-     "item": "torso_aprons_overalls",
-     "variant": "leather"
     },
     {
      "type": "shadow",
@@ -713,7 +484,7 @@
      "variant": "shadow"
     }
    ],
-   "spriteUrl": "/folk/fernwick-abel.png",
+   "spriteUrl": "/folk/fernwick-hester.png",
    "animations": {
     "complete": [
      "backslash",

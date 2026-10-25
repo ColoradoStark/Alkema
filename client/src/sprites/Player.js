@@ -105,10 +105,10 @@ export class Player {
             const weaponType = getWeaponType(this.characterData);
             if (weaponType === 'slingshot') {
                 const range = this.shotRange;     // set in a battle: as far as the foe
-                setTimeout(() => spawnRock(this.scene, this.sprite.x, this.sprite.y, dir, range), 200);
+                setTimeout(() => this._gone || spawnRock(this.scene, this.sprite.x, this.sprite.y, dir, range), 200);
             } else {
                 const range = this.shotRange;     // set in a battle: as far as the foe
-                setTimeout(() => spawnArrow(this.scene, this.sprite.x, this.sprite.y, dir, weaponType, range), 200);
+                setTimeout(() => this._gone || spawnArrow(this.scene, this.sprite.x, this.sprite.y, dir, weaponType, range), 200);
             }
         } else {
             const weaponKey = getWeaponItemKey(this.characterData);
@@ -335,6 +335,8 @@ export class Player {
     }
 
     destroy() {
+        this._attackId = (this._attackId || 0) + 1;    // a swing or cast still to finish won't (it reached into a sheet already gone)
+        this._gone = true;
         this.ship?.destroy();
         if (this.sprite) {
             this.sprite.forget();      // their sheets go with them

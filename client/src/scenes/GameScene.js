@@ -294,8 +294,19 @@ export class GameScene extends Scene {
     updateGate() {
         const me = this.localPlayer?.sprite;
         if (!this.town || !me || this._changingRoom) return;
-        const exit = this.town.exitAt(me.x, me.y + FEET, this._intent || { dx: 0, dy: 0 });
-        if (!exit) return;
+        const intent = this._intent || { dx: 0, dy: 0 };
+        const exit = this.town.exitAt(me.x, me.y + FEET, intent);
+        if (!exit) {
+            // A door that won't open says so, once each time you try it (the user wasn't sure which houses open)
+            const shut = this.town.shutAt(me.x, me.y + FEET, intent);
+            if (shut && shut !== this._triedDoor) {
+                audio.play('latch');
+                this.scene.get('UIScene')?.notice?.(shut.says, 2200);
+            }
+            this._triedDoor = shut;
+            return;
+        }
+        if (exit.door) audio.play('door');      // at once: the room takes a moment to load (the user wasn't sure a door had taken them)
         if (exit.to === null) this.leaveTown();
         else this.changeMap(exit.to, exit.at, exit.dir === 'up' ? 'up' : 'down');
     }
@@ -307,10 +318,9 @@ export class GameScene extends Scene {
     async changeMap(key, feet, facing, { faded = false } = {}) {
         this._changingRoom = true;
         try {
-            await this._loadTown(key);
             const at = { x: feet[0], y: feet[1] - FEET };
-            const res = await this._room({ town: key, ...at });
-            if (!faded) await this._fadeOut();
+            // Fading out as the map loads and the server answers, not after: you see at once that you're on your way
+            const [, res] = await Promise.all([this._loadTown(key), this._room({ town: key, ...at }), faded ? null : this._fadeOut()]);
             this._dropTown();
             this.overworld.setVisible(false);
             this.mooredShip.setVisible(false);
@@ -325,6 +335,7 @@ export class GameScene extends Scene {
             this._loadFolk(this.town);
         } catch (err) {
             console.warn('Could not go to', key, err);
+            this.cameras.main.fadeIn(FADE_MS);      // (faded out already: not left on the black)
         } finally {
             this._changingRoom = false;
         }
@@ -615,7 +626,7 @@ export class GameScene extends Scene {
         if (!this.localPlayer) return;
 
         this._intent = { dx, dy };
-        if (this._fighting) {        // stopped in your tracks: it's a fight
+        if (this._fighting || (this._changingRoom && this.town && !this.battle)) {        // stopped in your tracks: it's a fight, or a door's taking you
             this.localPlayer.setVelocity(0, 0);
             return;
         }

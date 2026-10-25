@@ -405,6 +405,12 @@ export class Town {
             && (!needs || flags[needs]) && x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
     }
 
+    /** A door that doesn't open (a barn's, a barred one) that a hero's feet at (x, y) are walking up into: {rect, says}. */
+    shutAt(x, y, intent) {
+        if (!(intent.dy < 0)) return null;
+        return (this.data.shut || []).find(({ rect: [ex, ey, ew, eh] }) => x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
+    }
+
     get arrival() {
         return { x: this.data.arrive[0], y: this.data.arrive[1] };
     }
