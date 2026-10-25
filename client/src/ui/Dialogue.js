@@ -14,7 +14,9 @@
 // painting, which is its first frame, while the line is up, and fades back
 // to the painting when it ends. After dark (by the same hour as the
 // painting) the line's night clip plays instead, made from the night
-// painting; only the one set for the hour is held. A line too long for one page turns its pages
+// painting; only the one set for the hour is held. Some say other lines after
+// dark (`night_says`: Grimhold's demons), each with its own night clip and
+// no day one. A line too long for one page turns its pages
 // as it's said: talk.json has when each of its words is spoken.
 
 import { addPanelBackground } from './panelBackground.js';
@@ -263,7 +265,7 @@ export class Dialogue {
         loadPortraits(this.scene, [id], night);     // their hour turned since they were fetched: the other one, now
         const img = painted.get(id);
         this._layout(!!img?.naturalWidth);
-        this.pages = this._script(folk);
+        this.pages = this._script(folk, night);
         this.page = 0;
         this.seen = 0;
         this.clips = clipsOf(this.scene, id, night);
@@ -287,12 +289,13 @@ export class Dialogue {
 
     /**
      * What they'll say, page by page: their lines (each line its own page or
-     * pages), then their question if they have one. Asked before and you said
-     * yes, they just pick up where you left it.
+     * pages), then their question if they have one; after dark, their night
+     * lines if they have some. Asked before and you said yes, they just pick
+     * up where you left it.
      */
-    _script(folk) {
-        const { says, ask, id } = folk.plan;
-        const lines = Array.isArray(says) ? says : [says || '...'];
+    _script(folk, night = false) {
+        const { says, night_says: late, ask, id } = folk.plan;
+        const lines = night && late ? late : Array.isArray(says) ? says : [says || '...'];
         if (ask && this.answers.get(id) === 'yes') return pages(ask.yes.slice(-1));
         return [...pages(lines), ...(ask ? [{ text: ask.q, line: ask.q, ask }] : [])];
     }
@@ -658,7 +661,8 @@ function dropClips(id) {
 
 /**
  * Someone's clips, line by line (an empty Map if they have none): by night each
- * line's night clip where it has one. Made once for the hour, and fetched as soon as
+ * line's night clip where it has one. A line said only by day has `night: null`,
+ * one said only after dark no clip of its own: neither is held out of its hour. Made once for the hour, and fetched as soon as
  * they're made; the other hour's are let go.
  */
 function clipsOf(scene, id, night = false) {
@@ -666,8 +670,9 @@ function clipsOf(scene, id, night = false) {
     if (!listed) return new Map();
     if (voiced.get(id)?.night !== night) {
         dropClips(id);
-        const set = new Map(Object.entries(listed).map(([line, said]) => {
-            const { clip: file, at } = (night && said.night) || said;
+        const ofHour = (said) => (night && 'night' in said ? said.night : said);
+        const set = new Map(Object.entries(listed).filter(([, said]) => ofHour(said)?.clip).map(([line, said]) => {
+            const { clip: file, at } = ofHour(said);
             const v = document.createElement('video');
             v.said = at || [];        // when each word of the line is said (s)
             v.playsInline = true;

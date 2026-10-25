@@ -457,7 +457,7 @@ test.describe('Riverhold', () => {
         expect(missing).toEqual([]);
     });
 
-    test("Fernwick's and Seacombe's women in skimpy clothes say every line in a clip, by day and by night", async ({ page }) => {
+    test("Fernwick's and Seacombe's women in skimpy clothes say every line in a clip, two others by night in night clips", async ({ page }) => {
         test.setTimeout(60000);
         await page.goto('/');
         const missing = await page.evaluate(async () => {
@@ -467,12 +467,12 @@ test.describe('Riverhold', () => {
                 'seacombe-nell', 'seacombe-meg', 'seacombe-ada', 'seacombe-croft-crofter_wife']) {
                 const [map, who] = [id.slice(0, id.lastIndexOf('-')), id.slice(id.lastIndexOf('-') + 1)];
                 const folk = (await (await fetch(`/towns/${map}.json`)).json()).folk.find(f => f.id === who);
-                for (const line of [].concat(folk.says)) {
-                    const said = talk[id]?.[line];
-                    if (!said?.night) { out.push(`${id}: ${line}`); continue; }
-                    for (const clip of [said.clip, said.night.clip])
-                        for (const ext of ['webm', 'mp4'])
-                            if (!(await fetch(`/portraits/talk/${clip}.${ext}`, { method: 'HEAD' })).ok) out.push(`${clip}.${ext}`);
+                if ((folk.night_says || []).length !== 2) out.push(`${id}: two lines by night`);
+                for (const [line, night] of [...[].concat(folk.says).map(l => [l, false]), ...(folk.night_says || []).map(l => [l, true])]) {
+                    const said = night ? talk[id]?.[line]?.night : talk[id]?.[line];
+                    if (!said?.clip) { out.push(`${id}: ${line}`); continue; }
+                    for (const ext of ['webm', 'mp4'])
+                        if (!(await fetch(`/portraits/talk/${said.clip}.${ext}`, { method: 'HEAD' })).ok) out.push(`${said.clip}.${ext}`);
                 }
             }
             return out;
@@ -480,7 +480,7 @@ test.describe('Riverhold', () => {
         expect(missing).toEqual([]);
     });
 
-    test('Agnes the baker says her line in a clip, her night one after dark', async ({ page }) => {
+    test('Agnes the baker says her line in a clip, her night ones after dark', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await page.evaluate(async () => {
@@ -499,13 +499,16 @@ test.describe('Riverhold', () => {
             ui.talkTo(gs.town.folk.find(f => f.plan.id === 'agnes'));
         }, hour);
         const ui = () => page.evaluate(() => {
-            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
-            return { clip: d.clip?.currentSrc || '', playing: !!d.clip && !d.clip.paused && d.clip.currentTime > 0 };
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue, f = d.who.plan;
+            return { clip: d.clip?.currentSrc || '', playing: !!d.clip && !d.clip.paused && d.clip.currentTime > 0,
+                says: d.pages[0].line === [].concat(f.says)[0] ? 'day' : d.pages[0].line === f.night_says?.[0] ? 'night' : d.pages[0].line };
         });
         await talk(12);
-        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, clip: expect.stringMatching(/fernwick-cottage-agnes-01\.(webm|mp4)$/) });
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, says: 'day',
+            clip: expect.stringMatching(/fernwick-cottage-agnes-01\.(webm|mp4)$/) });
         await talk(23);
-        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, clip: expect.stringMatching(/fernwick-cottage-agnes-01-night\.(webm|mp4)$/) });
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, says: 'night',
+            clip: expect.stringMatching(/fernwick-cottage-agnes-01-night\.(webm|mp4)$/) });
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     });
 

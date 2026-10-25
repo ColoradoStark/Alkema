@@ -339,4 +339,50 @@ test.describe('Castle Dunmere', () => {
         await expect.poll(clips, { timeout: 10000 }).toEqual({ playing: true, muted: false,
             others: Array(3).fill({ unlocked: true, paused: true, at: 0 }) });
     });
+
+    test("Grimhold's three demons flirt in clips, two lines by day and two others by night, and only the hour's clips are held", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page);
+        const missing = await page.evaluate(async () => {
+            const talk = await (await fetch('/portraits/talk.json')).json();
+            const folk = (await (await fetch('/towns/grimhold-cells.json')).json()).folk;
+            const out = [];
+            for (const who of ['demon1', 'demon2', 'demon3']) {
+                const f = folk.find(x => x.id === who), id = `grimhold-cells-${who}`;
+                if ([].concat(f.says).length !== 2 || (f.night_says || []).length !== 2) out.push(`${who}: two lines each`);
+                for (const [line, night] of [...[].concat(f.says).map(l => [l, false]), ...(f.night_says || []).map(l => [l, true])]) {
+                    const said = night ? talk[id]?.[line]?.night : talk[id]?.[line];
+                    if (!said?.clip) { out.push(`${id}: ${line}`); continue; }
+                    for (const ext of ['webm', 'mp4'])
+                        if (!(await fetch(`/portraits/talk/${said.clip}.${ext}`, { method: 'HEAD' })).ok) out.push(`${said.clip}.${ext}`);
+                }
+            }
+            return out;
+        });
+        expect(missing).toEqual([]);
+        await goTo(page, 'grimhold-cells');
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'demon2')?.sprite),
+            { timeout: 60000 }).toBe(true);
+        const talk = (hour) => page.evaluate((hour) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            gs.dayNight.hourOverride = hour;
+            if (ui.dialogue.visible) ui.dialogue.close();
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'demon2'));
+        }, hour);
+        const ui = () => page.evaluate(() => {
+            const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue, f = d.who.plan;
+            return { clip: d.clip?.currentSrc || '', playing: !!d.clip && !d.clip.paused && d.clip.currentTime > 0,
+                says: d.pages[0].line === [].concat(f.says)[0] ? 'day' : d.pages[0].line === f.night_says?.[0] ? 'night' : d.pages[0].line,
+                held: [...d.clips.keys()].map(l => [].concat(f.says).includes(l) ? 'day' : 'night') };
+        });
+        await talk(12);
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, says: 'day', held: ['day', 'day'],
+            clip: expect.stringMatching(/grimhold-cells-demon2-01\.(webm|mp4)$/) });
+        await talk(23);
+        await expect.poll(ui, { timeout: 30000 }).toMatchObject({ playing: true, says: 'night', held: ['night', 'night'],
+            clip: expect.stringMatching(/grimhold-cells-demon2-01-night\.(webm|mp4)$/) });
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    });
+
 });

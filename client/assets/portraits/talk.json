@@ -683,20 +683,7 @@
     4.22,
     4.38
    ],
-   "night": {
-    "clip": "fernwick-tamsin-01-night",
-    "at": [
-     0.8,
-     1.42,
-     1.58,
-     2.48,
-     2.64,
-     3.94,
-     4.06,
-     4.22,
-     4.38
-    ]
-   }
+   "night": null
   },
   "One for the basket, one for me. Bram never counts.": {
    "clip": "fernwick-tamsin-02",
@@ -712,19 +699,47 @@
     3.58,
     3.92
    ],
+   "night": null
+  },
+  "You came all this way in the dark just to find me? I'm flattered. Truly.": {
+   "night": {
+    "clip": "fernwick-tamsin-01-night",
+    "at": [
+     0.0,
+     0.48,
+     0.78,
+     1.06,
+     1.24,
+     1.5,
+     1.66,
+     1.8,
+     2.06,
+     2.34,
+     2.56,
+     2.82,
+     3.88,
+     4.16,
+     5.4
+    ]
+   }
+  },
+  "The orchard's no fun after dark. You're much better company than the wasps.": {
    "night": {
     "clip": "fernwick-tamsin-02-night",
     "at": [
-     0.0,
-     0.4,
-     0.56,
-     0.68,
-     1.52,
-     1.78,
-     2.0,
-     3.7,
-     3.82,
-     4.1
+     0.8,
+     1.44,
+     1.98,
+     2.14,
+     2.44,
+     2.76,
+     3.88,
+     4.06,
+     4.24,
+     4.5,
+     4.92,
+     5.2,
+     5.38
     ]
    }
   }
@@ -748,23 +763,40 @@
     5.78,
     5.98
    ],
+   "night": null
+  },
+  "I hoped you'd knock. I left the candle burning, just in case.": {
    "night": {
     "clip": "fernwick-mabel-01-night",
     "at": [
      0.0,
-     0.66,
-     1.24,
+     0.96,
+     1.16,
      1.5,
-     1.7,
-     1.98,
-     3.76,
+     2.88,
+     3.08,
+     3.26,
+     3.46,
+     3.8,
+     4.9,
+     5.1,
+     5.34
+    ]
+   }
+  },
+  "My brother's asleep. We'll have to whisper, won't we?": {
+   "night": {
+    "clip": "fernwick-mabel-02-night",
+    "at": [
+     1.28,
+     1.8,
+     2.22,
+     3.58,
+     3.72,
      3.84,
      4.02,
-     4.16,
-     4.86,
-     5.44,
-     5.58,
-     5.8
+     4.6,
+     4.7
     ]
    }
   }
@@ -787,24 +819,7 @@
     4.46,
     4.6
    ],
-   "night": {
-    "clip": "fernwick-ruth-01-night",
-    "at": [
-     0.0,
-     0.42,
-     0.64,
-     1.12,
-     1.36,
-     1.56,
-     2.4,
-     2.58,
-     2.76,
-     2.98,
-     4.36,
-     4.44,
-     4.58
-    ]
-   }
+   "night": null
   },
   "My two boys argue over that wheat every evening. Their father left it to both of them.": {
    "clip": "fernwick-ruth-02",
@@ -827,26 +842,39 @@
     5.94,
     6.1
    ],
+   "night": null
+  },
+  "The boys are finally asleep. It's just us and the candles now.": {
+   "night": {
+    "clip": "fernwick-ruth-01-night",
+    "at": [
+     1.0,
+     1.7,
+     2.0,
+     2.22,
+     2.66,
+     4.24,
+     4.56,
+     4.74,
+     5.02,
+     5.22,
+     5.34,
+     5.72
+    ]
+   }
+  },
+  "Come closer. I'll tell you which floorboards creak.": {
    "night": {
     "clip": "fernwick-ruth-02-night",
     "at": [
      0.0,
-     1.16,
-     1.48,
-     1.88,
-     2.3,
-     2.6,
-     2.82,
-     3.04,
-     3.42,
-     4.74,
-     4.84,
-     5.16,
-     5.46,
-     5.64,
-     5.78,
-     5.94,
-     6.12
+     1.02,
+     2.68,
+     2.76,
+     2.94,
+     3.18,
+     3.4,
+     4.1
     ]
    }
   }
@@ -871,24 +899,45 @@
     4.88,
     5.12
    ],
+   "night": null
+  },
+  "Flour on my nose again? Come here and brush it off for me.": {
    "night": {
     "clip": "fernwick-cottage-agnes-01-night",
     "at": [
-     0.66,
-     1.14,
-     1.26,
-     1.42,
-     2.36,
-     2.52,
-     2.8,
-     2.94,
-     3.08,
-     3.16,
-     3.34,
+     2.96,
+     2.96,
+     3.3,
      3.5,
-     3.78,
-     4.88,
-     5.12
+     3.74,
+     4.96,
+     5.14,
+     5.36,
+     5.52,
+     5.68,
+     5.82,
+     6.0,
+     6.2
+    ]
+   }
+  },
+  "Bread's not till noon, but for you I might bake something sweet tonight.": {
+   "night": {
+    "clip": "fernwick-cottage-agnes-02-night",
+    "at": [
+     0.0,
+     0.94,
+     1.16,
+     1.38,
+     2.48,
+     2.68,
+     2.9,
+     3.24,
+     3.5,
+     3.76,
+     4.02,
+     4.48,
+     4.96
     ]
    }
   }
@@ -912,23 +961,40 @@
     5.58,
     5.8
    ],
+   "night": null
+  },
+  "Off my feet at last, and here you are. Perfect timing.": {
    "night": {
     "clip": "seacombe-nell-01-night",
     "at": [
-     1.64,
-     2.18,
-     2.54,
-     2.8,
-     3.04,
-     3.98,
-     4.26,
-     4.52,
-     4.9,
-     5.1,
-     5.26,
-     5.48,
-     5.58,
-     5.8
+     0.0,
+     0.82,
+     1.06,
+     1.34,
+     1.52,
+     1.94,
+     2.48,
+     2.76,
+     2.94,
+     3.88,
+     4.1
+    ]
+   }
+  },
+  "Stay for supper? There's stew, and I don't bite. Much.": {
+   "night": {
+    "clip": "seacombe-nell-02-night",
+    "at": [
+     0.0,
+     0.98,
+     1.22,
+     2.12,
+     2.36,
+     3.16,
+     3.24,
+     3.34,
+     4.02,
+     4.36
     ]
    }
   }
@@ -949,22 +1015,7 @@
     4.06,
     4.28
    ],
-   "night": {
-    "clip": "seacombe-meg-01-night",
-    "at": [
-     0.0,
-     0.8,
-     1.26,
-     1.52,
-     1.68,
-     1.96,
-     2.52,
-     2.7,
-     2.86,
-     3.44,
-     4.26
-    ]
-   }
+   "night": null
   },
   "My Will's out in the pumpkins. He talks to them, you know.": {
    "clip": "seacombe-meg-02",
@@ -982,21 +1033,48 @@
     4.44,
     4.48
    ],
+   "night": null
+  },
+  "I was just dreaming of someone, and now here you are.": {
+   "night": {
+    "clip": "seacombe-meg-01-night",
+    "at": [
+     0.0,
+     0.66,
+     0.82,
+     1.16,
+     1.58,
+     1.88,
+     3.0,
+     3.54,
+     3.8,
+     4.14,
+     4.34
+    ]
+   }
+  },
+  "Make a wish on the first star with me. I'll tell you mine if you tell me yours.": {
    "night": {
     "clip": "seacombe-meg-02-night",
     "at": [
-     0.8,
-     1.24,
-     1.66,
-     1.8,
-     1.98,
-     2.1,
-     3.48,
-     3.7,
-     3.92,
-     4.18,
-     4.46,
-     4.48
+     0.94,
+     1.34,
+     1.54,
+     1.72,
+     1.92,
+     2.06,
+     2.3,
+     2.64,
+     2.84,
+     4.06,
+     4.26,
+     4.44,
+     4.64,
+     4.92,
+     5.14,
+     5.3,
+     5.48,
+     5.68
     ]
    }
   }
@@ -1020,23 +1098,39 @@
     5.24,
     5.5
    ],
+   "night": null
+  },
+  "The peppers are asleep. I'm not, as it happens.": {
    "night": {
     "clip": "seacombe-ada-01-night",
     "at": [
      0.0,
-     0.66,
-     0.86,
-     1.22,
+     0.94,
+     1.3,
+     1.56,
+     2.88,
+     3.08,
+     3.32,
+     3.74,
+     3.9
+    ]
+   }
+  },
+  "Don't look at me like that. Well... maybe a little longer.": {
+   "night": {
+    "clip": "seacombe-ada-02-night",
+    "at": [
+     0.7,
+     1.12,
+     1.24,
      1.38,
-     1.5,
-     1.76,
-     2.14,
-     2.36,
-     3.62,
-     3.84,
-     4.04,
-     5.14,
-     5.4
+     1.48,
+     1.7,
+     2.9,
+     3.9,
+     4.1,
+     4.26,
+     4.4
     ]
    }
   }
@@ -1058,21 +1152,276 @@
     4.18,
     4.36
    ],
+   "night": null
+  },
+  "The fire's warm, if you'd care to share it.": {
    "night": {
     "clip": "seacombe-croft-crofter_wife-01-night",
     "at": [
-     1.8,
-     2.1,
-     2.22,
-     2.36,
-     2.46,
+     1.6,
+     2.04,
+     2.48,
      3.56,
-     3.66,
      3.78,
+     3.98,
+     4.18,
+     4.38,
+     4.6
+    ]
+   }
+  },
+  "Hush now. Just stay a while, and let me look at you.": {
+   "night": {
+    "clip": "seacombe-croft-crofter_wife-02-night",
+    "at": [
+     0.0,
+     0.74,
+     1.9,
+     2.24,
+     2.56,
+     2.7,
+     2.98,
      3.94,
-     4.08,
+     4.12,
+     4.28,
+     4.46,
+     4.62
+    ]
+   }
+  }
+ },
+ "grimhold-cells-demon1": {
+  "Back again, little mortal? Admit it. You came all the way down here just to see me.": {
+   "clip": "grimhold-cells-demon1-01",
+   "at": [
+    0.0,
+    0.62,
+    1.22,
+    1.38,
+    2.8,
+    3.08,
+    4.0,
+    4.14,
+    4.38,
+    4.66,
+    4.8,
+    4.98,
+    5.28,
+    5.62,
+    5.9,
+    6.2,
+    6.42
+   ],
+   "night": null
+  },
+  "Only these bars between us. Such a pity, isn't it? I think so too.": {
+   "clip": "grimhold-cells-demon1-02",
+   "at": [
+    0.0,
+    0.68,
+    0.96,
+    1.32,
+    1.8,
+    2.96,
+    3.04,
+    3.22,
+    3.62,
+    3.8,
+    4.9,
+    5.12,
+    5.32,
+    5.6
+   ],
+   "night": null
+  },
+  "Couldn't sleep either? Come, keep me company by the bars. I'm warm.": {
+   "night": {
+    "clip": "grimhold-cells-demon1-01-night",
+    "at": [
+     0.0,
+     0.6,
+     0.86,
+     1.32,
+     2.34,
+     3.06,
+     3.24,
+     3.6,
+     3.88,
+     4.04,
+     4.62,
+     5.46
+    ]
+   }
+  },
+  "The jailer's snoring. Nobody would know if you came a little closer.": {
+   "night": {
+    "clip": "grimhold-cells-demon1-02-night",
+    "at": [
+     0.0,
+     1.14,
+     1.82,
+     3.42,
+     3.72,
+     4.04,
+     4.32,
+     4.54,
+     4.7,
+     4.96,
+     5.12,
+     5.32
+    ]
+   }
+  }
+ },
+ "grimhold-cells-demon2": {
+  "Oh, it's you. I was hoping it would be. Don't tell the others.": {
+   "clip": "grimhold-cells-demon2-01",
+   "at": [
+    0.0,
+    1.18,
+    1.52,
+    2.58,
+    2.8,
+    2.96,
+    3.3,
+    3.56,
+    3.74,
+    5.04,
+    5.34,
+    5.5,
+    5.7
+   ],
+   "night": null
+  },
+  "Your lord thinks he holds me. I'd much rather you did.": {
+   "clip": "grimhold-cells-demon2-02",
+   "at": [
+    0.0,
+    0.64,
+    1.0,
+    1.34,
+    1.64,
+    1.94,
+    3.24,
+    3.52,
+    3.76,
+    4.12,
+    4.5
+   ],
+   "night": null
+  },
+  "Every night I count these bars, and every night I wish there were one fewer.": {
+   "night": {
+    "clip": "grimhold-cells-demon2-01-night",
+    "at": [
+     1.02,
+     1.62,
+     1.92,
+     2.16,
+     2.44,
+     2.74,
+     3.9,
+     4.24,
+     4.5,
+     4.8,
+     5.04,
+     5.26,
+     5.58,
+     5.74,
+     6.06
+    ]
+   }
+  },
+  "Whisper me your name. I promise I'll only ever use it nicely.": {
+   "night": {
+    "clip": "grimhold-cells-demon2-02-night",
+    "at": [
+     1.16,
+     1.76,
+     1.92,
+     2.14,
+     3.26,
+     3.44,
+     3.88,
      4.2,
-     4.38
+     4.48,
+     4.76,
+     5.02,
+     5.2
+    ]
+   }
+  }
+ },
+ "grimhold-cells-demon3": {
+  "Bring me the key, and I'll give you anything. Anything at all.": {
+   "clip": "grimhold-cells-demon3-01",
+   "at": [
+    0.0,
+    0.7,
+    0.92,
+    1.1,
+    2.1,
+    2.34,
+    2.56,
+    2.7,
+    2.92,
+    4.48,
+    4.7,
+    5.08
+   ],
+   "night": null
+  },
+  "You're blushing. Green would suit you too, you know.": {
+   "clip": "grimhold-cells-demon3-02",
+   "at": [
+    1.2,
+    1.72,
+    3.3,
+    3.38,
+    3.62,
+    3.86,
+    4.06,
+    4.5,
+    4.58
+   ],
+   "night": null
+  },
+  "The torches are burning low, and here you are. I knew you'd come.": {
+   "night": {
+    "clip": "grimhold-cells-demon3-01-night",
+    "at": [
+     0.0,
+     0.2,
+     0.6,
+     0.94,
+     1.24,
+     2.44,
+     2.7,
+     3.0,
+     3.22,
+     4.5,
+     4.68,
+     4.92,
+     5.22
+    ]
+   }
+  },
+  "Give me your hand. I won't bite... unless you ask me nicely.": {
+   "night": {
+    "clip": "grimhold-cells-demon3-02-night",
+    "at": [
+     1.14,
+     1.7,
+     1.88,
+     2.06,
+     2.9,
+     3.0,
+     3.34,
+     4.56,
+     4.82,
+     5.08,
+     5.34,
+     5.58
     ]
    }
   }
