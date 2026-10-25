@@ -101,6 +101,31 @@ test.describe('A real-time fight', () => {
         })).toEqual({ post: false, others: 3 });
     });
 
+    test('the demons start well back, stand still for a moment and a half while you find yourself, then come on at half their old pace', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await toTheDemons(page, { alone: true });
+        await fight(page);
+        const look = () => page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, me = b.party[0].who.sprite;
+            return { you: [me.x, me.y + 23], foes: b.foes.map(f => [f.foe.x, f.foe.y]), hold: b._hold ?? 1500 };
+        });
+        const first = await look();
+        // Six rows (192 px) between you and the nearest, not four
+        expect(Math.min(...first.foes.map(([x, y]) => Math.hypot(x - first.you[0], y - first.you[1])))).toBeGreaterThanOrEqual(185);
+        // Held (1.5 s from when they're drawn; the wait for their sheets above may have used some)
+        expect(first.hold).toBeGreaterThan(300);
+        await page.waitForTimeout(first.hold - 200);
+        expect((await look()).foes).toEqual(first.foes);
+        await page.waitForTimeout(800);
+        const t0 = Date.now(), a = await look();
+        await page.waitForTimeout(1000);
+        const b = await look(), secs = (Date.now() - t0) / 1000;
+        const moved = a.foes.map((p, i) => Math.hypot(b.foes[i][0] - p[0], b.foes[i][1] - p[1]) / secs);
+        expect(Math.max(...moved)).toBeGreaterThan(10);     // they're coming
+        expect(Math.max(...moved)).toBeLessThanOrEqual(45); // the fury, the fastest, at 40 px a second (was 80)
+    });
+
     test('press attack and you swing at the demon nearest the way you face (stepping in to it); press again mid-swing and the next comes after it', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

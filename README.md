@@ -115,6 +115,7 @@ Fights are fought Ultima III style, on a battle map of their own:
 
 By the sea mouth of Gloomwater Grotto wait four bands of demons (made with the character creator: a brute with a war axe, furies with tridents, a warlock who throws fire), and their fights are in real time, on the same cave battle map. Each is labelled with who comes with you: nearest the mouth, two demons you fight alone; then three with one companion, four with two, and six with all three:
 
+- The demons start well back and stand still for a moment and a half as the fight opens, so you can find your hero; then they come on at a walk
 - Move freely, and press attack whenever you like, even on the move: you swing at the demon nearest the way you face, stepping in to it if it's just out of reach; press again mid-swing and the next swing follows (a bow shoots straight at them)
 - Your companions fight on their own: the cleric keeps by you, heals whoever is worst hurt and fights off what comes at her, the mage hangs back throwing fire, the ranger keeps their distance and shoots
 - Every demon's blow is telegraphed: it stops and flashes red before it strikes, so you can step out of reach (and see "Dodged"); a warlock's fire flies where you stood. A brute's swing is slow but heavy, and a blow won't stop it

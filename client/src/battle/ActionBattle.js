@@ -50,12 +50,14 @@ const FLEE_MS = 600;            // pushing against an edge this long, you've fle
 const STEP_MS = 330;            // footsteps
 const FALL_MS = 1600;
 const ARROW_SPEED = 320, BOLT_SPEED = 180;
+const HOLD_MS = 1500;           // the demons stand this long as the fight opens, while you find yourself (the user's)
+const BACK = 2;                 // rows further back than the turn-based foes' places (the user's: they started too close)
 
 /** Each demon: how it fights. A blow lands `windup` ms after it stops and flashes; `recover` ms before it can again. */
 export const DEMON_KINDS = {
-    brute: { hp: 60, speed: 44, reach: 38, windup: 700, recover: 900, damage: 7, anim: 'slash', poise: true },
-    fury: { hp: 28, speed: 80, reach: 40, windup: 420, recover: 650, damage: 4, anim: 'thrust', lunge: 22 },
-    warlock: { hp: 24, speed: 52, keep: 140, windup: 800, recover: 1600, damage: 6, anim: 'spellcast', ranged: true },
+    brute: { hp: 60, speed: 22, reach: 38, windup: 700, recover: 900, damage: 7, anim: 'slash', poise: true },
+    fury: { hp: 28, speed: 40, reach: 40, windup: 420, recover: 650, damage: 4, anim: 'thrust', lunge: 22 },
+    warlock: { hp: 24, speed: 26, keep: 140, windup: 800, recover: 1600, damage: 6, anim: 'spellcast', ranged: true },
 };
 const BAND = ['fury', 'brute', 'fury', 'warlock', 'fury', 'brute'];     // a band of n: the first n
 
@@ -172,6 +174,7 @@ export class ActionBattle extends Battle {
         const places = map.places.slice(0, Math.max(1, Math.min(count, map.places.length)));
         return places.map((cell, i) => {
             const spec = DEMON_KINDS[BAND[i % BAND.length]];
+            cell = [cell[0], Math.max(1, cell[1] - BACK)];
             const at = this.feetOf(cell);
             const foe = new Demon(this.scene, at.x, at.y, BAND[i % BAND.length]);
             const f = { foe, spec, cell: [...cell], hp: spec.hp, maxHp: spec.hp, bar: this.scene.add.graphics().setDepth(39),
@@ -213,7 +216,8 @@ export class ActionBattle extends Battle {
         if (!this.over) {
             this._you(delta, dt);
             for (const m of this.party.slice(1)) if (!m.out) this._companion(m, delta, dt);
-            for (const f of this.standing) this._foe(f, delta, dt);
+            if (this.foes.every(f => f.foe.who.sprite.sprite)) this._hold = (this._hold ?? HOLD_MS) - delta;     // (from when they're drawn)
+            if (this._hold <= 0) for (const f of this.standing) this._foe(f, delta, dt);
             this._apart();
         }
         this._fly(dt);
