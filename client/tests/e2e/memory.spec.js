@@ -196,6 +196,37 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')))).toEqual([]);
     });
 
+    test("the demons' real-time fight: under budget, and their sheets and file let go once it's over and you've gone", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page);
+        const base = await settled(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Gloomwater Grotto'));
+        });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.foes.some(f => f.plan.action)), { timeout: 20000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.enterBattle({ ...gs.town.foes.find(f => f.plan.action).plan, country: 'cave', town: gs.town.key });
+        });
+        await expect.poll(() => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return !!gs.battle?.realtime && !gs._changingRoom && gs.battle.foes.every(f => f.foe.who.sprite.sprite);
+        }), { timeout: 30000 }).toBe(true);
+        const inFight = await settled(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key ?? null), { timeout: 15000 }).toBe('gloomwater-1');
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
+        const after = await settled(page);
+        console.log('the demons\' fight', +(inFight.mb - base.mb).toFixed(2), 'MB');
+        expect(inFight.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => ({ file: window.__PHASER_GAME.cache.json.exists('folk-demons'),
+            sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, sheets: [] });
+    });
+
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);

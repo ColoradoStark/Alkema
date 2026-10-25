@@ -12,6 +12,7 @@ import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
 import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
+import { ActionBattle, loadDemons } from '../battle/ActionBattle.js';
 import { Encounters } from '../battle/Encounters.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
@@ -382,6 +383,7 @@ export class GameScene extends Scene {
         try {
             const country = spot.country || battleCountry(this.overworld, spot.x, spot.y);
             await loadBattleMap(this, country, this.companions);
+            if (spot.action) await loadDemons(this);        // (a real-time fight, ActionBattle.js)
             this.localPlayer.setVelocity(0, 0);
             // You'll be back a step from where it stood, the way you came (clear of the chest it leaves)
             const away = { x: wrapDelta(spot.x, me.x), y: wrapDelta(spot.y, me.y + FEET) };
@@ -399,7 +401,7 @@ export class GameScene extends Scene {
             this.mooredShip.setVisible(false);
             this.encounters.setVisible(false);
             this.scene.get('UIScene')?.enterPrompt?.hide();
-            this.battle = this.world = new Battle(this, { country, kind: spot.kind, count: spot.count, boss: spot.boss, name: spot.name,
+            this.battle = this.world = new (spot.action ? ActionBattle : Battle)(this, { country, kind: spot.kind, count: spot.count, boss: spot.boss, name: spot.name,
                 companions: this.companions, spoils: !!spot.town && !spot.flag, onEnd: (result, how) => this.leaveBattle(result, how),
                 onWon: () => spot.town && this._loadTown(spot.town).catch(() => null) });     // (the level you'll be back on, as Victory! shows)
             const cam = this.cameras.main;

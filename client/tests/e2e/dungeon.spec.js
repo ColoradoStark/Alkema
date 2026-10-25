@@ -166,7 +166,7 @@ test.describe('Gloomwater Grotto', () => {
         await goTo(page, 'gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
         const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
         // Toned down from Duelyst's colours, and side-on
         const spec = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').foes.snowchaser);
         expect(spec).toMatchObject({ side: true, look: 'grey', name: 'Snowchaser' });
@@ -181,7 +181,7 @@ test.describe('Gloomwater Grotto', () => {
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold), { timeout: 5000 }).toBeGreaterThan(gold);
         await page.waitForTimeout(800);
         // That band gone; the other three still at their posts
-        const left = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind).sort());
+        const left = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).map(f => f.plan.kind).sort());
         expect(left).toEqual(['snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
         expect((await flags(page))).toEqual({});       // nothing kept: they'll be back
         // Out and down again: back at their post
@@ -191,7 +191,7 @@ test.describe('Gloomwater Grotto', () => {
         });
         await expect.poll(() => level(page), { timeout: 15000 }).toBe(null);
         await goTo(page, 'gloomwater-1');
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.map(f => f.plan.kind).sort()), { timeout: 20000 })
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).map(f => f.plan.kind).sort()), { timeout: 20000 })
             .toEqual(['snowchaser', 'snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
     });
 
@@ -201,7 +201,7 @@ test.describe('Gloomwater Grotto', () => {
         await goTo(page, 'gloomwater-1');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
         const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
         await walkFrom(page, band.x, band.y + 100, 'up', 2500);
         await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
         const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
@@ -249,7 +249,7 @@ test.describe('Gloomwater Grotto', () => {
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
         await goTo(page, 'gloomwater-1');
         const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
         await walkFrom(page, band.x, band.y + 100, 'up', 2500);
         await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
         const step = (cell, dx) => page.evaluate(async ([cell, dx]) => {
@@ -275,7 +275,7 @@ test.describe('Gloomwater Grotto', () => {
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
         await goTo(page, 'gloomwater-1');
         const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(4);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
         await walkFrom(page, band.x, band.y + 100, 'up', 2500);
         await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
         await page.evaluate(() => {

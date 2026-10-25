@@ -11,6 +11,7 @@ import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
 import { FIRE_ART } from './DayNight.js';
 import { Foe, loadFoe, forgetFoe } from '../battle/Foe.js';
+import { Demon, loadDemons, DEMONS } from '../battle/ActionBattle.js';
 import { audio } from '../audio/audio.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
@@ -161,6 +162,12 @@ export class Town {
         for (const [i, post] of (data.foes || []).entries()) {
             const plan = { ...post, id: `${key}:${i}` };
             if (scene.flags?.[plan.flag] || scene.slain?.has(plan.id)) continue;
+            if (plan.action) {          // demons, for a real-time fight (ActionBattle.js): their brute stands for them
+                loadDemons(scene).then(() => {
+                    if (!this.gone) this.foes.push({ plan, foe: new Demon(scene, plan.x, plan.y, 'brute'), armed: false });
+                }).catch(err => console.warn('No demons here', err));
+                continue;
+            }
             loadFoe(scene, plan.kind).then(() => {
                 if (this.gone) {        // came after you'd gone: let it go (unless it's where you are now, or whom you're fighting)
                     if (scene.fighting !== plan.kind && !scene.town?.data.foes?.some(p => p.kind === plan.kind)) forgetFoe(scene, plan.kind);
@@ -623,6 +630,7 @@ export class Town {
         for (const kind of new Set((this.data.foes || []).map(p => p.kind))) {
             if (kind !== this.scene.fighting) forgetFoe(this.scene, kind);     // (not the one you're off to fight)
         }
+        if (this.scene.fighting !== 'demons') this.scene.cache.json.remove(DEMONS);
         this.water?.destroy();
         this.ground.destroy();
         this.things.forEach(t => t.destroy());

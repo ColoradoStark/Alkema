@@ -111,6 +111,17 @@ Fights are fought Ultima III style, on a battle map of their own:
 - Beat them all and there's a moment's victory: the field dims, "Victory!" comes up with who fell (and, in a dungeon, what they carried), your party raises their weapons, and an orchestral fanfare plays
 - Then you're back in the world, where a chest has dropped where they stood: gold for each foe and, likelier the bigger the band, a piece of gear any shop will buy. A new band is at the post a couple of minutes later
 
+### A real-time fight, to try
+
+By the sea mouth of Gloomwater Grotto waits a band of six demons (made with the character creator: a brute with a war axe, furies with tridents, a warlock who throws fire), and their fight is in real time, on the same cave battle map:
+
+- Move freely, and press attack whenever you like: you swing at the demon nearest the way you face, stepping in to it if it's just out of reach; press again mid-swing and the next swing follows (a bow shoots straight at them)
+- Your companions fight on their own: the cleric keeps by you, heals whoever is worst hurt and fights off what comes at her, the mage hangs back throwing fire, the ranger keeps their distance and shoots
+- Every demon's blow is telegraphed: it stops and flashes red before it strikes, so you can step out of reach (and see "Dodged"); a warlock's fire flies where you stood. A brute's swing is slow but heavy, and a blow won't stop it
+- No more than two wind up at you at once; the rest circle, waiting their turn
+- Hits land with a moment's freeze, a flash and a knock back; struck, you can't be struck again for a moment
+- Keep pushing against an edge to flee. Win, and it ends as the turn-based fights do, the demons gone till you next come down
+
 ## Spells
 
 Every class has six spells (a fighter's and a thief's are battle skills), three ranks each, with painted icons:

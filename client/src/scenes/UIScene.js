@@ -354,6 +354,7 @@ export class UIScene extends Scene {
         // In a fight: which spell (or skill)? Then it's cast as your turn
         if (gameScene?.battle) {
             if (this.castMenu.visible) this.castMenu.close();
+            else if (gameScene.battle.realtime) gameScene.battle.say('No spells in a real-time fight yet');
             else if (gameScene.battle.canAct && gameScene.battle.active.book) this.castMenu.open(gameScene.battle.active.book, gameScene.battle);
             return;
         }

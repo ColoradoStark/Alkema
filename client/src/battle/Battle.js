@@ -205,20 +205,7 @@ export class Battle {
         }
         fxAnims(scene);
 
-        // The band in its rows (tools/battlegen.py FOE_PLACES): the front row, nearest you, fills
-        // first, its middle place first of all; the rest take the places behind at random
-        const [middle, ...sides] = map.places.slice(0, FRONT);
-        const places = [middle, ...Phaser.Utils.Array.Shuffle(sides), ...Phaser.Utils.Array.Shuffle(map.places.slice(FRONT))];
-        this.foes = places.slice(0, Math.max(1, Math.min(count, places.length))).map(cell => {
-            const at = this.feetOf(cell);
-            const foe = new Foe(scene, at.x, at.y, kind);
-            foe.setDepthAt();
-            const hp = foe.spec.hp * (boss ? BOSS_HP : 1);      // a dungeon's boss: the same foe, harder to put down
-            const f = { foe, cell: [...cell], hp, maxHp: hp, bar: scene.add.graphics().setDepth(39),
-                moves: foe.spec.moves || 'walk', flees: !!foe.spec.flees, side: !!foe.spec.side, damage: foe.spec.damage || 4, gone: false };
-            this._drawBar(f);
-            return f;
-        });
+        this.foes = this._band(map, kind, count, boss);
         this.name = name || this.foes[0].foe.name;
 
         // Whose turn it is: a box round them, as Ultima III drew it
@@ -233,6 +220,25 @@ export class Battle {
         const n = this.foes.length;
         this.say(boss ? `The ${this.name} rises from the black water!`
             : n > 1 ? `${n} ${this.name}s!` : `${/^[AEIOU]/.test(this.name) ? 'An' : 'A'} ${this.name}!`);
+    }
+
+    /**
+     * The band in its rows (tools/battlegen.py FOE_PLACES): the front row, nearest you, fills
+     * first, its middle place first of all; the rest take the places behind at random.
+     */
+    _band(map, kind, count, boss) {
+        const [middle, ...sides] = map.places.slice(0, FRONT);
+        const places = [middle, ...Phaser.Utils.Array.Shuffle(sides), ...Phaser.Utils.Array.Shuffle(map.places.slice(FRONT))];
+        return places.slice(0, Math.max(1, Math.min(count, places.length))).map(cell => {
+            const at = this.feetOf(cell);
+            const foe = new Foe(this.scene, at.x, at.y, kind);
+            foe.setDepthAt();
+            const hp = foe.spec.hp * (boss ? BOSS_HP : 1);      // a dungeon's boss: the same foe, harder to put down
+            const f = { foe, cell: [...cell], hp, maxHp: hp, bar: this.scene.add.graphics().setDepth(39),
+                moves: foe.spec.moves || 'walk', flees: !!foe.spec.flees, side: !!foe.spec.side, damage: foe.spec.damage || 4, gone: false };
+            this._drawBar(f);
+            return f;
+        });
     }
 
     /** Where someone standing in a cell has their feet. */
