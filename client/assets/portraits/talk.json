@@ -668,5 +668,413 @@
     ]
    }
   }
+ },
+ "fernwick-tamsin": {
+  "Mind the windfalls, they're slippery. And full of wasps.": {
+   "clip": "fernwick-tamsin-01",
+   "at": [
+    0.78,
+    1.42,
+    1.58,
+    2.48,
+    2.64,
+    3.54,
+    4.04,
+    4.22,
+    4.38
+   ],
+   "night": {
+    "clip": "fernwick-tamsin-01-night",
+    "at": [
+     0.8,
+     1.42,
+     1.58,
+     2.48,
+     2.64,
+     3.94,
+     4.06,
+     4.22,
+     4.38
+    ]
+   }
+  },
+  "One for the basket, one for me. Bram never counts.": {
+   "clip": "fernwick-tamsin-02",
+   "at": [
+    0.0,
+    0.38,
+    0.56,
+    0.66,
+    1.56,
+    1.76,
+    2.0,
+    3.42,
+    3.58,
+    3.92
+   ],
+   "night": {
+    "clip": "fernwick-tamsin-02-night",
+    "at": [
+     0.0,
+     0.4,
+     0.56,
+     0.68,
+     1.52,
+     1.78,
+     2.0,
+     3.7,
+     3.82,
+     4.1
+    ]
+   }
+  }
+ },
+ "fernwick-mabel": {
+  "The potatoes are only just showing. Walk in the furrows, please, not on them.": {
+   "clip": "fernwick-mabel-01",
+   "at": [
+    0.0,
+    0.8,
+    1.34,
+    1.6,
+    1.82,
+    2.12,
+    3.94,
+    4.0,
+    4.18,
+    4.32,
+    4.74,
+    5.58,
+    5.78,
+    5.98
+   ],
+   "night": {
+    "clip": "fernwick-mabel-01-night",
+    "at": [
+     0.0,
+     0.66,
+     1.24,
+     1.5,
+     1.7,
+     1.98,
+     3.76,
+     3.84,
+     4.02,
+     4.16,
+     4.86,
+     5.44,
+     5.58,
+     5.8
+    ]
+   }
+  }
+ },
+ "fernwick-ruth": {
+  "The well water's cold as winter even in high summer. Have a drink.": {
+   "clip": "fernwick-ruth-01",
+   "at": [
+    0.0,
+    0.4,
+    0.64,
+    1.12,
+    1.36,
+    1.56,
+    2.34,
+    2.56,
+    2.76,
+    2.98,
+    4.36,
+    4.46,
+    4.6
+   ],
+   "night": {
+    "clip": "fernwick-ruth-01-night",
+    "at": [
+     0.0,
+     0.42,
+     0.64,
+     1.12,
+     1.36,
+     1.56,
+     2.4,
+     2.58,
+     2.76,
+     2.98,
+     4.36,
+     4.44,
+     4.58
+    ]
+   }
+  },
+  "My two boys argue over that wheat every evening. Their father left it to both of them.": {
+   "clip": "fernwick-ruth-02",
+   "at": [
+    0.6,
+    1.16,
+    1.46,
+    1.86,
+    2.28,
+    2.56,
+    2.78,
+    3.04,
+    3.44,
+    4.74,
+    4.84,
+    5.16,
+    5.44,
+    5.64,
+    5.78,
+    5.94,
+    6.1
+   ],
+   "night": {
+    "clip": "fernwick-ruth-02-night",
+    "at": [
+     0.0,
+     1.16,
+     1.48,
+     1.88,
+     2.3,
+     2.6,
+     2.82,
+     3.04,
+     3.42,
+     4.74,
+     4.84,
+     5.16,
+     5.46,
+     5.64,
+     5.78,
+     5.94,
+     6.12
+    ]
+   }
+  }
+ },
+ "fernwick-cottage-agnes": {
+  "Bread's out at noon. If Kit's not at the door by five past, he's ill.": {
+   "clip": "fernwick-cottage-agnes-01",
+   "at": [
+    0.66,
+    1.14,
+    1.26,
+    1.42,
+    2.36,
+    2.52,
+    2.82,
+    2.94,
+    3.08,
+    3.16,
+    3.34,
+    3.5,
+    3.8,
+    4.88,
+    5.12
+   ],
+   "night": {
+    "clip": "fernwick-cottage-agnes-01-night",
+    "at": [
+     0.66,
+     1.14,
+     1.26,
+     1.42,
+     2.36,
+     2.52,
+     2.8,
+     2.94,
+     3.08,
+     3.16,
+     3.34,
+     3.5,
+     3.78,
+     4.88,
+     5.12
+    ]
+   }
+  }
+ },
+ "seacombe-nell": {
+  "Five minutes off my feet. The cows don't care that it's a feast day.": {
+   "clip": "seacombe-nell-01",
+   "at": [
+    1.18,
+    1.84,
+    2.22,
+    2.5,
+    2.76,
+    3.7,
+    4.16,
+    4.46,
+    4.86,
+    5.08,
+    5.24,
+    5.5,
+    5.58,
+    5.8
+   ],
+   "night": {
+    "clip": "seacombe-nell-01-night",
+    "at": [
+     1.64,
+     2.18,
+     2.54,
+     2.8,
+     3.04,
+     3.98,
+     4.26,
+     4.52,
+     4.9,
+     5.1,
+     5.26,
+     5.48,
+     5.58,
+     5.8
+    ]
+   }
+  }
+ },
+ "seacombe-meg": {
+  "Fresh water from the well's sweeter than the brook. Help yourself.": {
+   "clip": "seacombe-meg-01",
+   "at": [
+    0.0,
+    0.8,
+    1.26,
+    1.52,
+    1.68,
+    1.96,
+    2.52,
+    2.7,
+    2.86,
+    4.06,
+    4.28
+   ],
+   "night": {
+    "clip": "seacombe-meg-01-night",
+    "at": [
+     0.0,
+     0.8,
+     1.26,
+     1.52,
+     1.68,
+     1.96,
+     2.52,
+     2.7,
+     2.86,
+     3.44,
+     4.26
+    ]
+   }
+  },
+  "My Will's out in the pumpkins. He talks to them, you know.": {
+   "clip": "seacombe-meg-02",
+   "at": [
+    0.8,
+    1.24,
+    1.66,
+    1.8,
+    1.98,
+    2.08,
+    3.48,
+    3.68,
+    3.92,
+    4.18,
+    4.44,
+    4.48
+   ],
+   "night": {
+    "clip": "seacombe-meg-02-night",
+    "at": [
+     0.8,
+     1.24,
+     1.66,
+     1.8,
+     1.98,
+     2.1,
+     3.48,
+     3.7,
+     3.92,
+     4.18,
+     4.46,
+     4.48
+    ]
+   }
+  }
+ },
+ "seacombe-ada": {
+  "Peppers want sun and a drink twice a day. Like my husband, only quieter.": {
+   "clip": "seacombe-ada-01",
+   "at": [
+    0.0,
+    0.66,
+    0.86,
+    1.28,
+    1.68,
+    1.84,
+    2.1,
+    2.48,
+    2.7,
+    3.72,
+    3.86,
+    4.1,
+    5.24,
+    5.5
+   ],
+   "night": {
+    "clip": "seacombe-ada-01-night",
+    "at": [
+     0.0,
+     0.66,
+     0.86,
+     1.22,
+     1.38,
+     1.5,
+     1.76,
+     2.14,
+     2.36,
+     3.62,
+     3.84,
+     4.04,
+     5.14,
+     5.4
+    ]
+   }
+  }
+ },
+ "seacombe-croft-crofter_wife": {
+  "Hal's out in the stubble. He'll be in when the light goes.": {
+   "clip": "seacombe-croft-crofter_wife-01",
+   "at": [
+    1.94,
+    1.94,
+    2.08,
+    2.26,
+    2.38,
+    3.56,
+    3.64,
+    3.76,
+    3.9,
+    4.06,
+    4.18,
+    4.36
+   ],
+   "night": {
+    "clip": "seacombe-croft-crofter_wife-01-night",
+    "at": [
+     1.8,
+     2.1,
+     2.22,
+     2.36,
+     2.46,
+     3.56,
+     3.66,
+     3.78,
+     3.94,
+     4.08,
+     4.2,
+     4.38
+    ]
+   }
+  }
  }
 }
