@@ -164,6 +164,22 @@ test.describe('Sound', () => {
         await expect.poll(held, { timeout: 10000 }).toBeLessThanOrEqual(2);
     });
 
+    test("a fight's stinger goes with the fight's music: back in the world you hear the world's, not the stinger's tail", async ({ page }) => {
+        test.setTimeout(120000);
+        await page.addInitScript(() => localStorage.removeItem('alkema.audio'));
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.locator('#cc-play').click();
+        await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
+        await page.evaluate(() => window.__ALKEMA_AUDIO.stinger('victory'));
+        await expect.poll(() => music(page), { timeout: 15000 }).toContain('music-stinger-victory');
+        // (3.4 s long; the victory scene and the fade back take under 3)
+        await page.evaluate(() => window.__ALKEMA_AUDIO.playMusic('sea'));
+        await page.waitForTimeout(700);
+        expect(await music(page)).not.toContain('music-stinger-victory');
+        expect(await page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-stinger-victory'))).toBe(false);
+    });
+
     test('the speaker cycles sound on → music off → off, and is remembered', async ({ page }) => {
         test.setTimeout(90000);
         // Start from the default setting once (not again on the reload below)

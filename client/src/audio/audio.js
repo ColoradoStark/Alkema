@@ -15,6 +15,7 @@ const SFX_VOLUME = 1.0;
 const MASTER_VOLUME = 1.25; // the mix measures ~-19 LUFS with peaks well under 0 dBFS
 const FADE_MS = 1600;
 const STINGER_DUCK_MS = 3200; // the music under a stinger, till it's done
+const STINGER_FADE_MS = 350; // a stinger cut short as the music changes (back from a fight)
 const HEARING_RANGE = 520; // world px beyond which other players' fights are silent
 
 /**
@@ -182,6 +183,7 @@ class Audio {
             return;
         }
         this._fadeOut(this.music?.sound);
+        this._endStinger();         // (a fight's goes with its music: its tail would play over the world's)
         this.music = { mood, index: 0, sound: null, playsLeft: 0 };
         this._startTrack();
     }
@@ -211,13 +213,25 @@ class Audio {
             if (this.sound.locked && !this._resumeContext()) return;
             const sound = this.sound.add(key, { volume: MUSIC_VOLUME });
             this.duck(STINGER_DUCK_MS, 0.15);
-            sound.once('complete', () => {
-                sound.destroy();
-                this.game.cache.audio.remove(key);
-            });
+            this._stinger = sound;
+            sound.once('complete', () => this._endStinger(0));
             sound.play();
         });
         return null;
+    }
+
+    /** The stinger playing faded out (over `ms`) and let go. */
+    _endStinger(ms = STINGER_FADE_MS) {
+        const sound = this._stinger;
+        if (!sound) return;
+        this._stinger = null;
+        const key = sound.key;
+        const done = () => {
+            sound.destroy();
+            this.game.cache.audio.remove(key);
+        };
+        if (ms) this._ramp(sound, 0, ms, done);
+        else done();
     }
 
     /** Let go of a stinger fetched for a moment that never came (a fight fled). */
