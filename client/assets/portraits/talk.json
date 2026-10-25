@@ -1425,5 +1425,981 @@
     ]
    }
   }
+ },
+ "ashby-ebba": {
+  "Off my feet for a moment, and look who comes by. The goats can wait. They always can.": {
+   "clip": "ashby-ebba-01",
+   "at": [
+    0.0,
+    0.52,
+    0.76,
+    1.04,
+    1.28,
+    1.42,
+    2.14,
+    2.26,
+    2.4,
+    2.62,
+    2.88,
+    4.04,
+    4.14,
+    4.36,
+    4.62,
+    5.42,
+    5.58,
+    5.9
+   ],
+   "night": null
+  },
+  "Fresh milk, if you're thirsty. Or you could just sit with me a while.": {
+   "clip": "ashby-ebba-02",
+   "at": [
+    0.0,
+    0.54,
+    0.96,
+    1.36,
+    1.58,
+    2.16,
+    3.42,
+    3.6,
+    3.78,
+    3.94,
+    4.16,
+    4.32,
+    4.54,
+    4.62
+   ],
+   "night": null
+  },
+  "No goats, no pails, and nobody watching. Just you and me.": {
+   "night": {
+    "clip": "ashby-ebba-01-night",
+    "at": [
+     0.0,
+     0.38,
+     1.22,
+     1.34,
+     2.46,
+     2.58,
+     2.88,
+     4.16,
+     4.38,
+     4.64,
+     4.76
+    ]
+   }
+  },
+  "I saved the warm spot by the fire. It's yours, if you sit close.": {
+   "night": {
+    "clip": "ashby-ebba-02-night",
+    "at": [
+     0.0,
+     0.36,
+     0.72,
+     0.88,
+     1.1,
+     1.44,
+     1.68,
+     1.82,
+     2.86,
+     3.08,
+     3.84,
+     3.98,
+     4.1,
+     4.28
+    ]
+   }
+  }
+ },
+ "ashby-britt": {
+  "Whatever the reapers leave, I pick up. Today, I think the field left me you.": {
+   "clip": "ashby-britt-01",
+   "at": [
+    0.0,
+    0.4,
+    0.66,
+    1.0,
+    1.58,
+    1.72,
+    1.94,
+    2.92,
+    3.16,
+    3.38,
+    3.56,
+    3.74,
+    4.02,
+    4.26,
+    4.54
+   ],
+   "night": null
+  },
+  "Careful, you'll make me drop my gleanings, staring like that.": {
+   "clip": "ashby-britt-02",
+   "at": [
+    1.14,
+    2.04,
+    2.24,
+    2.38,
+    2.56,
+    2.74,
+    2.92,
+    3.74,
+    4.1,
+    4.42
+   ],
+   "night": null
+  },
+  "My basket's put away for the night. My hands are free, you know.": {
+   "night": {
+    "clip": "ashby-britt-01-night",
+    "at": [
+     0.0,
+     0.6,
+     1.22,
+     1.36,
+     1.62,
+     1.82,
+     1.94,
+     3.22,
+     3.36,
+     3.66,
+     3.86,
+     4.28,
+     4.32
+    ]
+   }
+  },
+  "Tell me I'm prettier than a field of wheat. Go on, I'll wait.": {
+   "night": {
+    "clip": "ashby-britt-02-night",
+    "at": [
+     0.58,
+     1.1,
+     1.28,
+     1.54,
+     1.88,
+     2.06,
+     2.2,
+     2.46,
+     2.66,
+     3.64,
+     3.86,
+     4.34,
+     4.56
+    ]
+   }
+  }
+ },
+ "ashby-hilde": {
+  "Mind the leeks. If you must step on something, step on my heart instead.": {
+   "clip": "ashby-hilde-01",
+   "at": [
+    0.0,
+    0.7,
+    1.44,
+    2.18,
+    2.34,
+    2.5,
+    2.68,
+    2.98,
+    3.2,
+    4.48,
+    4.6,
+    4.82,
+    5.06,
+    5.4
+   ],
+   "night": null
+  },
+  "Onions make me cry. You make me smile. I know which I'd rather.": {
+   "clip": "ashby-hilde-02",
+   "at": [
+    1.2,
+    1.66,
+    1.86,
+    2.08,
+    3.3,
+    3.48,
+    3.64,
+    3.88,
+    5.14,
+    5.32,
+    5.48,
+    5.68,
+    5.98
+   ],
+   "night": null
+  },
+  "The garden's asleep, and so is everyone else. Shall we keep each other awake?": {
+   "night": {
+    "clip": "ashby-hilde-01-night",
+    "at": [
+     0.0,
+     0.38,
+     0.92,
+     2.16,
+     2.28,
+     2.5,
+     2.68,
+     3.04,
+     4.6,
+     4.74,
+     4.94,
+     5.14,
+     5.38,
+     5.56
+    ]
+   }
+  },
+  "No flowers to give you at this hour. Will a smile do instead?": {
+   "night": {
+    "clip": "ashby-hilde-02-night",
+    "at": [
+     0.56,
+     1.12,
+     1.56,
+     1.82,
+     1.96,
+     2.12,
+     2.24,
+     2.42,
+     3.6,
+     3.72,
+     3.86,
+     4.14,
+     4.46
+    ]
+   }
+  }
+ },
+ "ashby-hut-wenna": {
+  "They call me Old Wenna. Do I look old to you? Look closer.": {
+   "clip": "ashby-hut-wenna-01",
+   "at": [
+    0.0,
+    0.44,
+    0.72,
+    0.94,
+    1.24,
+    2.26,
+    2.34,
+    2.5,
+    2.68,
+    2.9,
+    3.12,
+    4.22,
+    4.34
+   ],
+   "night": null
+  },
+  "Everything the sea washes up, I keep. I think I'll keep you too.": {
+   "clip": "ashby-hut-wenna-02",
+   "at": [
+    0.0,
+    0.72,
+    0.96,
+    1.16,
+    1.6,
+    2.04,
+    2.12,
+    3.54,
+    3.66,
+    3.82,
+    4.04,
+    4.18,
+    4.44
+   ],
+   "night": null
+  },
+  "Put a shell to your ear and you'll hear the sea. Put your ear to me, and you'll hear my heart.": {
+   "night": {
+    "clip": "ashby-hut-wenna-01-night",
+    "at": [
+     0.0,
+     0.34,
+     0.48,
+     0.7,
+     0.94,
+     1.04,
+     1.62,
+     1.74,
+     1.9,
+     2.06,
+     2.24,
+     3.46,
+     3.58,
+     3.78,
+     3.94,
+     4.14,
+     5.06,
+     5.22,
+     5.4,
+     5.56,
+     5.76
+    ]
+   }
+  },
+  "The tide's out and the candles are lit. Stay till morning, why don't you?": {
+   "night": {
+    "clip": "ashby-hut-wenna-02-night",
+    "at": [
+     0.0,
+     0.34,
+     0.78,
+     1.02,
+     1.24,
+     1.36,
+     1.7,
+     1.98,
+     3.2,
+     3.44,
+     3.62,
+     4.18,
+     4.3,
+     4.52
+    ]
+   }
+  }
+ },
+ "tumbledown-liv": {
+  "Shh. Grandad says talk quietly on the ice. So come closer, and whisper.": {
+   "clip": "tumbledown-liv-01",
+   "at": [
+    1.34,
+    1.34,
+    1.34,
+    1.58,
+    1.88,
+    2.24,
+    2.5,
+    2.62,
+    3.38,
+    3.62,
+    3.82,
+    4.24,
+    4.72
+   ],
+   "night": null
+  },
+  "Three herring and a boot today. And now you. My luck's turning.": {
+   "clip": "tumbledown-liv-02",
+   "at": [
+    0.0,
+    0.64,
+    1.1,
+    1.26,
+    1.34,
+    1.58,
+    2.6,
+    2.8,
+    3.0,
+    4.08,
+    4.29,
+    4.5
+   ],
+   "night": null
+  },
+  "No fish bite at night. I might, if you stand that close.": {
+   "night": {
+    "clip": "tumbledown-liv-01-night",
+    "at": [
+     0.0,
+     0.4,
+     0.72,
+     1.04,
+     1.24,
+     2.38,
+     2.54,
+     3.42,
+     3.54,
+     3.68,
+     3.96,
+     4.22
+    ]
+   }
+  },
+  "My hands are cold from the ice. Will you warm them for me?": {
+   "night": {
+    "clip": "tumbledown-liv-02-night",
+    "at": [
+     1.5,
+     2.02,
+     2.4,
+     2.66,
+     3.02,
+     3.3,
+     3.46,
+     4.84,
+     4.98,
+     5.2,
+     5.44,
+     5.68,
+     5.92
+    ]
+   }
+  }
+ },
+ "tumbledown-kari": {
+  "Pine cones burn hot and quick. A bit like me, some say.": {
+   "clip": "tumbledown-kari-01",
+   "at": [
+    1.7,
+    1.7,
+    1.7,
+    1.86,
+    2.18,
+    2.38,
+    3.38,
+    3.44,
+    3.58,
+    3.78,
+    4.28,
+    4.36
+   ],
+   "night": null
+  },
+  "Carry my basket home for me? I'll make it worth your while.": {
+   "clip": "tumbledown-kari-02",
+   "at": [
+    0.0,
+    0.82,
+    1.06,
+    1.54,
+    1.84,
+    2.1,
+    2.56,
+    3.52,
+    3.7,
+    3.88,
+    4.08,
+    4.34
+   ],
+   "night": null
+  },
+  "The fire's roaring now. All that kindling, and it's just for us.": {
+   "night": {
+    "clip": "tumbledown-kari-01-night",
+    "at": [
+     0.0,
+     0.32,
+     0.86,
+     1.18,
+     2.26,
+     2.5,
+     2.74,
+     3.76,
+     3.96,
+     4.2,
+     4.38,
+     4.66
+    ]
+   }
+  },
+  "It's freezing out there. Good thing I'm warm in here, isn't it?": {
+   "night": {
+    "clip": "tumbledown-kari-02-night",
+    "at": [
+     0.0,
+     0.7,
+     1.1,
+     1.52,
+     2.74,
+     2.84,
+     3.06,
+     3.34,
+     3.52,
+     3.72,
+     4.08,
+     4.32
+    ]
+   }
+  }
+ },
+ "tumbledown-tove": {
+  "White hair since birth. Mother says the snow got in. Do you like it?": {
+   "clip": "tumbledown-tove-01",
+   "at": [
+    0.0,
+    0.66,
+    0.92,
+    1.22,
+    2.44,
+    2.44,
+    2.74,
+    2.96,
+    3.22,
+    3.44,
+    4.42,
+    4.5,
+    4.64,
+    4.8
+   ],
+   "night": null
+  },
+  "If my brother offers you a fox pelt, haggle. If I offer you a kiss, don't.": {
+   "clip": "tumbledown-tove-02",
+   "at": [
+    0.78,
+    1.26,
+    1.5,
+    1.8,
+    2.14,
+    2.36,
+    2.5,
+    2.76,
+    3.52,
+    4.38,
+    4.48,
+    4.7,
+    4.92,
+    5.12,
+    5.32,
+    5.8
+   ],
+   "night": null
+  },
+  "The snow's falling again. Looks like you'll have to stay the night.": {
+   "night": {
+    "clip": "tumbledown-tove-01-night",
+    "at": [
+     0.0,
+     0.74,
+     1.18,
+     1.52,
+     2.92,
+     3.02,
+     3.3,
+     3.54,
+     3.68,
+     3.86,
+     4.06,
+     4.22
+    ]
+   }
+  },
+  "Pull the furs up close. There's room under them for two.": {
+   "night": {
+    "clip": "tumbledown-tove-02-night",
+    "at": [
+     0.0,
+     0.94,
+     1.14,
+     1.4,
+     1.64,
+     2.9,
+     3.14,
+     3.36,
+     3.66,
+     3.9,
+     4.1
+    ]
+   }
+  }
+ },
+ "tumbledown-longhall-brynja": {
+  "Mulled ale, hot as you like. Sit by the fire, and I'll bring yours over myself.": {
+   "clip": "tumbledown-longhall-brynja-01",
+   "at": [
+    0.36,
+    0.36,
+    0.98,
+    1.2,
+    1.34,
+    1.48,
+    2.34,
+    2.48,
+    2.66,
+    2.78,
+    3.54,
+    3.62,
+    3.8,
+    3.94,
+    4.14,
+    4.44
+   ],
+   "night": null
+  },
+  "Pay for the ale, and the smile is free. Just for you, mind.": {
+   "clip": "tumbledown-longhall-brynja-02",
+   "at": [
+    0.0,
+    0.36,
+    0.56,
+    0.7,
+    1.08,
+    1.64,
+    1.8,
+    2.14,
+    2.4,
+    3.64,
+    3.78,
+    4.02,
+    4.44
+   ],
+   "night": null
+  },
+  "The hall's emptied out. The last cup of the night is on me.": {
+   "night": {
+    "clip": "tumbledown-longhall-brynja-01-night",
+    "at": [
+     0.0,
+     0.56,
+     0.92,
+     1.4,
+     1.8,
+     2.7,
+     3.12,
+     3.34,
+     3.52,
+     3.68,
+     3.98,
+     4.2,
+     4.46
+    ]
+   }
+  },
+  "Stay by the fire with me a while. The ale's warm, and so am I.": {
+   "night": {
+    "clip": "tumbledown-longhall-brynja-02-night",
+    "at": [
+     0.0,
+     0.5,
+     0.74,
+     0.9,
+     1.3,
+     1.54,
+     1.78,
+     1.92,
+     2.28,
+     3.34,
+     3.9,
+     4.32,
+     5.12,
+     5.48,
+     5.66
+    ]
+   }
+  }
+ },
+ "gulls_rest-femi": {
+  "Lugworms, under the sand, if you dig fast enough. Want to stay and watch me?": {
+   "clip": "gulls_rest-femi-01",
+   "at": [
+    0.44,
+    1.18,
+    1.38,
+    1.56,
+    2.44,
+    2.46,
+    2.58,
+    2.74,
+    3.08,
+    4.14,
+    4.22,
+    4.34,
+    4.48,
+    4.62,
+    4.8
+   ],
+   "night": null
+  },
+  "Dad says the fish here are lazy. I say you're the best thing the tide's brought in.": {
+   "clip": "gulls_rest-femi-02",
+   "at": [
+    1.08,
+    1.56,
+    1.82,
+    2.04,
+    2.22,
+    2.46,
+    2.6,
+    3.72,
+    3.9,
+    4.18,
+    4.64,
+    4.76,
+    4.96,
+    5.2,
+    5.38,
+    5.76,
+    5.98
+   ],
+   "night": null
+  },
+  "No digging tonight. My hands are clean, and they're all yours.": {
+   "night": {
+    "clip": "gulls_rest-femi-01-night",
+    "at": [
+     0.0,
+     0.4,
+     0.66,
+     2.02,
+     2.12,
+     2.4,
+     2.56,
+     3.4,
+     3.84,
+     4.06,
+     4.24
+    ]
+   }
+  },
+  "Walk me down to the beach later? I know a quiet spot in the moonlight.": {
+   "night": {
+    "clip": "gulls_rest-femi-02-night",
+    "at": [
+     0.0,
+     0.56,
+     0.76,
+     0.96,
+     1.1,
+     1.2,
+     1.4,
+     2.66,
+     2.86,
+     3.0,
+     3.24,
+     3.48,
+     3.82,
+     4.04,
+     4.12
+    ]
+   }
+  }
+ },
+ "gulls_rest-gwen": {
+  "Driftwood, seaweed, and once a gold ring. Today the sea brought me you.": {
+   "clip": "gulls_rest-gwen-01",
+   "at": [
+    0.0,
+    0.94,
+    1.96,
+    2.04,
+    2.26,
+    2.42,
+    2.64,
+    3.64,
+    3.84,
+    4.04,
+    4.28,
+    4.5,
+    4.7
+   ],
+   "night": null
+  },
+  "Help me fill my basket, and I'll share whatever treasure we find.": {
+   "clip": "gulls_rest-gwen-02",
+   "at": [
+    0.0,
+    0.48,
+    0.68,
+    0.88,
+    1.08,
+    2.06,
+    2.44,
+    2.64,
+    2.9,
+    3.3,
+    3.66,
+    3.96
+   ],
+   "night": null
+  },
+  "The tide's coming in, and I've nowhere to be tonight. Have you?": {
+   "night": {
+    "clip": "gulls_rest-gwen-01-night",
+    "at": [
+     0.0,
+     0.48,
+     0.9,
+     1.12,
+     2.0,
+     2.22,
+     2.44,
+     2.62,
+     2.92,
+     3.1,
+     4.38,
+     4.54
+    ]
+   }
+  },
+  "I found a pearl once. You're rarer, I think.": {
+   "night": {
+    "clip": "gulls_rest-gwen-02-night",
+    "at": [
+     0.0,
+     0.62,
+     0.92,
+     1.12,
+     1.46,
+     3.0,
+     3.3,
+     3.98,
+     4.24
+    ]
+   }
+  }
+ },
+ "gulls_rest-alehouse-ysella": {
+  "Ashore till my ship's fitted. I'm in no hurry now that you're here.": {
+   "clip": "gulls_rest-alehouse-ysella-01",
+   "at": [
+    0.74,
+    0.74,
+    1.0,
+    1.22,
+    1.6,
+    2.82,
+    3.02,
+    3.1,
+    3.3,
+    3.62,
+    3.86,
+    4.04,
+    4.28
+   ],
+   "night": null
+  },
+  "I've sailed every sea there is, and never seen eyes like yours.": {
+   "clip": "gulls_rest-alehouse-ysella-02",
+   "at": [
+    0.0,
+    0.5,
+    0.76,
+    1.22,
+    1.54,
+    1.78,
+    2.72,
+    2.94,
+    3.24,
+    3.56,
+    3.88,
+    4.18
+   ],
+   "night": null
+  },
+  "Last orders are long gone. Sit with me, sailor, and I'll tell you a tale.": {
+   "night": {
+    "clip": "gulls_rest-alehouse-ysella-01-night",
+    "at": [
+     0.0,
+     0.52,
+     0.84,
+     1.06,
+     1.3,
+     1.7,
+     2.62,
+     2.8,
+     3.04,
+     3.52,
+     4.02,
+     4.2,
+     4.36,
+     4.54,
+     4.66
+    ]
+   }
+  },
+  "A sailor needs a harbour for the night. Are you offering?": {
+   "night": {
+    "clip": "gulls_rest-alehouse-ysella-02-night",
+    "at": [
+     0.0,
+     0.74,
+     1.2,
+     1.58,
+     1.85,
+     2.12,
+     2.46,
+     2.6,
+     4.0,
+     4.14,
+     4.3
+    ]
+   }
+  }
+ },
+ "gulls_rest-tamsin": {
+  "Herring, mackerel, fresh cod! And for you, sweetheart, a wink, free of charge.": {
+   "clip": "gulls_rest-tamsin-01",
+   "at": [
+    0.5,
+    0.5,
+    1.16,
+    1.52,
+    2.02,
+    2.52,
+    2.68,
+    2.92,
+    3.46,
+    3.66,
+    3.94,
+    4.36,
+    4.52
+   ],
+   "night": null
+  },
+  "Crabs are a copper each. Kisses cost more. Mind you, I'd haggle.": {
+   "clip": "gulls_rest-tamsin-02",
+   "at": [
+    0.0,
+    1.12,
+    1.32,
+    1.46,
+    1.72,
+    2.2,
+    2.8,
+    3.14,
+    3.66,
+    4.3,
+    4.68,
+    5.24
+   ],
+   "night": null
+  },
+  "The stall's shut, the gulls are asleep, and I smell of the sea. Still want to stay?": {
+   "night": {
+    "clip": "gulls_rest-tamsin-01-night",
+    "at": [
+     0.0,
+     0.3,
+     0.56,
+     1.4,
+     1.48,
+     1.8,
+     1.86,
+     2.68,
+     2.74,
+     2.96,
+     3.2,
+     3.4,
+     3.52,
+     4.28,
+     4.48,
+     4.66,
+     4.8
+    ]
+   }
+  },
+  "I'll tell you a fisherman's secret. The best catches come after dark.": {
+   "night": {
+    "clip": "gulls_rest-tamsin-02-night",
+    "at": [
+     0.0,
+     0.84,
+     0.98,
+     1.18,
+     1.34,
+     1.88,
+     2.82,
+     3.06,
+     3.36,
+     3.82,
+     4.12,
+     4.48
+    ]
+   }
+  }
  }
 }

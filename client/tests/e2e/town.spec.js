@@ -459,14 +459,17 @@ test.describe('Riverhold', () => {
         expect(missing).toEqual([]);
     });
 
-    test("Fernwick's and Seacombe's women in skimpy clothes say every line in a clip, two others by night in night clips", async ({ page }) => {
+    test("the five villages' women in skimpy clothes say every line in a clip, two others by night in night clips", async ({ page }) => {
         test.setTimeout(60000);
         await page.goto('/');
         const missing = await page.evaluate(async () => {
             const talk = await (await fetch('/portraits/talk.json')).json();
             const out = [];
             for (const id of ['fernwick-tamsin', 'fernwick-mabel', 'fernwick-ruth', 'fernwick-cottage-agnes',
-                'seacombe-nell', 'seacombe-meg', 'seacombe-ada', 'seacombe-croft-crofter_wife']) {
+                'seacombe-nell', 'seacombe-meg', 'seacombe-ada', 'seacombe-croft-crofter_wife',
+                'ashby-ebba', 'ashby-britt', 'ashby-hilde', 'ashby-hut-wenna',
+                'tumbledown-liv', 'tumbledown-kari', 'tumbledown-tove', 'tumbledown-longhall-brynja',
+                'gulls_rest-tamsin', 'gulls_rest-femi', 'gulls_rest-gwen', 'gulls_rest-alehouse-ysella']) {
                 const [map, who] = [id.slice(0, id.lastIndexOf('-')), id.slice(id.lastIndexOf('-') + 1)];
                 const folk = (await (await fetch(`/towns/${map}.json`)).json()).folk.find(f => f.id === who);
                 if ((folk.night_says || []).length !== 2) out.push(`${id}: two lines by night`);
