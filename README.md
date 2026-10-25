@@ -117,7 +117,7 @@ By the sea mouth of Gloomwater Grotto wait four bands of demons (made with the c
 
 - The demons start well back and stand still for a moment and a half as the fight opens, so you can find your hero; then they come on at a walk
 - Move freely, and press attack whenever you like, even on the move: you swing at the demon nearest the way you face, stepping in to it if it's just out of reach; press again mid-swing and the next swing follows (a bow shoots straight at them)
-- Your companions fight on their own: the cleric keeps by you, heals whoever is worst hurt and fights off what comes at her, the mage hangs back throwing fire, the ranger keeps their distance and shoots
+- Your companions fight on their own: the cleric goes off and fights on her own, and comes to heal whoever is worst hurt, the mage hangs back throwing fire, the ranger keeps their distance and shoots
 - Every demon's blow is telegraphed: it stops and flashes red before it strikes, so you can step out of reach (and see "Dodged"); a warlock's fire flies where you stood. A brute's swing is slow but heavy, and a blow won't stop it
 - No more than two wind up at you at once; the rest circle, waiting their turn
 - Hits land with a moment's freeze, a flash and a knock back; struck, you can't be struck again for a moment

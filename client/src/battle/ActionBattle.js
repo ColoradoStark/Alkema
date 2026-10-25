@@ -39,6 +39,7 @@ const ALLY_SPEED = 95;
 const REACH = 40;               // a blow's reach, feet to feet
 const LUNGE = 26;               // a swing at a foe this much further off steps you in to it
 const SHOT_REACH = 220;         // a bow's or a spell's
+const HEAL_REACH = 160;         // the cleric's healing light (she goes to you when you're further)
 const AIM = Math.cos(Math.PI * 0.4);    // what's within 72 degrees of the way you face is "ahead"
 const SWING_HIT_MS = 170;       // from a swing starting to its landing
 const HIT_STOP_MS = 55;
@@ -62,7 +63,7 @@ export const DEMON_KINDS = {
 const BAND = ['fury', 'brute', 'fury', 'warlock', 'fury', 'brute'];     // a band of n: the first n
 
 const ROLES = { cleric: 'healer', mage: 'caster', ranger: 'archer' };
-const FOLLOW = [[-34, 26], [34, 26], [0, 48]];      // where your companions keep (the cleric always, the rest with nothing to fight)
+const FOLLOW = [[-34, 26], [34, 26], [0, 48]];      // where your companions keep with nothing to fight
 
 const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
 const UNIT = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
@@ -483,10 +484,14 @@ export class ActionBattle extends Battle {
         const who = m.who;
         if (who.isAttacking) return;
         const me = this._feet(m), hero = this._feet(this.party[0]);
-        // The cleric mends whoever is worst hurt
+        // The cleric mends whoever is worst hurt, going to them if they're beyond her reach
         if (m.role === 'healer' && m.healCd <= 0) {
             const hurt = [...this.fighting].sort((a, b) => a.life.now / a.life.max - b.life.now / b.life.max)[0];
-            if (hurt && hurt.life.now / hurt.life.max < 0.55) return this._mend(m, hurt);
+            if (hurt && hurt.life.now / hurt.life.max < 0.55) {
+                const at = this._feet(hurt), dx = at.x - me.x, dy = at.y - me.y, d = Math.hypot(dx, dy);
+                if (hurt === m || d <= HEAL_REACH) return this._mend(m, hurt);
+                return this._go(who, dx / d, dy / d, ALLY_SPEED, dt);
+            }
         }
         const near = (list, p) => [...list].sort((a, b) => Math.hypot(a.foe.x - p.x, a.foe.y - p.y) - Math.hypot(b.foe.x - p.x, b.foe.y - p.y))[0];
         const foes = this.standing;
@@ -496,10 +501,8 @@ export class ActionBattle extends Battle {
             const byYou = near(foes, hero);
             if (Math.hypot(byYou.foe.x - hero.x, byYou.foe.y - hero.y) < 120) f = byYou;
         }
-        // The cleric keeps by you, out of the thick of it, and fights only what comes at her
-        if (f && m.role === 'healer' && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) > REACH + 20) f = null;
         if (!f) {
-            // Nothing to fight (or the cleric's strayed): back to you
+            // Nothing to fight: back to you
             const want = { x: hero.x + m.slot[0], y: hero.y + m.slot[1] };
             const dx = want.x - me.x, dy = want.y - me.y, d = Math.hypot(dx, dy);
             if (d > 10) this._go(who, dx / d, dy / d, ALLY_SPEED, dt);

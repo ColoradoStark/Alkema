@@ -145,6 +145,24 @@ test.describe('A real-time fight', () => {
         expect(errors).toEqual([]);
     });
 
+    test("the cleric goes off and fights on her own, not at your heels, and comes to mend you when you're hurt", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await toTheDemons(page);
+        await fight(page, 1);
+        // You in a corner; the demons across the field, held where they stand
+        await stage(page, [70, 410], [], { 0: [280, 170] });
+        const look = () => page.evaluate(() => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, c = b.party[1].who.sprite, me = b.party[0].who.sprite;
+            return { hurt: b.foes.some(f => f.hp < f.maxHp), fromYou: Math.hypot(c.x - me.x, c.y - me.y), life: b.party[0].life.now };
+        });
+        await expect.poll(async () => (await look()).hurt, { timeout: 20000 }).toBe(true);
+        expect((await look()).fromYou).toBeGreaterThan(150);
+        // Hurt: she mends you
+        const low = await page.evaluate(() => { const life = window.__PHASER_GAME.scene.getScene('GameScene').battle.party[0].life; return (life.now = Math.ceil(life.max * 0.3)); });
+        await expect.poll(async () => (await look()).life, { timeout: 15000 }).toBeGreaterThan(low);
+    });
+
     test('press attack and you swing at the demon nearest the way you face (stepping in to it); press again mid-swing and the next comes after it', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
