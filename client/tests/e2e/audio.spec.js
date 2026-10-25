@@ -164,19 +164,62 @@ test.describe('Sound', () => {
         await expect.poll(held, { timeout: 10000 }).toBeLessThanOrEqual(2);
     });
 
-    test("a fight's stinger goes with the fight's music: back in the world you hear the world's, not the stinger's tail", async ({ page }) => {
-        test.setTimeout(120000);
+    // Back from a fight won: the stinger plays out, then the world's music fades in (loaded under it), never
+    // the two at once nor a gap; a stinger that comes too late (a slow phone) isn't played over the world's.
+    const watch = (page) => page.evaluate(() => {
+        const g = window.__PHASER_GAME;
+        window.__heard = [];
+        g.events.on('step', () => window.__heard.push(Object.assign(g.sound.sounds.filter(s => s.key.startsWith('music-') && s.isPlaying && s.volume > 0.02).map(s => s.key),
+            { at: performance.now() })));
+    });
+    const startWorld = async (page) => {
         await page.addInitScript(() => localStorage.removeItem('alkema.audio'));
         await page.goto('/');
         await waitForPreview(page);
         await page.locator('#cc-play').click();
         await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
-        await page.evaluate(() => window.__ALKEMA_AUDIO.stinger('victory'));
-        await expect.poll(() => music(page), { timeout: 15000 }).toContain('music-stinger-victory');
-        // (3.4 s long; the victory scene and the fade back take under 3)
-        await page.evaluate(() => window.__ALKEMA_AUDIO.playMusic('sea'));
-        await page.waitForTimeout(700);
-        expect(await music(page)).not.toContain('music-stinger-victory');
+    };
+
+    test("won, the stinger plays out and then the next music comes in: never both, and no wait for it to load", async ({ page }) => {
+        test.setTimeout(120000);
+        await startWorld(page);
+        await page.evaluate(() => window.__ALKEMA_AUDIO.prepareStinger('victory'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-stinger-victory')), { timeout: 15000 }).toBe(true);
+        await watch(page);
+        const fetched = [];
+        page.on('request', r => r.url().includes('three-sheets') && fetched.push(r.url()));
+        await page.evaluate(() => {
+            const g = window.__PHASER_GAME;
+            window.__fadeIn = [];          // (comes in quietly, and rises)
+            g.events.on('step', () => { const s = g.sound.sounds.find(s => s.key === 'music-three-sheets' && s.isPlaying); if (s && window.__fadeIn.length < 20) window.__fadeIn.push(s.currentConfig.volume); });
+            window.__ALKEMA_AUDIO.stinger('victory');
+            window.__ALKEMA_AUDIO.playMusic('sea');
+        });
+        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-three-sheets']);
+        await page.waitForTimeout(1000);
+        expect(fetched.length).toBe(1);         // loaded under the stinger, and kept for when it ends
+        const fadeIn = await page.evaluate(() => window.__fadeIn);
+        expect(fadeIn[0]).toBeLessThan(0.1);
+        expect(fadeIn.at(-1)).toBeGreaterThan(fadeIn[0]);
+        const heard = await page.evaluate(() => window.__heard);
+        expect(heard.some(h => h.includes('music-stinger-victory'))).toBe(true);
+        expect(heard.filter(h => h.includes('music-stinger-victory') && h.includes('music-three-sheets'))).toEqual([]);
+        // ...straight after it
+        const end = heard.findLastIndex(h => h.includes('music-stinger-victory')), next = heard.findIndex(h => h.includes('music-three-sheets'));
+        const gap = await page.evaluate(([end, next]) => window.__heard[next].at - window.__heard[end].at, [end, next]);
+        expect(gap).toBeLessThan(150);         // (the next fading in from silence: heard within a few frames)
+        expect(await page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-stinger-victory'))).toBe(false);
+    });
+
+    test("a stinger that comes too late isn't played over the music after it", async ({ page }) => {
+        test.setTimeout(120000);
+        await page.route('**/stinger-victory.*', async route => { await new Promise(r => setTimeout(r, 3000)); await route.continue(); });
+        await startWorld(page);
+        await watch(page);
+        await page.evaluate(() => { window.__ALKEMA_AUDIO.stinger('victory'); window.__ALKEMA_AUDIO.playMusic('sea'); });
+        await expect.poll(() => music(page), { timeout: 15000 }).toEqual(['music-three-sheets']);
+        await page.waitForTimeout(4000);
+        expect((await page.evaluate(() => window.__heard)).some(h => h.includes('music-stinger-victory'))).toBe(false);
         expect(await page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-stinger-victory'))).toBe(false);
     });
 

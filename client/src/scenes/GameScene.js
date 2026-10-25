@@ -150,8 +150,11 @@ export class GameScene extends Scene {
         if (!this.overworld || !feet) return;
         let mood = 'world';
         const lost = this.town || this.battle ? 0 : this.overworld.forest.lost;
-        const at = this.town ? this._townPlace : this.battle ? this._battleFrom : feet;
-        if (this.battle) mood = 'battle';
+        // (won, the music of where you'll be back starts loading under the stinger; a dungeon's fight is
+        // back on the level: in town coordinates, so it's the dungeon's place on the map that says)
+        const fight = this._battleFrom, inside = this.town || (this.battle && fight?.spot.town);
+        const at = inside ? this._townPlace : this.battle ? fight : this.world ? feet : null;
+        if (this.battle && !this.battle.victorious) mood = 'battle';
         else if (this.localPlayer?.sailing) mood = 'sea';
         else if (lost > (this._mood === 'forest' ? 0.2 : 0.6)) mood = 'forest';
         else if (at && this.overworld.isSnowy(at.x, at.y)) mood = 'north';

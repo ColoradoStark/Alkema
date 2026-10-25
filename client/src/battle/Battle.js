@@ -514,6 +514,7 @@ export class Battle {
         this._drawMarker();
         if (this.spoils && this.slain) this.loot = rollLoot(this.slain);
         audio.stinger('victory');
+        this.victorious = true;         // (the music of where you'll be back loads under the stinger)
         this.onWon?.();
         const s = this.scene, cx = this.width / 2, cy = this.height * 0.36;
         const text = (y, words, size, color) => s.add.text(cx, y, words, {

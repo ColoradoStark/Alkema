@@ -15,7 +15,7 @@ const SFX_VOLUME = 1.0;
 const MASTER_VOLUME = 1.25; // the mix measures ~-19 LUFS with peaks well under 0 dBFS
 const FADE_MS = 1600;
 const STINGER_DUCK_MS = 3200; // the music under a stinger, till it's done
-const STINGER_FADE_MS = 350; // a stinger cut short as the music changes (back from a fight)
+const STINGER_LATE_MS = 1500; // a stinger not here by then has missed its moment
 const HEARING_RANGE = 520; // world px beyond which other players' fights are silent
 
 /**
@@ -80,8 +80,8 @@ class Audio {
     }
 
     /** Fade a sound's volume over `ms`, independent of any scene's lifetime. */
-    _ramp(sound, to, ms, done) {
-        this._ramps.set(sound, { from: sound.volume, to, ms: Math.max(1, ms), t: 0, done });
+    _ramp(sound, to, ms, done, from = sound.volume) {
+        this._ramps.set(sound, { from, to, ms: Math.max(1, ms), t: 0, done });
     }
 
     _tickRamps(delta) {
@@ -183,7 +183,6 @@ class Audio {
             return;
         }
         this._fadeOut(this.music?.sound);
-        this._endStinger();         // (a fight's goes with its music: its tail would play over the world's)
         this.music = { mood, index: 0, sound: null, playsLeft: 0 };
         this._startTrack();
     }
@@ -204,34 +203,47 @@ class Audio {
 
     /**
      * A stinger over the music (a fight won): the music dips under it, and it's let go once it's
-     * played. With the music off, the short chime of the same name instead.
+     * played. Music asked for meanwhile (the world's, back from the fight) waits for it to end, then
+     * fades in: never the two at once, and never a gap while the next track is still loading (it loads
+     * under the stinger). A stinger not loaded within STINGER_LATE_MS has missed its moment and isn't
+     * played at all (a slow phone heard one after the fight). With the music off, the short chime
+     * of the same name instead.
      */
     stinger(name) {
         if (this.mode !== 'all' || !this.sound) return this.play(name);
         const id = `stinger-${name}`, key = `music-${id}`;
+        const token = this._stingerToken = {};
+        const late = setTimeout(() => {
+            if (this._stingerToken !== token) return;
+            this._stingerToken = null;
+            this.game.cache.audio.remove(key);
+            this._afterStinger();
+        }, STINGER_LATE_MS);
         this._ensureLoaded(id, () => {
-            if (this.sound.locked && !this._resumeContext()) return;
+            clearTimeout(late);
+            if (this._stingerToken !== token) return void this.forgetStinger(name);
+            if (!this.game.cache.audio.exists(key) || (this.sound.locked && !this._resumeContext())) {
+                this._stingerToken = null;
+                return this._afterStinger();
+            }
             const sound = this.sound.add(key, { volume: MUSIC_VOLUME });
             this.duck(STINGER_DUCK_MS, 0.15);
-            this._stinger = sound;
-            sound.once('complete', () => this._endStinger(0));
+            sound.once('complete', () => {
+                sound.destroy();
+                this.game.cache.audio.remove(key);
+                if (this._stingerToken === token) this._stingerToken = null;
+                this._afterStinger();
+            });
             sound.play();
         });
         return null;
     }
 
-    /** The stinger playing faded out (over `ms`) and let go. */
-    _endStinger(ms = STINGER_FADE_MS) {
-        const sound = this._stinger;
-        if (!sound) return;
-        this._stinger = null;
-        const key = sound.key;
-        const done = () => {
-            sound.destroy();
-            this.game.cache.audio.remove(key);
-        };
-        if (ms) this._ramp(sound, 0, ms, done);
-        else done();
+    /** The music that waited for a stinger to end, now. */
+    _afterStinger() {
+        const go = this._waiting;
+        this._waiting = null;
+        go?.();
     }
 
     /** Let go of a stinger fetched for a moment that never came (a fight fled). */
@@ -259,6 +271,7 @@ class Audio {
         const key = `music-${entry.id}`;
         this._ensureLoaded(entry.id, () => {
             if (this.music !== music) return;
+            if (this._stingerToken) return void (this._waiting = () => this._startTrack());
             const sound = this.sound.add(key, { loop: Boolean(entry.loop), volume: 0 });
             music.sound = sound;
             music.playsLeft = entry.plays || 1;
@@ -303,11 +316,12 @@ class Audio {
         sound.destroy();
         const list = this.music ? MUSIC[this.music.mood] : [];
         const upcoming = this.music ? list[(this.music.index + 1) % list.length] : null;
+        const current = this.music ? list[this.music.index % list.length] : null;     // (loaded, it may be waiting for a stinger to end)
         for (const key of this.game.cache.audio.getKeys()) {
             if (!key.startsWith('music-') || key.startsWith('music-stinger-')) continue;      // (stingers free themselves)
             // (a destroyed sound stays on the manager's list till its next update)
             const inUse = this.sound.sounds.some(s => s.key === key && s !== sound && !s.pendingRemove)
-                || (upcoming && `music-${upcoming.id}` === key);
+                || [upcoming, current].some(t => t && `music-${t.id}` === key);
             if (!inUse) this.game.cache.audio.remove(key);
         }
     }
@@ -352,7 +366,9 @@ class Audio {
     }
 
     _fadeIn(sound) {
-        this._ramp(sound, MUSIC_VOLUME, FADE_MS);
+        // From silence: a sound new to the audio context reads 1 (its node's gain, not yet rendered), so the
+        // fade-in came in loud and fell
+        this._ramp(sound, MUSIC_VOLUME, FADE_MS, undefined, 0);
     }
 
     _fadeOut(sound) {
