@@ -387,10 +387,7 @@ export class GameScene extends Scene {
             await loadBattleMap(this, country, companions);
             if (spot.action) await loadDemons(this);        // (a real-time fight, ActionBattle.js)
             this.localPlayer.setVelocity(0, 0);
-            // You'll be back a step from where it stood, the way you came (clear of the chest it leaves)
-            const away = { x: wrapDelta(spot.x, me.x), y: wrapDelta(spot.y, me.y + FEET) };
-            const k = BACK_OFF / (Math.hypot(away.x, away.y) || 1);
-            this._battleFrom = { x: spot.x + away.x * k, y: spot.y + (away.x || away.y ? away.y * k : -BACK_OFF), spot, country };
+            this._battleFrom = { ...this._backFrom(spot, { x: me.x, y: me.y + FEET }), spot, country };
             const [col, row] = this.cache.json.get('battle').maps[country].party[0];
             const res = await this._room({ battle: true, x: col * 32 + 16, y: row * 32 });
             await this._fadeOut();
@@ -418,6 +415,19 @@ export class GameScene extends Scene {
         } finally {
             this._changingRoom = this._fighting = false;
         }
+    }
+
+    /**
+     * Where you'll stand (feet) back from a fight with the foe at `spot`, met with your feet at `feet`. In the world, a step
+     * from where it stood, the way you came (clear of the chest it leaves). Inside a map (a dungeon's band), where you stood:
+     * rock and water crowd its posts, and a step back from one could be inside them (the user was stuck by the grotto's
+     * dock); a band you fled isn't armed again till you've walked away from it.
+     */
+    _backFrom(spot, feet) {
+        if (spot.town) return { x: feet.x, y: feet.y };
+        const away = { x: wrapDelta(spot.x, feet.x), y: wrapDelta(spot.y, feet.y) };
+        const k = BACK_OFF / (Math.hypot(away.x, away.y) || 1);
+        return { x: spot.x + away.x * k, y: spot.y + (away.x || away.y ? away.y * k : -BACK_OFF) };
     }
 
     /**

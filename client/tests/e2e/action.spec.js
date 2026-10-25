@@ -220,4 +220,48 @@ test.describe('A real-time fight', () => {
         // (and your companions are all still yours, for the turn-based fights)
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').companions.length)).toBe(3);
     });
+
+    test("back from a fight by a wall or the water you're never put where you can't move (the user was stuck by the dock after the +2 band)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await toTheDemons(page);
+        const stuck = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), t = gs.town;
+            const free = (p) => !t.boxBlocked(p.x - 9, p.y - 5, 18, 10);       // (your feet's box)
+            const bad = [];
+            for (const post of t.data.foes) {
+                // Every way up to it you could have stood (a little further than it takes to start the fight)
+                for (let a = 0; a < 32; a++) {
+                    const at = { x: post.x + Math.cos(a / 32 * Math.PI * 2) * 22, y: post.y + Math.sin(a / 32 * Math.PI * 2) * 22 };
+                    if (!free(at)) continue;
+                    const back = gs._backFrom({ ...post, town: t.key }, at);
+                    if (!free(back)) bad.push([post.kind, post.companions, Math.round(at.x), Math.round(at.y), Math.round(back.x), Math.round(back.y)]);
+                }
+            }
+            return bad;
+        });
+        expect(stuck).toEqual([]);
+    });
+
+    test('you can swing as you move (the user asked to): holding a way, you keep going while the attack plays', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await toTheDemons(page, { alone: true });
+        await fight(page);
+        await stage(page, [100, 300]);
+        const went = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            const me = gs.localPlayer, keys = ui.bottomControls.movementKeys;
+            keys.right = true;
+            await new Promise(r => setTimeout(r, 200));
+            ui.handleAttack();
+            await new Promise(r => setTimeout(r, 60));
+            const from = me.sprite.x, swinging = me.isAttacking;
+            await new Promise(r => setTimeout(r, 300));
+            keys.right = false;
+            return { swinging, moved: me.sprite.x - from };
+        });
+        expect(went.swinging).toBe(true);
+        expect(went.moved).toBeGreaterThan(15);
+    });
 });

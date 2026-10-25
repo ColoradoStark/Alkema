@@ -5,7 +5,7 @@
 // What makes it play well is what action games have found works:
 // - Easy to control on a phone: move, and one attack button. A swing turns to the foe nearest where
 //   you face and steps you in to it if it's just out of reach (aim assist); a press mid-swing is kept
-//   for the next (buffered).
+//   for the next (buffered); you keep moving as you swing.
 // - Every foe's blow is telegraphed: it stops, flashes red, then strikes, so you can step out of the way,
 //   and a blow you take is one you could have dodged. A warlock's fire flies where you stood: move.
 // - Only two foes wind up at any one of you at once; the rest circle, waiting their turn (the
@@ -34,6 +34,7 @@ const FEET = Ship.BELOW_HERO;
 export const DEMONS = 'folk-demons';    // client/assets/folk/demons.json (tools/bake_demons.py)
 
 const HERO_SPEED = 110;         // px a second
+const SWING_PACE = 0.85;        // ...as you swing
 const ALLY_SPEED = 95;
 const REACH = 40;               // a blow's reach, feet to feet
 const LUNGE = 26;               // a swing at a foe this much further off steps you in to it
@@ -255,8 +256,8 @@ export class ActionBattle extends Battle {
             this._queued = false;
             return this._swing(m, true);
         }
-        if (who.isAttacking) return;
-        this._go(who, dx, dy, HERO_SPEED, dt);
+        // You move as you swing (the user's), a little slower, the swing playing on
+        this._go(who, dx, dy, who.isAttacking ? HERO_SPEED * SWING_PACE : HERO_SPEED, dt);
         if (dx || dy) {
             this._stepT += delta;
             if (this._stepT >= STEP_MS) {
