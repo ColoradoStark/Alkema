@@ -227,6 +227,27 @@ test.describe('Memory', () => {
             sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, sheets: [] });
     });
 
+    test("the demons on the coast: thirty on one sheet, under budget, and let go when you leave the coast", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const base = await settled(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        const { spawn } = await page.evaluate(async () => ({ spawn: (await import('/src/world/places.js')).WORLD.spawn }));
+        await go(spawn.x, spawn.y - 23);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.who.sprite.sprite).length === 30, null, { timeout: 30000 });
+        const coast = await settled(page);
+        await go(6320, 11120);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+        const after = await settled(page);
+        console.log('the coast\'s demons', +(coast.mb - base.mb).toFixed(2), 'MB');
+        expect(coast.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+    });
+
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);

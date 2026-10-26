@@ -14,6 +14,7 @@ import { Snowfall } from '../world/Snowfall.js';
 import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
 import { ActionBattle, loadDemons } from '../battle/ActionBattle.js';
 import { Encounters } from '../battle/Encounters.js';
+import { FieldDemons } from '../battle/FieldDemons.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
@@ -93,7 +94,12 @@ export class GameScene extends Scene {
         // Foes out in the world, and what they leave behind
         this.encounters = new Encounters(this);
         this.companions = [...PARTY];      // who fights beside you (Battle.js PARTY: the user's cleric, mage and ranger)
-        this.events.once('shutdown', () => this.encounters.destroy());
+        // Demons on the coast, fought where they stand (the user's prototype: the real-time fight on the world itself)
+        this.fieldDemons = new FieldDemons(this);
+        this.events.once('shutdown', () => {
+            this.encounters.destroy();
+            this.fieldDemons.destroy();
+        });
         // Your ship, at anchor off the port of Saltmere, bow out to sea
         this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
         // Ships follow their captains after the physics step, so they never lag a frame
@@ -134,6 +140,7 @@ export class GameScene extends Scene {
         this.updateGate();
         this.updatePortraits(time, feet);
         this.updateEncounters(feet);
+        this.fieldDemons.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         // Walked into someone: story mode
         if (this.town?.bumped) {
             this.scene.get('UIScene')?.talkTo(this.town.bumped);
@@ -608,6 +615,26 @@ export class GameScene extends Scene {
         if (near.length) loadPortraits(this, near.map(f => f.sprite.characterData.id));
     }
 
+    /** Fallen to the demons on the coast: you come to where you set out, with a hit point, and they forget you. */
+    comeTo() {
+        const at = { x: WORLD.spawn.x, y: WORLD.spawn.y - FEET };
+        this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            const me = this.localPlayer.sprite;
+            me.setPosition(at.x, at.y);
+            me.body.reset(at.x, at.y);
+            me.setDirection('down');
+            me.stopAnimation?.();
+            this.cameras.main.centerOn(at.x, at.y);
+            const hp = this.scene.get('UIScene')?.hp;
+            if (hp) hp.now = Math.max(1, hp.now);
+            this.fieldDemons.forgive();
+            this._fallenInField = false;
+            this._sendMove(0, 0);
+            this.cameras.main.fadeIn(FADE_MS);
+        });
+    }
+
     /** Take down the town or room showing, and let go of everything it loaded. */
     _dropTown() {
         if (!this.town) return;
@@ -681,7 +708,7 @@ export class GameScene extends Scene {
         if (!this.localPlayer) return;
 
         this._intent = { dx, dy };
-        if (this._fighting || (this._changingRoom && this.town && !this.battle)) {        // stopped in your tracks: it's a fight, or a door's taking you
+        if (this._fighting || this._fallenInField || (this._changingRoom && this.town && !this.battle)) {        // stopped in your tracks: it's a fight, or you've fallen, or a door's taking you
             this.localPlayer.setVelocity(0, 0);
             return;
         }
@@ -794,6 +821,8 @@ export class GameScene extends Scene {
         // In a town or a dungeon, what's in front of you breaks (a barrel)
         const me = this.localPlayer?.sprite;
         if (this.town && me) this.town.strike({ x: me.x, y: me.y + FEET }, me.currentDirection || 'down', !!getRangedAnimation(this.localPlayer.characterData));
+        // Out in the world, a demon before you is struck
+        else if (me && this.world === this.overworld) this.fieldDemons.strike({ x: me.x, y: me.y + FEET }, me.currentDirection || 'down', !!getRangedAnimation(this.localPlayer.characterData));
         if (this.networkManager?.socket?.connected) {
             this.networkManager.socket.emit('player-attack', {
                 direction: this.localPlayer.sprite.currentDirection || 'down',

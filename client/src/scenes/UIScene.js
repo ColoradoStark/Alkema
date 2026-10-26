@@ -306,7 +306,7 @@ export class UIScene extends Scene {
 
     update(time, delta) {
         // Hit points and magic in the top bar; magic comes back out of a fight
-        const inFight = !!this.scene.get('GameScene')?.battle;
+        const inFight = !!this.scene.get('GameScene')?.battle || !!this.scene.get('GameScene')?.fieldDemons?.engaged;
         // Second Wind (an upgrade): both come back faster
         const regen = this.upgrades?.regen ?? 1;
         // Focus (an upgrade) adds to their magic: as much more as their stats' magic has changed
@@ -406,6 +406,7 @@ export class UIScene extends Scene {
         if (gameScene?.battle) {
             if (gameScene.battle.attack() !== false) this.quests.record('attack');
         } else if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
+            if (!gameScene.localPlayer.isAttacking) gameScene.fieldDemons?.aim();      // (a demon near you on the coast: turned to it)
             gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');
         }
