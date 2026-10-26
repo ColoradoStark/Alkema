@@ -97,6 +97,38 @@ export function preloadTown(load, key) {
     }
 }
 
+/**
+ * Fetch a map's files ahead of need, into the browser's own cache only (nothing decoded, nothing held):
+ * a door you're near, a place you're asked into. Going through it then waits on no download
+ * (the user found doors slow, Castle Dunmere's most).
+ */
+const fetched = new Set();
+export function prefetchTown(key) {
+    if (!key || fetched.has(key)) return;
+    fetched.add(key);
+    for (const url of [`/towns/${key}.json`, `/towns/${key}.png`, `/towns/${key}-things.png`, `/folk/${key}.json`]) {
+        fetch(url, { priority: 'low' }).then(r => r.arrayBuffer()).catch(() => fetched.delete(key));
+    }
+}
+
+/** Rooms with a name better than their key's word (`ROOMS[word]`). */
+const ROOMS = { keep: 'The Keep', cells: 'The Cells', chambers: 'The Chambers', back: 'The Back Room', 'inn-rooms': 'Upstairs at the Inn', longhall: 'The Long Hall' };
+
+/**
+ * What a map is called, for the card on the black as you go: the place (the town, castle or dungeon
+ * you came into from the world) and, inside it, the room or the level. `{ place, room }`.
+ */
+export function mapTitle(key, placeName) {
+    const home = TOWNS[placeName];
+    if (!home || key === home) return { place: placeName || '', room: '' };
+    const level = /^(.*)-(\d+)$/.exec(key);
+    if (level && home.startsWith(`${level[1]}-`)) return { place: placeName, room: `Level ${level[2]}` };
+    const word = key.slice(home.length + 1);
+    const room = ROOMS[word] || ROOMS[word.split('-').pop()]
+        || word.replace(/\d+$/, '').split(/[-_]/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+    return { place: placeName, room };
+}
+
 /** Let go of the fires' art (out of the towns and back on the map: the next town loads it again). */
 export function forgetFires(scene) {
     for (const name of Object.keys(FIRE_ART)) {

@@ -146,6 +146,45 @@ export class UIScene extends Scene {
         this.tweens.add({ targets: t, alpha: 0, delay: ms, duration: 500, onComplete: () => t.destroy() });
     }
 
+    /**
+     * A card on the black while a door or a gate takes you (the user's: say where you're going): Entering or
+     * Leaving, the place, the room or level inside it, and a bar for the loading. Faded in as the world fades out.
+     * @param {{ place: string, room?: string, leaving?: boolean }} where
+     * @param {Phaser.Loader.LoaderPlugin} [loader]  the map's loading, if any, for the bar
+     */
+    arriving({ place, room = '', leaving = false }, loader = null) {
+        this.arrived(true);
+        if (!place) return;
+        const W = this.scale.width, Y = 32 + 448 / 2;
+        const bits = [
+            this.add.text(W / 2, Y - 34, leaving ? 'Leaving' : 'Entering', { fontFamily: 'Romulus', fontSize: '14px', color: '#c7b08b' }).setOrigin(0.5),
+            this.add.text(W / 2, Y - 8, place, { fontFamily: 'Alagard', fontSize: '24px', color: '#fff6e0', align: 'center', wordWrap: { width: W - 48 } }).setOrigin(0.5),
+        ];
+        if (room && !leaving) bits.push(this.add.text(W / 2, Y + 20, room, { fontFamily: 'Alagard', fontSize: '16px', color: '#dab040' }).setOrigin(0.5));
+        const barW = 120, barY = Y + 46;
+        const track = this.add.rectangle(W / 2, barY, barW, 3, 0x3f3f74).setOrigin(0.5);
+        const fill = this.add.rectangle(W / 2 - barW / 2, barY, 0, 3, 0xdab040).setOrigin(0, 0.5);
+        bits.push(track, fill);
+        const card = this._card = this.add.container(0, 0, bits).setDepth(59).setAlpha(0);
+        this.tweens.add({ targets: card, alpha: 1, duration: 200 });
+        const shown = (p) => { if (fill.active) fill.width = barW * p; };
+        if (loader?.isLoading()) {
+            loader.on('progress', shown);
+            card.once('destroy', () => loader.off('progress', shown));
+        } else shown(1);
+        card.done = () => shown(1);
+    }
+
+    /** The card goes as the world fades back in (at once with `now`). */
+    arrived(now = false) {
+        const card = this._card;
+        if (!card) return;
+        this._card = null;
+        card.done();
+        if (now) card.destroy();
+        else this.tweens.add({ targets: card, alpha: 0, duration: 220, onComplete: () => card.destroy() });
+    }
+
     /** A shopkeeper at their counter: their shop, if they keep one here. */
     _shopOf(folk) {
         const town = this.scene.get('GameScene')?.town;

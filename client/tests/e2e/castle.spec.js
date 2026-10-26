@@ -385,4 +385,44 @@ test.describe('Castle Dunmere', () => {
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     });
 
+
+    test("going through a door is quick and says where it's taking you: the card on the black, the maps behind the doors fetched ahead, portraits only of who you're near", async ({ page }) => {
+        test.setTimeout(120000);
+        const asked = [];
+        page.on('request', r => asked.push(new URL(r.url()).pathname));
+        await enterWorld(page);
+        const card = () => page.evaluate(() => {
+            const c = window.__PHASER_GAME.scene.getScene('UIScene')._card;
+            return c ? c.list.filter(b => b.text !== undefined).map(b => b.text) : null;
+        });
+        // Yes, and the world fades at once with the card up, while the castle loads
+        const going = page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Castle Dunmere', x: 10928, y: 10220 }));
+        await expect.poll(card, { timeout: 2000, intervals: [20] }).toEqual(['Entering', 'Castle Dunmere']);
+        await going;
+        await expect.poll(card, { timeout: 2000 }).toBe(null);
+        expect(await where(page)).toBe('dunmere');
+        // Settled in the courtyard, the keep behind its door is fetched ahead
+        await expect.poll(() => asked.includes('/towns/dunmere-keep.png'), { timeout: 10000 }).toBe(true);
+        // Only the portraits of who's near you, not the courtyard's every one
+        await page.waitForTimeout(1500);
+        const folk = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.length);
+        const portraits = asked.filter(u => u.startsWith('/portraits/dunmere-') && !u.startsWith('/portraits/dunmere-keep'));
+        expect(folk).toBeGreaterThan(10);
+        expect(portraits.length).toBeLessThan(folk / 2);
+        // Through the keep's door: the card names the room
+        const into = page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const exit = gs.town.data.exits.find(e => e.to === 'dunmere-keep');
+            const { arrive } = await (await fetch('/towns/dunmere-keep.json')).json();
+            return gs.changeMap(exit.to, arrive, 'up');
+        });
+        await expect.poll(card, { timeout: 2000, intervals: [20] }).toEqual(['Entering', 'Castle Dunmere', 'The Keep']);
+        await into;
+        expect(await where(page)).toBe('dunmere-keep');
+        // And out to the world: Leaving
+        const out = page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await expect.poll(card, { timeout: 2000, intervals: [20] }).toEqual(['Leaving', 'Castle Dunmere']);
+        await out;
+        await expect.poll(card, { timeout: 2000 }).toBe(null);
+    });
 });

@@ -7,7 +7,7 @@ import { Overworld, wrap, wrapDelta } from '../world/Overworld.js';
 import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
 import { Ship } from '../world/Ship.js';
-import { Town, TOWNS, preloadTown, forgetFires } from '../world/Town.js';
+import { Town, TOWNS, preloadTown, forgetFires, prefetchTown, mapTitle } from '../world/Town.js';
 import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
 import { Snowfall } from '../world/Snowfall.js';
@@ -28,6 +28,8 @@ const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pa
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 const FADE_MS = 260;            // going into a town or out again
 const ROOM_WAIT_MS = 6000;      // how long to wait for the server to move you to another room before going anyway
+const PORTRAIT_NEAR = 192;      // a townsperson's painted portrait is fetched once you're this close (px), not all a town's at once
+const PREFETCH_AFTER_MS = 1500; // settled in a map, the maps behind its doors are fetched ahead (into the browser's cache)
 const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
 const BACK_OFF = 40;            // back from a fight, you stand this far from where the foe stood
 
@@ -128,6 +130,7 @@ export class GameScene extends Scene {
         this.updateSailing();
         this.updatePlaceVisit();
         this.updateGate();
+        this.updatePortraits(time, feet);
         this.updateEncounters(feet);
         // Walked into someone: story mode
         if (this.town?.bumped) {
@@ -275,20 +278,30 @@ export class GameScene extends Scene {
         this._place = place;
         const prompt = this.scene.get('UIScene')?.enterPrompt;
         if (!prompt) return;
-        if (place) prompt.show(place);
-        else prompt.hide();
+        if (place) {
+            prompt.show(place);
+            prefetchTown(TOWNS[place.name]);       // asked in: its map on its way before you say yes
+        } else prompt.hide();
     }
 
     /** Answer "Enter Riverhold?" with yes. Places without a map of their own yet stay closed. */
     async enterPlace(place) {
         const key = TOWNS[place?.name];
         if (!key || this.town || this.battle || this._changingRoom) return;
-        await this._loadTown(key).catch(() => null);
+        this._changingRoom = true;
+        // Fading out at once, the card saying where you're going, while the map loads (it waited on the load before)
+        this._card(key, place.name);
+        await Promise.all([this._loadTown(key).catch(() => null), this._fadeOut()]);
         const { arrive, facing } = this.cache.json.get(`town-${key}`) || {};
-        if (!arrive) return;
+        if (!arrive) {
+            this._changingRoom = false;
+            this.scene.get('UIScene')?.arrived();
+            this.cameras.main.fadeIn(FADE_MS);
+            return;
+        }
         this._townPlace = place;
         this.slain = new Set();         // a dungeon's bands are all back at their posts each time you come
-        await this.changeMap(key, arrive, facing || 'right');
+        await this.changeMap(key, arrive, facing || 'right', { faded: true });
     }
 
     /** Walk out through an exit (a town's gate, any door) and you're in the map it leads to. */
@@ -328,6 +341,7 @@ export class GameScene extends Scene {
         this._changingRoom = true;
         try {
             const at = { x: feet[0], y: feet[1] - FEET };
+            if (!faded) this._card(key, this._townPlace?.name);
             // Fading out as the map loads and the server answers, not after: you see at once that you're on your way
             const [, res] = await Promise.all([this._loadTown(key), this._room({ town: key, ...at }), faded ? null : this._fadeOut()]);
             this._dropTown();
@@ -342,10 +356,12 @@ export class GameScene extends Scene {
             this.cameras.main.centerOn(at.x, at.y);
             this.cameras.main.fadeIn(FADE_MS);
             this._loadFolk(this.town);
+            this._prefetchDoors(this.town);
         } catch (err) {
             console.warn('Could not go to', key, err);
             this.cameras.main.fadeIn(FADE_MS);      // (faded out already: not left on the black)
         } finally {
+            this.scene.get('UIScene')?.arrived();
             this._changingRoom = false;
         }
     }
@@ -365,6 +381,7 @@ export class GameScene extends Scene {
         const place = this._townPlace;
         this._changingRoom = true;
         audio.play('leave');        // the gate shutting behind you, at once (the user's: to know you're leaving)
+        this.scene.get('UIScene')?.arriving({ place: place?.name, leaving: true });
         try {
             const at = { x: place.x, y: place.y - FEET };
             const [res] = await Promise.all([this._room({ town: null, ...at }), this._fadeOut()]);
@@ -384,6 +401,7 @@ export class GameScene extends Scene {
         } catch (err) {
             console.warn('Could not leave', place?.name, err);
         } finally {
+            this.scene.get('UIScene')?.arrived();
             this._changingRoom = false;
         }
     }
@@ -559,6 +577,31 @@ export class GameScene extends Scene {
         say(sw.says);
     }
 
+    /** The card on the black for going to map `key` (in the place called `placeName`), its loading on the bar. */
+    _card(key, placeName) {
+        this.scene.get('UIScene')?.arriving(mapTitle(key, placeName), this.load);
+    }
+
+    /** Settled in a map, the maps behind its doors are fetched ahead, so going through one waits on no download. */
+    _prefetchDoors(town) {
+        this.time.delayedCall(PREFETCH_AFTER_MS, () => {
+            if (this.town !== town) return;
+            for (const exit of town.data.exits || []) prefetchTown(exit.to);
+        });
+    }
+
+    /**
+     * The painted portraits of the townsfolk you're near (talking needs you beside them): fetched as you come
+     * close, not every one in a town as you arrive, where they held up its people's sheets (and so the door).
+     */
+    updatePortraits(time, feet) {
+        if (!this.town || !feet || time < (this._portraitsAt || 0)) return;
+        this._portraitsAt = time + 400;
+        const near = this.town.folk.filter(f => f.sprite?.characterData?.id
+            && Math.hypot(f.sprite.x - feet.x, f.sprite.y + FEET - feet.y) < PORTRAIT_NEAR);
+        if (near.length) loadPortraits(this, near.map(f => f.sprite.characterData.id));
+    }
+
     /** Take down the town or room showing, and let go of everything it loaded. */
     _dropTown() {
         if (!this.town) return;
@@ -605,14 +648,10 @@ export class GameScene extends Scene {
     async _loadFolk(town) {
         const ready = this.cache.json.get(`folk-${town.key}`) || [];
         town.populate(ready);
-        loadPortraits(this, ready.map(f => f.character.id));
         if (town.data.folk.every(plan => ready.some(f => f.id === plan.id))) return;
         try {
             const res = await this.networkManager.request('town-folk', { town: town.key }, 90000);
-            if (res?.ok && this.town === town) {
-                town.populate(res.folk);
-                loadPortraits(this, res.folk.map(f => f.character?.id));
-            }
+            if (res?.ok && this.town === town) town.populate(res.folk);
         } catch (err) {
             console.warn('No townsfolk today', err);
         }
