@@ -15,7 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
-import { BUY, GODDESSES, GODDESS_FRAME, RANKS, givesText, lastMilestone, nextMilestone, rankAt, short } from '../../upgrades/Upgrades.js';
+import { BUY, GODDESSES, GODDESS_FRAME, MASTERY, RANKS, givesText, lastMilestone, nextMilestone, rankAt, short } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -374,7 +374,7 @@ export class GearScreen {
                 audio.play('page', { volume: 0.6 });
                 this.equipTab = key;
                 this.picking = null;
-                this.spellPick = null;
+                this.tierPick = null;
                 this.notice = '';
                 this.render();
             });
@@ -440,66 +440,91 @@ export class GearScreen {
      * blue button casts it in a real-time fight.
      */
     _renderMagic(panel) {
-        const book = this.spellbook?.();
+        const book = this.spellbook?.(), up = this.upgrades?.();
         if (!book?.list.length) {
             panel.append(el('div', 'gear-empty', { text: 'No spells yet.' }));
             return;
         }
-        const list = el('div', 'gear-list gear-spells');
-        for (const spell of book.list) {
-            const rank = book.rankOf(spell.id);
+        // The spell HUD (the user's): nothing bought here, only equipped. Each spell grows through four
+        // tiers as its upgrade's levels mount (RANKS, then its mastery), each its own painting, lit as reached
+        const list = el('div', 'gear-list gear-spells', { 'data-key': 'magic' });
+        const ROMAN = ['I', 'II', 'III', 'IV'], AT = [...RANKS, MASTERY];
+        book.list.forEach((spell, row) => {
+            const rank = book.rankOf(spell.id), level = up?.level(spell.id) || 0;
+            const tier = AT.filter(n => level >= n).length || (rank ? rank : 0);
             const on = book.equipped === spell.id;
-            const card = el('button', `gear-spell${on ? ' is-equipped' : ''}${this.spellPick === spell.id ? ' is-current' : ''}${rank ? '' : ' is-locked'}`,
-                { type: 'button', 'data-spell': spell.id });
-            const words = el('span', 'gear-spell-words');
-            const name = el('span', 'gear-spell-name', { text: spell.name });
+            const card = el('div', `gear-spell${on ? ' is-equipped' : ''}${rank ? '' : ' is-locked'}`, { 'data-spell': spell.id });
+            const top = el('div', 'gear-spell-top');
+            top.append(this._tierIcon(book, row, Math.max(0, tier - 1), !rank, 'gear-spell-big'));
+            const words = el('div', 'gear-spell-words');
+            const name = el('div', 'gear-spell-name', { text: spell.name });
+            if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
             if (on) name.append(el('span', 'gear-spell-on', { text: 'Equipped' }));
-            const path = el('span', 'gear-ranks');
-            spell.ranks.forEach((r, i) => {
-                const chip = el('span', `gear-rank${i < rank ? ' is-known' : ''}`);
-                chip.append(el('b', '', { text: ['I', 'II', 'III'][i] }), ` Lv ${RANKS[i]}`);
-                path.append(chip);
+            words.append(name);
+            const at = book.at(spell.id);
+            if (at) {
+                const k = up?.spellBoost(spell.id) ?? 1;
+                words.append(el('div', 'gear-spell-says', { text: [tier > 3 ? 'Mastery' : `Rank ${ROMAN[rank - 1]}`, k > 1 ? `power ×${k.toFixed(2)}` : null,
+                    at.mp ? `${at.mp} MP` : 'no MP', `rests ${at.cd}s`].filter(Boolean).join(' · ') }));
+            } else words.append(el('div', 'gear-spell-says', { text: spell.ranks[0].text }));
+            top.append(words);
+            if (rank) {
+                const b = el('button', 'gear-btn gear-btn--go gear-spell-equip', { type: 'button', text: on ? 'Equipped' : 'Equip' });
+                b.disabled = on || !book.canEquip(spell.id);
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (!book.equip(spell.id)) return;
+                    audio.play('equip_mage', { volume: 0.6 });
+                    this.notice = `${spell.name} is on the blue button.`;
+                    this.render();
+                });
+                top.append(b);
+            } else {
+                // Not one cast without its upgrade (the user's): to the Upgrade page, to it
+                const b = el('button', 'gear-btn gear-spell-unlock', { type: 'button', text: 'Unlock' });
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    audio.play('page', { volume: 0.6 });
+                    this.openUpgrades();
+                    this.root.querySelector(`.gear-up[data-up="${spell.id}"]`)?.scrollIntoView({ block: 'center' });
+                });
+                top.append(b);
+            }
+            card.append(top);
+            const strip = el('div', 'gear-tiers');
+            AT.forEach((n, k) => {
+                const known = level >= n || (k < 3 && k < rank);
+                const state = known ? ' is-known' : k === tier && (rank || k === 0) ? ' is-next' : '';
+                const t = el('button', `gear-rank${state}${this.tierPick === `${spell.id}:${k}` ? ' is-current' : ''}`, { type: 'button', 'data-tier': String(k + 1) });
+                t.append(this._tierIcon(book, row, k, !known, 'gear-tier-icon'), el('b', 'gear-tier-roman', { text: ROMAN[k] }));
+                if (known) t.append(el('span', 'gear-tier-tick', { text: '✓' }));
+                t.append(el('span', 'gear-tier-at', { text: `Lv ${n}` }));
+                t.addEventListener('click', () => {
+                    audio.play('page', { volume: 0.5 });
+                    this.tierPick = this.tierPick === `${spell.id}:${k}` ? null : `${spell.id}:${k}`;
+                    this.render();
+                });
+                strip.append(t);
             });
-            words.append(name, path);
-            card.append(this._spellIcon(spell.id, !rank), words);
-            card.addEventListener('click', () => {
-                audio.play('page', { volume: 0.6 });
-                this.spellPick = this.spellPick === spell.id ? null : spell.id;
-                this.notice = '';
-                this.render();
-            });
+            card.append(strip);
+            const [pickId, pickK] = (this.tierPick || '').split(':');
+            if (pickId === spell.id) {
+                const k = Number(pickK), r = spell.ranks[Math.min(k, 2)];
+                const words = k < 3 ? `${r.text} ${r.mp ? `${r.mp} MP` : 'No MP'}, rests ${r.cd}s.` : `Mastery: ${spell.name} twice as strong again.`;
+                card.append(el('div', 'gear-tier-says', { text: `${ROMAN[k]} at its upgrade's level ${AT[k]}: ${words}` }));
+            }
             list.append(card);
-        }
+        });
         panel.append(list);
+    }
 
-        const spell = this.spellPick && book.spell(this.spellPick);
-        if (!spell) return;
-        const rank = book.rankOf(spell.id);
-        const card = el('div', 'gear-detail gear-detail--spell');
-        const words = el('div', 'gear-detail-words');
-        words.append(el('div', 'gear-detail-name', { text: spell.name }));
-        spell.ranks.forEach((r, i) => {
-            const numbers = [r.mp ? `${r.mp} MP` : 'no MP', `rests ${r.cd}s`].join(' · ');
-            const line = el('div', `gear-rank-line${i < rank ? ' is-known' : ''}`);
-            line.append(el('b', '', { text: `${['I', 'II', 'III'][i]} · Lv ${RANKS[i]}` }), ` ${r.text} `, el('span', 'gear-rank-numbers', { text: numbers }));
-            words.append(line);
-        });
-        card.append(words);
-        const buttons = el('div', 'gear-actions');
-        const on = book.equipped === spell.id;
-        const b = el('button', 'gear-btn gear-btn--go', { type: 'button', text: on ? 'Equipped' : 'Equip' });
-        b.disabled = on || !book.canEquip(spell.id);
-        b.addEventListener('click', () => {
-            if (!book.equip(spell.id)) return;
-            audio.play('equip_mage', { volume: 0.6 });
-            this.notice = `${spell.name} is on the blue button.`;
-            this.render();
-        });
-        buttons.append(b);
-        if (!rank) buttons.append(el('div', 'gear-detail-note', { text: 'Learn it on the Upgrade page.' }));
-        else if (!spell.kind) buttons.append(el('div', 'gear-detail-note', { text: 'Not ready to cast yet.' }));
-        card.append(buttons);
-        panel.append(card);
+    /** One of a spell's four tier paintings (its row of its class's /spells/tiers-<class>.png, tools/spellgen.py). */
+    _tierIcon(book, row, k, dim, cls) {
+        const box = el('span', `gear-icon ${cls}${dim ? ' is-dim' : ''}`);
+        box.style.backgroundImage = `url(/spells/tiers-${book.heroClass}.png)`;
+        box.style.backgroundPosition = `${(k / 3) * 100}% ${book.list.length > 1 ? (row / (book.list.length - 1)) * 100 : 0}%`;
+        box.style.backgroundSize = `400% ${book.list.length * 100}%`;
+        return box;
     }
 
     /** A spell's painted icon (a row of the icons' sheet). */

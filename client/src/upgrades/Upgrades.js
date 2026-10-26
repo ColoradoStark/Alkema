@@ -2,7 +2,7 @@
 // again and again, each level dearer than the last (GROW), each a little stronger; every one doubles
 // what it gives at its milestones (MILESTONES). Further down the list they cost far more, and there's
 // always another below (the legends go on for ever). Your spells are in the list too: buying a
-// spell's first level learns it, its 10th and 25th its second and third ranks (RANKS), and each level
+// spell's first level learns it (your class's first ones known from the start), its 10th and 25th its second and third ranks (RANKS), and each level
 // makes it stronger; a spell not learned yet opens when the spell before it reaches its 10th level,
 // so the two grow together. Kept in the hero's save as `upgrades` ({ track id: level }).
 
@@ -10,6 +10,7 @@ import { account } from '../account/account.js';
 
 export const GROW = 1.07;                    // each level costs this much more than the one before (Clicker Heroes')
 export const RANKS = [1, 10, 25];            // a spell's level at which each of its ranks is learned
+export const MASTERY = 50;                   // ...and its mastery, its fourth tier (its 50th-level milestone, doubling it again)
 const SPELL_COSTS = [120, 500, 2000, 8000, 30000];      // the first level of each spell you don't start with
 const STARTER_COSTS = [25, 40, 60];         // ...and the next level of those you do
 const SPELL_BOOST = 0.05;                    // a spell's power, each level past its first

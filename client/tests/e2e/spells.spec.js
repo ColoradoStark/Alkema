@@ -78,7 +78,14 @@ const menu = (page) => page.evaluate(() => {
 /** Press the blue button, and pick a spell from the menu as a tap would. */
 async function castFromMenu(page, id) {
     await page.keyboard.press('e');
-    await expect.poll(async () => (await menu(page))?.rows.length ?? 0).toBe(6);
+    // (It once didn't open in a long run, and it couldn't be made to again: if it doesn't, say how the fight stood)
+    await expect.poll(async () => (await menu(page))?.rows.length ?? 0).toBe(6).catch(async () => {
+        throw new Error(`the cast menu didn't open: ${JSON.stringify(await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), b = gs.battle;
+            return { battle: !!b, over: b?.over, canAct: b?.canAct, book: !!b?.active?.book, hp: ui.hp?.now, gear: ui.gear?.visible,
+                menu: ui.castMenu.visible, cooling: ui.bottomControls.coolingDown, standing: b?.foes.filter(f => f.hp > 0).length };
+        }))}`);
+    });
     return page.evaluate((id) => {
         const m = window.__PHASER_GAME.scene.getScene('UIScene').castMenu;
         const row = m.container.list.find(o => o.getData?.('spell') === id);

@@ -84,7 +84,7 @@ const state = (page) => page.evaluate(() => {
 });
 
 test.describe('Spells in the real-time fight', () => {
-    test("Equip's Magic tab: every spell of your class with the ranks it grows through, and the one you equip is kept", async ({ page }) => {
+    test("Equip's Magic tab, the spell HUD: every spell of your class with the four tiers it grows through, equipped not bought, and the one you equip is kept", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await asClass(page, 'cleric', 'heal');
@@ -92,20 +92,27 @@ test.describe('Spells in the real-time fight', () => {
         await expect(page.locator('.gear-tab', { hasText: 'Gear' })).toBeVisible();
         await page.locator('.gear-tab', { hasText: 'Magic' }).click();
         await expect(page.locator('.gear-spell')).toHaveCount(6);
-        for (let i = 0; i < 6; i++) await expect(page.locator('.gear-spell').nth(i).locator('.gear-rank')).toHaveCount(3);
-        // Known now: lit; still to learn: the level of its upgrade each rank comes at
+        // Four tiers each, each its own painting from the class's sheet
+        for (let i = 0; i < 6; i++) await expect(page.locator('.gear-spell').nth(i).locator('.gear-rank')).toHaveCount(4);
+        await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="4"] .gear-tier-icon')).toHaveCSS('background-image', /tiers-cleric\.png/);
+        await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="4"]')).toContainText('Lv 50');
+        // Known now: lit; still to learn: the level of its upgrade each tier comes at
         await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank.is-known')).toHaveCount(1);
         await expect(page.locator('.gear-spell[data-spell="sanctuary"] .gear-rank.is-known')).toHaveCount(0);
         await expect(page.locator('.gear-spell[data-spell="sanctuary"]')).toContainText('Lv 25');
         await expect(page.locator('.gear-spell[data-spell="heal"]')).toHaveClass(/is-equipped/);
-        // Equip the cleric's lightning
-        await page.locator('.gear-spell[data-spell="smite"]').click();
-        await page.locator('.gear-btn', { hasText: 'Equip' }).click();
+        // A tier tapped says what it does
+        await page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="2"]').click();
+        await expect(page.locator('.gear-spell[data-spell="smite"] .gear-tier-says')).toContainText("II at its upgrade's level 10");
+        // Equip the cleric's lightning: nothing bought here, only equipped
+        await expect(page.locator('.gear-spell .gear-up-buy')).toHaveCount(0);
+        await page.locator('.gear-spell[data-spell="smite"] .gear-spell-equip').click();
         await expect(page.locator('.gear-spell[data-spell="smite"]')).toHaveClass(/is-equipped/);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.equipped)).toBe('smite');
-        // One still to learn can't be
-        await page.locator('.gear-spell[data-spell="sanctuary"]').click();
-        await expect(page.locator('.gear-btn', { hasText: 'Equip' })).toBeDisabled();
+        // One still to learn can't be: it sends you to its upgrade instead
+        await expect(page.locator('.gear-spell[data-spell="sanctuary"] .gear-spell-equip')).toHaveCount(0);
+        await page.locator('.gear-spell[data-spell="sanctuary"] .gear-spell-unlock').click();
+        await expect(page.locator('.gear-tab[data-tab="upgrades"]')).toHaveClass(/is-current/);
     });
 
     test('the blue button casts the spell you equipped, then it rests (the cooldown); each with its effect, particles and sound, the screen shaking a little', async ({ page }) => {
