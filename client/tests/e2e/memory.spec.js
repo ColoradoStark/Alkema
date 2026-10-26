@@ -269,6 +269,18 @@ test.describe('Memory', () => {
         expect(await shown()).toBe(0);
     });
 
+    test("the Magic tab's spell tiers are held only while it's open", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const shown = () => page.evaluate(() => [...document.querySelectorAll('*')].filter(e => getComputedStyle(e).backgroundImage.includes('/spells/tiers-')).length);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openEquip());
+        await page.locator('.gear-tab', { hasText: 'Magic' }).click();
+        await expect(page.locator('.gear-tier-icon')).toHaveCount(24);
+        expect(await shown()).toBe(30);       // (four tiers and the big one, for each of six spells)
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.close());
+        expect(await shown()).toBe(0);
+    });
+
     test('a sheet kept packed draws every frame exactly as the full sheet does', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
