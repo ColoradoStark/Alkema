@@ -431,11 +431,16 @@ export class Town {
      * its box, heading its way (out of the gate, up into a door, down out of a room).
      * @returns {{to: string|null, at?: number[], dir: string}|null}
      */
-    exitAt(x, y, intent) {
+    exitAt(x, y, intent, skip = null) {
         const going = { left: intent.dx < 0, right: intent.dx > 0, up: intent.dy < 0, down: intent.dy > 0 };
         const flags = this.scene.flags || {};
-        return this.data.exits.find(({ rect: [ex, ey, ew, eh], dir, needs }) => (dir === 'any' ? intent.dx || intent.dy : going[dir])
-            && (!needs || flags[needs]) && x >= ex && x <= ex + ew && y >= ey - 6 && y <= ey + eh + 6) || null;
+        return this.data.exits.find((e) => !skip?.has(e) && (e.dir === 'any' ? intent.dx || intent.dy : going[e.dir])
+            && (!e.needs || flags[e.needs]) && this.inExit(e, x, y)) || null;
+    }
+
+    /** Are a hero's feet at (x, y) in way out `e` (`margin` px round it)? */
+    inExit({ rect: [ex, ey, ew, eh] }, x, y, margin = 0) {
+        return x >= ex - margin && x <= ex + ew + margin && y >= ey - 6 - margin && y <= ey + eh + 6 + margin;
     }
 
     /** Are a hero's feet at (x, y) in (or right by) a way out to the world (the gate, a dungeon's mouth)? */

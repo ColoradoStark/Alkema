@@ -28,6 +28,7 @@ const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pa
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
 const FADE_MS = 260;            // going into a town or out again
 const ROOM_WAIT_MS = 6000;      // how long to wait for the server to move you to another room before going anyway
+const DOOR_CLEAR = 24;          // the door you came in by takes you back out only once you've been this far (px) clear of it
 const PORTRAIT_NEAR = 192;      // a townsperson's painted portrait is fetched once you're this close (px), not all a town's at once
 const PREFETCH_AFTER_MS = 1500; // settled in a map, the maps behind its doors are fetched ahead (into the browser's cache)
 const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
@@ -38,6 +39,7 @@ export class GameScene extends Scene {
         super({ key: 'GameScene' });
         this.players = new Map();
         this.localPlayer = null;
+        this._doorBehind = new Set();      // the way back out of the map you just came into (`updateGate`)
     }
 
     create() {
@@ -309,7 +311,10 @@ export class GameScene extends Scene {
         const me = this.localPlayer?.sprite;
         if (!this.town || !me || this._changingRoom) return;
         const intent = this._intent || { dx: 0, dy: 0 };
-        const exit = this.town.exitAt(me.x, me.y + FEET, intent);
+        // Just through a door you stand in its way back: it waits till you've stepped a tile clear of it (the user
+        // went straight back out of rooms, a wavering thumb nudging them down again as they arrived)
+        for (const e of this._doorBehind) if (!this.town.inExit(e, me.x, me.y + FEET, DOOR_CLEAR)) this._doorBehind.delete(e);
+        const exit = this.town.exitAt(me.x, me.y + FEET, intent, this._doorBehind);
         // Out to the world: asked first, as going in is (the user's); not again till you've stepped away from the way out
         if (this._askedLeave && !this.town.atWayOut(me.x, me.y + FEET)) this._askedLeave = false;
         if (exit?.to === null) {
@@ -351,6 +356,7 @@ export class GameScene extends Scene {
             this.town = this.world = new Town(this, key);
             this.cameras.main.setBackgroundColor(this.town.indoors || this.town.data.dark ? '#0c080e' : '#1d5d8c');
             this._arriveAt(at, facing, res?.players);
+            this._doorBehind = new Set(this.town.data.exits.filter(e => this.town.inExit(e, at.x, at.y + FEET)));
             if (this.town.data.name) this.scene.get('UIScene')?.notice?.(this.town.data.name, 2600);   // a dungeon level's name
             this.cameras.main.setBounds(0, 0, this.town.width, this.town.height);
             this.cameras.main.centerOn(at.x, at.y);

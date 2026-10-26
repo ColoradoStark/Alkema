@@ -102,7 +102,8 @@ test.describe('Riverhold', () => {
 
         // After dark the warden's night portrait is up instead, and it takes the day one's place (one each held)
         const held = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.constructor.portraitsHeld());
-        const heldByDay = await held();
+        // (nobody else's portrait coming meanwhile as they wander near: this counts the warden's two)
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').updatePortraits = () => {}; });
         // ...but each at their own hour, when they go in (or, for the watch, light their lantern), not when the sky
         // turns: at dusk, already dark, the guard who's latest to turn is still by day till then
         const late = await page.evaluate(() => {
@@ -123,6 +124,7 @@ test.describe('Riverhold', () => {
         expect(late.at).toBeGreaterThan(19.9);       // the sky's night by then (DayNight isNight)
         await expect.poll(() => talk().then(t => t.portrait), { timeout: 30000 }).toContain(`/portraits/${late.id}.webp`);
         while ((await talk()).open) await page.keyboard.press('Space');
+        const heldByDay = await held();     // (the warden's day one among them)
 
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 23; });
         await page.evaluate(() => {
@@ -262,7 +264,8 @@ test.describe('Riverhold', () => {
             { timeout: 120000, intervals: [1000] }).toEqual(['Weaponsmith']);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.indoors)).toBe(true);
 
-        // Straight back down and out of the door
+        // A step into the room (the door you came in by waits till you're clear of it), then back down and out of it
+        await hold(page, 'up', 400);
         await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
@@ -309,7 +312,8 @@ test.describe('Riverhold', () => {
             await walk('up', shop);
             await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(`${shop}-back`);
             expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.folk)).toEqual([]);
-            // ...and back out, below the doorway again
+            // ...and a step in, then back out, below the doorway again
+            await hold(page, 'up', 400);
             await walk('down', `${shop}-back`);
             await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe(shop);
             const back = await where(page);
@@ -356,7 +360,8 @@ test.describe('Riverhold', () => {
     test('everyone is there the moment Riverhold loads, and a room loads only its own people', async ({ page }) => {
         test.setTimeout(90000);
         const fetched = [];
-        page.on('request', r => { if (r.url().includes('/folk/')) fetched.push(new URL(r.url()).pathname); });
+        // (what the game loads, not the maps behind its doors fetched ahead into the browser's cache: those are fetch()es)
+        page.on('request', r => { if (r.url().includes('/folk/') && r.resourceType() !== 'fetch') fetched.push(new URL(r.url()).pathname); });
         await enterWorld(page);
         // The server never gets round to making anyone
         await page.evaluate(() => {
@@ -796,6 +801,35 @@ for (const v of [
 test.describe('Doors', () => {
     // The user couldn't tell if a door had taken them: a few seconds of nothing, then the room. Nor which houses open,
     // nor find the one spot that let them out again.
+    test("just in through a door, a nudge back doesn't take you out again: the way you came in waits till you've stepped clear of it", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { WORLD } = await import('/src/world/places.js');
+            await gs.enterPlace(WORLD.places.find(p => p.name === 'Fernwick'));
+            const exit = gs.town.data.exits.find(e => e.to === 'fernwick-cottage');
+            await gs.changeMap(exit.to, exit.at, 'up');
+        });
+        expect((await where(page)).town).toBe('fernwick-cottage');
+        // A thumb still wavering down as you arrive (you stand in the doorway): you stay
+        await hold(page, 'down', 500);
+        await page.waitForTimeout(800);
+        expect((await where(page)).town).toBe('fernwick-cottage');
+        // Step in, clear of the doorway, and back down: out you go
+        await hold(page, 'up', 700);
+        await page.evaluate(() => new Promise(done => {     // down, and let go the moment you're out
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), keys = gs.scene.get('UIScene').bottomControls.movementKeys;
+            keys.down = true;
+            const watch = () => { if (gs.town?.key === 'fernwick') { keys.down = false; done(); } else requestAnimationFrame(watch); };
+            watch();
+        }));
+        // Out in the street the same: a nudge back up the step doesn't take you in again
+        await hold(page, 'up', 400);
+        await page.waitForTimeout(800);
+        expect((await where(page)).town).toBe('fernwick');
+    });
+
     test("a door answers at once (its sound, the fade) however slow the server is; out of a room by any of three tiles; a barn's doors say they're shut", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
@@ -834,6 +868,7 @@ test.describe('Doors', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), out = gs.town.data.exits[0], me = gs.localPlayer.sprite;
             me.setPosition(out.rect[0] + 8, out.rect[1] - 10 - 23);
             me.body.reset(me.x, me.y);
+            gs._doorBehind.clear();       // (as though you'd walked about the room and back: the door you came in by takes you only then)
             window.__played = [];
         });
         await hold(page, 'down', 600);
@@ -878,6 +913,7 @@ test.describe('Leaving', () => {
             const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
             me.setPosition(120, 27 * 32 - 23);
             me.body.reset(me.x, me.y);
+            window.__PHASER_GAME.scene.getScene('GameScene')._doorBehind.clear();     // (as though you'd walked about and back)
         });
         // Out of a house: no question
         await page.evaluate(async () => {
@@ -886,6 +922,7 @@ test.describe('Leaving', () => {
             const out = gs.town.data.exits[0], me = gs.localPlayer.sprite;
             me.setPosition(out.rect[0] + out.rect[2] / 2, out.rect[1] - 10 - 23);
             me.body.reset(me.x, me.y);
+            gs._doorBehind.clear();       // (as though you'd walked about the room and back)
         });
         await hold(page, 'down', 600);
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
