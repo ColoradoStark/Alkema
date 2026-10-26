@@ -15,7 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
-import { BUY, RANKS, lastMilestone, nextMilestone, rankAt } from '../../upgrades/Upgrades.js';
+import { BUY, GODDESSES, GODDESS_FRAME, RANKS, givesText, lastMilestone, nextMilestone, rankAt } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -149,6 +149,7 @@ export class GearScreen {
     close() {
         if (!this.visible) return;
         this.root.hidden = true;
+        this.root.replaceChildren();      // (what it showed, pictures and all, let go)
         this.mode = null;
         this._stopHero();
         this.onClose?.();
@@ -585,10 +586,10 @@ export class GearScreen {
 
     // ------------------------------------------------------------------ upgrades
 
-    /** Two tabs (the user's): the upgrades, and your stats to see what they've done. */
+    /** Three tabs (the user's): the upgrades, the goddesses, and your stats to see what they've done. */
     _renderUpgradePage(panel) {
         const tabs = el('div', 'gear-tabs');
-        for (const [key, label] of [['upgrades', 'Upgrades'], ['stats', 'Stats']]) {
+        for (const [key, label] of [['upgrades', 'Upgrades'], ['goddesses', 'Goddesses'], ['stats', 'Stats']]) {
             const t = el('button', `gear-tab${this.upgradeTab === key ? ' is-current' : ''}`, { type: 'button', text: label, 'data-tab': key });
             t.addEventListener('click', () => {
                 if (this.upgradeTab === key) return;
@@ -602,7 +603,7 @@ export class GearScreen {
         }
         panel.append(tabs);
         if (this.upgradeTab === 'stats') return this._renderStats(panel);
-        this._renderUpgrades(panel);
+        this._renderUpgrades(panel, this.upgradeTab === 'goddesses');
     }
 
     /**
@@ -610,7 +611,7 @@ export class GearScreen {
      * to its next milestone, and a button to buy it (as many at a time as the toggle says); the ones
      * not open yet show what opens them.
      */
-    _renderUpgrades(panel) {
+    _renderUpgrades(panel, goddesses = false) {
         const up = this.upgrades?.();
         if (!up) {
             panel.append(el('div', 'gear-empty', { text: 'Upgrades will be here once the realm has reckoned your stats.' }));
@@ -630,15 +631,23 @@ export class GearScreen {
         }
         panel.append(how);
 
-        const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
-        for (const t of up.list()) {
+        // The goddesses: every one in the list from the start, those not open yet a shadow, as Clicker Heroes' heroes
+        const list = el('div', `gear-list gear-upgrades${goddesses ? ' gear-goddesses' : ''}`, { 'data-key': goddesses ? 'goddesses' : 'upgrades' });
+        for (const t of goddesses ? GODDESSES : up.list()) {
             const level = up.level(t.id), open = up.open(t);
-            const row = el('div', `gear-up${open ? '' : ' is-locked'}${t.spell ? ' is-spell' : ''}`, { 'data-up': t.id });
-            row.append(t.spell ? this._spellIcon(t.id, !level) : el('span', `gear-icon gear-up-glyph gear-up-glyph--${t.stat}`, { text: t.glyph }));
+            const row = el('div', `gear-up${open ? '' : ' is-locked'}${t.spell ? ' is-spell' : ''}${t.goddess ? ' is-goddess' : ''}`, { 'data-up': t.id });
+            if (t.goddess) {
+                const face = el('span', `gear-goddess${open ? '' : ' is-shadow'}`);
+                face.style.backgroundPosition = `${-t.frame * GODDESS_FRAME * 2 - 12}px -40px`;       // (her figure, in its frame's lower middle)
+                face.style.backgroundSize = `${GODDESSES.length * GODDESS_FRAME * 2}px ${GODDESS_FRAME * 2}px`;
+                row.append(face);
+            } else row.append(t.spell ? this._spellIcon(t.id, !level) : el('span', `gear-icon gear-up-glyph gear-up-glyph--${t.stat}`, { text: t.glyph }));
             const words = el('div', 'gear-up-words');
             const name = el('div', 'gear-up-name', { text: t.name });
+            if (t.title) words.append(el('div', 'gear-up-title', { text: t.title }));
             if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
-            words.append(name, el('div', 'gear-up-gives', { text: this._gives(up, t, level, open) }));
+            words.prepend(name);
+            words.append(el('div', 'gear-up-gives', { text: this._gives(up, t, level, open) }));
             if (open && level) {
                 // How far to its next milestone (a spell's next rank first)
                 const rankNext = t.spell && RANKS.find(r => r > level);
@@ -677,6 +686,7 @@ export class GearScreen {
             return `Rank ${['I', 'II', 'III'][rankAt(level) - 1]}${k > 1 ? `, power ×${k.toFixed(2)}` : ''}`;
         }
         const now = up.amount(t, level), next = up.amount(t, level + 1);
+        if (t.goddess) return level ? `${givesText(t.gives, now, up.magic)} (next ${givesText(t.gives, next - now, up.magic)})` : `Each level: ${givesText(t.gives, 1, up.magic)}`;
         return level ? `${t.text(now, up.magic)} (next +${next - now})` : t.text(t.per, up.magic);
     }
 
@@ -703,7 +713,7 @@ export class GearScreen {
             this.notice = `${t.name} Lv ${level}.`;
         }
         // What it opened
-        const opened = up.list().filter(o => o.needs?.[0] === t.id && level >= o.needs[1] && level - res.levels < o.needs[1]);
+        const opened = [...up.list(), ...GODDESSES].filter(o => o.needs?.[0] === t.id && level >= o.needs[1] && level - res.levels < o.needs[1]);
         if (opened.length) this.notice += ` ${opened.map(o => o.name).join(' and ')} ${opened.length > 1 ? 'are' : 'is'} open to you.`;
         this.render();
     }

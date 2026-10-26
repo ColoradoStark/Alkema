@@ -137,4 +137,45 @@ test.describe('Upgrades', () => {
         await page.locator('.gear-tab', { hasText: 'Magic' }).click();
         await expect(page.locator('.gear-spell[data-spell="frost-lance"] .gear-rank.is-known')).toHaveCount(1);
     });
+
+    test('the Goddesses tab: every goddess shown, a shadow till the one before opens her, each adding to your stats', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await asMage(page, 100000);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades('goddesses'));
+        const rows = page.locator('.gear-up.is-goddess');
+        await expect(rows).toHaveCount(12);
+        await expect(rows.first()).toHaveAttribute('data-up', 'goddess-brigid');
+        await expect(page.locator('.gear-up[data-up="goddess-brigid"]')).toContainText('Opens at Strength of Arm Lv 10');
+        await expect(page.locator('.gear-up[data-up="goddess-brigid"] .gear-goddess')).toHaveClass(/is-shadow/);
+        // Her picture is there to be shown
+        expect(await page.evaluate(() => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i.width); i.src = '/goddesses.png'; }))).toBe(12 * 64);
+        // Strength of Arm to 10 opens her, and says so
+        await page.locator('.gear-tab[data-tab="upgrades"]').click();
+        await page.locator('.gear-buy-n[data-n="10"]').click();
+        await page.locator('.gear-up-buy[data-buy="might"]').click();
+        await expect(page.locator('.gear-notice')).toContainText(/Brigid (is|are) open to you/);
+        await page.locator('.gear-tab[data-tab="goddesses"]').click();
+        await expect(page.locator('.gear-up[data-up="goddess-brigid"] .gear-goddess')).not.toHaveClass(/is-shadow/);
+        await expect(page.locator('.gear-up[data-up="goddess-freya"]')).toHaveClass(/is-locked/);
+        const before = await ui(page, (ui) => ui.inventory.stats.attack);
+        await page.locator('.gear-buy-n[data-n="1"]').click();
+        await page.locator('.gear-up-buy[data-buy="goddess-brigid"]').click();
+        await expect(page.locator('.gear-up[data-up="goddess-brigid"] .gear-up-level')).toHaveText('Lv 1');
+        expect(await ui(page, (ui) => ui.inventory.stats.attack)).toBe(before + 3);
+        // The later ones: Fortuna's gold, Eos's regen, Gaia's share of everything
+        const later = await ui(page, (ui) => {
+            const up = ui.upgrades, base = ui.inventory.stats;
+            const was = { fortune: up.fortune, regen: up.regen, hp: base.hp.max };
+            up.levels['goddess-fortuna'] = 1;
+            up.levels['goddess-eos'] = 2;
+            up.levels['goddess-gaia'] = 1;
+            up._save();
+            const now = ui.inventory.stats;
+            return { was, fortune: up.fortune, regen: up.regen, hp: now.hp.max };
+        });
+        expect(later.fortune).toBeCloseTo(later.was.fortune + 0.1);
+        expect(later.regen).toBeCloseTo(later.was.regen + 0.2);
+        expect(later.hp).toBe(Math.round(later.was.hp * 1.1));
+    });
 });

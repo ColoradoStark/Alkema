@@ -258,6 +258,17 @@ test.describe('Memory', () => {
             .filter(k => ids.some(id => k.startsWith(`sprite_${id}`))), ids)).toEqual([]);
     });
 
+    test("the goddesses' pictures are held only while their tab is open", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const shown = () => page.evaluate(() => [...document.querySelectorAll('*')].filter(e => getComputedStyle(e).backgroundImage.includes('goddesses.png')).length);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades('goddesses'));
+        await expect(page.locator('.gear-goddess')).toHaveCount(12);
+        expect(await shown()).toBe(12);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.close());
+        expect(await shown()).toBe(0);
+    });
+
     test('a sheet kept packed draws every frame exactly as the full sheet does', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);

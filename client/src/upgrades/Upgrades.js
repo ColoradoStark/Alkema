@@ -36,6 +36,42 @@ export function legend(k) {
     };
 }
 
+/**
+ * The goddesses (the user's: heroes to buy, after Clicker Heroes' long list of heroes to unlock), each
+ * far dearer than the last and giving far more, a level at a time; each opens when the one before her
+ * reaches her 10th level (the first, at Strength of Arm's 10th). `gives` is what one level gives (doubled
+ * at her milestones, as every track); `frame` her picture in /goddesses.png (tools/bake_goddesses.py).
+ */
+export const GODDESSES = [
+    ['brigid', 'Brigid', 'of the Forge', { attack: 3 }],
+    ['freya', 'Freya', 'of Love and Battle', { attack: 6, hp: 20 }],
+    ['artemis', 'Artemis', 'of the Hunt', { attack: 30 }],
+    ['athena', 'Athena', 'of Wisdom and War', { defence: 12, spell: 20 }],
+    ['selene', 'Selene', 'of the Moon', { spell: 60, mp: 6 }],
+    ['skadi', 'Skadi', 'of Winter', { hp: 600 }],
+    ['hecate', 'Hecate', 'of the Crossroads', { spell: 700 }],
+    ['fortuna', 'Fortuna', 'of Luck', { gold: 10 }],
+    ['eos', 'Eos', 'of the Dawn', { regen: 10 }],
+    ['morrigan', 'The Morrígan', 'of War and Fate', { attack: 12000 }],
+    ['nyx', 'Nyx', 'of the Night', { spell: 40000, hp: 80000 }],
+    ['gaia', 'Gaia', 'Mother of All', { all: 10 }],
+].map(([id, name, title, gives], k) => ({
+    id: `goddess-${id}`, name, title, gives, goddess: true, frame: k, base: 250 * 5 ** k, per: 1,
+    needs: k ? [`goddess-${['brigid', 'freya', 'artemis', 'athena', 'selene', 'skadi', 'hecate', 'fortuna', 'eos', 'morrigan', 'nyx'][k - 1]}`, 10] : ['might', 10],
+}));
+export const GODDESS_FRAME = 64;
+const GIVES = {
+    attack: 'attack', hp: 'hit points', defence: 'defence', spell: 'spell power', mp: 'magic',
+    gold: '% gold found', regen: '% faster hit points and magic back', all: '% to everything',
+};
+export function givesText(gives, k = 1, magic = true) {
+    return Object.entries(gives).filter(([s]) => s !== 'mp' || magic)
+        .map(([s, n]) => `+${goldish(n * k)}${s === 'gold' || s === 'regen' || s === 'all' ? '' : ' '}${GIVES[s]}`).join(', ');
+}
+function goldish(n) {
+    return n >= 1e9 ? `${+(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${+(n / 1e3).toFixed(1)}K` : String(n);
+}
+
 /** Milestones: at each, a track's every level gives twice as much (Clicker Heroes' 25, 50, 100, then every 100). */
 export function milestonesAt(level) {
     let n = 0;
@@ -102,7 +138,7 @@ export class Upgrades {
     }
 
     track(id) {
-        return STAT_TRACKS.find(t => t.id === id) || this.spellTracks.find(t => t.id === id)
+        return STAT_TRACKS.find(t => t.id === id) || this.spellTracks.find(t => t.id === id) || GODDESSES.find(t => t.id === id)
             || (id.startsWith('legend-') ? legend(Number(id.slice(7)) - 1) : null);
     }
 
@@ -192,30 +228,37 @@ export class Upgrades {
         return k;
     }
 
-    /** More gold found (Fortune), times a find. */
-    get fortune() {
-        return 1 + this.amount(STAT_TRACKS[4]) / 100;
+    /** What the goddesses give between them of a stat (a level's `gives`, times her levels and milestones). */
+    blessing(stat) {
+        let n = 0;
+        for (const g of GODDESSES) if (g.gives[stat] && this.level(g.id)) n += g.gives[stat] * this.amount(g);
+        return n;
     }
 
-    /** How much faster hit points and magic come back (Second Wind). */
+    /** More gold found (Fortune, Fortuna), times a find. */
+    get fortune() {
+        return 1 + (this.amount(STAT_TRACKS[4]) + this.blessing('gold')) / 100;
+    }
+
+    /** How much faster hit points and magic come back (Second Wind, Eos). */
     get regen() {
-        return 1 + this.amount(STAT_TRACKS[5]) / 100;
+        return 1 + (this.amount(STAT_TRACKS[5]) + this.blessing('regen')) / 100;
     }
 
     /** The hero's stats with their upgrades: what the server reckoned from their race, class and gear, and these. */
     apply(base) {
         if (!base) return base;
         const add = (id) => this.amount(STAT_TRACKS.find(t => t.id === id));
-        const all = this.legendary;
-        const hp = Math.round((base.hp.max + add('vigour')) * all);
-        const mp = base.mp.max ? base.mp.max + add('focus') : 0;
+        const all = this.legendary * (1 + this.blessing('all') / 100);
+        const hp = Math.round((base.hp.max + add('vigour') + this.blessing('hp')) * all);
+        const mp = base.mp.max ? base.mp.max + add('focus') + this.blessing('mp') : 0;
         return {
             ...base,
             hp: { now: hp, max: hp },
             mp: { now: mp, max: mp },
-            attack: Math.round((base.attack + add('might')) * all),
-            defence: base.defence + add('guard'),
-            spell: Math.round((base.spell + add('focus')) * all),
+            attack: Math.round((base.attack + add('might') + this.blessing('attack')) * all),
+            defence: base.defence + add('guard') + this.blessing('defence'),
+            spell: Math.round((base.spell + add('focus') + this.blessing('spell')) * all),
             base,
         };
     }
