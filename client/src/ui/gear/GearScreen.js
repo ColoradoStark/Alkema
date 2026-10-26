@@ -15,7 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
-import { BUY, GODDESSES, GODDESS_FRAME, RANKS, givesText, lastMilestone, nextMilestone, rankAt } from '../../upgrades/Upgrades.js';
+import { BUY, GODDESSES, GODDESS_FRAME, RANKS, givesText, lastMilestone, nextMilestone, rankAt, short } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -59,12 +59,7 @@ const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
 const pct = (n) => `${Math.round(n * 100)}%`;
 
 /** Gold as it reads: 9,500, then 12.3K, 4.5M... (the upgrades' prices grow and grow). */
-export function goldText(n) {
-    if (n < 10000) return n.toLocaleString('en-GB');
-    const [k, unit] = [[1e15, 'Q'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']].find(([k]) => n >= k);
-    const v = n / k;
-    return `${v >= 100 ? Math.floor(v) : Math.floor(v * 10) / 10}${unit}`;
-}
+export const goldText = short;
 
 function coins(n) {
     const span = el('span', 'gear-coins');

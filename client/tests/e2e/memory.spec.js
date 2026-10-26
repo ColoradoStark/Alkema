@@ -263,8 +263,8 @@ test.describe('Memory', () => {
         await enterWorld(page);
         const shown = () => page.evaluate(() => [...document.querySelectorAll('*')].filter(e => getComputedStyle(e).backgroundImage.includes('goddesses.png')).length);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades('goddesses'));
-        await expect(page.locator('.gear-goddess')).toHaveCount(12);
-        expect(await shown()).toBe(12);
+        await expect(page.locator('.gear-goddess')).toHaveCount(50);
+        expect(await shown()).toBe(50);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.close());
         expect(await shown()).toBe(0);
     });

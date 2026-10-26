@@ -144,12 +144,13 @@ test.describe('Upgrades', () => {
         await asMage(page, 100000);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades('goddesses'));
         const rows = page.locator('.gear-up.is-goddess');
-        await expect(rows).toHaveCount(12);
+        await expect(rows).toHaveCount(50);
+        await expect(rows.last()).toHaveAttribute('data-up', 'goddess-gaia');
         await expect(rows.first()).toHaveAttribute('data-up', 'goddess-brigid');
         await expect(page.locator('.gear-up[data-up="goddess-brigid"]')).toContainText('Opens at Strength of Arm Lv 10');
         await expect(page.locator('.gear-up[data-up="goddess-brigid"] .gear-goddess')).toHaveClass(/is-shadow/);
         // Her picture is there to be shown
-        expect(await page.evaluate(() => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i.width); i.src = '/goddesses.png'; }))).toBe(12 * 64);
+        expect(await page.evaluate(() => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i.width); i.src = '/goddesses.png'; }))).toBe(50 * 64);
         // Strength of Arm to 10 opens her, and says so
         await page.locator('.gear-tab[data-tab="upgrades"]').click();
         await page.locator('.gear-buy-n[data-n="10"]').click();
@@ -172,10 +173,11 @@ test.describe('Upgrades', () => {
             up.levels['goddess-gaia'] = 1;
             up._save();
             const now = ui.inventory.stats;
-            return { was, fortune: up.fortune, regen: up.regen, hp: now.hp.max };
+            return { was, fortune: up.fortune, regen: up.regen, hp: now.hp.max, gaia: up.track('goddess-gaia').gives.all };
         });
         expect(later.fortune).toBeCloseTo(later.was.fortune + 0.1);
         expect(later.regen).toBeCloseTo(later.was.regen + 0.2);
-        expect(later.hp).toBe(Math.round(later.was.hp * 1.1));
+        expect(later.gaia).toBeGreaterThan(1000);      // (the last, the greatest)
+        expect(later.hp).toBe(Math.round(later.was.hp * (1 + later.gaia / 100)));
     });
 });

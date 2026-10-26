@@ -37,11 +37,14 @@ export function legend(k) {
 }
 
 /**
- * The goddesses (the user's: heroes to buy, after Clicker Heroes' long list of heroes to unlock), each
- * far dearer than the last and giving far more, a level at a time; each opens when the one before her
- * reaches her 10th level (the first, at Strength of Arm's 10th). `gives` is what one level gives (doubled
- * at her milestones, as every track); `frame` her picture in /goddesses.png (tools/bake_goddesses.py).
+ * The goddesses (the user's: heroes to buy, after Clicker Heroes' long list of heroes to unlock; fifty,
+ * as the user asked), each five times dearer than the last and giving far more, a level at a time; each
+ * opens when the one before her reaches her 10th level (the first, at Strength of Arm's 10th). `gives` is
+ * what one level gives (doubled at her milestones, as every track): the first eleven set by hand, the rest
+ * reckoned from where she stands (`blessed`); `frame` her picture in /goddesses.png (tools/bake_goddesses.py,
+ * which follows this order).
  */
+const HAND_SET = 11;
 export const GODDESSES = [
     ['brigid', 'Brigid', 'of the Forge', { attack: 3 }],
     ['freya', 'Freya', 'of Love and Battle', { attack: 6, hp: 20 }],
@@ -54,11 +57,63 @@ export const GODDESSES = [
     ['eos', 'Eos', 'of the Dawn', { regen: 10 }],
     ['morrigan', 'The Morrígan', 'of War and Fate', { attack: 12000 }],
     ['nyx', 'Nyx', 'of the Night', { spell: 40000, hp: 80000 }],
-    ['gaia', 'Gaia', 'Mother of All', { all: 10 }],
-].map(([id, name, title, gives], k) => ({
-    id: `goddess-${id}`, name, title, gives, goddess: true, frame: k, base: 250 * 5 ** k, per: 1,
-    needs: k ? [`goddess-${['brigid', 'freya', 'artemis', 'athena', 'selene', 'skadi', 'hecate', 'fortuna', 'eos', 'morrigan', 'nyx'][k - 1]}`, 10] : ['might', 10],
+    ['hestia', 'Hestia', 'of the Hearth', ['hp']],
+    ['iris', 'Iris', 'of the Rainbow', ['spell']],
+    ['flora', 'Flora', 'of Flowers', ['regen']],
+    ['sif', 'Sif', 'the Golden-Haired', ['attack', 'hp']],
+    ['idunn', 'Idunn', 'of Youth', ['hp']],
+    ['epona', 'Epona', 'of Horses', ['attack']],
+    ['hebe', 'Hebe', 'Cupbearer of the Gods', ['regen']],
+    ['demeter', 'Demeter', 'of the Harvest', ['gold']],
+    ['persephone', 'Persephone', 'Queen of the Underworld', ['spell', 'hp']],
+    ['bastet', 'Bastet', 'of Cats', ['attack']],
+    ['rhiannon', 'Rhiannon', 'of Birdsong', ['spell']],
+    ['sol', 'Sol', 'of the Sun Chariot', ['attack', 'spell']],
+    ['eir', 'Eir', 'of Healing', ['regen']],
+    ['danu', 'Danu', 'Mother of the Gods', ['all']],
+    ['nike', 'Nike', 'of Victory', ['attack']],
+    ['aphrodite', 'Aphrodite', 'of Love', ['gold', 'hp']],
+    ['hera', 'Hera', 'Queen of Heaven', ['defence', 'hp']],
+    ['frigg', 'Frigg', 'Queen of Asgard', ['spell', 'defence']],
+    ['arianrhod', 'Arianrhod', 'of the Silver Wheel', ['spell']],
+    ['cerridwen', 'Cerridwen', 'of the Cauldron', ['spell']],
+    ['ran', 'Rán', 'of the Sea', ['hp']],
+    ['bellona', 'Bellona', 'of War', ['attack']],
+    ['sekhmet', 'Sekhmet', 'the Lioness', ['attack']],
+    ['hathor', 'Hathor', 'of Joy', ['gold']],
+    ['maat', 'Maat', 'of Truth', ['defence']],
+    ['neith', 'Neith', 'of the Bow', ['attack']],
+    ['themis', 'Themis', 'of Justice', ['defence', 'spell']],
+    ['nemesis', 'Nemesis', 'of Retribution', ['attack', 'spell']],
+    ['astraea', 'Astraea', 'of the Stars', ['spell']],
+    ['ishtar', 'Ishtar', 'of Love and War', ['attack', 'hp']],
+    ['mokosh', 'Mokosh', 'the Spinner', ['gold']],
+    ['zorya', 'Zorya', 'of the Morning Star', ['regen']],
+    ['saule', 'Saule', 'the Sun Maiden', ['spell', 'attack']],
+    ['ilmatar', 'Ilmatar', 'of the Air', ['hp', 'spell']],
+    ['hel', 'Hel', 'of the Dead', ['hp']],
+    ['ereshkigal', 'Ereshkigal', 'of the Great Below', ['spell']],
+    ['nut', 'Nut', 'of the Sky', ['all']],
+    ['tiamat', 'Tiamat', 'of the Primordial Sea', ['attack', 'spell', 'hp']],
+    ['gaia', 'Gaia', 'Mother of All', ['all']],
+].map(([id, name, title, gives], k, all) => ({
+    id: `goddess-${id}`, name, title, gives: Array.isArray(gives) ? blessed(gives, k) : gives, goddess: true, frame: k,
+    base: 250 * 5 ** k, per: 1, needs: k ? [`goddess-${all[k - 1][0]}`, 10] : ['might', 10],
 }));
+
+/** What a level of the `k`th goddess gives of each of `stats`: past the ones set by hand, about 4.5 times the one before. */
+function blessed(stats, k) {
+    const f = 40000 * 4.5 ** (k - HAND_SET + 1);
+    const each = { attack: f, spell: f, hp: 2 * f, defence: f / 3, gold: 10 * 1.3 ** (k - 7), regen: 10 * 1.3 ** (k - 8), all: 10 * 1.2 ** (k - HAND_SET) };
+    return Object.fromEntries(stats.map(s => [s, roundly(each[s])]));
+}
+
+/** Two figures, the rest noughts. */
+function roundly(n) {
+    const p = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1);
+    return Math.round(n / p) * p;
+}
+
 export const GODDESS_FRAME = 64;
 const GIVES = {
     attack: 'attack', hp: 'hit points', defence: 'defence', spell: 'spell power', mp: 'magic',
@@ -66,10 +121,17 @@ const GIVES = {
 };
 export function givesText(gives, k = 1, magic = true) {
     return Object.entries(gives).filter(([s]) => s !== 'mp' || magic)
-        .map(([s, n]) => `+${goldish(n * k)}${s === 'gold' || s === 'regen' || s === 'all' ? '' : ' '}${GIVES[s]}`).join(', ');
+        .map(([s, n]) => `+${short(n * k)}${s === 'gold' || s === 'regen' || s === 'all' ? '' : ' '}${GIVES[s]}`).join(', ');
 }
-function goldish(n) {
-    return n >= 1e9 ? `${+(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${+(n / 1e3).toFixed(1)}K` : String(n);
+
+/** A big number as it reads: 9500, then 12.3K, 4.5M, 6B, 7T, 8Qa... and past those, 1.2e48. */
+const UNITS = ['K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid'];
+export function short(n) {
+    if (n < 10000) return Math.round(n).toLocaleString('en-GB');
+    const e = Math.floor(Math.log10(n) / 3);
+    if (e > UNITS.length) return n.toExponential(1).replace('+', '');
+    const v = n / 1000 ** e;
+    return `${v >= 100 ? Math.floor(v) : Math.floor(v * 10) / 10}${UNITS[e - 1]}`;
 }
 
 /** Milestones: at each, a track's every level gives twice as much (Clicker Heroes' 25, 50, 100, then every 100). */
