@@ -112,9 +112,12 @@ export class Inventory {
         this._save();
     }
 
-    /** Sell one of `id` from the bag (what you're wearing, take off first). */
+    /**
+     * Sell one of `id` from the bag (what you're wearing, take off first): the last of them, so the
+     * lists (in the order things first came) keep its place, and Sell pressed again sells another (the user's).
+     */
     sell(id) {
-        const at = this.bag.indexOf(id);
+        const at = this.bag.lastIndexOf(id);
         if (at < 0) return { ok: false, error: 'not-carried' };
         this.bag.splice(at, 1);
         this.gold += this.sellPrice(id);

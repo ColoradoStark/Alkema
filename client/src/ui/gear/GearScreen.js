@@ -284,7 +284,7 @@ export class GearScreen {
         }
         panel.append(tabs);
 
-        const list = el('div', 'gear-list');
+        const list = el('div', 'gear-list', { 'data-key': `shop-${this.shopTab}` });
         const ids = this.shopTab === 'buy' ? this.shop.sells : [...new Set(inv.bag)];
         for (const id of ids) {
             const price = this.shopTab === 'buy' ? inv.price(id) : inv.sellPrice(id);

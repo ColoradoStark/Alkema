@@ -459,4 +459,41 @@ test.describe('Gear', () => {
         await me.waitForTimeout(2000);      // long enough for any echo to come round
         await expect.poll(() => them.evaluate(() => window.__CASTS), { timeout: 5000 }).toBe(1);
     });
+
+    test("selling several of a thing: keep pressing Sell, the row stays where it is and the list doesn't move", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await intoShop(page, 'riverhold-weapons', 'smith');
+        // A bag long enough to scroll, six spears spread through it (as found and bought over time), not last
+        await page.evaluate(() => {
+            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            inv.bag = ['dagger', 'mace', 'oak-staff', 'hunting-bow', 'spear', 'iron-sword', 'spear', 'longsword', 'spear', 'war-axe',
+                'spear', 'glowsword', 'spear', 'dagger', 'spear', 'mace'];
+            inv._save();
+        });
+        await page.locator('.gear-tab', { hasText: 'Sell' }).click();
+        const list = page.locator('.gear-panel--shop .gear-list');
+        const spear = page.locator('.gear-row[data-item="spear"]');
+        await page.setViewportSize({ width: 390, height: 640 });
+        await list.evaluate(l => { l.scrollTop = l.scrollHeight; });
+        await spear.scrollIntoViewIfNeeded();
+        await spear.click();
+        expect(await list.evaluate(l => l.scrollTop)).toBeGreaterThan(0);        // (the list scrolled: the spears aren't in its first rows)
+        const where = () => page.evaluate(() => {
+            const rows = [...document.querySelectorAll('.gear-panel--shop .gear-row')];
+            return { at: rows.findIndex(r => r.dataset.item === 'spear'), current: rows.findIndex(r => r.classList.contains('is-current')),
+                top: document.querySelector('.gear-panel--shop .gear-list').scrollTop };
+        });
+        const first = await where();
+        for (let n = 5; n >= 1; n--) {
+            await page.locator('.gear-detail .gear-btn--go').click();
+            await expect(spear.locator('.gear-count')).toHaveCount(n > 1 ? 1 : 0);
+            expect(await where()).toEqual(first);       // same place, still the one picked, the list not scrolled
+            await expect(page.locator('.gear-detail .gear-btn--go')).toBeInViewport();
+        }
+        await page.locator('.gear-detail .gear-btn--go').click();
+        await expect(spear).toHaveCount(0);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.count('spear'))).toBe(0);
+        await expect(list).toBeVisible();
+    });
 });
