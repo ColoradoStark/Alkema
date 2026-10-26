@@ -546,10 +546,11 @@ export class GameScene extends Scene {
         if (sw.kind === 'chest') {
             audio.play('chest_open');
             if (sw.gold) audio.play('coins');
-            ui?.inventory?.loot(sw.gold || 0, sw.item || null);
+            const gold = ui?.inventory?.found(sw.gold || 0) ?? sw.gold;
+            ui?.inventory?.loot(gold || 0, sw.item || null);
             const name = sw.item && ui?.inventory?.item(sw.item)?.name;
             if (sw.gold) this.effects?.coinBurst(sw.x, sw.y - 14, sw.y + 6);
-            this.effects?.floatText(sw.x, sw.y - 30, [sw.gold && `+${sw.gold} gold`, name].filter(Boolean).join('  '), '#fbf236', 16);
+            this.effects?.floatText(sw.x, sw.y - 30, [gold && `+${gold} gold`, name].filter(Boolean).join('  '), '#fbf236', 16);
         } else {
             audio.play('latch');
         }

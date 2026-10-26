@@ -25,6 +25,7 @@ export class Inventory {
         this.catalogue = catalogue;
         this.kit = kit || { items: {}, equipped: {} };
         this.stats = stats || null;
+        this.upgrades = null;       // (UIScene's: what they've bought on the Upgrade page adds to their stats and finds)
         this.request = request;
         this._listeners = new Set();
         this.busy = false;
@@ -39,6 +40,18 @@ export class Inventory {
         const left = fresh ? [] : Object.values(saved.equipped || {}).filter(id => this.item(id) && !Object.values(this.equipped).includes(id));
         if (left.length) this.bag.push(...left);
         if (fresh || left.length) this._save();
+    }
+
+    /** Their stats: as the server reckons them from race, class and gear, with their upgrades on top (`stats.base`: without). */
+    get stats() {
+        const u = this.upgrades;
+        if (!u || !this._stats) return this._stats;
+        if (this._applied?.v !== u.version || this._applied.of !== this._stats) this._applied = { v: u.version, of: this._stats, stats: u.apply(this._stats) };
+        return this._applied.stats;
+    }
+
+    set stats(s) {
+        this._stats = s;
     }
 
     /** An item by id: the shops' or one of this hero's starting pieces. */
@@ -85,6 +98,11 @@ export class Inventory {
         this.bag.push(id);
         this._save();
         return { ok: true };
+    }
+
+    /** What `gold` found comes to with Fortune (an upgrade): every find goes through this before it's shown and looted. */
+    found(gold) {
+        return gold ? Math.round(gold * (this.upgrades?.fortune ?? 1)) : 0;
     }
 
     /** Found: gold, and an item (if any) into the bag. */

@@ -4,7 +4,8 @@
 // whatever opens at level 1 (their class's first, and for mages and clerics a
 // bane); the rest wait in the cast menu, greyed with the level they come at.
 // One is equipped (Equip's Magic tab): the blue button casts it in a real-time
-// fight. Kept in the hero's save, as their gear is.
+// fight. Kept in the hero's save, as their gear is. The hero's own learn the
+// rest, and their higher ranks, on the Upgrade page (client/src/upgrades/Upgrades.js).
 
 import { account } from '../account/account.js';
 
@@ -68,10 +69,13 @@ export class Spellbook {
         return this.known[id] || 0;
     }
 
-    /** The numbers of a spell at the rank they know it, or null. */
+    /** The numbers of a spell at the rank they know it (its power made more by its upgrades, `boost`), or null. */
     at(id) {
         const rank = this.rankOf(id);
-        return rank ? this.spell(id).ranks[rank - 1] : null;
+        if (!rank) return null;
+        const r = this.spell(id).ranks[rank - 1], k = this.boost?.(id) ?? 1;
+        if (k === 1) return r;
+        return { ...r, ...(r.power ? { power: Math.round(r.power * k) } : {}), ...(r.mult ? { mult: r.mult * k } : {}) };
     }
 
     /** Does their class cast spells (magic points), or use battle skills? */

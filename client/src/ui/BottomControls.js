@@ -274,7 +274,7 @@ export class BottomControls {
         const tabs = [
             { key: 'map', label: 'Map', x: 50 },
             { key: 'equip', label: 'Equip', x: 134 },
-            { key: 'stats', label: 'Stats', x: 218 },
+            { key: 'stats', label: 'Upgrade', x: 218 },     // (the Upgrade page, its Stats a tab of it)
             { key: 'items', label: 'Items', x: 302 }
         ];
 

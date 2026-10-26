@@ -534,7 +534,10 @@ export class Battle {
     _won() {
         this.over = true;
         this._drawMarker();
-        if (this.spoils && this.slain) this.loot = rollLoot(this.slain);
+        if (this.spoils && this.slain) {
+            this.loot = rollLoot(this.slain);
+            this.loot.gold = this.scene.scene.get('UIScene')?.inventory?.found(this.loot.gold) ?? this.loot.gold;
+        }
         audio.stinger('victory');
         this.victorious = true;         // (the music of where you'll be back loads under the stinger)
         this.onWon?.();
@@ -707,7 +710,7 @@ export class Battle {
     whyNot(spell, at) {
         const m = this.active;
         const kind = SPELLS[spell.kind];
-        if (!kind) return 'Not castable yet';
+        if (!kind) return spell.kind ? 'Only in a real-time fight' : 'Not castable yet';
         if (m.rest[spell.id]) return `Resting ${m.rest[spell.id]} more turn${m.rest[spell.id] > 1 ? 's' : ''}`;
         if ((at.mp || 0) > (m.magic?.now || 0)) return `Needs ${at.mp} MP`;
         return kind.can?.call(this, m, spell, at) || null;
@@ -793,8 +796,9 @@ export class Battle {
         return s;
     }
 
-    _fx(name, x, y, { origin = 0.5, scale = 1 } = {}) {
+    _fx(name, x, y, { origin = 0.5, scale = 1, tint = null } = {}) {
         const s = this._live(this.scene.add.sprite(x, y, FX).setOrigin(0.5, origin).setScale(scale).setDepth(FX_DEPTH));
+        if (tint) s.setTint(tint);
         s.play(`${FX}-${name}`);
         s.once('animationcomplete', () => s.destroy());
         return new Promise(resolve => s.once('animationcomplete', resolve));

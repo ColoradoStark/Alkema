@@ -208,6 +208,7 @@ test.describe('Gear', () => {
         await enterWorld(page);
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory, null, { timeout: 20000 });
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        await page.locator('.gear-tab[data-tab="stats"]').click();      // (the Upgrade page's Stats tab)
         await expect(page.locator('.gear-panel--stats canvas.gear-hero')).toBeVisible();
         await expect(page.locator('.gear-level')).toContainText('Level 1');
         await expect(page.locator('.gear-attr')).toHaveCount(5);
@@ -246,6 +247,7 @@ test.describe('Gear', () => {
         const shielded = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats);
         await page.locator('.gear-close').click();
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        await page.locator('.gear-tab[data-tab="stats"]').click();      // (the Upgrade page's Stats tab)
         await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(shielded.attack));
         expect(shielded.defence).toBe(after.defence + 1);
     });
@@ -362,6 +364,7 @@ test.describe('Gear', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats.defence)).toBe(Math.max(0, clothed - 3));
         await page.locator('.gear-close').click();
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        await page.locator('.gear-tab[data-tab="stats"]').click();      // (the Upgrade page's Stats tab)
         await expect(page.locator('.gear-sheet-note')).toContainText('Nothing on your body: 2 less defence');
         await page.locator('.gear-close').click();
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));

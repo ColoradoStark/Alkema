@@ -1,8 +1,9 @@
 // The hero's gear, over the map view: a shop (talk to a shopkeeper: buy what
 // they sell, sell them what you carry), Equip (the hero large on a stage, the
-// five slots, and what in your bag could go in each), Stats (level, hit and
-// magic points, the five attributes, and what their gear comes to) and Items
-// (your bag).
+// five slots, and what in your bag could go in each; and a Magic tab), Upgrade
+// (the long list of upgrades to buy, client/src/upgrades/Upgrades.js; and a
+// Stats tab: level, hit and magic points, the five attributes, and what their
+// gear and upgrades come to) and Items (your bag).
 // A page layer like the character creator, laid out in the game's 352 px
 // column and scaled with the canvas so it's crisp at any size.
 
@@ -14,6 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
+import { BUY, RANKS, lastMilestone, nextMilestone, rankAt } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -56,9 +58,17 @@ function spellRows() {
 const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
 const pct = (n) => `${Math.round(n * 100)}%`;
 
+/** Gold as it reads: 9,500, then 12.3K, 4.5M... (the upgrades' prices grow and grow). */
+export function goldText(n) {
+    if (n < 10000) return n.toLocaleString('en-GB');
+    const [k, unit] = [[1e15, 'Q'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']].find(([k]) => n >= k);
+    const v = n / k;
+    return `${v >= 100 ? Math.floor(v) : Math.floor(v * 10) / 10}${unit}`;
+}
+
 function coins(n) {
     const span = el('span', 'gear-coins');
-    span.append(el('i', 'gear-coin'), document.createTextNode(String(n)));
+    span.append(el('i', 'gear-coin'), document.createTextNode(goldText(n)));
     return span;
 }
 
@@ -72,10 +82,13 @@ export class GearScreen {
      * @param {() => void} opts.onClose
      * @param {() => import('../../magic/Spellbook.js').Spellbook} [opts.spellbook]  the hero's spells (the Magic tab)
      */
-    constructor({ inventory, hero, request, gameWidth, onClose, spellbook }) {
+    constructor({ inventory, hero, request, gameWidth, onClose, spellbook, upgrades }) {
         this.inventory = inventory;
         this.spellbook = spellbook;
+        this.upgrades = upgrades;
         this.equipTab = 'gear';
+        this.upgradeTab = 'upgrades';
+        this.buyHowMany = 1;
         this.hero = hero;
         this.request = request;
         this.gameWidth = gameWidth;
@@ -123,8 +136,14 @@ export class GearScreen {
         this._show('items');
     }
 
-    openStats() {
+    /** The Upgrade page: its upgrades (or, `tab` 'stats', the hero's stats). */
+    openUpgrades(tab = 'upgrades') {
+        this.upgradeTab = tab;
         this._show('stats');
+    }
+
+    openStats() {
+        this.openUpgrades('stats');
     }
 
     close() {
@@ -149,6 +168,9 @@ export class GearScreen {
 
     render() {
         const inv = this.inventory;
+        // A long list keeps its place as it's drawn again (the Upgrade page's, as you buy)
+        const was = this.root.querySelector('.gear-list');
+        const scroll = was && { key: was.dataset.key, top: was.scrollTop };
         this.root.replaceChildren();
         this._stopHero();
         const panel = el('div', `gear-panel gear-panel--${this.mode}`);
@@ -164,7 +186,7 @@ export class GearScreen {
                 el('div', 'gear-says', { text: this.keeper.says || '' }));
             head.append(face, who);
         } else {
-            const titles = { equip: 'Equipment', stats: this.hero()?.name || 'Your hero', items: 'Your bag' };
+            const titles = { equip: 'Equipment', stats: this.upgradeTab === 'stats' ? this.hero()?.name || 'Your hero' : 'Upgrades', items: 'Your bag' };
             head.append(el('div', 'gear-title gear-title--big', { text: titles[this.mode] }));
         }
         const purse = el('div', 'gear-purse');
@@ -176,11 +198,13 @@ export class GearScreen {
 
         if (this.mode === 'shop') this._renderShop(panel);
         else if (this.mode === 'equip') this._renderEquip(panel);
-        else if (this.mode === 'stats') this._renderStats(panel);
+        else if (this.mode === 'stats') this._renderUpgradePage(panel);
         else this._renderItems(panel);
 
         const notice = el('div', 'gear-notice', { role: 'status', text: this.notice || '' });
         panel.append(notice);
+        const list = this.root.querySelector('.gear-list');
+        if (scroll && list && list.dataset.key === scroll.key) list.scrollTop = scroll.top;
     }
 
     _row(id, right, onPick) {
@@ -416,7 +440,7 @@ export class GearScreen {
 
     /**
      * Every spell of their class (a fighter's or a thief's skills), each with the ranks it grows
-     * through (the level each comes at, lit as they know it); tap one to read it, and equip it: the
+     * through (the level of its upgrade each comes at, lit as they know it); tap one to read it, and equip it: the
      * blue button casts it in a real-time fight.
      */
     _renderMagic(panel) {
@@ -437,7 +461,7 @@ export class GearScreen {
             const path = el('span', 'gear-ranks');
             spell.ranks.forEach((r, i) => {
                 const chip = el('span', `gear-rank${i < rank ? ' is-known' : ''}`);
-                chip.append(el('b', '', { text: ['I', 'II', 'III'][i] }), ` Lv ${r.level}`);
+                chip.append(el('b', '', { text: ['I', 'II', 'III'][i] }), ` Lv ${RANKS[i]}`);
                 path.append(chip);
             });
             words.append(name, path);
@@ -461,7 +485,7 @@ export class GearScreen {
         spell.ranks.forEach((r, i) => {
             const numbers = [r.mp ? `${r.mp} MP` : 'no MP', `rests ${r.cd}s`].join(' · ');
             const line = el('div', `gear-rank-line${i < rank ? ' is-known' : ''}`);
-            line.append(el('b', '', { text: `${['I', 'II', 'III'][i]} · Lv ${r.level}` }), ` ${r.text} `, el('span', 'gear-rank-numbers', { text: numbers }));
+            line.append(el('b', '', { text: `${['I', 'II', 'III'][i]} · Lv ${RANKS[i]}` }), ` ${r.text} `, el('span', 'gear-rank-numbers', { text: numbers }));
             words.append(line);
         });
         card.append(words);
@@ -476,7 +500,7 @@ export class GearScreen {
             this.render();
         });
         buttons.append(b);
-        if (!rank) buttons.append(el('div', 'gear-detail-note', { text: `Learned at level ${spell.ranks[0].level}.` }));
+        if (!rank) buttons.append(el('div', 'gear-detail-note', { text: 'Learn it on the Upgrade page.' }));
         else if (!spell.kind) buttons.append(el('div', 'gear-detail-note', { text: 'Not ready to cast yet.' }));
         card.append(buttons);
         panel.append(card);
@@ -559,6 +583,131 @@ export class GearScreen {
         this._raf = null;
     }
 
+    // ------------------------------------------------------------------ upgrades
+
+    /** Two tabs (the user's): the upgrades, and your stats to see what they've done. */
+    _renderUpgradePage(panel) {
+        const tabs = el('div', 'gear-tabs');
+        for (const [key, label] of [['upgrades', 'Upgrades'], ['stats', 'Stats']]) {
+            const t = el('button', `gear-tab${this.upgradeTab === key ? ' is-current' : ''}`, { type: 'button', text: label, 'data-tab': key });
+            t.addEventListener('click', () => {
+                if (this.upgradeTab === key) return;
+                audio.play('page', { volume: 0.6 });
+                this.upgradeTab = key;
+                this.selected = null;
+                this.notice = '';
+                this.render();
+            });
+            tabs.append(t);
+        }
+        panel.append(tabs);
+        if (this.upgradeTab === 'stats') return this._renderStats(panel);
+        this._renderUpgrades(panel);
+    }
+
+    /**
+     * The upgrades, cheapest first, as in Clicker Heroes: each with its level, what it gives, how far
+     * to its next milestone, and a button to buy it (as many at a time as the toggle says); the ones
+     * not open yet show what opens them.
+     */
+    _renderUpgrades(panel) {
+        const up = this.upgrades?.();
+        if (!up) {
+            panel.append(el('div', 'gear-empty', { text: 'Upgrades will be here once the realm has reckoned your stats.' }));
+            return;
+        }
+        const inv = this.inventory;
+        const how = el('div', 'gear-buy-how');
+        how.append(el('span', 'gear-buy-how-label', { text: 'Buy' }));
+        for (const n of BUY) {
+            const b = el('button', `gear-buy-n${this.buyHowMany === n ? ' is-current' : ''}`, { type: 'button', text: n === 'max' ? 'Max' : `×${n}`, 'data-n': String(n) });
+            b.addEventListener('click', () => {
+                audio.play('page', { volume: 0.5 });
+                this.buyHowMany = n;
+                this.render();
+            });
+            how.append(b);
+        }
+        panel.append(how);
+
+        const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
+        for (const t of up.list()) {
+            const level = up.level(t.id), open = up.open(t);
+            const row = el('div', `gear-up${open ? '' : ' is-locked'}${t.spell ? ' is-spell' : ''}`, { 'data-up': t.id });
+            row.append(t.spell ? this._spellIcon(t.id, !level) : el('span', `gear-icon gear-up-glyph gear-up-glyph--${t.stat}`, { text: t.glyph }));
+            const words = el('div', 'gear-up-words');
+            const name = el('div', 'gear-up-name', { text: t.name });
+            if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
+            words.append(name, el('div', 'gear-up-gives', { text: this._gives(up, t, level, open) }));
+            if (open && level) {
+                // How far to its next milestone (a spell's next rank first)
+                const rankNext = t.spell && RANKS.find(r => r > level);
+                const goal = rankNext || nextMilestone(level);
+                const from = rankNext ? RANKS.filter(r => r <= level).at(-1) : lastMilestone(level);
+                const bar = el('div', 'gear-up-bar');
+                const fill = el('span', 'gear-up-fill');
+                fill.style.width = `${Math.round(100 * (level - from) / Math.max(1, goal - from))}%`;
+                bar.append(fill, el('span', 'gear-up-goal', { text: rankNext ? `Rank ${['I', 'II', 'III'][rankAt(rankNext) - 1]} at ${rankNext}` : `×2 at ${goal}` }));
+                words.append(bar);
+            }
+            row.append(words);
+            if (open) {
+                const n = up.howMany(t, this.buyHowMany), price = up.cost(t, this.buyHowMany);
+                const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': t.id });
+                if (n > 1) buy.append(el('span', 'gear-up-n', { text: `+${n}` }));
+                buy.append(coins(price));
+                buy.classList.toggle('is-dear', price > inv.gold);
+                buy.addEventListener('click', () => this._buyUpgrade(t, price));
+                row.append(buy);
+            }
+            list.append(row);
+        }
+        panel.append(list);
+    }
+
+    /** What a track gives now, or what it will, or what opens it. */
+    _gives(up, t, level, open) {
+        if (!open) {
+            const [id, n] = t.needs;
+            return `🔒 Opens at ${up.track(id)?.name || id} Lv ${n}`;
+        }
+        if (t.spell) {
+            if (!level) return `Learn ${t.name}: ${t.spell.ranks[0].text}`;
+            const k = up.spellBoost(t.id);
+            return `Rank ${['I', 'II', 'III'][rankAt(level) - 1]}${k > 1 ? `, power ×${k.toFixed(2)}` : ''}`;
+        }
+        const now = up.amount(t, level), next = up.amount(t, level + 1);
+        return level ? `${t.text(now, up.magic)} (next +${next - now})` : t.text(t.per, up.magic);
+    }
+
+    _buyUpgrade(t, price) {
+        const up = this.upgrades?.();
+        const res = up.buy(t.id, this.buyHowMany);
+        if (!res.ok) {
+            audio.play('error', { volume: 0.5 });
+            this.notice = res.error === 'poor' ? `${t.name} costs ${goldText(price)} gold.` : SAY[res.error] || '';
+            return this.render();
+        }
+        const level = up.level(t.id);
+        if (res.learned === 1) {
+            audio.play('reveal', { volume: 0.8, drift: 0 });
+            this.notice = `You've learned ${t.name}! Equip it on Equip's Magic tab.`;
+        } else if (res.learned) {
+            audio.play('reveal', { volume: 0.8, drift: 0 });
+            this.notice = `${t.name} is rank ${['I', 'II', 'III'][res.learned - 1]} now.`;
+        } else if (res.milestone) {
+            audio.play('ting', { volume: 0.8 });
+            this.notice = `${t.name} Lv ${level}: twice as strong!`;
+        } else {
+            audio.play('coins', { volume: 0.6 });
+            this.notice = `${t.name} Lv ${level}.`;
+        }
+        // What it opened
+        const opened = up.list().filter(o => o.needs?.[0] === t.id && level >= o.needs[1] && level - res.levels < o.needs[1]);
+        if (opened.length) this.notice += ` ${opened.map(o => o.name).join(' and ')} ${opened.length > 1 ? 'are' : 'is'} open to you.`;
+        this.render();
+    }
+
     // ------------------------------------------------------------------ stats
 
     _renderStats(panel) {
@@ -607,10 +756,13 @@ export class GearScreen {
         for (const [key, name] of POWERS) {
             const tile = el('div', 'gear-power-tile', { 'data-power': key });
             tile.append(el('span', 'gear-power-value', { text: String(stats[key]) }), el('span', 'gear-power-name', { text: name }));
+            // What their upgrades add to it
+            const more = stats.base ? stats[key] - stats.base[key] : 0;
+            if (more) tile.append(el('span', 'gear-power-more', { text: `+${more} upgrades` }));
             powers.append(tile);
         }
         const note = this.inventory.equipped.body
-            ? 'Gear adds to attack, defence and spell. Tap an attribute to learn more.'
+            ? 'Gear and upgrades add to attack, defence and spell. Tap an attribute to learn more.'
             : 'Nothing on your body: 2 less defence. Tap an attribute to learn more.';
         panel.append(powers, el('div', 'gear-detail-note gear-sheet-note', { text: note }));
     }

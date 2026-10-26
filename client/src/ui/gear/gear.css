@@ -514,3 +514,61 @@
 .gear-power-value { font-size: 20px; color: var(--gold); text-shadow: 1px 1px var(--ink); }
 .gear-power-name { font-family: 'Romulus', monospace; font-size: 11px; color: var(--parchment); }
 .gear-sheet-note { text-align: center; }
+.gear-power-more { font-family: 'Romulus', monospace; font-size: 10px; color: #99e550; }
+
+/* ---------- Upgrade: the long list, cheapest first, as Clicker Heroes' ---------- */
+
+.gear-buy-how { display: flex; align-items: center; gap: 4px; }
+.gear-buy-how-label { font-family: 'Romulus', monospace; font-size: 12px; color: var(--parchment); margin-right: 2px; }
+.gear-buy-n {
+    flex: 1;
+    height: 22px;
+    font-size: 13px;
+    background: var(--well);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #6a4a18;
+}
+.gear-buy-n.is-current { color: #ffe060; background: #6a4a18; box-shadow: inset 0 0 0 2px #dab040; }
+.gear-up {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 50px;
+    padding: 3px 4px 3px 3px;
+    background: rgba(41, 23, 9, 0.85);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #6a4a18;
+}
+.gear-up.is-spell { background: rgba(30, 26, 56, 0.88); box-shadow: inset 0 0 0 1px #3f3f74; }
+.gear-up.is-locked { opacity: 0.6; }
+.gear-up-glyph { font-family: serif; font-size: 20px; color: var(--gold); text-shadow: 1px 1px var(--ink); }
+.gear-up-glyph--hp { color: #d95763; }
+.gear-up-glyph--defence { color: #cbdbfc; }
+.gear-up-glyph--spell { color: #639bff; }
+.gear-up-glyph--regen { color: #99e550; }
+.gear-up-glyph--all { color: #fbf236; text-shadow: 0 0 4px #df7126; }
+.gear-up-words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gear-up-name { font-size: 14px; display: flex; align-items: baseline; gap: 6px; }
+.gear-up-level { font-family: 'Romulus', monospace; font-size: 11px; color: var(--gold); }
+.gear-up-gives { font-family: 'Romulus', monospace; font-size: 11px; color: var(--parchment); line-height: 1.15; }
+.gear-up-bar { position: relative; height: 9px; background: var(--ink); border-radius: 2px; overflow: hidden; box-shadow: inset 0 0 0 1px #45283c; }
+.gear-up-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#fbf236, #df7126); }
+.gear-up-goal { position: absolute; right: 3px; top: -2px; font-family: 'Romulus', monospace; font-size: 9px; color: #fff; text-shadow: 1px 1px #000; }
+.gear-up-buy {
+    flex: none;
+    min-width: 62px;
+    height: 38px;
+    padding: 0 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(#6a4a18, #3d2510);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 2px #dab040;
+}
+.gear-up-buy:active { transform: translateY(1px); }
+.gear-up-buy.is-dear { background: var(--well); box-shadow: inset 0 0 0 1px #6a4a18; }
+.gear-up-buy .gear-coins { font-size: 13px; }
+.gear-up-n { font-family: 'Romulus', monospace; font-size: 10px; color: var(--parchment); }
+.gear-up-buy.is-dear .gear-coins { color: #d95763; }

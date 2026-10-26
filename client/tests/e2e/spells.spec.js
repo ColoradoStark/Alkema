@@ -91,15 +91,15 @@ async function castFromMenu(page, id) {
 const FIRST = { mage: 'fireball', cleric: 'heal', ranger: 'flaming-arrow', warrior: 'mighty-swing', thief: 'shadowstrike' };
 
 test.describe('Spells', () => {
-    test('in a fight the blue button asks which spell: your class\'s six, the ones still to learn greyed with their level; Cancel spends nothing', async ({ page }) => {
+    test('in a fight the blue button asks which spell: your class\'s six, the ones still to learn greyed, learned on the Upgrade page; Cancel spends nothing', async ({ page }) => {
         await enterWorld(page);
         await fight(page, 3);
         const cls = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.heroClass);
         await page.keyboard.press('e');
         await expect.poll(async () => (await menu(page))?.rows.length ?? 0).toBe(6);
         const shown = await menu(page);
-        const known = cls === 'mage' || cls === 'cleric' ? 2 : 1;
-        expect(shown.texts.filter(t => t.startsWith('Learned at level'))).toHaveLength(6 - known);
+        const known = { mage: 2, cleric: 3 }[cls] || 1;      // (the cleric's Smite opens at the start too)
+        expect(shown.texts.filter(t => t === 'Learn it on the Upgrade page')).toHaveLength(6 - known);
         expect(shown.rows[0]).toEqual({ id: FIRST[cls], usable: true });
         expect(shown.texts[0]).toMatch(/^(Cast which spell\?|Use which skill\?)$/);
         // Each spell's icon, square, from the painted sheet

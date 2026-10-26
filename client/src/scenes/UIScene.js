@@ -9,6 +9,7 @@ import { Dialogue, portraitUrl, nightNow } from '../ui/Dialogue.js';
 import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
 import { Spellbook } from '../magic/Spellbook.js';
+import { Upgrades } from '../upgrades/Upgrades.js';
 import { CastMenu } from '../ui/CastMenu.js';
 
 const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often
@@ -80,9 +81,13 @@ export class UIScene extends Scene {
         // Their class's spells (or a fighter's battle skills), and the one they have ready
         const heroClass = gear.stats?.class || this.scene.get('GameScene')?.localPlayer?.characterData?.character_class;
         this.spellbook = new Spellbook({ spells: catalogue.spells, heroClass });
+        // What they've bought on the Upgrade page: on their stats, their finds and their spells
+        this.upgrades = new Upgrades({ inventory: this.inventory, spellbook: this.spellbook });
+        this.inventory.upgrades = this.upgrades;
         // Their magic and hit points: full to start, spent casting and lost to blows in a fight, coming back slowly out of one
         const mp = gear.stats?.mp?.max || 0;
         this.mp = { now: mp, max: mp };
+        this._mpMax = mp;       // (what the server reckoned: their upgrades are added in update)
         const hp = gear.stats?.hp?.max || 1;
         this.hp = { now: hp, max: hp };
         this.gear = new GearScreen({
@@ -92,6 +97,7 @@ export class UIScene extends Scene {
             gameWidth: this.scale.width,
             onClose: () => this.bottomControls.activeTab !== 'map' && this.bottomControls.switchTab('map'),
             spellbook: () => this.spellbook,
+            upgrades: () => this.upgrades,
         });
         this.events.once('shutdown', () => this.gear?.close());
     }
@@ -100,7 +106,7 @@ export class UIScene extends Scene {
         if (!this.gear || this.dialogue.visible) return;
         if (key === 'equip') this.gear.openEquip();
         else if (key === 'items') this.gear.openItems();
-        else if (key === 'stats') this.gear.openStats();
+        else if (key === 'stats') this.gear.openUpgrades();
         else this.gear.close();
     }
 
@@ -262,19 +268,29 @@ export class UIScene extends Scene {
     update(time, delta) {
         // Hit points and magic in the top bar; magic comes back out of a fight
         const inFight = !!this.scene.get('GameScene')?.battle;
+        // Second Wind (an upgrade): both come back faster
+        const regen = this.upgrades?.regen ?? 1;
+        // Focus (an upgrade) adds to their magic: as much more as their stats' magic has changed
+        const mpMax = this.inventory?.stats?.mp?.max;
+        if (this.mp && mpMax !== undefined && mpMax !== this._mpMax) {
+            const more = mpMax - (this._mpMax ?? mpMax);
+            this._mpMax = mpMax;
+            this.mp.max = Math.max(0, this.mp.max + more);
+            this.mp.now = Math.max(0, Math.min(this.mp.max, this.mp.now + more));
+        }
         if (this.mp && !inFight && this.mp.now < this.mp.max) {
             this._mpBack = (this._mpBack || 0) + delta;
-            if (this._mpBack >= MP_BACK_MS) {
+            if (this._mpBack >= MP_BACK_MS / regen) {
                 this._mpBack = 0;
                 this.mp.now++;
             }
         }
         if (this.hp) {
             const max = this.inventory?.stats?.hp?.max;
-            if (max && max !== this.hp.max) this.hp = Object.assign(this.hp, { max, now: Math.min(this.hp.now, max) });
+            if (max && max !== this.hp.max) this.hp = Object.assign(this.hp, { max, now: Math.min(this.hp.now + Math.max(0, max - this.hp.max), max) });
             if (!inFight && this.hp.now < this.hp.max) {
                 this._hpBack = (this._hpBack || 0) + delta;
-                if (this._hpBack >= HP_BACK_MS) {
+                if (this._hpBack >= HP_BACK_MS / regen) {
                     this._hpBack = 0;
                     this.hp.now++;
                 }

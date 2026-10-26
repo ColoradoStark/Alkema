@@ -57,6 +57,7 @@ const FLEE_MS = 600;            // pushing against an edge this long, you've fle
 const STEP_MS = 330;            // footsteps
 const FALL_MS = 1600;
 const ARROW_SPEED = 320, BOLT_SPEED = 180;
+const SLOWED = 0.4;              // a slowed foe's pace (Frost Lance)
 const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you fight
 const COMPANION_SPELLS = { cleric: 'smite', mage: 'fireball', ranger: 'flaming-arrow' };    // what each casts, now and then, as they fight
 const HOLD_MS = 1500;           // the demons stand this long as the fight opens, while you find yourself (the user's)
@@ -235,7 +236,7 @@ export class ActionBattle extends Battle {
      * A melee spell's swing: bigger (they swell as they swing it), sparks of its colour along the arc,
      * and `onHit(struck)` with every foe before them when it comes down.
      */
-    _bigSwing(m, colour, yours, onHit, { aim = true } = {}) {
+    _bigSwing(m, colour, yours, onHit, { aim = true, round = false } = {}) {
         const who = m.who, s = who.sprite;
         if (aim) {
             const f = this._aim(m, this.MELEE_REACH + 20);
@@ -256,7 +257,7 @@ export class ActionBattle extends Battle {
             const at = this._feet(m), [ux, uy] = UNIT[s.currentDirection || 'up'];
             const struck = this.standing.filter(o => {
                 const dx = o.foe.x - at.x, dy = o.foe.y - at.y, d = Math.hypot(dx, dy);
-                return d <= REACH * 1.5 && (d < 18 || (dx * ux + dy * uy) / d >= AIM * 0.6);
+                return round ? d <= REACH * 1.8 : d <= REACH * 1.5 && (d < 18 || (dx * ux + dy * uy) / d >= AIM * 0.6);
             });
             for (const o of struck) this._sparkle(o.foe.x, o.foe.y - 22, colour, 10);
             onHit(struck);
@@ -317,7 +318,7 @@ export class ActionBattle extends Battle {
         }
         if (!this.over) {
             const mp = this.scene.scene.get('UIScene')?.mp;
-            if (mp && mp.now < mp.max && (this._mpT += delta) >= MP_BACK_MS) {
+            if (mp && mp.now < mp.max && (this._mpT += delta) >= MP_BACK_MS / (this.scene.scene.get('UIScene')?.upgrades?.regen ?? 1)) {
                 this._mpT = 0;
                 mp.now++;
             }
@@ -329,6 +330,7 @@ export class ActionBattle extends Battle {
             this._apart();
         }
         this._fly(dt);
+        this._statuses(delta);
         for (const m of this.party) {
             m.guard = Math.max(0, m.guard - delta);
             if (m.who !== this.scene.localPlayer) m.who.sprite.setDepth(sortDepth(this.scene, m.who.sprite.y + FEET) + OVER_TREES);
@@ -374,7 +376,8 @@ export class ActionBattle extends Battle {
             return this._swing(m, true);
         }
         // You move as you swing (the user's), a little slower, the swing playing on
-        this._go(who, dx, dy, who.isAttacking ? HERO_SPEED * SWING_PACE : HERO_SPEED, dt);
+        const pace = HERO_SPEED * (m.rage?.speed || 1);      // (Swiftness, Berserk)
+        this._go(who, dx, dy, who.isAttacking ? pace * SWING_PACE : pace, dt);
         if (dx || dy) {
             this._stepT += delta;
             if (this._stepT >= STEP_MS) {
@@ -469,7 +472,7 @@ export class ActionBattle extends Battle {
     }
 
     /** Something flying: an arrow, or fire (yours, or a warlock's). It goes the way it was aimed, to its range. */
-    _launch(from, to, kind, side, damage, { scale = 1, trail = null, reach = SHOT_REACH + 80, speed = null, onHit = null } = {}) {
+    _launch(from, to, kind, side, damage, { scale = 1, trail = null, reach = SHOT_REACH + 80, speed = null, onHit = null, tint = null, home = null } = {}) {
         const a = Math.atan2(to.y - from.y, to.x - from.x);
         speed ??= kind === 'arrow' ? ARROW_SPEED : BOLT_SPEED;
         let sprite;
@@ -483,12 +486,21 @@ export class ActionBattle extends Battle {
             if (!onHit) audio.play('zap', { volume: 0.5 });
         }
         sprite.setDepth(32);
-        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit });
+        if (tint) sprite.setTint(tint);
+        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit, home, speed });
     }
 
     _fly(dt) {
         for (const s of this.shots) {
             if (s.done) continue;
+            if (s.home?.hp > 0) {       // (a missile that never misses turns after its foe)
+                const want = Math.atan2(s.home.foe.y - 18 - s.sprite.y, s.home.foe.x - s.sprite.x);
+                const now = Math.atan2(s.vy, s.vx), turn = Phaser.Math.Angle.Wrap(want - now);
+                const a = now + Phaser.Math.Clamp(turn, -6 * dt, 6 * dt);
+                s.vx = Math.cos(a) * s.speed;
+                s.vy = Math.sin(a) * s.speed;
+                s.sprite.setRotation(s.kind === 'arrow' ? a : a + Math.PI / 2);
+            }
             const step = Math.hypot(s.vx, s.vy) * dt;
             s.sprite.x += s.vx * dt;
             s.sprite.y += s.vy * dt;
@@ -527,6 +539,7 @@ export class ActionBattle extends Battle {
     _strikeFoe(f, damage, from, { words = null, colour = '#fff2a8' } = {}) {
         if (f.hp <= 0) return;
         const { foe } = f;
+        if (f.mark > 0) damage = Math.round(damage * (1 + f.markMore));      // Hunter's Mark
         f.hp = Math.max(0, f.hp - damage);
         audio.play('hit_blade', { volume: 0.8 });
         this.scene.effects.impact('metal', foe.x, foe.y - 22, foe.y);
@@ -577,7 +590,18 @@ export class ActionBattle extends Battle {
     _hurt(m, damage, from) {
         if (m.out || m.guard > 0 || this.over) return;
         const s = m.who.sprite;
+        // Protect: a ward turns the blow aside
+        if (m.blocks > 0) {
+            m.blocks--;
+            m.guard = GUARD_MS / 2;
+            audio.play('block', { volume: 0.7 });
+            this._sparkle(s.x, s.y, 0xfff6c0, 10);
+            this.scene.effects.floatText(s.x, s.y - 29, 'Warded', '#fff6c0', 16);
+            return;
+        }
         damage = Math.max(1, damage - Math.floor((m.defence || 0) / 2));
+        if (m.ward > 0) damage = Math.max(1, Math.round(damage * (1 - m.wardCut)));     // Shield Wall
+        if (m.rage) damage = Math.round(damage * (m.rage.hurt || 1));                   // Berserk
         m.life.now = Math.max(0, m.life.now - damage);
         m.guard = GUARD_MS;
         this.scene.effects.floatText(s.x, s.y - 29, String(damage), '#ff6a5a', 20);
@@ -595,6 +619,66 @@ export class ActionBattle extends Battle {
         if (m === this.party[0] || !this.fighting.length) {
             this.over = true;
             this.scene.time.delayedCall(FALL_MS, () => this.end('fallen'));
+        }
+    }
+
+    /** A member's blow: harder in a rage (Berserk), and from hiding (Vanish), which brings them out of it. */
+    _blow(m, mult = 1) {
+        let k = m.rage?.hit || 1;
+        if (m.ambush) {
+            k *= m.ambush;
+            m.ambush = 0;
+            m.hidden = 0;
+        }
+        return super._blow(m, mult * k);
+    }
+
+    /** A foe stops its wind-up (staggered, lost its quarry). */
+    _calm(f) {
+        f.state = 'recover';
+        f.t = 300;
+        tint(f.foe.who, null);
+    }
+
+    /**
+     * What spells leave on people as the fight goes on: on foes, slowed, marked, cursed, fleeing,
+     * poisoned (a blow of it every second); on yours, warded, raging, hidden. Each runs down, and
+     * shows while it lasts (motes of its colour, now and then; the hidden see-through).
+     */
+    _statuses(delta) {
+        const puff = (this._puffT = (this._puffT || 0) + delta) >= 260;
+        if (puff) this._puffT = 0;
+        for (const f of this.standing) {
+            for (const k of ['slow', 'mark', 'curse', 'fear']) if (f[k] > 0) f[k] -= delta;
+            if (puff) {
+                const colour = f.poison ? 0x99e550 : f.slow > 0 ? 0x9fd0ff : f.curse > 0 || f.fear > 0 ? 0xb070ff : f.mark > 0 ? 0xff5050 : null;
+                if (colour) this._rise(f.foe.x, f.foe.y - 8, colour, 2);
+            }
+            if (f.poison) {
+                f.poison.t -= delta;
+                if ((f.poison.tick -= delta) <= 0) {
+                    f.poison.tick = 1000;
+                    f.hp = Math.max(0, f.hp - f.poison.dmg);
+                    this.scene.effects.floatText(f.foe.x, f.foe.y - f.foe.tall, String(f.poison.dmg), '#99e550', 16);
+                    if (f.hp <= 0) this._slay(f);
+                }
+                if (f.poison.t <= 0) f.poison = null;
+            }
+        }
+        for (const m of this.party) {
+            if (m.ward > 0) m.ward -= delta;
+            if (m.blockT > 0 && (m.blockT -= delta) <= 0) m.blocks = 0;
+            if (m.rage && (m.rage.t -= delta) <= 0) m.rage = null;
+            if (m.hidden > 0 && (m.hidden -= delta) <= 0) m.ambush = 0;
+            if (!m.fallen && (m.hidden > 0) !== !!m.seeThrough) {        // (only as it starts and ends: other fades are tweens)
+                m.seeThrough = m.hidden > 0;
+                m.who.sprite.setAlpha(m.seeThrough ? 0.35 : 1);
+            }
+            if (puff && !m.out) {
+                const s = m.who.sprite;
+                if (m.ward > 0 || m.blocks > 0) this._rise(s.x, s.y + 10, 0xfff6c0, 2);
+                if (m.rage) this._rise(s.x, s.y + 10, m.rage.colour, 2);
+            }
         }
     }
 
@@ -682,9 +766,18 @@ export class ActionBattle extends Battle {
             f.stun -= delta;
             return;
         }
-        // Whom it's after: the nearest of you, unless the one it's after is still about as near
-        const near = this.fighting.map(m => ({ m, d: Math.hypot(m.who.sprite.x - foe.x, m.who.sprite.y + FEET - foe.y) })).sort((a, b) => a.d - b.d);
-        if (!near.length) return;
+        // Cursed to flee (Evil Eye): away from you
+        if (f.fear > 0) {
+            const me = this._feet(this.party[0]), dx = foe.x - me.x, dy = foe.y - me.y, d = Math.hypot(dx, dy) || 1;
+            if (f.state === 'windup') this._calm(f);
+            return this._step(f, dx / d, dy / d, dt);
+        }
+        // Whom it's after: the nearest of you it can see (not one hidden in smoke), unless the one it's after is still about as near
+        const near = this.fighting.filter(m => !(m.hidden > 0)).map(m => ({ m, d: Math.hypot(m.who.sprite.x - foe.x, m.who.sprite.y + FEET - foe.y) })).sort((a, b) => a.d - b.d);
+        if (!near.length) {
+            if (f.state === 'windup') this._calm(f);
+            return this._step(f, 0, 0, dt);
+        }
         const was = near.find(n => n.m === f.target && !n.m.out);
         if (!was || was.d > near[0].d + 40) f.target = near[0].m;
         const m = f.target, at = this._feet(m);
@@ -730,7 +823,7 @@ export class ActionBattle extends Battle {
 
     _step(f, dx, dy, dt, pace = 1) {
         f.foe.walking = !!(dx || dy);
-        this._go(f.foe.who, dx, dy, f.spec.speed * pace, dt);
+        this._go(f.foe.who, dx, dy, f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1), dt);
     }
 
     _windup(f, m) {
@@ -776,7 +869,10 @@ export class ActionBattle extends Battle {
         this.scene.time.delayedCall(200, () => {
             if (f.hp <= 0 || this.over) return;
             const now = this._feet(m);
-            if (Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.reach + 8) {
+            // Cursed (Evil Eye), or swinging at smoke (Smoke Bomb, Vanish): a miss
+            if ((f.curse > 0 && Math.random() < f.miss) || m.hidden > 0) {
+                this.scene.effects.floatText(now.x, now.y - 52, 'Missed', '#c4b59f', 14);
+            } else if (Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.reach + 8) {
                 this._hurt(m, Math.round(spec.damage * (0.8 + Math.random() * 0.4)), { x: foe.x, y: foe.y });
             } else {
                 this.scene.effects.floatText(now.x, now.y - 52, 'Dodged', '#c4b59f', 14);

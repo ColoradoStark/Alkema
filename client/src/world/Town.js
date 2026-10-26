@@ -256,9 +256,10 @@ export class Town {
         s.effects?.smash(x, y, foot, b.kind);
         s.cameras.main.shake(90, 0.004);
         audio.play('smash', { volume: 0.9 });
-        const { gold, item } = barrelLoot(this.rand);
-        if (!gold && !item) return;
+        const { gold: coins, item } = barrelLoot(this.rand);
+        if (!coins && !item) return;
         const ui = s.scene.get('UIScene');
+        const gold = ui?.inventory?.found(coins) ?? coins;
         ui?.inventory?.loot(gold, item);
         if (gold) {
             s.effects?.coinBurst(x, y, foot + 4);

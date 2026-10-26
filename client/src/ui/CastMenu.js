@@ -61,7 +61,7 @@ export class CastMenu {
             const name = s.add.text(x0 + 14 + ICON + 10, y + 7, spell.name, {
                 fontFamily: 'Alagard, monospace', fontSize: '15px', color: usable ? '#fff6e0' : at ? '#c8b090' : '#7a6650',
             });
-            const note = !at ? `Learned at level ${spell.ranks[0].level}`
+            const note = !at ? (book.own ? 'Learn it on the Upgrade page' : `Learned at level ${spell.ranks[0].level}`)
                 : why || [`Rank ${rank}`, at.mp ? `${at.mp} MP` : null, at.wait ? `rests ${at.wait} turns after` : null].filter(Boolean).join(' · ');
             const sub = s.add.text(x0 + 14 + ICON + 10, y + 24, note, {
                 fontFamily: 'Romulus, monospace', fontSize: '11px', color: usable ? '#eec39a' : '#8a7058',

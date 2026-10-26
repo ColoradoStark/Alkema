@@ -153,9 +153,9 @@ export class Encounters {
     /** Walk into a chest: it opens, and what's inside is yours. */
     _open(chest) {
         chest.open = true;
-        const { gold, item } = chest.loot;
         const ui = this.scene.scene.get('UIScene');
         const inventory = ui?.inventory;
+        const { item } = chest.loot, gold = inventory?.found(chest.loot.gold) ?? chest.loot.gold;
         inventory?.loot(gold, item);
         const s = this.scene, sprite = chest.sprite;
         audio.play('chest_open');

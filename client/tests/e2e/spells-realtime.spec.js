@@ -93,10 +93,10 @@ test.describe('Spells in the real-time fight', () => {
         await page.locator('.gear-tab', { hasText: 'Magic' }).click();
         await expect(page.locator('.gear-spell')).toHaveCount(6);
         for (let i = 0; i < 6; i++) await expect(page.locator('.gear-spell').nth(i).locator('.gear-rank')).toHaveCount(3);
-        // Known now: lit; still to learn: the level it comes at
+        // Known now: lit; still to learn: the level of its upgrade each rank comes at
         await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank.is-known')).toHaveCount(1);
         await expect(page.locator('.gear-spell[data-spell="sanctuary"] .gear-rank.is-known')).toHaveCount(0);
-        await expect(page.locator('.gear-spell[data-spell="sanctuary"]')).toContainText('Lv 8');
+        await expect(page.locator('.gear-spell[data-spell="sanctuary"]')).toContainText('Lv 25');
         await expect(page.locator('.gear-spell[data-spell="heal"]')).toHaveClass(/is-equipped/);
         // Equip the cleric's lightning
         await page.locator('.gear-spell[data-spell="smite"]').click();
@@ -181,5 +181,137 @@ test.describe('Spells in the real-time fight', () => {
         });
         await expect.poll(async () => (await state(page)).fx.some(k => k.startsWith('spell-fx-lightning')), { timeout: 20000 }).toBe(true);
         expect((await state(page)).shakes).toBe(0);
+    });
+
+    test('every other spell works in the real-time fight, at its first rank and its third: what it does to foes or to you', async ({ page }) => {
+        test.setTimeout(400000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+        await fight(page, 0);
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
+        // What each must leave behind (`hurt`: foe 0 struck)
+        const WANT = {
+            warrior: { 'battle-cry': ['stun'], 'shield-wall': ['ward'], cleave: ['hurt'], earthshaker: ['hurt', 'stun'], berserk: ['rage'] },
+            mage: { 'frost-lance': ['hurt', 'slow'], lightning: ['hurt'], 'arcane-missiles': ['hurt'], explosion: ['hurt', 'hurt1'] },
+            cleric: { protect: ['blocks'], 'holy-light': ['hurt'], sanctuary: ['mend'] },
+            ranger: { 'hunters-mark': ['mark'], entangle: ['stun'], volley: ['hurt'], 'wild-companion': ['hurt'], swiftness: ['rage'] },
+            thief: { 'poison-blade': ['hurt', 'poison'], 'smoke-bomb': ['hidden'], 'evil-eye': ['curse'], knives: ['hurt'], vanish: ['hidden'] },
+        };
+        for (const [cls, spells] of Object.entries(WANT)) {
+            for (const [id, want] of Object.entries(spells)) {
+                for (const rank of [1, 3]) {
+                    await asClass(page, cls, id);
+                    // Foe 0 before you, foe 1 beside it; the rest held far off; all hard to kill
+                    await page.evaluate(([id, rank]) => {
+                        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), b = gs.battle, ui = gs.scene.get('UIScene');
+                        ui.spellbook.known[id] = rank;
+                        ui.spellbook.equip(id);
+                        b._hold = 0;
+                        b.foes.forEach((f, i) => {
+                            Object.assign(f, { hp: 5000, maxHp: 5000, stun: i < 2 ? 0 : 1e9, slow: 0, mark: 0, curse: 0, fear: 0, poison: null, state: 'recover', t: 1e9 });
+                            f.foe.who.sprite.setPosition(...[[176, 290 - 23], [206, 296 - 23]][i] || [30 + i * 40, 60]);
+                        });
+                        const m = b.party[0];
+                        m.who.sprite.setPosition(176, 330 - 23);
+                        m.who.sprite.setDirection('up');
+                        Object.assign(m, { ward: 0, blocks: 0, rage: null, hidden: 0, ambush: 0 });
+                        m.life.now = Math.ceil(m.life.max * 0.3);
+                        Object.assign(ui.mp, { now: 50, max: 50 });
+                        ui.bottomControls._cooldown.until = 0;
+                        window.__before = m.life.now;
+                        // What's seen on any frame from now on
+                        window.__seen = {};
+                        gs.events.off('postupdate', window.__look);
+                        window.__look = () => {
+                            const [f, g] = b.foes, seen = window.__seen;
+                            const now = { hurt: f.hp < 5000, hurt1: g.hp < 5000, stun: f.stun > 0, slow: f.slow > 0, mark: f.mark > 0, curse: f.curse > 0, poison: !!f.poison,
+                                ward: m.ward > 0, blocks: m.blocks > 0, rage: !!m.rage, hidden: m.hidden > 0, mend: m.life.now > window.__before };
+                            for (const k in now) seen[k] ||= now[k];
+                        };
+                        gs.events.on('postupdate', window.__look);
+                    }, [id, rank]);
+                    const cast = await blue(page);
+                    expect(cast, `${id} ${rank} cast`).not.toBe(false);
+                    await page.waitForTimeout(1400);
+                    const got = await page.evaluate(() => window.__seen);
+                    for (const w of want) expect(got[w], `${id} at rank ${rank}: ${w}`).toBe(true);
+                }
+            }
+        }
+        expect(errors).toEqual([]);
+    });
+
+    test('what the spells leave works: a ward turns a blow aside, a wall halves it, smoke and a curse make them miss, poison bites, a mark hurts more, ice slows', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
+        await fight(page, 0);
+        const r = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), b = gs.battle, m = b.party[0], [f] = b.foes;
+            const wait = (ms) => new Promise(res => setTimeout(res, ms));
+            b._hold = 0;
+            b.foes.forEach((o, i) => { o.stun = 1e9; o.hp = o.maxHp = 5000; });
+            const from = { x: m.who.sprite.x, y: m.who.sprite.y - 40 };
+            const hurt = (n) => { m.guard = 0; const was = m.life.now; b._hurt(m, n, from); return was - m.life.now; };
+            m.defence = 0;
+            m.life.max = m.life.now = 1000;
+            const plain = hurt(20);
+            m.blocks = 1;
+            const warded = hurt(20);
+            m.ward = 3000; m.wardCut = 0.5;
+            const walled = hurt(20);
+            m.ward = 0;
+            // A foe's blow at someone in smoke, or cursed to miss
+            const strikeAt = async () => {
+                m.guard = 0;
+                const was = m.life.now;
+                f.stun = 0;
+                f.foe.who.sprite.setPosition(m.who.sprite.x, m.who.sprite.y + 23 - 20 - 23 + 23);
+                b._foeStrike(f, m);
+                await wait(400);
+                f.stun = 1e9;
+                return was - m.life.now;
+            };
+            const open = await strikeAt();
+            m.hidden = 2000;
+            const smoked = await strikeAt();
+            m.hidden = 0;
+            f.curse = 5000; f.miss = 1;
+            const cursed = await strikeAt();
+            f.curse = 0;
+            // Poison bites every second
+            f.poison = { t: 3000, tick: 1000, dmg: 7 };
+            const hp = f.hp;
+            await wait(2300);
+            const bitten = hp - f.hp;
+            // A mark: the same blow lands harder
+            const blow = (k) => { const was = f.hp; b._strikeFoe(f, 10, { x: f.foe.x, y: f.foe.y + 30 }); return was - f.hp; };
+            const unmarked = blow();
+            f.mark = 5000; f.markMore = 0.5;
+            const marked = blow();
+            // Ice: half a second's walk, slowed and not
+            const walk = async (slow) => {
+                f.slow = slow; f.stun = 0; f.state = 'chase';
+                const x0 = f.foe.who.sprite.x, y0 = f.foe.who.sprite.y;
+                for (let i = 0; i < 30; i++) b._step(f, 1, 0, 1 / 60);
+                const d = Math.hypot(f.foe.who.sprite.x - x0, f.foe.who.sprite.y - y0);
+                f.foe.who.sprite.setPosition(x0, y0);
+                f.stun = 1e9;
+                return d;
+            };
+            const quick = await walk(0), slowed = await walk(5000);
+            return { plain, warded, walled, open, smoked, cursed, bitten, unmarked, marked, quick, slowed, blocksLeft: m.blocks };
+        });
+        expect(r.plain).toBeGreaterThan(0);
+        expect(r.warded).toBe(0);
+        expect(r.blocksLeft).toBe(0);
+        expect(r.walled).toBe(Math.max(1, Math.round(r.plain * 0.5)));
+        expect(r.open).toBeGreaterThan(0);
+        expect(r.smoked).toBe(0);
+        expect(r.cursed).toBe(0);
+        expect(r.bitten).toBe(14);
+        expect(r.marked).toBe(Math.round(r.unmarked * 1.5));
+        expect(r.slowed).toBeLessThan(r.quick * 0.5);
     });
 });
