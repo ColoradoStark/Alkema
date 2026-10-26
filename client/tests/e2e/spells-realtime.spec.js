@@ -104,15 +104,25 @@ test.describe('Spells in the real-time fight', () => {
         // A tier tapped says what it does
         await page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="2"]').click();
         await expect(page.locator('.gear-spell[data-spell="smite"] .gear-tier-says')).toContainText("II at its upgrade's level 10");
-        // Equip the cleric's lightning: nothing bought here, only equipped
-        await expect(page.locator('.gear-spell .gear-up-buy')).toHaveCount(0);
-        await page.locator('.gear-spell[data-spell="smite"] .gear-spell-equip').click();
+        // One slot: the socket at the top holds the one equipped, and only its radio is filled
+        await expect(page.locator('.gear-cast')).toHaveCount(1);
+        await expect(page.locator('.gear-cast-name')).toHaveText('Heal');
+        await expect(page.locator('.gear-spell[aria-checked="true"]')).toHaveCount(1);
+        // Equip the cleric's lightning by tapping it: nothing bought here, no buttons, only chosen
+        await expect(page.locator('.gear-spell button:not(.gear-rank)')).toHaveCount(0);
+        await page.locator('.gear-spell[data-spell="smite"] .gear-spell-name').click();
         await expect(page.locator('.gear-spell[data-spell="smite"]')).toHaveClass(/is-equipped/);
+        await expect(page.locator('.gear-spell.is-equipped')).toHaveCount(1);
+        await expect(page.locator('.gear-cast-name')).toHaveText('Smite');
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.equipped)).toBe('smite');
-        // One still to learn can't be: it sends you to its upgrade instead
-        await expect(page.locator('.gear-spell[data-spell="sanctuary"] .gear-spell-equip')).toHaveCount(0);
-        await page.locator('.gear-spell[data-spell="sanctuary"] .gear-spell-unlock').click();
-        await expect(page.locator('.gear-tab[data-tab="upgrades"]')).toHaveClass(/is-current/);
+        // Tapping a tier reads it, it doesn't equip
+        await page.locator('.gear-spell[data-spell="heal"] .gear-rank[data-tier="1"]').click();
+        await expect(page.locator('.gear-cast-name')).toHaveText('Smite');
+        // One still to learn is locked: tapping it changes nothing and goes nowhere
+        await page.locator('.gear-spell[data-spell="sanctuary"] .gear-spell-name').click({ force: true });
+        await expect(page.locator('.gear-spell[data-spell="sanctuary"]')).toHaveClass(/is-locked/);
+        await expect(page.locator('.gear-cast-name')).toHaveText('Smite');
+        await expect(page.locator('.gear-tab', { hasText: 'Magic' })).toHaveClass(/is-current/);
     });
 
     test('the blue button casts the spell you equipped, then it rests (the cooldown); each with its effect, particles and sound, the screen shaking a little', async ({ page }) => {

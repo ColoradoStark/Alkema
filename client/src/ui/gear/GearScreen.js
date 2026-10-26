@@ -392,7 +392,7 @@ export class GearScreen {
             const b = el('button', 'gear-slot-pick', { type: 'button' });
             b.append(id ? this._icon(id) : el('span', 'gear-icon is-empty', { 'data-slot': slot }));
             const words = el('span', 'gear-slot-words');
-            words.append(el('span', 'gear-slot-name', { text: SLOT_NAMES[slot] }),
+            words.append(el('span', 'gear-cast-name', { text: SLOT_NAMES[slot] }),
                 el('span', 'gear-slot-item', { text: id ? inv.item(id)?.name : '—' }));
             b.append(words);
             b.addEventListener('click', () => {
@@ -447,19 +447,35 @@ export class GearScreen {
         }
         // The spell HUD (the user's): nothing bought here, only equipped. Each spell grows through four
         // tiers as its upgrade's levels mount (RANKS, then its mastery), each its own painting, lit as reached
-        const list = el('div', 'gear-list gear-spells', { 'data-key': 'magic' });
+        // One slot (the user's: it must say without words that only one is equipped): the socket at the top holds
+        // the spell the blue button casts; each spell below is a radio, its socket filled only on the one in the slot.
+        // A spell not learned yet is locked (learned on the Upgrade page; nothing here sends you there)
         const ROMAN = ['I', 'II', 'III', 'IV'], AT = [...RANKS, MASTERY];
+        const tierOf = (spell) => {
+            const rank = book.rankOf(spell.id), level = up?.level(spell.id) || 0;
+            return AT.filter(n => level >= n).length || rank;
+        };
+        const worn = book.spell(book.equipped);
+        if (worn) {
+            const slot = el('div', `gear-cast${this.slotted && this.slotted !== worn.id ? ' is-new' : ''}`);
+            const socket = el('div', 'gear-cast-socket');
+            socket.append(this._tierIcon(book, book.list.indexOf(worn), Math.max(0, tierOf(worn) - 1), false, 'gear-cast-icon'));
+            slot.append(socket, el('div', 'gear-cast-name', { text: worn.name }));
+            panel.append(slot);
+            this.slotted = worn.id;
+        }
+        const list = el('div', 'gear-list gear-spells', { 'data-key': 'magic', role: 'radiogroup' });
         book.list.forEach((spell, row) => {
             const rank = book.rankOf(spell.id), level = up?.level(spell.id) || 0;
-            const tier = AT.filter(n => level >= n).length || (rank ? rank : 0);
+            const tier = tierOf(spell);
             const on = book.equipped === spell.id;
-            const card = el('div', `gear-spell${on ? ' is-equipped' : ''}${rank ? '' : ' is-locked'}`, { 'data-spell': spell.id });
+            const card = el('div', `gear-spell${on ? ' is-equipped' : ''}${rank ? '' : ' is-locked'}`,
+                { 'data-spell': spell.id, role: 'radio', 'aria-checked': String(on), 'aria-disabled': String(!book.canEquip(spell.id)) });
             const top = el('div', 'gear-spell-top');
             top.append(this._tierIcon(book, row, Math.max(0, tier - 1), !rank, 'gear-spell-big'));
             const words = el('div', 'gear-spell-words');
             const name = el('div', 'gear-spell-name', { text: spell.name });
             if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
-            if (on) name.append(el('span', 'gear-spell-on', { text: 'Equipped' }));
             words.append(name);
             const at = book.at(spell.id);
             if (at) {
@@ -468,28 +484,22 @@ export class GearScreen {
                     at.mp ? `${at.mp} MP` : 'no MP', `rests ${at.cd}s`].filter(Boolean).join(' · ') }));
             } else words.append(el('div', 'gear-spell-says', { text: spell.ranks[0].text }));
             top.append(words);
-            if (rank) {
-                const b = el('button', 'gear-btn gear-btn--go gear-spell-equip', { type: 'button', text: on ? 'Equipped' : 'Equip' });
-                b.disabled = on || !book.canEquip(spell.id);
-                b.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (!book.equip(spell.id)) return;
-                    audio.play('equip_mage', { volume: 0.6 });
-                    this.notice = `${spell.name} is on the blue button.`;
-                    this.render();
-                });
-                top.append(b);
-            } else {
-                // Not one cast without its upgrade (the user's): to the Upgrade page, to it
-                const b = el('button', 'gear-btn gear-spell-unlock', { type: 'button', text: 'Unlock' });
-                b.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    audio.play('page', { volume: 0.6 });
-                    this.openUpgrades();
-                    this.root.querySelector(`.gear-up[data-up="${spell.id}"]`)?.scrollIntoView({ block: 'center' });
-                });
-                top.append(b);
-            }
+            // The radio's socket: empty, filled (the one in the slot), or a lock
+            const pick = el('span', 'gear-spell-pick');
+            if (!rank) pick.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16"><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="7" width="10" height="8" rx="1.5" fill="currentColor"/></svg>';
+            top.append(pick);
+            card.addEventListener('click', () => {
+                if (on) return;
+                if (!book.equip(spell.id)) {
+                    audio.play('error', { volume: 0.5 });
+                    card.classList.remove('is-shaking');
+                    void card.offsetWidth;
+                    card.classList.add('is-shaking');
+                    return;
+                }
+                audio.play('equip_mage', { volume: 0.6 });
+                this.render();
+            });
             card.append(top);
             const strip = el('div', 'gear-tiers');
             AT.forEach((n, k) => {
@@ -497,9 +507,9 @@ export class GearScreen {
                 const state = known ? ' is-known' : k === tier && (rank || k === 0) ? ' is-next' : '';
                 const t = el('button', `gear-rank${state}${this.tierPick === `${spell.id}:${k}` ? ' is-current' : ''}`, { type: 'button', 'data-tier': String(k + 1) });
                 t.append(this._tierIcon(book, row, k, !known, 'gear-tier-icon'), el('b', 'gear-tier-roman', { text: ROMAN[k] }));
-                if (known) t.append(el('span', 'gear-tier-tick', { text: '✓' }));
                 t.append(el('span', 'gear-tier-at', { text: `Lv ${n}` }));
-                t.addEventListener('click', () => {
+                t.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     audio.play('page', { volume: 0.5 });
                     this.tierPick = this.tierPick === `${spell.id}:${k}` ? null : `${spell.id}:${k}`;
                     this.render();

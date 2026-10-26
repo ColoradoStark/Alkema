@@ -276,7 +276,7 @@ test.describe('Memory', () => {
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openEquip());
         await page.locator('.gear-tab', { hasText: 'Magic' }).click();
         await expect(page.locator('.gear-tier-icon')).toHaveCount(24);
-        expect(await shown()).toBe(30);       // (four tiers and the big one, for each of six spells)
+        expect(await shown()).toBe(31);       // (four tiers and the big one, for each of six spells, and the one in the slot)
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.close());
         expect(await shown()).toBe(0);
     });
