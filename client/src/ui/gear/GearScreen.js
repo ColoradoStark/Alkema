@@ -581,10 +581,10 @@ export class GearScreen {
 
     // ------------------------------------------------------------------ upgrades
 
-    /** Three tabs (the user's): the upgrades, the goddesses, and your stats to see what they've done. */
+    /** Two tabs (the user's): the upgrades (the goddesses below them), and your stats to see what they've done. */
     _renderUpgradePage(panel) {
         const tabs = el('div', 'gear-tabs');
-        for (const [key, label] of [['upgrades', 'Upgrades'], ['goddesses', 'Goddesses'], ['stats', 'Stats']]) {
+        for (const [key, label] of [['upgrades', 'Upgrades'], ['stats', 'Stats']]) {
             const t = el('button', `gear-tab${this.upgradeTab === key ? ' is-current' : ''}`, { type: 'button', text: label, 'data-tab': key });
             t.addEventListener('click', () => {
                 if (this.upgradeTab === key) return;
@@ -598,7 +598,7 @@ export class GearScreen {
         }
         panel.append(tabs);
         if (this.upgradeTab === 'stats') return this._renderStats(panel);
-        this._renderUpgrades(panel, this.upgradeTab === 'goddesses');
+        this._renderUpgrades(panel);
     }
 
     /**
@@ -606,7 +606,7 @@ export class GearScreen {
      * to its next milestone, and a button to buy it (as many at a time as the toggle says); the ones
      * not open yet show what opens them.
      */
-    _renderUpgrades(panel, goddesses = false) {
+    _renderUpgrades(panel) {
         const up = this.upgrades?.();
         if (!up) {
             panel.append(el('div', 'gear-empty', { text: 'Upgrades will be here once the realm has reckoned your stats.' }));
@@ -626,9 +626,11 @@ export class GearScreen {
         }
         panel.append(how);
 
-        // The goddesses: every one in the list from the start, those not open yet a shadow, as Clicker Heroes' heroes
-        const list = el('div', `gear-list gear-upgrades${goddesses ? ' gear-goddesses' : ''}`, { 'data-key': goddesses ? 'goddesses' : 'upgrades' });
-        for (const t of goddesses ? GODDESSES : up.list()) {
+        // The upgrades, then straight on down the same list to the goddesses (the user's): every one of them
+        // there from the start, those not open yet a shadow, as Clicker Heroes' heroes
+        const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
+        for (const t of [...up.list(), ...GODDESSES]) {
+            if (t === GODDESSES[0]) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
             const level = up.level(t.id), open = up.open(t);
             const row = el('div', `gear-up${open ? '' : ' is-locked'}${t.spell ? ' is-spell' : ''}${t.goddess ? ' is-goddess' : ''}`, { 'data-up': t.id });
             if (t.goddess) {

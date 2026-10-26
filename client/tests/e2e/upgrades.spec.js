@@ -138,12 +138,19 @@ test.describe('Upgrades', () => {
         await expect(page.locator('.gear-spell[data-spell="frost-lance"] .gear-rank.is-known')).toHaveCount(1);
     });
 
-    test('the Goddesses tab: every goddess shown, a shadow till the one before opens her, each adding to your stats', async ({ page }) => {
+    test('the goddesses, straight on below the upgrades: every one shown, a shadow till the one before opens her, each adding to your stats', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await asMage(page, 100000);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades('goddesses'));
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
         const rows = page.locator('.gear-up.is-goddess');
+        // Two tabs, and the goddesses in the upgrades' own list, after them all
+        await expect(page.locator('.gear-tab')).toHaveCount(2);
+        expect(await page.evaluate(() => {
+            const all = [...document.querySelectorAll('.gear-upgrades > *')];
+            const at = all.findIndex(e => e.classList.contains('gear-up-heading'));
+            return { at, before: all.slice(0, at).every(e => !e.classList.contains('is-goddess')), after: all.slice(at + 1).every(e => e.classList.contains('is-goddess')) };
+        })).toEqual({ at: expect.any(Number), before: true, after: true });
         await expect(rows).toHaveCount(50);
         await expect(rows.last()).toHaveAttribute('data-up', 'goddess-gaia');
         await expect(rows.first()).toHaveAttribute('data-up', 'goddess-brigid');
@@ -152,11 +159,9 @@ test.describe('Upgrades', () => {
         // Her picture is there to be shown
         expect(await page.evaluate(() => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i.width); i.src = '/goddesses.png'; }))).toBe(50 * 64);
         // Strength of Arm to 10 opens her, and says so
-        await page.locator('.gear-tab[data-tab="upgrades"]').click();
         await page.locator('.gear-buy-n[data-n="10"]').click();
         await page.locator('.gear-up-buy[data-buy="might"]').click();
         await expect(page.locator('.gear-notice')).toContainText(/Brigid (is|are) open to you/);
-        await page.locator('.gear-tab[data-tab="goddesses"]').click();
         await expect(page.locator('.gear-up[data-up="goddess-brigid"] .gear-goddess')).not.toHaveClass(/is-shadow/);
         await expect(page.locator('.gear-up[data-up="goddess-freya"]')).toHaveClass(/is-locked/);
         const before = await ui(page, (ui) => ui.inventory.stats.attack);

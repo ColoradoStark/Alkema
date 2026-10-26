@@ -258,11 +258,11 @@ test.describe('Memory', () => {
             .filter(k => ids.some(id => k.startsWith(`sprite_${id}`))), ids)).toEqual([]);
     });
 
-    test("the goddesses' pictures are held only while their tab is open", async ({ page }) => {
+    test("the goddesses' pictures are held only while the Upgrade page is open", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         const shown = () => page.evaluate(() => [...document.querySelectorAll('*')].filter(e => getComputedStyle(e).backgroundImage.includes('goddesses.png')).length);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades('goddesses'));
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
         await expect(page.locator('.gear-goddess')).toHaveCount(50);
         expect(await shown()).toBe(50);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.close());
