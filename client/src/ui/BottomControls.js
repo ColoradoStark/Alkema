@@ -30,8 +30,10 @@ export class BottomControls {
 
         addPanelBackground(s, this.container, -this.offsetX, this.width, 160);
 
+        const from = this.container.length;
         this._buildDPad();
         this._buildActionButtons();
+        this._controls = this.container.list.slice(from);       // (the pad and the two buttons: not the tab bar)
         this._buildTabBar();
     }
 
@@ -156,6 +158,17 @@ export class BottomControls {
         }
         arrow.closePath();
         arrow.fillPath();
+    }
+
+    /**
+     * The pad and the two buttons shown, or hidden while a menu's open (the user's: the menu has
+     * their room, and only the tab bar stays).
+     */
+    setControlsShown(on) {
+        if (this._controlsShown === on) return;
+        this._controlsShown = on;
+        if (!on) this.release();
+        for (const c of this._controls) c.setVisible(on);
     }
 
     _buildActionButtons() {

@@ -335,6 +335,8 @@ export class UIScene extends Scene {
                 }
             }
         }
+        // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
+        this.bottomControls.setControlsShown(!this.gear?.visible);
         // In a fight, attack is greyed out while there's no one in reach
         const battle = this.scene.get('GameScene')?.battle;
         this.bottomControls.setAttackReady(!battle || battle.over || battle.phase === 'foes' || battle.canStrike);

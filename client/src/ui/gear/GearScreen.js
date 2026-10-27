@@ -202,6 +202,7 @@ export class GearScreen {
         panel.append(notice);
         const list = this.root.querySelector('.gear-list');
         if (scroll && list && list.dataset.key === scroll.key) list.scrollTop = scroll.top;
+        this.root.querySelector('.gear-pick')?.scrollIntoView({ block: 'nearest' });     // (a slot's choices, in sight)
     }
 
     _row(id, right, onPick) {

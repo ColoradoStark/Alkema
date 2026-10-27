@@ -467,7 +467,7 @@ test.describe('Gear', () => {
         // A bag long enough to scroll, six spears spread through it (as found and bought over time), not last
         await page.evaluate(() => {
             const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
-            inv.bag = ['dagger', 'mace', 'oak-staff', 'hunting-bow', 'spear', 'iron-sword', 'spear', 'longsword', 'spear', 'war-axe',
+            inv.bag = ['dagger', 'mace', 'oak-staff', 'hunting-bow', 'mail-coif', 'iron-helm', 'great-helm', 'wooden-shield', 'spear', 'iron-sword', 'spear', 'longsword', 'spear', 'war-axe',
                 'spear', 'glowsword', 'spear', 'dagger', 'spear', 'mace'];
             inv._save();
         });
@@ -495,5 +495,38 @@ test.describe('Gear', () => {
         await expect(spear).toHaveCount(0);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.count('spear'))).toBe(0);
         await expect(list).toBeVisible();
+    });
+
+    test('tap a slot on Equip and what you could wear there is right before you, no scrolling, no other page', async ({ page }) => {
+        test.setTimeout(120000);
+        await page.setViewportSize({ width: 390, height: 640 });
+        await enterWorld(page);
+        await page.evaluate(() => {
+            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            inv.bag = ['dagger', 'mace', 'mail-coif'];
+            inv._save();
+        });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('equip'));
+        const panel = page.locator('.gear-panel--equip');
+        await expect(panel.locator('canvas.gear-hero')).toBeVisible();
+        for (const [slot, items] of [['weapon', ['dagger', 'mace']], ['crystal', []]]) {
+            await panel.locator(`.gear-slot[data-slot="${slot}"] .gear-slot-pick`).click();
+            // In the hero's place: the slot's choices (or word that there are none), all in sight as they are
+            const choices = panel.locator('.gear-pick');
+            await expect(choices).toBeInViewport({ ratio: 1 });
+            expect(await panel.evaluate(p => p.scrollTop)).toBe(0);
+            await expect(choices.locator('.gear-row')).toHaveCount(items.length);
+            for (const id of items) await expect(choices.locator(`.gear-row[data-item="${id}"]`)).toBeInViewport({ ratio: 1 });
+            if (!items.length) await expect(choices).toContainText('Nothing to wear');
+            // ...and the slots haven't moved
+            await expect(panel.locator('.gear-slot[data-slot="crystal"]')).toBeInViewport({ ratio: 1 });
+        }
+        // Tap the weapon slot, wear the mace: the hero's back on the stage, wearing it
+        await panel.locator('.gear-slot[data-slot="weapon"] .gear-slot-pick').click();
+        await panel.locator('.gear-pick .gear-row[data-item="mace"]').click();
+        await expect.poll(() => inv(page).then(i => i.equipped.weapon), { timeout: 30000 }).toBe('mace');
+        await expect(panel.locator('canvas.gear-hero')).toBeVisible();
+        await expect(panel.locator('.gear-pick')).toHaveCount(0);
+        await expect(panel.locator('.gear-slot[data-slot="weapon"] .gear-slot-item')).toHaveText('Mace');
     });
 });

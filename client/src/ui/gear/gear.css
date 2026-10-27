@@ -42,7 +42,7 @@
 .gear-panel {
     position: absolute;
     top: 32px;
-    height: 448px;
+    height: 564px;          /* down to the tab bar: the pad and the buttons are hidden while it's open */
     left: calc(-1 * var(--side, 0px));
     right: calc(-1 * var(--side, 0px));
     padding: 8px calc(10px + var(--side, 0px)) 6px;
