@@ -406,8 +406,8 @@ export class UIScene extends Scene {
         if (gameScene?.battle) {
             if (gameScene.battle.attack() !== false) this.quests.record('attack');
         } else if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
-            if (!gameScene.localPlayer.isAttacking) gameScene.fieldDemons?.aim();      // (a demon near you on the coast: turned to it)
-            gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
+            // A demon near you on the coast: a swing or a shot at it, as on a battle map; else the world's own
+            if (!gameScene.fieldDemons?.attack()) gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');
         }
     }
@@ -422,7 +422,9 @@ export class UIScene extends Scene {
             else if (gameScene.battle.canAct && gameScene.battle.active.book) this.castMenu.open(gameScene.battle.active.book, gameScene.battle);
             return;
         }
-        if (!gameScene?.localPlayer || gameScene.localPlayer.sailing || this.bottomControls.coolingDown) return;
+        if (!gameScene?.localPlayer || gameScene.localPlayer.sailing) return;
+        if (gameScene.fieldDemons?.castEquipped()) return;      // (demons in sight on the coast: the spell you equipped, as on a battle map)
+        if (this.bottomControls.coolingDown) return;
         gameScene.localPlayer.playCast();
         gameScene.emitCast();
         const crystal = this.inventory?.item(this.inventory.equipped.crystal);

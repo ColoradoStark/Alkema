@@ -75,7 +75,7 @@ const FX_DEPTH = 32;             // over the night's dark: magic gives its own l
 const BOLT_SPEED = 300;          // px a second, a fireball or a burning arrow
 
 /** The spells' animations, made from fx.json's list. */
-function fxAnims(scene) {
+export function fxAnims(scene) {
     const spec = scene.cache.json.get(FX_ANIMS)?.anims || {};
     for (const [name, a] of Object.entries(spec)) {
         const key = `${FX}-${name}`;
@@ -84,7 +84,7 @@ function fxAnims(scene) {
     }
 }
 
-function forgetFx(scene) {
+export function forgetFx(scene) {
     for (const name of Object.keys(scene.cache.json.get(FX_ANIMS)?.anims || {})) scene.anims.remove(`${FX}-${name}`);
     if (scene.textures.exists(FX)) scene.textures.remove(FX);
     if (scene.textures.exists(ICONS)) scene.textures.remove(ICONS);
@@ -98,14 +98,43 @@ export function battleCountry(overworld, x, y) {
     return overworld.forest.depthAt(x, y) > 0 ? 'forest' : 'grass';
 }
 
+/** The spells' effects and icons (tools/spellgen.py): what a fight needs to cast in. */
+const SPELL_FILES = [{ type: 'atlas', key: FX, url: ['/spells/fx.png', '/spells/fx.json'] },
+    { type: 'json', key: FX_ANIMS, url: '/spells/fx.json' },
+    { type: 'spritesheet', key: ICONS, url: ['/spells/icons.png', { frameWidth: 64, frameHeight: 64 }] },
+    { type: 'json', key: ICONS_INDEX, url: '/spells/icons.json' }];
+
 /** Load a battle map's ground, your companions (PARTY entries), and the spells' effects (tools/spellgen.py). */
 export function loadBattleMap(scene, country, companions = []) {
-    const files = [{ type: 'image', key: groundKey(country), url: `/battle/${scene.cache.json.get('battle').maps[country].ground}` },
-        { type: 'atlas', key: FX, url: ['/spells/fx.png', '/spells/fx.json'] },
-        { type: 'json', key: FX_ANIMS, url: '/spells/fx.json' },
-        { type: 'spritesheet', key: ICONS, url: ['/spells/icons.png', { frameWidth: 64, frameHeight: 64 }] },
-        { type: 'json', key: ICONS_INDEX, url: '/spells/icons.json' }];
+    const files = [{ type: 'image', key: groundKey(country), url: `/battle/${scene.cache.json.get('battle').maps[country].ground}` }, ...SPELL_FILES];
     for (const town of new Set(companions.map(p => p.town))) files.push({ type: 'json', key: `folk-${town}`, url: `/folk/${town}.json` });
+    return loadFiles(scene, files);
+}
+
+/** Load just the spells' effects and icons (a fight out on the world itself: FieldDemons.js); forgetFx lets them go. */
+export function loadSpellFx(scene) {
+    return loadFiles(scene, SPELL_FILES).then(() => fxAnims(scene));
+}
+
+/** The spells' particles (the GameScene's own sparks, glints and motes), for a fight: destroyed with it. */
+export function spellParticles(scene) {
+    return {
+        sparks: scene.add.particles(0, 0, 'fx-streak', {
+            speed: { min: 50, max: 190 }, angle: { min: 0, max: 360 }, lifespan: { min: 180, max: 380 },
+            scale: 2, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+        }).setDepth(FX_DEPTH + 1),
+        motes: scene.add.particles(0, 0, 'cc-spark', {
+            speedX: { min: -18, max: 18 }, speedY: { min: -70, max: -25 }, lifespan: { min: 550, max: 900 },
+            scale: { start: 1.8, end: 0.6 }, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+        }).setDepth(FX_DEPTH + 1),
+        glints: scene.add.particles(0, 0, 'fx-glint', {
+            anim: { anims: ['fx-glint-twinkle'], randomFrame: true }, speed: { min: 40, max: 150 }, angle: { min: 0, max: 360 },
+            lifespan: { min: 350, max: 650 }, scale: { start: 2, end: 1 }, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+        }).setDepth(FX_DEPTH + 1),
+    };
+}
+
+function loadFiles(scene, files) {
     const wanted = files.filter(f => f.type === 'json' ? !scene.cache.json.exists(f.key) : !scene.textures.exists(f.key));
     if (!wanted.length) return Promise.resolve();
     return new Promise((resolve, reject) => {
@@ -208,18 +237,7 @@ export class Battle {
         fxAnims(scene);
         // The spells' particles (the GameScene's own sparks, glints and motes): sparks along a swing and
         // off a blow, motes rising from a mending, glints in a burst. Made for the fight, gone with it.
-        this.sparks = scene.add.particles(0, 0, 'fx-streak', {
-            speed: { min: 50, max: 190 }, angle: { min: 0, max: 360 }, lifespan: { min: 180, max: 380 },
-            scale: 2, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
-        }).setDepth(FX_DEPTH + 1);
-        this.motes = scene.add.particles(0, 0, 'cc-spark', {
-            speedX: { min: -18, max: 18 }, speedY: { min: -70, max: -25 }, lifespan: { min: 550, max: 900 },
-            scale: { start: 1.8, end: 0.6 }, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
-        }).setDepth(FX_DEPTH + 1);
-        this.glints = scene.add.particles(0, 0, 'fx-glint', {
-            anim: { anims: ['fx-glint-twinkle'], randomFrame: true }, speed: { min: 40, max: 150 }, angle: { min: 0, max: 360 },
-            lifespan: { min: 350, max: 650 }, scale: { start: 2, end: 1 }, alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
-        }).setDepth(FX_DEPTH + 1);
+        Object.assign(this, spellParticles(scene));
 
         this.foes = this._band(map, kind, count, boss);
         this.name = name || this.foes[0].foe.name;

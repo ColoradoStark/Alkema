@@ -432,6 +432,7 @@ export class GameScene extends Scene {
         if (!me || this._changingRoom || this.battle || (this.town && !spot.town)) return;
         this._changingRoom = this._fighting = true;
         try {
+            this.fieldDemons.release();         // (the coast's demons and their spells' effects, before the fight's own load)
             const country = spot.country || battleCountry(this.overworld, spot.x, spot.y);
             // (a post can say how many companions come: the demons' bands, to try the real-time fight alone, then with more)
             const companions = spot.companions == null ? this.companions : this.companions.slice(0, spot.companions);
@@ -729,8 +730,9 @@ export class GameScene extends Scene {
             // Easing into a walk: a little at first, full speed by EASE_IN_MS
             this._pace = dx || dy ? Math.min(1, (this._pace || 0.15) + this.game.loop.delta / EASE_IN_MS) : 0;
             const pace = this._pace * this._pace * (3 - 2 * this._pace);       // slow away, then up to speed
-            vx = dx * WALK_SPEED * pace;
-            vy = dy * WALK_SPEED * pace;
+            const quick = this.fieldDemons.you.rage?.speed || 1;          // (Swiftness, Berserk: a fight on the coast)
+            vx = dx * WALK_SPEED * pace * quick;
+            vy = dy * WALK_SPEED * pace * quick;
             this.localPlayer.setVelocity(vx, vy);
         }
 
@@ -821,8 +823,6 @@ export class GameScene extends Scene {
         // In a town or a dungeon, what's in front of you breaks (a barrel)
         const me = this.localPlayer?.sprite;
         if (this.town && me) this.town.strike({ x: me.x, y: me.y + FEET }, me.currentDirection || 'down', !!getRangedAnimation(this.localPlayer.characterData));
-        // Out in the world, a demon before you is struck
-        else if (me && this.world === this.overworld) this.fieldDemons.strike({ x: me.x, y: me.y + FEET }, me.currentDirection || 'down', !!getRangedAnimation(this.localPlayer.characterData));
         if (this.networkManager?.socket?.connected) {
             this.networkManager.socket.emit('player-attack', {
                 direction: this.localPlayer.sprite.currentDirection || 'down',
