@@ -7,6 +7,8 @@ import {
     attackInstead
 } from './AnimationFactory.js';
 
+const cutting = new Map();      // look: its oversized frames being cut from its sheet
+
 export class CompositeCharacter extends Phaser.GameObjects.Container {
     constructor(scene, x, y, characterData) {
         super(scene, x, y);
@@ -107,25 +109,35 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         const spriteUrl = this.characterData.spriteUrl;
         if (!spriteUrl) return;
 
-        fetch(spriteUrl)
-            .then(r => r.blob())
-            .then(blob => createImageBitmap(blob))
-            .then(bitmap => {
-                if (!this.scene) return bitmap.close();
-                createOversizedAnimations(this.scene, bitmap, customAnims, this.look, this.animationKey);
-                bitmap.close();
-
-                // Re-play current animation so it picks up oversized version
-                const currentAnim = this.sprite?.anims?.currentAnim;
-                if (currentAnim) {
-                    const parts = currentAnim.key.split('_');
-                    const dir = parts.pop();
-                    const prefix = this.animationKey + '_';
-                    const animName = currentAnim.key.slice(prefix.length, -(dir.length + 1));
-                    if (animName) this.playAnimation(animName, dir);
-                }
-            })
-            .catch(err => console.warn('Failed to load oversized animations:', err));
+        // Many wearing one sheet (the coast's demons) cut its oversized frames once between them
+        const look = this.look, scene = this.scene;
+        const cut = Object.entries(customAnims).every(([name, l]) => !l?.frame_size || scene.textures.exists(`sprite_${look}_os_${name}`));
+        let job = cut ? Promise.resolve() : cutting.get(look);
+        if (!job) {
+            const animationKey = this.animationKey;
+            job = fetch(spriteUrl)
+                .then(r => r.blob())
+                .then(blob => createImageBitmap(blob))
+                .then(bitmap => {
+                    // (all of them gone meanwhile, their sheet with them: nothing to cut it for)
+                    if (scene.sys?.textures?.exists(`sprite_${look}`)) createOversizedAnimations(scene, bitmap, customAnims, look, animationKey);
+                    bitmap.close();
+                })
+                .finally(() => cutting.delete(look));
+            cutting.set(look, job);
+        }
+        job.then(() => {
+            if (!this.scene || this.look !== look) return;
+            // Re-play current animation so it picks up oversized version
+            const currentAnim = this.sprite?.anims?.currentAnim;
+            if (currentAnim) {
+                const parts = currentAnim.key.split('_');
+                const dir = parts.pop();
+                const prefix = this.animationKey + '_';
+                const animName = currentAnim.key.slice(prefix.length, -(dir.length + 1));
+                if (animName) this.playAnimation(animName, dir);
+            }
+        }).catch(err => console.warn('Failed to load oversized animations:', err));
     }
 
     playAnimation(animName, direction = null) {

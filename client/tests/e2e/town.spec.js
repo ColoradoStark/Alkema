@@ -363,6 +363,9 @@ test.describe('Riverhold', () => {
         // (what the game loads, not the maps behind its doors fetched ahead into the browser's cache: those are fetch()es)
         page.on('request', r => { if (r.url().includes('/folk/') && r.resourceType() !== 'fetch') fetched.push(new URL(r.url()).pathname); });
         await enterWorld(page);
+        // (from Riverhold's road on: heroes start on the coast, where its demons' file comes and goes)
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length && !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._loading);
+        fetched.length = 0;
         // The server never gets round to making anyone
         await page.evaluate(() => {
             const net = window.__PHASER_GAME.scene.getScene('GameScene').networkManager;

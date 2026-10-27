@@ -1,9 +1,9 @@
 // Demons out on the overworld itself, fought where you meet them: no battle map,
 // the real-time fight's way of fighting (the user's prototype, October 2026,
 // beside the turn-based fights and the real-time ones on battle maps, to try
-// fighting in the open world). Thirty stand along the coast between where new
-// heroes start and Castle Dunmere's gate (POSTS, from the world map's shore
-// tiles along the walk there). Come within AGGRO of one and it comes for you:
+// fighting in the open world). They stand along the coast between where new
+// heroes start and Castle Dunmere's gate (PACKS, on the world map's shore
+// along the walk there). Come within AGGRO of one and it comes for you:
 // it closes in, stops and flashes red (the wind-up), and swings; step out of
 // reach to dodge it. Your swing (the attack button, aimed at the nearest in
 // front of you) strikes what's before you when it lands. Get far enough away
@@ -17,12 +17,23 @@
 // effects, particles and rest, and what it leaves on them (slowed, marked,
 // held...) and on you (warded, raging, hidden). Magic comes back as you fight.
 //
-// All thirty are one demon, the fury, so there's one sheet between them (the
-// user's: light on memory), loaded once you're near the coast (NEAR) with the
-// spells' effects, and let go with the demons when you're far from it (FAR),
-// or go into a place. The slain stay down till then.
+// They stand in packs (PACKS: the user found lone ones dull, October 2026): the
+// real-time fight's three demons mixed, the fury darting in with her trident,
+// the brute's slow heavy axe you wait out and punish (it isn't staggered), the
+// warlock hanging back throwing fire; rouse one and its pack comes. Halfway
+// along stands a champion, a big brute, that leaves a chest. They're matched
+// to your hero as they come (`numbers`: a fury takes about three of your
+// blows, whatever you've bought), and grow tougher along the road toward
+// Dunmere (each pack's `tier`), and every one you fell bursts into gold
+// (`bounty`: a share of what your next upgrade costs, more along the road,
+// more for kills close together, COMBO_MS apart).
+//
+// Their three sheets load once you're near the coast (NEAR) with the spells'
+// effects, and are let go with the demons when you're far from it (FAR), or go
+// into a place. The slain stay down till then.
 
 import { ActionBattle, Demon, DEMONS, DEMON_KINDS, loadDemons } from './ActionBattle.js';
+import { rollLoot } from './Encounters.js';
 import { ACTION_SPELLS } from './ActionSpells.js';
 import { Battle, forgetFx, loadSpellFx, spellParticles } from './Battle.js';
 import { sortDepth } from '../world/Forest.js';
@@ -33,8 +44,21 @@ import { WORLD } from '../world/places.js';
 import { audio } from '../audio/audio.js';
 
 const FEET = Ship.BELOW_HERO;
-const KIND = 'fury';
-const SPEC = { ...DEMON_KINDS[KIND], speed: 80 };   // twice its battle-map pace: the world's hero walks faster (128), and still outruns it
+// How each fights out here: twice its battle-map pace (the world's hero walks faster, 128, and still outruns them all)
+const KINDS = {
+    fury: { ...DEMON_KINDS.fury, speed: 80 },
+    brute: { ...DEMON_KINDS.brute, speed: 50 },
+    warlock: { ...DEMON_KINDS.warlock, speed: 52 },
+    champion: { ...DEMON_KINDS.brute, speed: 54, reach: 46, windup: 900, recover: 1100, sheet: 'brute', scale: 1.35, label: 'Champion' },
+};
+// Matched to your hero (`numbers`): how many of your blows each takes, and how much of your hit points its blow takes
+const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22 };
+const HURTS = { fury: 0.06, warlock: 0.07, brute: 0.13, champion: 0.16 };
+// What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
+const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4 };      // (a pack near the start buys about one)
+const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
+const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
+const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
 const LEASH = 12 * TILE;        // and gives up this far from its post, or this far from you
@@ -50,15 +74,40 @@ const KNOCK = 12;
 const BODY = 22;
 const FALL_MS = 1600;
 
-// Feet, on the shore between the start and Dunmere (worked out from the world map's walking and sailing
-// layers: walkable tiles by the water, every neighbour walkable, along the walk from the start to the gate)
-export const POSTS = [
-    [9872, 11856], [9904, 11728], [10000, 11536], [10096, 11472], [10288, 11312], [10416, 11344], [10544, 11344],
-    [10672, 11344], [10800, 11344], [10896, 11408], [11024, 11344], [11120, 11280], [11440, 11248], [11152, 11152],
-    [11280, 11120], [11312, 10992], [11216, 10864], [11088, 10800], [11088, 10672], [11056, 10544], [11376, 11152],
-    [9904, 11632], [10960, 11376], [11344, 11088], [11280, 10928], [11152, 10832], [9872, 11792], [10064, 11536],
-    [10352, 11344], [10480, 11344],
-];
+// The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
+// out from the world map's walking and sailing layers), and who's in it, each tougher than the last
+export const PACKS = [
+    { at: [9904, 11728], band: ['fury', 'fury', 'warlock'] },
+    { at: [10064, 11536], band: ['fury', 'brute', 'fury'] },
+    { at: [10352, 11344], band: ['fury', 'fury', 'warlock', 'fury'] },
+    { at: [10672, 11344], band: ['brute', 'fury', 'warlock', 'fury'] },
+    { at: [10960, 11376], band: ['champion', 'fury', 'fury'] },          // halfway: the champion
+    { at: [11152, 11152], band: ['brute', 'fury', 'warlock', 'fury', 'fury'] },
+    { at: [11312, 10992], band: ['fury', 'warlock', 'warlock', 'fury'] },
+    { at: [11088, 10800], band: ['brute', 'brute', 'fury', 'warlock'] },
+    { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
+].map((p, k, all) => ({ ...p, tier: 1 + (TIER_END - 1) * k / (all.length - 1) }));
+const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30]];    // where a pack's members stand about its spot
+
+/** Each demon on the road, a place for each: { x, y (feet, before they're stood clear of rock), kind, pack, tier, i }. */
+export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
+    x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, pack, tier: p.tier,
+}))).map((p, i) => ({ ...p, i }));
+
+/** A demon matched to a hero ({attack, hp: max hit points, defence}) `tier` along the road: its hit points and blow. */
+export function numbers(kind, tier, hero) {
+    const attack = Math.max(1, hero.attack || 5), hp = Math.max(10, hero.hp || 30);
+    return {
+        hp: Math.max(4, Math.round(HITS[kind] * attack * tier)),
+        // (your defence takes half of itself off a blow, `_hurt`: here it's given back half of that, so it counts for something)
+        damage: Math.max(1, Math.round(HURTS[kind] * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 4),
+    };
+}
+
+/** The gold a `kind` is worth `tier` along the road, the cheapest next upgrade costing `price`, `combo` kills in a row. */
+export function bounty(kind, tier, price, combo = 1) {
+    return Math.max(1, Math.round(price * PAY[kind] * tier * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
+}
 
 const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
 
@@ -74,8 +123,10 @@ function tint(who, colour, fill = false) {
 export class FieldDemons {
     constructor(scene) {
         this.scene = scene;
-        this.foes = [];           // { foe: Demon, spec, post, hp, maxHp, state, t, cd, stun, and what spells leave on it }
-        this.slain = new Set();   // posts whose demon is down (till the demons go)
+        this.foes = [];           // { foe: Demon, kind, spec, pack, tier, post, hp, maxHp, damage, state, t, cd, stun, and what spells leave on it }
+        this.slain = new Set();   // places whose demon is down (till the demons go)
+        this.combo = 0;           // kills in a row, each within COMBO_MS of the last
+        this._lastKill = -Infinity;
         this.shots = [];          // arrows and spells in flight (ActionBattle._launch, _fly)
         this._loading = false;
         this._freeze = 0;
@@ -123,8 +174,12 @@ export class FieldDemons {
 
     /** Each frame, out in the world on foot (`feet`: yours), or null anywhere else (they go). */
     update(delta, feet) {
-        if (!feet) return this.release();
-        const near = POSTS.some(([x, y]) => Math.hypot(x - feet.x, y - feet.y) < (this.foes.length ? FAR : NEAR));
+        if (!feet) {
+            this._near = false;
+            return this.release();
+        }
+        const near = PACKS.some(({ at: [x, y] }) => Math.hypot(x - feet.x, y - feet.y) < (this.foes.length ? FAR : NEAR));
+        this._near = near;
         if (!near) return this.release();
         if (!this.foes.length) return this._summon();
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
@@ -166,35 +221,59 @@ export class FieldDemons {
         }
     }
 
-    /** The demons come (the sheet first, once, then all thirty on it), and the spells' effects with them. */
+    /** The demons come (one of each kind first, their sheets loading; then the rest on them), and the spells' effects with them. */
     async _summon() {
         if (this._loading) return;
         this._loading = true;
         try {
             await Promise.all([loadDemons(this.scene), loadSpellFx(this.scene)]);
-            const first = POSTS.findIndex((_, i) => !this.slain.has(i));
-            if (first < 0) return;
-            // One first, its sheet loading; the rest once it's in, on the same sheet (not thirty fetches of it)
-            const make = (i) => {
-                const [x, y] = POSTS[i];
-                const foe = new Demon(this.scene, x, y, KIND);
-                foe.who.sprite.setDepth(sortDepth(this.scene, y));
-                return { foe, spec: SPEC, post: { x, y }, i, hp: SPEC.hp, maxHp: SPEC.hp, state: 'post', t: 0, cd: 0, stun: 0 };
+            if (!this._near) return this._unload();     // gone from the coast while they came: make none of them
+            const left = PLACES.filter(p => !this.slain.has(p.i));
+            if (!left.length) return;
+            const hero = this._hero();
+            const make = (p) => {
+                const spec = KINDS[p.kind];
+                const at = this._clear(p);
+                const foe = new Demon(this.scene, at.x, at.y, spec.sheet || p.kind, spec.label);
+                if (spec.scale) foe.who.sprite.setScale(spec.scale);
+                if (spec.label) foe.who.nameText.setColor?.('#ff8a7a');
+                foe.who.sprite.setDepth(sortDepth(this.scene, at.y));
+                const { hp, damage } = numbers(p.kind, p.tier, hero);
+                return { foe, kind: p.kind, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
             };
-            const one = make(first);
-            this.foes.push(one);
+            // One of each sheet first (not a fetch of it for every one wearing it)
+            const firsts = [...new Map(left.map(p => [KINDS[p.kind].sheet || p.kind, p])).values()];
+            for (const p of firsts) this.foes.push(make(p));
             Object.assign(this, spellParticles(this.scene));
             this.bars = this.scene.add.graphics().setDepth(29);
             this._showSpell();
             await new Promise(resolve => {
-                const ready = () => (one.foe.who.sprite?.sprite || !this.foes.length ? resolve() : this.scene.time.delayedCall(100, ready));
+                const ready = () => (this.foes.every(f => f.foe.who.sprite?.sprite) || !this.foes.length ? resolve() : this.scene.time.delayedCall(100, ready));
                 ready();
             });
             if (!this.foes.length) return;      // (let go meanwhile)
-            POSTS.forEach((_, i) => { if (i !== first && !this.slain.has(i)) this.foes.push(make(i)); });
+            for (const p of left) if (!firsts.includes(p)) this.foes.push(make(p));
         } finally {
             this._loading = false;
         }
+    }
+
+    /** Where a demon stands at its place: there, or the nearest open ground about it. */
+    _clear(p) {
+        for (const r of [0, 12, 24, 36]) {
+            for (let a = 0; a < (r ? 8 : 1); a++) {
+                const x = p.x + Math.cos(a * Math.PI / 4) * r, y = p.y + Math.sin(a * Math.PI / 4) * r;
+                if (this._open(x, y)) return { x, y };
+            }
+        }
+        const [x, y] = PACKS[p.pack].at;
+        return { x, y };
+    }
+
+    /** Your hero as the demons are matched to: attack, most hit points, defence. */
+    _hero() {
+        const ui = this.scene.scene.get('UIScene'), stats = ui?.inventory?.stats;
+        return { attack: stats?.attack ?? 5, hp: ui?.hp?.max ?? stats?.hp?.max ?? 30, defence: stats?.defence ?? 0 };
     }
 
     /** The blue button shows the spell you equipped (or, with null, the plain cast again). */
@@ -214,6 +293,7 @@ export class FieldDemons {
         for (const f of this.foes) f.foe.destroy();
         this.foes = [];
         this.slain.clear();
+        this.combo = 0;
         this.bars?.destroy();
         this.bars = null;
         this.shots.forEach(s => s.sprite.destroy());
@@ -230,11 +310,15 @@ export class FieldDemons {
         if (this.you.seeThrough) this.you.who?.sprite?.setAlpha(1);
         this.you.seeThrough = false;
         this.scene.scene.get('UIScene')?.bottomControls?.showSpell?.(null);       // (before the icons go)
-        if (!this.scene.battle) {           // (a fight's own, if one's up)
-            forgetFx(this.scene);
-            this.scene.cache.json.remove(DEMONS);
-        }
+        this._unload();
         this.fallen = false;
+    }
+
+    /** Their file and the spells' effects go (a fight's own, if one's up, stay). */
+    _unload() {
+        if (this.scene.battle) return;
+        forgetFx(this.scene);
+        this.scene.cache.json.remove(DEMONS);
     }
 
     // ------------------------------------------------ you, fighting them
@@ -295,12 +379,14 @@ export class FieldDemons {
         fx.impact('metal', foe.x, foe.y - 22, foe.y);
         fx.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
         if (words) fx.floatText(foe.x, foe.y - foe.tall - 18, words, colour, 14);
+        this._rouse(f.pack);
         tint(foe.who, 0xffffff, true);
         this.scene.time.delayedCall(80, () => tint(foe.who, f.state === 'windup' ? 0xff5050 : null));
-        this._knock(foe.who, from, KNOCK);
+        this._knock(foe.who, from, f.spec.poise ? KNOCK / 3 : KNOCK);
         this._hitStop();
         if (f.hp <= 0) return this._slay(f);
         audio.play('foe_orc', { volume: 0.5, rate: 1.2 });
+        if (f.spec.poise) return;           // a brute isn't staggered: its swing comes on regardless
         if (f.state === 'windup') {
             f.state = 'recover';
             f.t = 350;
@@ -309,11 +395,46 @@ export class FieldDemons {
         f.stun = Math.max(f.stun, 160);
     }
 
+    /** One of a pack is after you: they all are. */
+    _rouse(pack) {
+        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && (o.state === 'post' || o.state === 'home')) o.state = 'chase';
+    }
+
     _slay(f) {
         audio.play('foe_down');
         f.state = 'dead';
         this.slain.add(f.i);
         f.foe.die();
+        this._reward(f);
+    }
+
+    /**
+     * What it was worth: gold bursting out where it fell (a share of the cheapest upgrade you could
+     * buy next, more along the road, more in a combo); the champion leaves a chest, and something in it.
+     */
+    _reward(f) {
+        const ui = this.scene.scene.get('UIScene'), inv = ui?.inventory, fx = this.scene.effects;
+        const now = this.scene.time.now;
+        this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
+        this._lastKill = now;
+        const { x, y } = f.foe, worth = bounty(f.kind, f.tier, this._price(ui), this.combo);
+        if (f.kind === 'champion') {
+            this.scene.encounters?.drop(x, y, { gold: worth, item: rollLoot(4).item });
+            return;
+        }
+        const gold = inv?.found(worth) ?? worth;
+        inv?.loot(gold);
+        audio.play('coins');
+        fx?.coinBurst(x, y - 14, y + 6);
+        fx?.floatText(x, y - f.foe.tall + 4, `+${gold} gold`, '#fbf236', 18);
+        if (this.combo > 1) this.scene.time.delayedCall(220, () => fx?.floatText(x, y - f.foe.tall - 16, `Combo ×${this.combo}`, '#ffb347', 16));
+    }
+
+    /** What the cheapest upgrade you could buy next costs (what the demons' gold is reckoned in). */
+    _price(ui) {
+        const up = ui?.upgrades;
+        const costs = (up?.list?.() || []).filter(t => up.open(t)).map(t => up.cost(t)).filter(n => n > 0);
+        return costs.length ? Math.min(...costs) : 20;
     }
 
     // ------------------------------------------------ them
@@ -343,8 +464,8 @@ export class FieldDemons {
         // At its post, it waits for you to come within five tiles; too far from home or from you, it goes back
         if (f.state === 'post' || f.state === 'home') {
             if (d <= AGGRO) {
-                f.state = 'chase';
-                if (!this.engaged || this.foes.filter(o => o.state === 'chase').length === 1) audio.play('foe_orc', { volume: 0.6 });
+                if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
+                this._rouse(f.pack);
             } else return this._home(f, dt, fromPost);
         }
         if (!you || fromPost > LEASH || d > LEASH) {
@@ -366,20 +487,24 @@ export class FieldDemons {
             return this._step(f, 0, 0, dt);
         }
         const free = this.foes.filter(o => o.state === 'windup').length < ATTACKERS;
-        if (d <= SPEC.reach) {
-            this._step(f, 0, 0, dt);
+        if (f.spec.ranged) {
+            // A warlock keeps its distance, and throws fire when it's ready (its turn too)
+            if (d < f.spec.keep - 30) this._step(f, -dx / u, -dy / u, dt);
+            else if (d > f.spec.keep + 40) this._step(f, dx / u, dy / u, dt);
+            else this._step(f, 0, 0, dt);
             foe.face(you.x, you.y);
-            if (free && f.cd <= 0) {
-                f.state = 'windup';
-                f.t = SPEC.windup;
-                foe.walking = false;
-                foe.who.sprite.stopAnimation();
-            }
+            if (free && f.cd <= 0 && d < SHOT_REACH + 60) this._windup(f);
             return;
         }
-        if (!free && d < SPEC.reach + 70) {         // others are at you: it circles, waiting its turn
+        if (d <= f.spec.reach) {
+            this._step(f, 0, 0, dt);
+            foe.face(you.x, you.y);
+            if (free && f.cd <= 0) this._windup(f);
+            return;
+        }
+        if (!free && d < f.spec.reach + 70) {         // others are at you: it circles, waiting its turn
             const side = f.side ??= Math.random() < 0.5 ? 1 : -1;
-            const away = d < SPEC.reach + 30 ? -0.6 : 0.3;
+            const away = d < f.spec.reach + 30 ? -0.6 : 0.3;
             return this._step(f, (-dy / u) * side + (dx / u) * away, (dx / u) * side + (dy / u) * away, dt, 0.6);
         }
         this._step(f, dx / u, dy / u, dt);
@@ -389,7 +514,7 @@ export class FieldDemons {
         if (fromPost < 4) {
             if (f.state === 'home') {
                 f.state = 'post';
-                f.hp = Math.max(f.hp, SPEC.hp);     // home again, mended
+                f.hp = Math.max(f.hp, f.maxHp);     // home again, mended
                 f.foe.who.sprite.setDirection('down');
             }
             return this._step(f, 0, 0, dt);
@@ -400,7 +525,7 @@ export class FieldDemons {
     _step(f, dx, dy, dt, pace = 1) {
         const who = f.foe.who, s = who.sprite;
         f.foe.walking = !!(dx || dy);
-        const v = SPEC.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
+        const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
         const x = s.x + dx * v, y = s.y + dy * v;
         if (this._open(x, s.y + FEET)) s.x = x;
         if (this._open(s.x, y + FEET)) s.y = y;
@@ -409,24 +534,40 @@ export class FieldDemons {
         else s.stopAnimation();
     }
 
-    /** Its blow: it lunges, and lands on you if you're still in reach. */
+    /** It stops, and flashes red: its blow is coming. */
+    _windup(f) {
+        f.state = 'windup';
+        f.t = f.spec.windup;
+        f.foe.walking = false;
+        f.foe.who.sprite.stopAnimation();
+    }
+
+    /** Its blow: it lunges, and lands on you if you're still in reach (a warlock's fire flies where you stood). */
     _foeSwing(f) {
-        const { foe } = f, who = foe.who, you = this._you();
+        const { foe, spec } = f, who = foe.who, you = this._you();
         tint(who, null);
         f.state = 'recover';
-        f.t = SPEC.recover * 0.6;
-        f.cd = SPEC.recover;
+        f.t = spec.recover * 0.6;
+        f.cd = spec.recover;
         if (!you) return;
-        who.sprite.playAnimation(SPEC.anim, dirOf(you.x - foe.x, you.y - foe.y));
+        who.sprite.playAnimation(spec.anim, dirOf(you.x - foe.x, you.y - foe.y));
         who.isAttacking = true;
         who.sprite.onAnimationComplete(() => {
             who.isAttacking = false;
             if (f.hp > 0) who.sprite.stopAnimation();
         });
         this.scene.time.delayedCall(700, () => { who.isAttacking = false; });
+        if (spec.ranged) {
+            audio.play('cast', { volume: 0.5 });
+            this.scene.time.delayedCall(250, () => {
+                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, 'fire', 'foe', f.damage);
+            });
+            f.t = 600;
+            return;
+        }
         audio.play('swing', { volume: 0.7 });
         const d = Math.hypot(you.x - foe.x, you.y - foe.y) || 1;
-        const k = Math.min(SPEC.lunge || 0, Math.max(0, d - 16)) / d;
+        const k = Math.min(spec.lunge || 0, Math.max(0, d - 16)) / d;
         const x = who.sprite.x + (you.x - foe.x) * k, y = who.sprite.y + (you.y - foe.y) * k;
         if (k && this._open(x, y + FEET)) this.scene.tweens.add({ targets: who.sprite, x, y, duration: 140 });
         this.scene.time.delayedCall(200, () => {
@@ -434,7 +575,7 @@ export class FieldDemons {
             if (f.hp <= 0 || !now || !this.foes.includes(f)) return;
             // Cursed (Evil Eye), or swinging at smoke (Smoke Bomb, Vanish): a miss
             if ((f.curse > 0 && Math.random() < f.miss) || this.you.hidden > 0) this.scene.effects.floatText(now.x, now.y - 52, 'Missed', '#c4b59f', 14);
-            else if (Math.hypot(now.x - foe.x, now.y - foe.y) <= SPEC.reach + 8) this._hurt(this.you, Math.round(SPEC.damage * (0.8 + Math.random() * 0.4)), { x: foe.x, y: foe.y });
+            else if (Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.reach + 8) this._hurt(this.you, Math.round(f.damage * (0.8 + Math.random() * 0.4)), { x: foe.x, y: foe.y });
             else this.scene.effects.floatText(now.x, now.y - 52, 'Dodged', '#c4b59f', 14);
         });
     }
@@ -534,10 +675,10 @@ export class FieldDemons {
         if (!g) return;
         g.clear();
         for (const f of this.foes) {
-            if (f.hp <= 0 || f.hp >= SPEC.hp) continue;
-            const x = f.foe.x - 14, y = f.foe.y - f.foe.tall - 6;
-            g.fillStyle(0x1d131e, 0.9).fillRect(x - 1, y - 1, 30, 5);
-            g.fillStyle(0xd04648, 1).fillRect(x, y, 28 * f.hp / SPEC.hp, 3);
+            if (f.hp <= 0 || f.hp >= f.maxHp) continue;
+            const w = f.spec.scale ? 44 : 28, x = f.foe.x - w / 2, y = f.foe.y - f.foe.tall * (f.spec.scale || 1) - 6;
+            g.fillStyle(0x1d131e, 0.9).fillRect(x - 1, y - 1, w + 2, 5);
+            g.fillStyle(0xd04648, 1).fillRect(x, y, w * f.hp / f.maxHp, 3);
         }
     }
 

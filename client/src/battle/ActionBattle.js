@@ -122,9 +122,13 @@ export class Demon {
         this.kind = kind;
         this.name = 'demon';
         this.tall = 50;         // feet to the top of its head (its bar goes above)
-        this.who = new Player(scene, x, y - FEET, `demon-${++made}`, demonCharacter(scene, kind), false);
+        const character = demonCharacter(scene, kind);
+        this.who = new Player(scene, x, y - FEET, `demon-${++made}`, character, false);
+        // Its weapon is drawn only in its sheet's oversized frames (a fury's trident, a brute's axe): without them it fought bare-handed
+        if (character?.spriteMeta) this.who.sprite.applySpriteMeta(character.spriteMeta);
         this.who.nameText.setVisible(!!label);
-        if (label) this.who.sprite.onLoaded = () => this.who.nameText.setText(label);
+        if (label && this.who.sprite.sprite) this.who.nameText.setText(label);     // (its sheet was in already)
+        else if (label) this.who.sprite.onLoaded = () => this.who.nameText.setText(label);
         this.who.sprite.body && (this.who.sprite.body.moves = false);
         this.who.sprite.setDirection('down');
         this.setDepthAt();

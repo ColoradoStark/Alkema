@@ -28,75 +28,202 @@ const field = (page) => page.evaluate(() => {
     return {
         count: fd.foes.length, drawn: fd.foes.filter(f => f.foe.who.sprite.sprite).length,
         sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => [...looks].some(l => k === `sprite_${l}`)).length,
-        looks: looks.size,
-        states: fd.foes.map(f => f.state), hp: fd.foes.map(f => f.hp),
+        looks: looks.size, kinds: [...new Set(fd.foes.map(f => f.kind))].sort(),
+        states: Object.fromEntries(fd.foes.map(f => [f.i, f.state])), hp: Object.fromEntries(fd.foes.map(f => [f.i, f.hp])),
     };
 });
 
+const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES, PACKS: m.PACKS })));
+
+/** Keep the hero standing (full hit points). */
+const keepUp = (page) => page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; hp.now = hp.max; });
+
 test.describe('Demons on the coast', () => {
-    test('thirty on one sheet, come as you near the coast; one comes for you within five tiles, swings, falls to your blows; far off, they go', async ({ page }) => {
+    test('packs of three to five, the three kinds mixed, come as you near the coast; rouse one and its pack comes; they fall to your blows in gold; far off, they go', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
-        const { POSTS } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ POSTS: m.POSTS })));
-        expect(POSTS.length).toBe(30);
-        // Where new heroes start: the coast's demons are near, all thirty on one sheet
+        const { PLACES, PACKS } = await places(page);
+        expect(PACKS.every(p => p.band.length >= 3 && p.band.length <= 5)).toBe(true);
+        // Where new heroes start: the coast's demons are near, on three sheets (fury, brute, warlock: the champion is a brute)
         const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(30);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
         const all = await field(page);
-        expect(all).toMatchObject({ count: 30, looks: 1, sheets: 1 });
+        expect(all).toMatchObject({ count: PLACES.length, looks: 3, sheets: 3, kinds: ['brute', 'champion', 'fury', 'warlock'] });
         // None comes for you at the start
-        expect(all.states.every(s => s === 'post')).toBe(true);
-        // The post furthest from any other: stand six tiles below it, and it stays; three, and it comes
-        const lone = POSTS.map((p, i) => ({ i, p, gap: Math.min(...POSTS.filter((_, j) => j !== i).map(q => Math.hypot(q[0] - p[0], q[1] - p[1]))) }))
-            .sort((a, b) => b.gap - a.gap)[0];
-        const [px, py] = lone.p;
-        const spot = await page.evaluate(([px, py]) => {      // a dry spot by it, as far off as it can be up to 6 tiles
-            const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
-            for (const d of [192, 176, 160 + 24]) for (const [ux, uy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
-                const x = px + ux * d, y = py + uy * d;
-                if (!ow.boxBlocked(x - 9, y - 5, 18, 10)) return { x, y, ux, uy };
+        expect(Object.values(all.states).every(s => s === 'post')).toBe(true);
+        // The first pack: stand three tiles off its fury, and the whole pack comes, not just her
+        const pack = PLACES.filter(p => p.pack === 0), fury = pack.find(p => p.kind === 'fury');
+        const near = await page.evaluate(([i, px, py]) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+            for (const [ux, uy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
+                const x = f.post.x + ux * 90, y = f.post.y + uy * 90;
+                if (fd._open(x, y)) return { x, y };
             }
             return null;
-        }, lone.p);
-        expect(spot).not.toBe(null);
-        await standAt(page, spot.x, spot.y);
-        await page.waitForTimeout(800);
-        expect((await field(page)).states[lone.i]).toBe('post');
-        const near = { x: px + spot.ux * 90, y: py + spot.uy * 90 };
+        }, [fury.i]);
+        expect(near).not.toBe(null);
         await standAt(page, near.x, near.y);
-        await expect.poll(() => field(page).then(f => f.states[lone.i]), { timeout: 3000 }).not.toBe('post');
-        // It closes in, winds up and swings: your hit points drop
+        await expect.poll(() => field(page).then(f => pack.every(p => f.states[p.i] !== 'post')), { timeout: 3000 }).toBe(true);
+        // They come at you, and one lands a blow
         const before = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now), { timeout: 15000 }).toBeLessThan(before);
-        // Swing back till it falls (it's beside you; your swing turns you to it)
-        for (let n = 0; n < 40 && (await field(page)).hp[lone.i] > 0; n++) {
+        // Swing back (at whichever is nearest before you) till one falls: it bursts into gold
+        const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
+        const down = async () => { const f = await field(page); return pack.filter(p => f.states[p.i] === 'dead').length; };
+        for (let n = 0; n < 80 && !(await down()); n++) {
             await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAttack());
             await page.waitForTimeout(450);
-            await page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; hp.now = hp.max; });     // (kept standing)
+            await keepUp(page);
         }
-        expect((await field(page)).states[lone.i]).toBe('dead');
-        // Far from the coast (Riverhold's road): the demons and their sheet go
+        expect(await down()).toBeGreaterThan(0);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold)).toBeGreaterThan(gold);
+        // Far from the coast (Riverhold's road): the demons and their sheets go
         await standAt(page, 6320, 11143);
         await expect.poll(() => field(page), { timeout: 5000 }).toMatchObject({ count: 0, sheets: 0 });
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('sprite_') && k.includes('demons')).length)).toBe(0);
     });
 
+    test("leave the coast before they've come, and none of them is made: no sheet of theirs loads", async ({ page }) => {
+        test.setTimeout(120000);
+        await page.goto('/');
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight;
+        }, null, { timeout: 60000 });
+        await page.evaluate(() => {         // every texture the game makes from here on
+            window.__made = [];
+            window.__PHASER_GAME.textures.on('addtexture', (key) => window.__made.push(key));
+        });
+        await page.locator('#cc-play').click();
+        // The moment you're in the world (on the coast, where the demons start coming), you're off to Riverhold's road
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.fieldDemons?._loading, null, { timeout: 30000, polling: 'raf' });
+        await standAt(page, 6320, 11143);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._loading, null, { timeout: 20000 });
+        await page.waitForTimeout(1500);
+        expect(await page.evaluate(() => window.__made.filter(k => k.includes('demons-')))).toEqual([]);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length)).toBe(0);
+    });
+
     test('outrun one and it gives up, back to its post', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
+        const { PLACES } = await places(page);
         const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(30);
-        const i = 0;
-        const post = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => m.POSTS[0]));
-        await page.evaluate(([i, x, y]) => {          // it's after you...
-            const f = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i);
-            f.state = 'chase';
-        }, [i, ...post]);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await page.evaluate(() => {          // it's after you...
+            window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0).state = 'chase';
+        });
         // ...and you're back at the start, more than its leash from it? It goes home
         await standAt(page, spawn.x, spawn.y + 300);
         await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 20000 }).toBe('post');
+    });
+
+    test('matched to your hero: a fury takes about three of your blows weak or strong, and the road toward Dunmere gets tougher and pays more', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const r = await page.evaluate(async () => {
+            const { numbers, bounty, PACKS } = await import('/src/battle/FieldDemons.js');
+            const weak = { attack: 4, hp: 30, defence: 1 }, strong = { attack: 400, hp: 3000, defence: 60 };
+            const first = PACKS[0].tier, last = PACKS[PACKS.length - 1].tier;
+            return {
+                weak: numbers('fury', first, weak).hp / weak.attack, strong: numbers('fury', first, strong).hp / strong.attack,
+                // a blow's share of your hit points, once your defence has taken its half off (as _hurt does)
+                weakHurt: (numbers('fury', first, weak).damage - Math.floor(weak.defence / 2)) / weak.hp,
+                strongHurt: (numbers('fury', first, strong).damage - Math.floor(strong.defence / 2)) / strong.hp,
+                tougher: numbers('brute', last, weak).hp > numbers('brute', first, weak).hp && numbers('brute', last, weak).damage > numbers('brute', first, weak).damage,
+                bruteVsFury: numbers('brute', first, weak).hp / numbers('fury', first, weak).hp,
+                richer: bounty('fury', last, 100) > bounty('fury', first, 100),
+                combo: [1, 2, 5, 20].map(n => bounty('fury', 1, 100, n)),
+                tiers: PACKS.map(p => p.tier),
+            };
+        });
+        expect(r.weak).toBeCloseTo(3, 0);
+        expect(r.strong).toBeCloseTo(3, 0);
+        expect(Math.abs(r.weakHurt - r.strongHurt)).toBeLessThan(0.03);
+        expect(r.tougher).toBe(true);
+        expect(r.bruteVsFury).toBeCloseTo(2, 0);
+        expect(r.richer).toBe(true);
+        expect(r.combo).toEqual([30, 38, 60, 90]);      // a quarter more for each in the combo, up to three times
+        expect(r.tiers[0]).toBe(1);
+        expect(r.tiers.every((t, k) => !k || t > r.tiers[k - 1])).toBe(true);
+        // On the road: each demon has its numbers for this hero and its pack's place along it
+        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        await standAt(page, spawn.x, spawn.y);
+        const { PLACES } = await places(page);
+        await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBe(PLACES.length);
+        const off = await page.evaluate(async () => {
+            const { numbers } = await import('/src/battle/FieldDemons.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hero = fd._hero();
+            return fd.foes.filter(f => f.maxHp !== numbers(f.kind, f.tier, hero).hp || f.damage !== numbers(f.kind, f.tier, hero).damage).length;
+        });
+        expect(off).toBe(0);
+    });
+
+    test('a warlock hangs back and throws fire; a brute is not staggered out of its swing; the champion leaves a chest; kills close together pay a combo', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const { PLACES } = await places(page);
+        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        await standAt(page, spawn.x, spawn.y);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        // The first pack's warlock: stand five tiles off it (the others kept at their posts), and fire comes at you
+        const w = PLACES.find(p => p.pack === 0 && p.kind === 'warlock');
+        const spot = await page.evaluate((i) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+            for (const d of [150, 130, 110]) for (const [ux, uy] of [[0, -1], [1, 0], [-1, 0], [0, 1]]) {
+                const x = f.post.x + ux * d, y = f.post.y + uy * d;
+                if (fd._open(x, y)) return { x, y };
+            }
+            return null;
+        }, w.i);
+        expect(spot).not.toBe(null);
+        await page.evaluate((i) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const f of fd.foes) if (f.i !== i) f.stun = 1e9;            // (only the warlock moves)
+            fd.foes.find(f => f.i === i).state = 'chase';
+        }, w.i);
+        await standAt(page, spot.x, spot.y);
+        const fire = await page.waitForFunction(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp;
+            hp.now = hp.max;            // (kept standing)
+            return fd.shots.find(s => s.side === 'foe')?.kind;
+        }, null, { timeout: 15000 }).then(h => h.jsonValue());
+        expect(fire).toBe('fire');
+        const keptBack = await page.evaluate((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), f = gs.fieldDemons.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
+            return Math.hypot(f.foe.x - me.x, f.foe.y - (me.y + 23));
+        }, w.i);
+        expect(keptBack).toBeGreaterThan(60);
+        // A brute struck mid wind-up swings on; a fury struck mid wind-up is staggered out of it
+        const struck = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            const out = {};
+            for (const kind of ['brute', 'fury']) {
+                const f = fd.foes.find(f => f.kind === kind && f.hp > 1 && f.pack > 0);
+                fd._windup(f);
+                fd._strikeFoe(f, 1, { x: f.foe.x, y: f.foe.y + 30 });
+                out[kind] = f.state;
+            }
+            return out;
+        });
+        expect(struck).toEqual({ brute: 'windup', fury: 'recover' });
+        // Two felled close together: the second pays a combo; the champion leaves a chest
+        const paid = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, inv = gs.scene.get('UIScene').inventory;
+            const furies = fd.foes.filter(f => f.kind === 'fury' && f.hp > 0 && f.tier === fd.foes.find(o => o.kind === 'fury' && o.hp > 0).tier).slice(0, 2);
+            const gold = [inv.gold];
+            for (const f of furies) { fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 }); gold.push(inv.gold); }
+            const chests = gs.encounters.chests.length;
+            const champ = fd.foes.find(f => f.kind === 'champion');
+            fd._strikeFoe(champ, champ.hp, { x: champ.foe.x, y: champ.foe.y + 30 });
+            return { first: gold[1] - gold[0], second: gold[2] - gold[1], combo: fd.combo, chests: gs.encounters.chests.length - chests, label: champ.foe.who.nameText.text };
+        });
+        expect(paid.second).toBeGreaterThan(paid.first);
+        expect(paid.chests).toBe(1);
+        expect(paid.label).toBe('Champion');
     });
 
     test('as on the battle map: your arrow flies at the demon and strikes as it gets there; the blue button casts the spell you equipped', async ({ page }) => {
@@ -114,38 +241,45 @@ test.describe('Demons on the coast', () => {
         await page.locator('#cc-play').click();
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.spellbook && window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
-        const { POSTS } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ POSTS: m.POSTS })));
+        const { PLACES, PACKS } = await places(page);
         const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(30);
-        // Six tiles straight off the loneliest demon, on the side furthest from any other, facing it: it stays at its post
-        const lone = POSTS.map((p, i) => ({ i, p, gap: Math.min(...POSTS.filter((_, j) => j !== i).map(q => Math.hypot(q[0] - p[0], q[1] - p[1]))) }))
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        // Six tiles straight off the loneliest pack, on the side furthest from any other, facing it: they stay at their posts
+        const lone = PACKS.map((p, i) => ({ i, p: p.at, gap: Math.min(...PACKS.filter((_, j) => j !== i).map(q => Math.hypot(q.at[0] - p.at[0], q.at[1] - p.at[1]))) }))
             .sort((a, b) => b.gap - a.gap)[0];
-        const spot = await page.evaluate(([px, py, posts]) => {
+        const spot = await page.evaluate(([px, py, packs]) => {
             const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
-            const others = posts.filter(q => q[0] !== px || q[1] !== py);
+            const others = packs.map(q => q.at).filter(q => q[0] !== px || q[1] !== py);
             return [[0, 1, 'up'], [0, -1, 'down'], [1, 0, 'left'], [-1, 0, 'right']]
-                .map(([ux, uy, face]) => ({ x: px + ux * 180, y: py + uy * 180, face }))
+                .map(([ux, uy, face]) => ({ x: px + ux * 200, y: py + uy * 200, face }))
                 .filter(p => !ow.boxBlocked(p.x - 9, p.y - 5, 18, 10))
                 .map(p => ({ ...p, gap: Math.min(...others.map(q => Math.hypot(q[0] - p.x, q[1] - p.y))) }))
                 .sort((a, b) => b.gap - a.gap)[0] || null;
-        }, [...lone.p, POSTS]);
+        }, [...lone.p, PACKS]);
         expect(spot).not.toBe(null);
         await standAt(page, spot.x, spot.y);
         await page.evaluate((face) => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.setDirection(face), spot.face);
         await page.waitForTimeout(500);
-        expect((await field(page)).states[lone.i]).toBe('post');
-        // Your arrow goes at it (before you, nearest), flies, and only strikes once it gets there
-        expect(await page.evaluate(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; return fd._aim(fd.you, 220)?.i; })).toBe(lone.i);
+        const pack = PLACES.filter(p => p.pack === lone.i);
+        const still = await field(page);
+        expect(pack.every(p => still.states[p.i] === 'post')).toBe(true);
+        // Your arrow goes at the nearest before you, flies, and only strikes once it gets there
+        const aimed = await page.evaluate(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd._aim(fd.you, 220); return f && { i: f.i, hp: f.hp, max: f.maxHp }; });
+        expect(aimed).not.toBe(null);
+        expect(aimed.hp).toBe(aimed.max);
+        expect(pack.map(p => p.i)).toContain(aimed.i);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAttack());
         const hit = await page.waitForFunction((i) => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             return fd.shots.length && { shots: fd.shots.map(s => s.kind), hp: fd.foes.find(f => f.i === i).hp };
-        }, lone.i, { timeout: 5000 }).then(h => h.jsonValue());
+        }, aimed.i, { timeout: 5000 }).then(h => h.jsonValue());
         expect(hit.shots).toEqual(['arrow']);
-        expect(hit.hp).toBe(28);
-        await expect.poll(() => field(page).then(f => f.hp[lone.i]), { timeout: 5000 }).toBeLessThan(28);
-        const afterArrow = (await field(page)).hp[lone.i];
+        expect(hit.hp).toBe(aimed.max);
+        await expect.poll(() => field(page).then(f => f.hp[aimed.i]), { timeout: 5000 }).toBeLessThan(aimed.max);
+        const packHp = (f) => pack.reduce((n, p) => n + f.hp[p.i], 0);
+        const afterArrow = packHp(await field(page));
+        await keepUp(page);
         // The blue button: the spell you equipped (a mage's Fireball), its magic spent, then it rests
         const cast = await page.evaluate(async () => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene'), fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
@@ -155,12 +289,36 @@ test.describe('Demons on the coast', () => {
             ui.mp.now = ui.mp.max;
             const mp = ui.mp.now;
             ui.handleAbility();
-            await new Promise(r => { const t = setInterval(() => fd.shots.length && (clearInterval(t), r()), 20); setTimeout(() => (clearInterval(t), r()), 5000); });
-            return { spent: mp - ui.mp.now, resting: ui.bottomControls.coolingDown, shots: fd.shots.map(s => s.kind), need: ui.spellbook.at('fireball').mp };
+            await new Promise(r => { const t = setInterval(() => fd.shots.some(s => s.side === 'party') && (clearInterval(t), r()), 20); setTimeout(() => (clearInterval(t), r()), 5000); });
+            return { spent: mp - ui.mp.now, resting: ui.bottomControls.coolingDown, shots: fd.shots.filter(s => s.side === 'party').map(s => s.kind), need: ui.spellbook.at('fireball').mp };
         });
         expect(cast.spent).toBe(cast.need);
         expect(cast.resting).toBe(true);
         expect(cast.shots).toContain('fire');
-        await expect.poll(() => field(page).then(f => f.hp[lone.i]), { timeout: 5000 }).toBeLessThan(afterArrow);
+        // (the arrow roused its pack: the fireball goes at whichever is nearest before you)
+        await expect.poll(() => field(page).then(packHp), { timeout: 5000 }).toBeLessThan(afterArrow);
+    });
+});
+
+test.describe('Demons on the road, armed', () => {
+    test('a demon walks and strikes with its weapon in hand (the oversized frames it is drawn in)', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        await standAt(page, spawn.x, spawn.y);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.foe.kind === 'fury' && f.foe.who.sprite.sprite), null, { timeout: 30000 });
+        // (its weapon is cut from its sheet once it has come)
+        await page.waitForFunction(() => window.__PHASER_GAME.textures.getTextureKeys().some(k => /^sprite_demons-fury_os_thrust/.test(k)), null, { timeout: 15000 });
+        const seen = await page.evaluate(() => {
+            const f = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.foe.kind === 'fury' && f.foe.who.sprite.sprite);
+            const s = f.foe.who.sprite, out = {};
+            for (const a of ['walk', 'thrust']) {
+                s.playAnimation(a, 'down');
+                out[a] = s.usingOversized && s.oversizedSprite.anims.currentAnim.key;
+            }
+            return out;
+        });
+        expect(seen.walk).toMatch(/_os_walk_128_down$/);
+        expect(seen.thrust).toMatch(/_os_thrust_oversize_down$/);
     });
 });

@@ -137,13 +137,18 @@ export class Encounters {
         const won = slain;                      // those that ran away leave nothing
         spot.count = rollBand(spot.band);       // whoever comes back next time
         if (!won) return null;
-        const sprite = this.scene.add.sprite(spot.x, spot.y - 40, 'cc-chests', CHEST_FRAMES.shut).setOrigin(0.5, 0.9);
-        const chest = { x: spot.x, y: spot.y, sprite, open: false, landed: false, loot: rollLoot(won) };
+        return this.drop(spot.x, spot.y, rollLoot(won));
+    }
+
+    /** A chest drops at (x, y) (feet) holding `loot`, { gold, item }: walk into it and it's yours. */
+    drop(x, y, loot) {
+        const sprite = this.scene.add.sprite(x, y - 40, 'cc-chests', CHEST_FRAMES.shut).setOrigin(0.5, 0.9);
+        const chest = { x, y, sprite, open: false, landed: false, loot };
         this.chests.push(chest);
-        sprite.setAlpha(0).setDepth(sortDepth(this.scene, spot.y));
+        sprite.setAlpha(0).setDepth(sortDepth(this.scene, y));
         this.scene.tweens.add({ targets: sprite, alpha: 1, duration: 120 });
         this.scene.tweens.add({
-            targets: sprite, y: spot.y, duration: 420, ease: 'Bounce.easeOut',
+            targets: sprite, y, duration: 420, ease: 'Bounce.easeOut',
             onComplete: () => { chest.landed = true; },
         });
         this.scene.time.delayedCall(170, () => audio.play('chest_drop'));

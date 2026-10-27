@@ -235,7 +235,7 @@ test.describe('Memory', () => {
             sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, sheets: [] });
     });
 
-    test("the demons on the coast: thirty on one sheet, under budget, and let go when you leave the coast", async ({ page }) => {
+    test("the demons on the coast: their packs on three sheets (with their weapons), under budget, and let go when you leave the coast", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const base = await settled(page);
@@ -246,7 +246,10 @@ test.describe('Memory', () => {
         }, [x, y]);
         const { spawn } = await page.evaluate(async () => ({ spawn: (await import('/src/world/places.js')).WORLD.spawn }));
         await go(spawn.x, spawn.y - 23);
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.who.sprite.sprite).length === 30, null, { timeout: 30000 });
+        const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES })));
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.who.sprite.sprite).length === n, PLACES.length, { timeout: 30000 });
+        // (and the frames their weapons are drawn in, cut from their sheets)
+        await page.waitForFunction(() => ['fury', 'brute'].every(k => window.__PHASER_GAME.textures.getTextureKeys().some(t => t.startsWith(`sprite_demons-${k}_os_`))), null, { timeout: 15000 });
         const coast = await settled(page);
         await go(6320, 11120);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
