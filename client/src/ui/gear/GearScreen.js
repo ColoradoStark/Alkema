@@ -155,6 +155,7 @@ export class GearScreen {
         this.selected = null;
         this.picking = null;
         this.notice = '';
+        this.slots = null;          // (the Upgrade page's three, picked afresh)
         this.root.hidden = false;
         this.fitToCanvas();
         this.render();
@@ -625,6 +626,7 @@ export class GearScreen {
                 if (this.upgradeTab === key) return;
                 audio.play('page', { volume: 0.6 });
                 this.upgradeTab = key;
+                this.slots = null;
                 this.selected = null;
                 this.notice = '';
                 this.render();
@@ -664,7 +666,9 @@ export class GearScreen {
         // The upgrades, then straight on down the same list to the goddesses (the user's): every one of them
         // there from the start, those not open yet a shadow, as Clicker Heroes' heroes
         const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
-        for (const t of [...up.list(), ...GODDESSES]) {
+        // Three upgrades (the user's), picked as the page opens and kept as you buy: a row doesn't go from under your finger
+        this.slots ??= up.list().map(t => t.id);
+        for (const t of [...this.slots.map(id => up.track(id)), ...GODDESSES]) {
             if (t === GODDESSES[0]) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
             const level = up.level(t.id), open = up.open(t);
             const row = el('div', `gear-up${open ? '' : ' is-locked'}${t.spell ? ' is-spell' : ''}${t.goddess ? ' is-goddess' : ''}`, { 'data-up': t.id });
@@ -745,7 +749,7 @@ export class GearScreen {
             this.notice = `${t.name} Lv ${level}.`;
         }
         // What it opened
-        const opened = [...up.list(), ...GODDESSES].filter(o => o.needs?.[0] === t.id && level >= o.needs[1] && level - res.levels < o.needs[1]);
+        const opened = [...up.tracks(), ...GODDESSES].filter(o => o.needs?.[0] === t.id && level >= o.needs[1] && level - res.levels < o.needs[1]);
         if (opened.length) this.notice += ` ${opened.map(o => o.name).join(' and ')} ${opened.length > 1 ? 'are' : 'is'} open to you.`;
         this.render();
     }

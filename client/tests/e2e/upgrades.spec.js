@@ -38,8 +38,9 @@ test.describe('Upgrades', () => {
         await expect(page.locator('.gear-tab[data-tab="upgrades"]')).toHaveClass(/is-current/);
         const rows = page.locator('.gear-up');
         await expect(rows.first()).toHaveAttribute('data-up', 'might');
-        // Something not open yet further down, saying what opens it
-        await expect(page.locator('.gear-up.is-locked').first()).toContainText('Opens at');
+        // Three upgrades, then the goddesses (the user's)
+        await expect(page.locator('.gear-up:not(.is-goddess)')).toHaveCount(3);
+        await expect(page.locator('.gear-upgrades > :nth-child(4)')).toHaveClass(/gear-up-heading/);
         const before = await ui(page, (ui) => ({ attack: ui.inventory.stats.attack, base: ui.inventory.stats.base.attack }));
         const price = Number(await page.locator('.gear-up-buy[data-buy="might"] .gear-coins').textContent());
         expect(price).toBe(10);
@@ -87,7 +88,7 @@ test.describe('Upgrades', () => {
             u.buy('guard', 10);
             u.buy('fortune', 1);
             const lucky = ui.inventory.found(100);
-            const list = () => u.list().map(t => t.id);
+            const list = () => u.tracks().map(t => t.id);
             const before = u.open(u.track('legend-1'));
             u.buy('fortune', 24);
             const opened = u.open(u.track('legend-1'));
@@ -110,9 +111,7 @@ test.describe('Upgrades', () => {
         await asMage(page, 100000);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
         await expect(page.locator('.gear-up[data-up="fireball"] .gear-up-level')).toHaveText('Lv 1');
-        await expect(page.locator('.gear-up[data-up="frost-lance"]')).toHaveClass(/is-locked/);
-        await expect(page.locator('.gear-up[data-up="frost-lance"]')).toContainText('Opens at Fireball Lv 10');
-        expect(await page.locator('.gear-up[data-up="frost-lance"] .gear-up-buy').count()).toBe(0);
+        expect(await ui(page, (ui) => ui.upgrades.open(ui.upgrades.track('frost-lance')))).toBe(false);
         const power = await ui(page, (ui) => ui.spellbook.at('fireball').power);
         // The list keeps its place as you buy
         await page.locator('.gear-upgrades').evaluate(l => { l.scrollTop = 40; });
@@ -127,7 +126,14 @@ test.describe('Upgrades', () => {
         expect(now.rank).toBe(2);
         expect(now.power).toBeGreaterThan(now.raw);
         expect(now.power).toBeGreaterThan(power);
-        // Learn Frost Lance
+        // Fireball kept its row as you bought it up, dearer now than Orcbane
+        await expect(page.locator('.gear-up:not(.is-goddess)')).toHaveCount(3);
+        // With the cheap ones bought up, Frost Lance is among the three next time: learn it
+        await ui(page, (ui) => {
+            const u = ui.upgrades;
+            for (let i = 0; i < 3; i++) for (const t of u.tracks()) if (u.open(t) && !['fireball', 'frost-lance'].includes(t.id)) u.buy(t.id, 40);
+        });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
         await expect(page.locator('.gear-up[data-up="frost-lance"]')).not.toHaveClass(/is-locked/);
         await page.locator('.gear-up-buy[data-buy="frost-lance"]').click();
         await expect(page.locator('.gear-notice')).toContainText("You've learned Frost Lance");

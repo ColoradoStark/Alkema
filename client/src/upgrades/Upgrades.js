@@ -15,6 +15,7 @@ const SPELL_COSTS = [120, 500, 2000, 8000, 30000];      // the first level of ea
 const STARTER_COSTS = [25, 40, 60];         // ...and the next level of those you do
 const SPELL_BOOST = 0.05;                    // a spell's power, each level past its first
 export const BUY = [1, 10, 25, 'max'];
+export const SLOTS = 3;                      // upgrades shown before the goddesses (the user's)
 
 /** The stat upgrades, cheapest first; `needs` another track at a level before it opens. */
 export const STAT_TRACKS = [
@@ -211,11 +212,11 @@ export class Upgrades {
     }
 
     /**
-     * The list, cheapest first: everything open or owned; what's not open yet but on its way (what
-     * opens it, you've begun), saying what opens it; and one more beyond, so there's always something
-     * further down to want. Legends are added as you reach them.
+     * Everything that could be on the list, cheapest first: what's open or owned; what's not open yet
+     * but on its way (what opens it, you've begun), saying what opens it; and one more beyond, so
+     * there's always something further down to want. Legends are added as you reach them.
      */
-    list() {
+    tracks() {
         const all = [...STAT_TRACKS, ...this.spellTracks];
         for (let k = 0; ; k++) {
             const t = legend(k);
@@ -230,6 +231,17 @@ export class Upgrades {
             else if (!beyond++) shown.push(t);
         }
         return shown;
+    }
+
+    /**
+     * The list on the page, SLOTS long (the user's: three, then the goddesses): the cheapest next
+     * buys of what's open, made up if need be from what's on its way. Shown cheapest first by their
+     * first level. (The page picks them as it opens, and keeps them while you buy.)
+     */
+    list() {
+        const shown = this.tracks();
+        const kept = new Set([...shown].sort((a, b) => (this.open(b) - this.open(a)) || this.cost(a) - this.cost(b)).slice(0, SLOTS));
+        return shown.filter(t => kept.has(t));
     }
 
     /** What the next `n` levels of a track cost; 'max' is as many as your gold buys (at least one). */
