@@ -49,11 +49,13 @@ const KINDS = {
     fury: { ...DEMON_KINDS.fury, speed: 80 },
     brute: { ...DEMON_KINDS.brute, speed: 50 },
     warlock: { ...DEMON_KINDS.warlock, speed: 52 },
-    champion: { ...DEMON_KINDS.brute, speed: 54, reach: 46, windup: 900, recover: 1100, sheet: 'brute', scale: 1.35, label: 'Champion' },
+    // (nearly a fury's pace, the user's: it should be a stressful event)
+    champion: { ...DEMON_KINDS.brute, speed: 74, reach: 46, windup: 750, recover: 950, sheet: 'brute', scale: 1.35, label: 'Champion' },
 };
 // Matched to your hero (`numbers`): how many of your blows each takes, and how much of your hit points its blow takes
 const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22 };
-const HURTS = { fury: 0.06, warlock: 0.07, brute: 0.13, champion: 0.16 };
+// (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
+const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22 };
 // What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
 const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4 };      // (a pack near the start buys about one)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
@@ -68,7 +70,7 @@ const REACH = 40, LUNGE = 26, SHOT_REACH = 220;
 const SIGHT = 12 * TILE;        // what a spell or a shot can go at: the demons this near you
 const SLOWED = 0.4;             // a slowed demon's pace (Frost Lance)
 const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you fight (as on a battle map)
-const ATTACKERS = 2;            // at most this many wind up at you at once; the rest circle
+const ATTACKERS = 2;            // at most this many wind up a blow at you at once; the rest circle (a warlock's fire doesn't wait its turn)
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
 const BODY = 22;
@@ -77,17 +79,19 @@ const FALL_MS = 1600;
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
 // out from the world map's walking and sailing layers), and who's in it, each tougher than the last
 export const PACKS = [
+// (a caster in every pack, the user's: more fire coming at you)
     { at: [9904, 11728], band: ['fury', 'fury', 'warlock'] },
-    { at: [10064, 11536], band: ['fury', 'brute', 'fury'] },
-    { at: [10352, 11344], band: ['fury', 'fury', 'warlock', 'fury'] },
+    { at: [10064, 11536], band: ['fury', 'brute', 'warlock'] },
+    { at: [10352, 11344], band: ['fury', 'fury', 'warlock', 'warlock'] },
     { at: [10672, 11344], band: ['brute', 'fury', 'warlock', 'fury'] },
-    { at: [10960, 11376], band: ['champion', 'fury', 'fury'] },          // halfway: the champion
-    { at: [11152, 11152], band: ['brute', 'fury', 'warlock', 'fury', 'fury'] },
-    { at: [11312, 10992], band: ['fury', 'warlock', 'warlock', 'fury'] },
-    { at: [11088, 10800], band: ['brute', 'brute', 'fury', 'warlock'] },
+    // halfway: the champion, well escorted (the user's)
+    { at: [10960, 11376], band: ['champion', 'fury', 'fury', 'warlock', 'warlock', 'fury'] },
+    { at: [11152, 11152], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
+    { at: [11312, 10992], band: ['fury', 'warlock', 'warlock', 'fury', 'warlock'] },
+    { at: [11088, 10800], band: ['brute', 'brute', 'fury', 'warlock', 'warlock'] },
     { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
 ].map((p, k, all) => ({ ...p, tier: 1 + (TIER_END - 1) * k / (all.length - 1) }));
-const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30]];    // where a pack's members stand about its spot
+const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
 
 /** Each demon on the road, a place for each: { x, y (feet, before they're stood clear of rock), kind, pack, tier, i }. */
 export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
@@ -99,8 +103,9 @@ export function numbers(kind, tier, hero) {
     const attack = Math.max(1, hero.attack || 5), hp = Math.max(10, hero.hp || 30);
     return {
         hp: Math.max(4, Math.round(HITS[kind] * attack * tier)),
-        // (your defence takes half of itself off a blow, `_hurt`: here it's given back half of that, so it counts for something)
-        damage: Math.max(1, Math.round(HURTS[kind] * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 4),
+        // (your defence takes half of itself off a blow, `_hurt`: given back here, as it's matched to you too; a
+        // quarter given back rounded a weak hero's fury down to a fortieth of their hit points)
+        damage: Math.max(1, Math.round(HURTS[kind] * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 2),
     };
 }
 
@@ -486,16 +491,19 @@ export class FieldDemons {
             if (f.t <= 0) f.state = 'chase';
             return this._step(f, 0, 0, dt);
         }
-        const free = this.foes.filter(o => o.state === 'windup').length < ATTACKERS;
         if (f.spec.ranged) {
-            // A warlock keeps its distance, and throws fire when it's ready (its turn too)
-            if (d < f.spec.keep - 30) this._step(f, -dx / u, -dy / u, dt);
+            // A warlock keeps its distance, backing off facing you (turning to walk away and back to you
+            // every frame, it flickered on the spot), and throws fire when it's ready, whoever else is at you
+            if (d < f.spec.keep - 30) this._step(f, -dx / u, -dy / u, dt, 0.8, you);
             else if (d > f.spec.keep + 40) this._step(f, dx / u, dy / u, dt);
-            else this._step(f, 0, 0, dt);
-            foe.face(you.x, you.y);
-            if (free && f.cd <= 0 && d < SHOT_REACH + 60) this._windup(f);
+            else {
+                this._step(f, 0, 0, dt);
+                foe.face(you.x, you.y);
+            }
+            if (f.cd <= 0 && d < SHOT_REACH + 60) this._windup(f);
             return;
         }
+        const free = this.foes.filter(o => o.state === 'windup' && !o.spec.ranged).length < ATTACKERS;
         if (d <= f.spec.reach) {
             this._step(f, 0, 0, dt);
             foe.face(you.x, you.y);
@@ -522,7 +530,8 @@ export class FieldDemons {
         this._step(f, (f.post.x - f.foe.x) / fromPost, (f.post.y - f.foe.y) / fromPost, dt, 0.7);
     }
 
-    _step(f, dx, dy, dt, pace = 1) {
+    /** It walks (dx, dy) a step's worth, facing its way or, given `facing` (feet), that. */
+    _step(f, dx, dy, dt, pace = 1, facing = null) {
         const who = f.foe.who, s = who.sprite;
         f.foe.walking = !!(dx || dy);
         const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
@@ -530,7 +539,7 @@ export class FieldDemons {
         if (this._open(x, s.y + FEET)) s.x = x;
         if (this._open(s.x, y + FEET)) s.y = y;
         if (who.isAttacking) return;
-        if (dx || dy) s.playAnimation('walk', dirOf(dx, dy));
+        if (dx || dy) s.playAnimation('walk', facing ? dirOf(facing.x - f.foe.x, facing.y - f.foe.y) : dirOf(dx, dy));
         else s.stopAnimation();
     }
 

@@ -39,11 +39,11 @@ const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js'
 const keepUp = (page) => page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; hp.now = hp.max; });
 
 test.describe('Demons on the coast', () => {
-    test('packs of three to five, the three kinds mixed, come as you near the coast; rouse one and its pack comes; they fall to your blows in gold; far off, they go', async ({ page }) => {
+    test('packs of three to five (the champion\'s six), the three kinds mixed, come as you near the coast; rouse one and its pack comes; they fall to your blows in gold; far off, they go', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PLACES, PACKS } = await places(page);
-        expect(PACKS.every(p => p.band.length >= 3 && p.band.length <= 5)).toBe(true);
+        expect(PACKS.every(p => p.band.length >= 3 && p.band.length <= (p.band.includes('champion') ? 6 : 5))).toBe(true);
         // Where new heroes start: the coast's demons are near, on three sheets (fury, brute, warlock: the champion is a brute)
         const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
         await standAt(page, spawn.x, spawn.y);
@@ -297,6 +297,80 @@ test.describe('Demons on the coast', () => {
         expect(cast.shots).toContain('fire');
         // (the arrow roused its pack: the fireball goes at whichever is nearest before you)
         await expect.poll(() => field(page).then(packHp), { timeout: 5000 }).toBeLessThan(afterArrow);
+    });
+});
+
+test.describe('Demons on the road, a fight you can lose', () => {
+    test('a blow hurts (a fury takes a tenth of your hit points), the casters are many and throw fire while two others are at you, and the champion is quick and well escorted', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const r = await page.evaluate(async () => {
+            const { numbers, PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
+            const hero = { attack: 6, hp: 40, defence: 2 };
+            const share = (kind) => (numbers(kind, 1, hero).damage - Math.floor(hero.defence / 2)) / hero.hp;
+            const champ = PACKS.find(p => p.band.includes('champion'));
+            return {
+                fury: share('fury'), brute: share('brute'),
+                warlocks: PLACES.filter(p => p.kind === 'warlock').length,
+                packsWithCaster: PACKS.filter(p => p.band.includes('warlock')).length, packs: PACKS.length,
+                escort: champ.band.length - 1, escortCasters: champ.band.filter(k => k === 'warlock').length,
+            };
+        });
+        expect(r.fury).toBeGreaterThanOrEqual(0.095);
+        expect(r.brute).toBeGreaterThanOrEqual(0.18);
+        expect(r.packsWithCaster).toBe(r.packs);
+        expect(r.warlocks).toBeGreaterThanOrEqual(15);
+        expect(r.escort).toBeGreaterThanOrEqual(5);
+        expect(r.escortCasters).toBeGreaterThanOrEqual(2);
+        // On the road: the champion is nearly as quick as a fury; a warlock throws while two others wind up at you
+        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        await standAt(page, spawn.x, spawn.y);
+        const { PLACES } = await places(page);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        const busy = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            const champ = fd.foes.find(f => f.kind === 'champion'), fury = fd.foes.find(f => f.kind === 'fury');
+            const w = fd.foes.find(f => f.kind === 'warlock');
+            const melee = fd.foes.filter(f => f.kind === 'fury' && f.pack === w.pack).slice(0, 2);
+            for (const f of melee) fd._windup(f);
+            w.state = 'chase';
+            w.cd = 0;
+            me.setPosition(w.foe.x, w.foe.y + 140 - 23);
+            fd._think(w, 16, 0.016, { x: me.x, y: me.y + 23 }, false);
+            return { pace: champ.spec.speed / fury.spec.speed, warlock: w.state };
+        });
+        expect(busy.pace).toBeGreaterThanOrEqual(0.9);
+        expect(busy.warlock).toBe('windup');
+    });
+
+    test('crowded onto you, no demon turns back and forth on the spot (a warlock backing off faced away and back every frame)', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        await standAt(page, spawn.x, spawn.y);
+        const { PLACES } = await places(page);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        const pack = PLACES.find(p => p.kind === 'warlock' && PLACES.filter(q => q.pack === p.pack).length >= 5).pack;
+        const turns = await page.evaluate(async (pack) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            const them = fd.foes.filter(f => f.pack === pack), me = gs.localPlayer.sprite, p = them[0].post;
+            me.setPosition(p.x, p.y - 23);
+            me.body.reset(me.x, me.y);
+            const turns = them.map(() => 0);
+            them.forEach((f, k) => {
+                const s = f.foe.who.sprite, set = s.setDirection.bind(s);
+                s.setDirection = (d) => { if (d !== s.currentDirection) turns[k]++; return set(d); };
+                s.setPosition(me.x + (k % 2 ? 2 : -2), me.y + (k > 2 ? 2 : -2));       // all on you at once
+                f.state = 'chase';
+            });
+            const t0 = performance.now();
+            while (performance.now() - t0 < 3000) {
+                ui.hp.now = ui.hp.max;
+                await new Promise(r => requestAnimationFrame(r));
+            }
+            return them.map((f, k) => `${f.kind} ${turns[k]}`);
+        }, pack);
+        for (const t of turns) expect(Number(t.split(' ')[1]), t).toBeLessThanOrEqual(8);
     });
 });
 
