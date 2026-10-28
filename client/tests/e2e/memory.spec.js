@@ -235,7 +235,7 @@ test.describe('Memory', () => {
             sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, sheets: [] });
     });
 
-    test("the demons on the coast: their packs on three sheets (with their weapons), under budget, and let go when you leave the coast", async ({ page }) => {
+    test("the demons and orcs on the coast: their packs on three sheets (with their weapons) and five Wesnoth ones, under budget, and let go when you leave the coast", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const base = await settled(page);
@@ -247,19 +247,21 @@ test.describe('Memory', () => {
         const { spawn } = await page.evaluate(async () => ({ spawn: (await import('/src/world/places.js')).WORLD.spawn }));
         await go(spawn.x, spawn.y - 23);
         const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES })));
-        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.who.sprite.sprite).length === n, PLACES.length, { timeout: 30000 });
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.length, { timeout: 30000 });
         // (and the frames their weapons are drawn in, cut from their sheets)
         await page.waitForFunction(() => ['fury', 'brute'].every(k => window.__PHASER_GAME.textures.getTextureKeys().some(t => t.startsWith(`sprite_demons-${k}_os_`))), null, { timeout: 15000 });
         const coast = await settled(page);
         await go(6320, 11120);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
         const after = await settled(page);
-        console.log('the coast\'s demons', +(coast.mb - base.mb).toFixed(2), 'MB');
+        console.log('the coast\'s demons and orcs', +(coast.mb - base.mb).toFixed(2), 'MB');
         expect(coast.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         // Their file, their sheet and the spells' effects all gone
         expect(await page.evaluate(() => ({ file: window.__PHASER_GAME.cache.json.exists('folk-demons'), fx: window.__PHASER_GAME.textures.exists('spell-fx'),
             sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, fx: false, sheets: [] });
+        // and the orcs' (Riverhold's road has its own grunt and spearman posted: only theirs stay)
+        expect(await page.evaluate(() => ['archer', 'warrior', 'warlord'].filter(k => window.__PHASER_GAME.textures.exists(`foe-${k}`)))).toEqual([]);
     });
 
     test("other players' sheets come with them and go when they leave", async ({ page }) => {

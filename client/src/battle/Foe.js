@@ -14,9 +14,16 @@ export const foeKey = kind => `foe-${kind}`;
 export const OVER_TREES = 2;
 const BODY_MS = 700;        // the slain lie this long before they fade
 
+// Who holds each sheet (`owner`: the coast's orcs, FieldOrcs.js, apart from the posts and fights, which share
+// one hold as they always have): one letting a sheet go doesn't take it from under another (Riverhold's posts
+// and the coast's orcs both have grunts and spearmen; a sheet loading for one was let go as the other drew it)
+const holders = new Map();
+
 /** Load a foe's sheet and make its animations (resolves at once if it's here already). */
-export function loadFoe(scene, kind) {
+export function loadFoe(scene, kind, owner = 'posts') {
     const key = foeKey(kind);
+    if (!holders.has(key)) holders.set(key, new Set());
+    holders.get(key).add(owner);
     const spec = scene.cache.json.get('battle')?.foes[kind];
     if (!spec) return Promise.reject(new Error(`no foe ${kind}`));
     const ready = () => {
@@ -52,9 +59,11 @@ export function loadFoe(scene, kind) {
     });
 }
 
-/** Let go of a foe's sheet and its animations. */
-export function forgetFoe(scene, kind) {
+/** `owner` lets go of a foe's sheet: it and its animations go once no one holds it. */
+export function forgetFoe(scene, kind, owner = 'posts') {
     const key = foeKey(kind);
+    holders.get(key)?.delete(owner);
+    if (holders.get(key)?.size) return;
     const spec = scene.cache.json.get('battle')?.foes[kind];
     for (const name of Object.keys(spec?.anims || {})) scene.anims.remove(`${key}-${name}`);
     if (scene.textures.exists(key)) scene.textures.remove(key);

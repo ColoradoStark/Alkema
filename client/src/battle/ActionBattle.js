@@ -138,6 +138,35 @@ export class Demon {
     get x() { return this.who.sprite.x; }
     get y() { return this.who.sprite.y + FEET; }
 
+    // What a fight out on the world asks of a foe's body (FieldDemons.js; FieldOrcs.js's Orc has the same)
+
+    /** Drawn yet (its sheet in)? */
+    get ready() { return !!this.who.sprite.sprite; }
+    /** Mid-blow? */
+    get striking() { return this.who.isAttacking; }
+    /** Tinted (null: as it is), or filled with a colour (a blow's flash). */
+    tint(colour, fill = false) { tint(this.who, colour, fill); }
+    /** Walking, facing `dir`. */
+    walkAnim(dir) { this.who.sprite.playAnimation('walk', dir); }
+    /** Standing still. */
+    halt() { this.who.sprite.stopAnimation(); }
+    /** At its post, facing you as you come. */
+    rest() { this.who.sprite.setDirection('down'); }
+    grow(scale) { this.who.sprite.setScale(scale); }
+    labelColour(colour) { this.who.nameText.setColor?.(colour); }
+
+    /** Its blow (the move `anim`), toward `dir`. */
+    strike(anim, dir, alive) {
+        const who = this.who;
+        who.sprite.playAnimation(anim, dir);
+        who.isAttacking = true;
+        who.sprite.onAnimationComplete(() => {
+            who.isAttacking = false;
+            if (alive()) who.sprite.stopAnimation();
+        });
+        this.scene.time.delayedCall(700, () => { who.isAttacking = false; });
+    }
+
     /** Turn to face a point (someone's feet). */
     face(x, y) {
         const dir = dirOf(x - this.x, y - this.y);
@@ -529,7 +558,7 @@ export class ActionBattle extends Battle {
                 const m = this.fighting.find(o => near(o.who.sprite.x, o.who.sprite.y + FEET));
                 if (m) {
                     s.done = true;
-                    this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75 });
+                    if (s.kind !== 'arrow') this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75 });
                     this._hurt(m, s.damage, { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 });
                 }
             }

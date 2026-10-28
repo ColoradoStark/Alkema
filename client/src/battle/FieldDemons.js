@@ -33,10 +33,10 @@
 // into a place. The slain stay down till then.
 
 import { ActionBattle, Demon, DEMONS, DEMON_KINDS, loadDemons } from './ActionBattle.js';
+import { Orc, ORC_KINDS, ORC_HITS, ORC_HURTS, ORC_PAY, ORC_PACKS, loadOrcs, forgetOrcs } from './FieldOrcs.js';
 import { rollLoot } from './Encounters.js';
 import { ACTION_SPELLS } from './ActionSpells.js';
 import { Battle, forgetFx, loadSpellFx, spellParticles } from './Battle.js';
-import { sortDepth } from '../world/Forest.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
@@ -50,14 +50,16 @@ const KINDS = {
     brute: { ...DEMON_KINDS.brute, speed: 50 },
     warlock: { ...DEMON_KINDS.warlock, speed: 52 },
     // (nearly a fury's pace, the user's: it should be a stressful event)
-    champion: { ...DEMON_KINDS.brute, speed: 74, reach: 46, windup: 750, recover: 950, sheet: 'brute', scale: 1.35, label: 'Champion' },
+    champion: { ...DEMON_KINDS.brute, speed: 74, reach: 46, windup: 750, recover: 950, sheet: 'brute', scale: 1.35, label: 'Champion', chest: true },
+    // The orcs west of the start (FieldOrcs.js), the same mix in Wesnoth's
+    ...ORC_KINDS, warlord: { ...ORC_KINDS.warlord, chest: true },
 };
 // Matched to your hero (`numbers`): how many of your blows each takes, and how much of your hit points its blow takes
-const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22 };
+const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS };
 // (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
-const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22 };
+const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS };
 // What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
-const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4 };      // (a pack near the start buys about one)
+const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY };      // (a pack near the start buys about one)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
 const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
@@ -90,12 +92,29 @@ export const PACKS = [
     { at: [11312, 10992], band: ['fury', 'warlock', 'warlock', 'fury', 'warlock'] },
     { at: [11088, 10800], band: ['brute', 'brute', 'fury', 'warlock', 'warlock'] },
     { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
-].map((p, k, all) => ({ ...p, tier: 1 + (TIER_END - 1) * k / (all.length - 1) }));
+].map((p, k, all) => ({ ...p, family: 'demons', tier: 1 + (TIER_END - 1) * k / (all.length - 1) }))
+    .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })));
+
+/** Each band's bodies: their sheets loaded and let go, and one made (feet at x, y). */
+const FAMILIES = {
+    demons: {
+        load: (scene) => loadDemons(scene),
+        forget: (scene) => scene.cache.json.remove(DEMONS),
+        make: (scene, x, y, kind, spec) => new Demon(scene, x, y, spec.sheet || kind, spec.label),
+        sheet: (kind) => KINDS[kind].sheet || kind,
+    },
+    orcs: {
+        load: (scene) => loadOrcs(scene),
+        forget: (scene) => forgetOrcs(scene),
+        make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
+        sheet: (kind) => kind,
+    },
+};
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
 
-/** Each demon on the road, a place for each: { x, y (feet, before they're stood clear of rock), kind, pack, tier, i }. */
+/** Each demon (and orc) on the coast, a place for each: { x, y (feet, before they're stood clear of rock), kind, family, pack, tier, i }. */
 export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
-    x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, pack, tier: p.tier,
+    x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, family: p.family, pack, tier: p.tier,
 }))).map((p, i) => ({ ...p, i }));
 
 /** A demon matched to a hero ({attack, hp: max hit points, defence}) `tier` along the road: its hit points and blow. */
@@ -116,15 +135,6 @@ export function bounty(kind, tier, price, combo = 1) {
 
 const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
 
-function tint(who, colour, fill = false) {
-    for (const s of [who.sprite.sprite, who.sprite.oversizedSprite]) {
-        if (!s?.active) continue;
-        if (colour == null) s.clearTint();
-        else if (fill) s.setTintFill(colour);
-        else s.setTint(colour);
-    }
-}
-
 export class FieldDemons {
     constructor(scene) {
         this.scene = scene;
@@ -133,7 +143,9 @@ export class FieldDemons {
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
         this.shots = [];          // arrows and spells in flight (ActionBattle._launch, _fly)
-        this._loading = false;
+        this._up = new Set();      // the bands (FAMILIES) come or coming: you're near their stretch of coast
+        this._coming = new Set();  // those whose sheets are loading
+        this._near = new Set();
         this._freeze = 0;
         this._mpT = 0;
         this.MELEE_REACH = REACH + LUNGE + 10;
@@ -177,16 +189,24 @@ export class FieldDemons {
         return this.foes.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
     }
 
+    /** Sheets on their way? */
+    get _loading() {
+        return this._coming.size > 0;
+    }
+
     /** Each frame, out in the world on foot (`feet`: yours), or null anywhere else (they go). */
     update(delta, feet) {
         if (!feet) {
-            this._near = false;
+            this._near.clear();
             return this.release();
         }
-        const near = PACKS.some(({ at: [x, y] }) => Math.hypot(x - feet.x, y - feet.y) < (this.foes.length ? FAR : NEAR));
-        this._near = near;
-        if (!near) return this.release();
-        if (!this.foes.length) return this._summon();
+        // Each band comes as you near its stretch of coast, and goes as you leave it
+        this._near = new Set(Object.keys(FAMILIES).filter(fam => PACKS.some(({ at: [x, y], family }) =>
+            family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? FAR : NEAR))));
+        if (!this._near.size) return this.release();
+        for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
+        for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
+        if (!this.foes.length) return;
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             if (this._freeze <= 0) this.scene.anims.resumeAll();
@@ -226,41 +246,66 @@ export class FieldDemons {
         }
     }
 
-    /** The demons come (one of each kind first, their sheets loading; then the rest on them), and the spells' effects with them. */
-    async _summon() {
-        if (this._loading) return;
-        this._loading = true;
+    /** A band comes (one of each sheet first, loading; then the rest on them), and the spells' effects with them. */
+    async _summon(fam) {
+        const band = FAMILIES[fam];
+        this._up.add(fam);
+        this._coming.add(fam);
         try {
-            await Promise.all([loadDemons(this.scene), loadSpellFx(this.scene)]);
-            if (!this._near) return this._unload();     // gone from the coast while they came: make none of them
-            const left = PLACES.filter(p => !this.slain.has(p.i));
+            await Promise.all([band.load(this.scene), loadSpellFx(this.scene)]);
+            // gone from their coast while they came: make none of them
+            if (!this._up.has(fam) || !this._near.has(fam)) {
+                this._up.delete(fam);
+                this._forget(fam);
+                if (!this._up.size && !this.bars) this._unload();      // (and the spells' effects that came with them)
+                return;
+            }
+            const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i));
             if (!left.length) return;
             const hero = this._hero();
             const make = (p) => {
                 const spec = KINDS[p.kind];
                 const at = this._clear(p);
-                const foe = new Demon(this.scene, at.x, at.y, spec.sheet || p.kind, spec.label);
-                if (spec.scale) foe.who.sprite.setScale(spec.scale);
-                if (spec.label) foe.who.nameText.setColor?.('#ff8a7a');
-                foe.who.sprite.setDepth(sortDepth(this.scene, at.y));
+                const foe = band.make(this.scene, at.x, at.y, p.kind, spec);
+                if (spec.scale) foe.grow(spec.scale);
+                if (spec.label) foe.labelColour('#ff8a7a');
+                foe.setDepthAt();
                 const { hp, damage } = numbers(p.kind, p.tier, hero);
-                return { foe, kind: p.kind, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
-            const firsts = [...new Map(left.map(p => [KINDS[p.kind].sheet || p.kind, p])).values()];
-            for (const p of firsts) this.foes.push(make(p));
-            Object.assign(this, spellParticles(this.scene));
-            this.bars = this.scene.add.graphics().setDepth(29);
-            this._showSpell();
+            const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
+            const mine = firsts.map(make);
+            this.foes.push(...mine);
+            if (!this.bars) {
+                Object.assign(this, spellParticles(this.scene));
+                this.bars = this.scene.add.graphics().setDepth(29);
+                this._showSpell();
+            }
             await new Promise(resolve => {
-                const ready = () => (this.foes.every(f => f.foe.who.sprite?.sprite) || !this.foes.length ? resolve() : this.scene.time.delayedCall(100, ready));
+                const ready = () => (mine.every(f => f.foe.ready) || !this._up.has(fam) ? resolve() : this.scene.time.delayedCall(100, ready));
                 ready();
             });
-            if (!this.foes.length) return;      // (let go meanwhile)
+            if (!this._up.has(fam)) return;      // (let go meanwhile)
             for (const p of left) if (!firsts.includes(p)) this.foes.push(make(p));
         } finally {
-            this._loading = false;
+            this._coming.delete(fam);
         }
+    }
+
+    /** A band goes (you've left its stretch of coast), and its sheets; its slain will stand again. */
+    _dismiss(fam) {
+        this._up.delete(fam);
+        // (one sheet between many: destroyed together, the first lets it go)
+        for (const f of this.foes) if (f.family === fam) f.foe.destroy();
+        this.foes = this.foes.filter(f => f.family !== fam);
+        for (const p of PLACES) if (p.family === fam) this.slain.delete(p.i);
+        this._forget(fam);
+    }
+
+    /** A band's sheets go (a fight's own, if one's up, stay). */
+    _forget(fam) {
+        if (!this.scene.battle) FAMILIES[fam].forget(this.scene);
     }
 
     /** Where a demon stands at its place: there, or the nearest open ground about it. */
@@ -291,13 +336,10 @@ export class FieldDemons {
 
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
-        if (!this.foes.length) return;
+        for (const fam of [...this._up]) this._dismiss(fam);
+        if (!this.bars) return;
         this.scene.anims.resumeAll();
         this._freeze = 0;
-        // (one sheet between them: destroyed together, the first lets it go)
-        for (const f of this.foes) f.foe.destroy();
-        this.foes = [];
-        this.slain.clear();
         this.combo = 0;
         this.bars?.destroy();
         this.bars = null;
@@ -319,11 +361,9 @@ export class FieldDemons {
         this.fallen = false;
     }
 
-    /** Their file and the spells' effects go (a fight's own, if one's up, stay). */
+    /** The spells' effects go (a fight's own, if one's up, stay). */
     _unload() {
-        if (this.scene.battle) return;
-        forgetFx(this.scene);
-        this.scene.cache.json.remove(DEMONS);
+        if (!this.scene.battle) forgetFx(this.scene);
     }
 
     // ------------------------------------------------ you, fighting them
@@ -385,9 +425,9 @@ export class FieldDemons {
         fx.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
         if (words) fx.floatText(foe.x, foe.y - foe.tall - 18, words, colour, 14);
         this._rouse(f.pack);
-        tint(foe.who, 0xffffff, true);
-        this.scene.time.delayedCall(80, () => tint(foe.who, f.state === 'windup' ? 0xff5050 : null));
-        this._knock(foe.who, from, f.spec.poise ? KNOCK / 3 : KNOCK);
+        foe.tint(0xffffff, true);
+        this.scene.time.delayedCall(80, () => foe.tint(f.state === 'windup' ? 0xff5050 : null));
+        this._knock(foe, from, f.spec.poise ? KNOCK / 3 : KNOCK);
         this._hitStop();
         if (f.hp <= 0) return this._slay(f);
         audio.play('foe_orc', { volume: 0.5, rate: 1.2 });
@@ -395,7 +435,7 @@ export class FieldDemons {
         if (f.state === 'windup') {
             f.state = 'recover';
             f.t = 350;
-            tint(foe.who, null);
+            foe.tint(null);
         }
         f.stun = Math.max(f.stun, 160);
     }
@@ -423,7 +463,7 @@ export class FieldDemons {
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
         const { x, y } = f.foe, worth = bounty(f.kind, f.tier, this._price(ui), this.combo);
-        if (f.kind === 'champion') {
+        if (f.spec.chest) {     // (the champion, the warlord)
             this.scene.encounters?.drop(x, y, { gold: worth, item: rollLoot(4).item });
             return;
         }
@@ -474,7 +514,7 @@ export class FieldDemons {
             } else return this._home(f, dt, fromPost);
         }
         if (!you || fromPost > LEASH || d > LEASH) {
-            if (f.state === 'windup') tint(foe.who, null);
+            if (f.state === 'windup') foe.tint(null);
             f.state = 'home';
             return this._home(f, dt, fromPost);
         }
@@ -482,7 +522,7 @@ export class FieldDemons {
         if (f.state === 'windup') {
             foe.face(you.x, you.y);
             f.t -= delta;
-            tint(foe.who, Math.floor(f.t / 90) % 2 ? 0xff5050 : 0xffb0b0);     // the tell
+            foe.tint(Math.floor(f.t / 90) % 2 ? 0xff5050 : 0xffb0b0);     // the tell
             if (f.t <= 0) this._foeSwing(f);
             return;
         }
@@ -523,7 +563,7 @@ export class FieldDemons {
             if (f.state === 'home') {
                 f.state = 'post';
                 f.hp = Math.max(f.hp, f.maxHp);     // home again, mended
-                f.foe.who.sprite.setDirection('down');
+                f.foe.rest();
             }
             return this._step(f, 0, 0, dt);
         }
@@ -532,15 +572,15 @@ export class FieldDemons {
 
     /** It walks (dx, dy) a step's worth, facing its way or, given `facing` (feet), that. */
     _step(f, dx, dy, dt, pace = 1, facing = null) {
-        const who = f.foe.who, s = who.sprite;
-        f.foe.walking = !!(dx || dy);
+        const foe = f.foe, s = foe.sprite;
+        foe.walking = !!(dx || dy);
         const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
         const x = s.x + dx * v, y = s.y + dy * v;
         if (this._open(x, s.y + FEET)) s.x = x;
         if (this._open(s.x, y + FEET)) s.y = y;
-        if (who.isAttacking) return;
-        if (dx || dy) s.playAnimation('walk', facing ? dirOf(facing.x - f.foe.x, facing.y - f.foe.y) : dirOf(dx, dy));
-        else s.stopAnimation();
+        if (foe.striking) return;
+        if (dx || dy) foe.walkAnim(facing ? dirOf(facing.x - foe.x, facing.y - foe.y) : dirOf(dx, dy));
+        else foe.halt();
     }
 
     /** It stops, and flashes red: its blow is coming. */
@@ -548,28 +588,22 @@ export class FieldDemons {
         f.state = 'windup';
         f.t = f.spec.windup;
         f.foe.walking = false;
-        f.foe.who.sprite.stopAnimation();
+        f.foe.halt();
     }
 
     /** Its blow: it lunges, and lands on you if you're still in reach (a warlock's fire flies where you stood). */
     _foeSwing(f) {
-        const { foe, spec } = f, who = foe.who, you = this._you();
-        tint(who, null);
+        const { foe, spec } = f, you = this._you();
+        foe.tint(null);
         f.state = 'recover';
         f.t = spec.recover * 0.6;
         f.cd = spec.recover;
         if (!you) return;
-        who.sprite.playAnimation(spec.anim, dirOf(you.x - foe.x, you.y - foe.y));
-        who.isAttacking = true;
-        who.sprite.onAnimationComplete(() => {
-            who.isAttacking = false;
-            if (f.hp > 0) who.sprite.stopAnimation();
-        });
-        this.scene.time.delayedCall(700, () => { who.isAttacking = false; });
-        if (spec.ranged) {
-            audio.play('cast', { volume: 0.5 });
+        foe.strike(spec.anim, dirOf(you.x - foe.x, you.y - foe.y), () => f.hp > 0);
+        if (spec.ranged) {          // a warlock's fire, an archer's arrow (its bow's own twang)
+            if (!spec.missile) audio.play('cast', { volume: 0.5 });
             this.scene.time.delayedCall(250, () => {
-                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, 'fire', 'foe', f.damage);
+                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage);
             });
             f.t = 600;
             return;
@@ -577,8 +611,8 @@ export class FieldDemons {
         audio.play('swing', { volume: 0.7 });
         const d = Math.hypot(you.x - foe.x, you.y - foe.y) || 1;
         const k = Math.min(spec.lunge || 0, Math.max(0, d - 16)) / d;
-        const x = who.sprite.x + (you.x - foe.x) * k, y = who.sprite.y + (you.y - foe.y) * k;
-        if (k && this._open(x, y + FEET)) this.scene.tweens.add({ targets: who.sprite, x, y, duration: 140 });
+        const x = foe.sprite.x + (you.x - foe.x) * k, y = foe.sprite.y + (you.y - foe.y) * k;
+        if (k && this._open(x, y + FEET)) this.scene.tweens.add({ targets: foe.sprite, x, y, duration: 140 });
         this.scene.time.delayedCall(200, () => {
             const now = this._you();
             if (f.hp <= 0 || !now || !this.foes.includes(f)) return;
@@ -635,7 +669,7 @@ export class FieldDemons {
     forgive() {
         this.fallen = false;
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post') {
-            if (f.state === 'windup') tint(f.foe.who, null);
+            if (f.state === 'windup') f.foe.tint(null);
             f.state = 'home';
         }
     }
@@ -664,7 +698,7 @@ export class FieldDemons {
     /** No two on one spot (you're moved least). */
     _apart() {
         const me = this.scene.localPlayer?.sprite;
-        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.who.sprite, w: 1 }));
+        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, w: 1 }));
         if (me && !this.fallen) all.push({ s: me, w: 0.15 });
         for (let i = 0; i < all.length; i++) {
             for (let j = i + 1; j < all.length; j++) {
