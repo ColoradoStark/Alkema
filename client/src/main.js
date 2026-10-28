@@ -5,6 +5,7 @@ import { CreateScene } from './scenes/CreateScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { audio } from './audio/audio.js';
+import { gameWidthForScreen, BASE_WIDTH, BASE_HEIGHT } from './screenShape.js';
 
 // Handle uncaught errors
 window.addEventListener('error', (e) => {
@@ -28,22 +29,8 @@ console.log('Starting Alkema game client v0.0.1');
 // Mobile portrait configuration with GUI
 // Total resolution: 352x640 (11 tiles wide)
 // Layout: 32px top bar + 448px game (14 tiles) + 160px controls
-const BASE_WIDTH = 352;  // 11 tiles * 32px
-const BASE_HEIGHT = 640; // Total height
-const GAME_HEIGHT = 448; // 14 tiles * 32px (game area only)
-const TOP_BAR_HEIGHT = 32; // 1 tile for info display
-const BOTTOM_CONTROLS_HEIGHT = 160; // 5 tiles for controls and tabs
-
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-// UI is laid out in a 352-wide column. On touch screens the game widens to the
-// screen's shape so it fills edge to edge (e.g. 376 on an iPhone 13); scenes
-// centre their 352 layout and stretch panels to this width.
-function gameWidthForScreen() {
-    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    return Math.min(480, Math.max(BASE_WIDTH, Math.round(BASE_HEIGHT * vw / vh)));
-}
 const GAME_WIDTH = isMobile ? gameWidthForScreen() : BASE_WIDTH;
 
 const config = {
@@ -109,12 +96,13 @@ if (isMobile) {
         if (!canvas) return;
 
         // Scale to fit whichever dimension is the constraint
-        const scaleW = vw / GAME_WIDTH;
+        const width = game.scale.width; // it may have been measured again since (screenShape.refit)
+        const scaleW = vw / width;
         const scaleH = vh / BASE_HEIGHT;
         const scale = Math.min(scaleW, scaleH);
 
         // Exact (not floored) sizes, so the game meets the screen edges without a sub-pixel gap
-        canvas.style.width = (GAME_WIDTH * scale) + 'px';
+        canvas.style.width = (width * scale) + 'px';
         canvas.style.height = (BASE_HEIGHT * scale) + 'px';
     }
 
@@ -122,6 +110,7 @@ if (isMobile) {
     function waitAndSize() {
         const canvas = document.querySelector('#game-container canvas');
         if (canvas) {
+            game.events.on('refit', sizeMobileCanvas);
             sizeMobileCanvas();
         } else {
             requestAnimationFrame(waitAndSize);

@@ -69,6 +69,12 @@ export class AccountMenu {
         this.closeSheet();
     }
 
+    /** The game's width changed (screenShape.refit). */
+    setWidth(gameWidth) {
+        this.gameWidth = gameWidth;
+        this.fitToCanvas();
+    }
+
     fitToCanvas() {
         const canvas = document.querySelector('#game-container canvas');
         if (!canvas) return;

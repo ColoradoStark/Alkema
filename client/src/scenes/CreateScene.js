@@ -7,6 +7,7 @@
 // and joins the game with whatever is on screen when Play is pressed.
 
 import { Scene } from 'phaser';
+import { refit } from '../screenShape.js';
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { loadCharacterSpritesheet } from '../sprites/SpritesheetLoader.js';
 import { CreatorState } from '../creator/CreatorState.js';
@@ -436,6 +437,8 @@ export class CreateScene extends Scene {
         this.cameras.main.once('camerafadeoutcomplete', async () => {
             await panelGone;
             this.panel = null;
+            refit(this.game);
+            this.accountMenu.setWidth(this.scale.width);
             this.scene.start('GameScene');
             this.scene.start('UIScene');
             if (this.network?.connected) this.network.emit('connected', {});

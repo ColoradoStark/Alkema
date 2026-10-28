@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { refit } from '../screenShape.js';
 import { audio } from '../audio/audio.js';
 import { preloadOverworld } from '../world/Overworld.js';
 
@@ -100,6 +101,7 @@ export class PreloadScene extends Scene {
     create() {
         audio.sfxLoaded();
         // Every session starts in character creation; it enters the world on Play.
+        refit(this.game);
         this.scene.start('CreateScene');
     }
 }
