@@ -36,6 +36,7 @@ const field = (page) => page.evaluate(() => {
 });
 
 const KIND_LEADS = ['champion', 'warlord', 'greatbear'];     // (a leader's pack is six)
+const KIND_CASTERS = ['warlock', 'archer', 'waterelemental'];
 const onCoast = p => p.family !== 'vanar';      // (where heroes started: the demons' road and the orcs' coast, not Dunmere's north)
 
 const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES, PACKS: m.PACKS })));
@@ -474,6 +475,83 @@ test.describe('Orcs on the coast west of the start', () => {
         await standAt(page, o[0], o[1] - 60);
         await expect.poll(families, { timeout: 30000 }).toEqual(['orcs']);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')))).toEqual([]);
+    });
+});
+
+test.describe('Each in a pack comes its own way (after Pac-Man\'s ghosts)', () => {
+    test('a pack has a chaser, a flanker and an ambusher (and a wanderer when it is big enough); the ambusher makes for where you are going, the flanker for your far side from its packmates, the wanderer drifts about you close up', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const { PLACES, PACKS } = await places(page);
+        // Every pack's fighters: the first a chaser, then a flanker, an ambusher, a wanderer...; its casters keep back
+        for (let pack = 0; pack < PACKS.length; pack++) {
+            const roles = PLACES.filter(p => p.pack === pack).map(p => p.role);
+            expect(roles.filter(r => r !== 'caster').slice(0, 3), `pack ${pack}`).toEqual(['chaser', 'flanker', 'ambusher'].slice(0, roles.filter(r => r !== 'caster').length));
+        }
+        expect(PLACES.some(p => p.role === 'wanderer')).toBe(true);
+        expect(PLACES.filter(p => KIND_CASTERS.includes(p.kind)).every(p => p.role === 'caster')).toBe(true);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        const goals = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            const pack = fd.foes.find(f => f.role === 'wanderer').pack, of = (role) => fd.foes.find(f => f.pack === pack && f.role === role);
+            const you = { x: 5000, y: 5000 };
+            for (const f of fd.foes.filter(f => f.pack === pack)) f.state = 'chase';
+            const put = (f, x, y) => f.foe.sprite.setPosition(x, y - fd.FEET);
+            // you going east: the ambusher, south of you, makes for well ahead of you
+            fd._heading = { x: 1, y: 0 };
+            put(of('ambusher'), you.x, you.y + 200);
+            const ambush = fd._goal(of('ambusher'), you, 200, true, 16);
+            // its packmates west of you: the flanker, north, makes for your east
+            for (const f of fd.foes.filter(f => f.pack === pack && f.role !== 'flanker')) put(f, you.x - 150, you.y);
+            put(of('flanker'), you.x, you.y - 300);
+            const flank = fd._goal(of('flanker'), you, 300, true, 16);
+            // the wanderer, three tiles off, waiting its turn: somewhere about you, out of reach; far off, straight at you
+            const w = of('wanderer');
+            w.cd = 1e9;
+            put(w, you.x + 96, you.y);
+            const near = [...Array(20)].map(() => { w.wanderT = 0; const g = fd._goal(w, you, 96, true, 16); return g && Math.hypot(g.x - you.x, g.y - you.y); });
+            put(w, you.x + 400, you.y);
+            const far = fd._goal(w, you, 400, true, 16);
+            return { ambush: ambush && [ambush.x - you.x, ambush.y - you.y], flank: flank && [flank.x - you.x, flank.y - you.y], near, reach: w.spec.reach, far, chaser: fd._goal(of('chaser'), you, 300, true, 16) };
+        });
+        expect(goals.ambush[0]).toBeGreaterThanOrEqual(100);
+        expect(Math.abs(goals.ambush[1])).toBeLessThan(5);
+        expect(goals.flank[0]).toBeGreaterThan(0);          // (on its way round to the east)
+        expect(goals.near.every(r => r > goals.reach)).toBe(true);
+        expect(goals.far).toBe(null);
+        expect(goals.chaser).toBe(null);
+    });
+
+    test('roused, a pack closes round you from more than one side', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const { PLACES } = await places(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        const pack = PLACES.find(p => p.role === 'flanker' && p.family === 'demons').pack;
+        const spread = await page.evaluate(async (pack) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
+            const them = fd.foes.filter(f => f.pack === pack && !f.spec.ranged);
+            for (const f of fd.foes) if (f.pack !== pack) f.stun = 1e9;
+            const p = them[0].post;
+            // you, four tiles off the pack, standing still
+            for (const [ux, uy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) if (fd._open(p.x + ux * 128, p.y + uy * 128)) { me.setPosition(p.x + ux * 128, p.y + uy * 128 - 23); break; }
+            me.body.reset(me.x, me.y);
+            for (const f of them) f.state = 'chase';
+            let most = 0;
+            const t0 = performance.now();
+            while (performance.now() - t0 < 5000) {
+                ui.hp.max = 1e6; ui.hp.now = 1e6;
+                const a = them.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23) < 110).map(f => Math.atan2(f.foe.y - me.y - 23, f.foe.x - me.x));
+                for (const x of a) for (const y of a) most = Math.max(most, Math.abs(Math.atan2(Math.sin(x - y), Math.cos(x - y))));
+                await new Promise(r => requestAnimationFrame(r));
+            }
+            return most * 180 / Math.PI;
+        }, pack);
+        expect(spread).toBeGreaterThan(110);
     });
 });
 

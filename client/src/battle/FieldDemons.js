@@ -78,7 +78,14 @@ const ATTACKERS = 2;            // at most this many wind up a blow at you at on
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
 const BODY = 22;
-const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
+const LEVEL = 12;
+// How each in a pack comes at you (the user's, after Pac-Man's ghosts: one pursues, one cuts you off, one
+// gets round you, one wanders and darts in), by its place among its pack's fighters (casters keep back)
+const ROLES = ['chaser', 'flanker', 'ambusher', 'wanderer', 'flanker', 'ambusher'];
+const AHEAD = 4 * TILE;         // an ambusher makes for this far ahead of where you're going
+const RING = 64;                // a flanker makes for this far off you, on the side away from its packmates
+const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
+const DART = 0.35;              // ...and darts in this often a second, given its turn               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 const FALL_MS = 1600;
 
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
@@ -125,6 +132,7 @@ const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];  
 /** Each demon (and orc) on the coast, a place for each: { x, y (feet, before they're stood clear of rock), kind, family, pack, tier, i }. */
 export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
     x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, family: p.family, pack, tier: p.tier,
+    role: KINDS[kind].ranged ? 'caster' : ROLES[p.band.slice(0, k).filter(o => !KINDS[o].ranged).length % ROLES.length],
 }))).map((p, i) => ({ ...p, i }));
 
 /** A demon matched to a hero ({attack, hp: max hit points, defence}) `tier` along the road: its hit points and blow. */
@@ -226,6 +234,8 @@ export class FieldDemons {
         this.you.guard = Math.max(0, this.you.guard - delta);
         const me = this.scene.localPlayer;
         const out = this.fallen || !me?.sprite;
+        const v = me?.sprite?.body?.velocity;
+        if (v && (v.x || v.y)) this._heading = { x: v.x / Math.hypot(v.x, v.y), y: v.y / Math.hypot(v.x, v.y) };     // (the way you last went)
         if (!out) this._yours(delta);
         for (const f of this.foes) {
             if (f.hp <= 0) continue;
@@ -281,7 +291,7 @@ export class FieldDemons {
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
                 const { hp, damage } = numbers(p.kind, p.tier, hero);
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
@@ -554,6 +564,14 @@ export class FieldDemons {
             return;
         }
         const free = this.foes.filter(o => o.state === 'windup' && !o.spec.ranged).length < ATTACKERS;
+        // Coming at you its own way (its role), till it's close
+        const goal = this._goal(f, you, d, free, delta);
+        if (goal) {
+            const gx = goal.x - foe.x, gy = goal.y - foe.y, g = Math.hypot(gx, gy);
+            if (g > 6) return this._step(f, gx / g, gy / g, dt, goal.pace || 1);
+            this._step(f, 0, 0, dt);
+            return foe.face(you.x, you.y);
+        }
         if (f.spec.side) return this._flank(f, you, d, free, dt);
         if (d <= f.spec.reach) {
             this._step(f, 0, 0, dt);
@@ -567,6 +585,57 @@ export class FieldDemons {
             return this._step(f, (-dy / u) * side + (dx / u) * away, (dx / u) * side + (dy / u) * away, dt, 0.6);
         }
         this._step(f, dx / u, dy / u, dt);
+    }
+
+    /**
+     * Where its role takes it on its way to you (`you`, its feet `d` off), or null: straight at you, to strike.
+     * A chaser comes straight on; an ambusher makes for where you're going; a flanker gets round to the far
+     * side of you from its packmates (a pack closes round you); a wanderer, close, drifts about you and darts
+     * in now and then when it's given its turn.
+     */
+    _goal(f, you, d, free, delta) {
+        const { foe, spec } = f, close = spec.reach + 24;
+        if (f.role === 'chaser' || (d <= close && f.role !== 'flanker')) return null;
+        if (f.role === 'ambusher') {
+            const h = this._heading;
+            if (!h || d < AHEAD / 2) return null;
+            return { x: you.x + h.x * AHEAD, y: you.y + h.y * AHEAD };
+        }
+        if (f.role === 'flanker') {
+            // the far side of you from its packmates after you (from where they are, round to the other side)
+            const mates = this.foes.filter(o => o !== f && o.pack === f.pack && o.hp > 0 && o.role !== 'flanker' && o.state !== 'post' && o.state !== 'home');
+            if (!mates.length) return null;
+            const mx = mates.reduce((n, o) => n + o.foe.x, 0) / mates.length, my = mates.reduce((n, o) => n + o.foe.y, 0) / mates.length;
+            const flankers = this.foes.filter(o => o.pack === f.pack && o.role === 'flanker' && o.hp > 0);
+            const a = Math.atan2(you.y - my, you.x - mx) + (flankers.length > 1 ? (flankers.indexOf(f) % 2 ? 0.9 : -0.9) : 0);    // (two go either side)
+            const now = Math.atan2(foe.y - you.y, foe.x - you.x), gap = Math.atan2(Math.sin(a - now), Math.cos(a - now));
+            if (Math.abs(gap) < 0.5) return null;       // round: in it goes
+            // going round you, not through you: round the ring, out of reach, while it's near
+            const ring = Math.max(RING, close + 20);
+            if (d < ring * 1.8) {
+                const step = now + Math.sign(gap) * Math.min(Math.abs(gap), 0.8);
+                return { x: you.x + Math.cos(step) * ring, y: you.y + Math.sin(step) * ring };
+            }
+            return { x: you.x + Math.cos(a) * ring, y: you.y + Math.sin(a) * ring };
+        }
+        if (f.role === 'wanderer') {
+            if (f.dart) return null;
+            if (d > SKITTISH) return null;
+            if (free && f.cd <= 0 && Math.random() < DART * delta / 1000) {
+                f.dart = true;
+                return null;
+            }
+            // somewhere about you, out of reach, a new place every second or two (or once it's there)
+            f.wanderT = (f.wanderT || 0) - delta;
+            const there = f.wander && Math.hypot(you.x + f.wander.dx - foe.x, you.y + f.wander.dy - foe.y) < 10;
+            if (!f.wander || f.wanderT <= 0 || there) {
+                const a = Math.random() * Math.PI * 2, r = close + 16 + Math.random() * 50;
+                f.wander = { dx: Math.cos(a) * r, dy: Math.sin(a) * r };
+                f.wanderT = 900 + Math.random() * 1200;
+            }
+            return { x: you.x + f.wander.dx, y: you.y + f.wander.dy, pace: 0.8 };
+        }
+        return null;
     }
 
     /**
@@ -633,6 +702,7 @@ export class FieldDemons {
         const { foe, spec } = f, you = this._you();
         foe.tint(null);
         f.state = 'recover';
+        f.dart = false;         // (a wanderer's dart is done: it drifts off again)
         f.t = spec.recover * 0.6;
         f.cd = spec.recover;
         if (!you) return;
