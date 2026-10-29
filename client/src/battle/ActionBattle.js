@@ -600,9 +600,9 @@ export class ActionBattle extends Battle {
         this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
     }
 
-    _hitStop() {
+    _hitStop(ms = HIT_STOP_MS) {
         if (this._freeze > 0) return;
-        this._freeze = HIT_STOP_MS;
+        this._freeze = ms;
         this.scene.anims.pauseAll();
     }
 

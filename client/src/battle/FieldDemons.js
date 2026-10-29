@@ -60,6 +60,7 @@ const KINDS = {
 const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS, ...VANAR_HITS };
 // (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
 const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS, ...VANAR_HURTS };
+const SOFTER = 0.7;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder)
 // What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
 const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY, ...VANAR_PAY };      // (a pack near the start buys about one)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
@@ -78,14 +79,14 @@ const ATTACKERS = 2;            // at most this many wind up a blow at you at on
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
 const BODY = 22;
-const LEVEL = 12;
+const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 // How each in a pack comes at you (the user's, after Pac-Man's ghosts: one pursues, one cuts you off, one
 // gets round you, one wanders and darts in), by its place among its pack's fighters (casters keep back)
 const ROLES = ['chaser', 'flanker', 'ambusher', 'wanderer', 'flanker', 'ambusher'];
 const AHEAD = 4 * TILE;         // an ambusher makes for this far ahead of where you're going
 const RING = 64;                // a flanker makes for this far off you, on the side away from its packmates
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
-const DART = 0.35;              // ...and darts in this often a second, given its turn               // a side-on foe swings at you only this near level with you (and misses you this far off it)
+const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
 
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
@@ -142,7 +143,7 @@ export function numbers(kind, tier, hero) {
         hp: Math.max(4, Math.round(HITS[kind] * attack * tier)),
         // (your defence takes half of itself off a blow, `_hurt`: given back here, as it's matched to you too; a
         // quarter given back rounded a weak hero's fury down to a fortieth of their hit points)
-        damage: Math.max(1, Math.round(HURTS[kind] * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 2),
+        damage: Math.max(1, Math.round(HURTS[kind] * SOFTER * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 2),
     };
 }
 
@@ -228,6 +229,7 @@ export class FieldDemons {
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             if (this._freeze <= 0) this.scene.anims.resumeAll();
+            for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
             return;
         }
         const dt = Math.min(delta, 50) / 1000;
@@ -240,6 +242,7 @@ export class FieldDemons {
         for (const f of this.foes) {
             if (f.hp <= 0) continue;
             this._think(f, delta, dt, out || this.you.hidden > 0 ? null : feet, out);
+            f.foe.tick?.(delta);
             f.foe.setDepthAt();
         }
         this._fly(dt);
@@ -448,7 +451,12 @@ export class FieldDemons {
         foe.tint(0xffffff, true);
         this.scene.time.delayedCall(80, () => foe.tint(f.state === 'windup' ? 0xff5050 : null));
         this._knock(foe, from, f.spec.poise ? KNOCK / 3 : KNOCK);
-        this._hitStop();
+        // (a Wesnoth or Duelyst body plays its own defend, the ground shaking a little, and holds a moment longer)
+        if (foe.flinch && f.hp > 0) {
+            foe.flinch();
+            this.scene.cameras.main.shake(70, 0.002);
+        }
+        this._hitStop(foe.weight);
         if (f.hp <= 0) return this._slay(f);
         audio.play('foe_orc', { volume: 0.5, rate: 1.2 });
         if (f.spec.poise) return;           // a brute isn't staggered: its swing comes on regardless
@@ -681,9 +689,11 @@ export class FieldDemons {
         const foe = f.foe, s = foe.sprite;
         foe.walking = !!(dx || dy);
         const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
-        const x = s.x + dx * v, y = s.y + dy * v;
+        const x0 = s.x, y0 = s.y, x = s.x + dx * v, y = s.y + dy * v;
         if (this._open(x, s.y + FEET)) s.x = x;
         if (this._open(s.x, y + FEET)) s.y = y;
+        const went = Math.hypot(s.x - x0, s.y - y0);
+        if (went) foe.travel?.(went, (s.x - x0) / went);        // (one that slides steps by how far it went)
         if (foe.striking) return;
         if (dx || dy) foe.walkAnim(facing ? dirOf(facing.x - foe.x, facing.y - foe.y) : dirOf(dx, dy));
         else foe.halt();

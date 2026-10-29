@@ -313,7 +313,7 @@ test.describe('Demons on the coast', () => {
 });
 
 test.describe('Demons on the road, a fight you can lose', () => {
-    test('a blow hurts (a fury takes a tenth of your hit points), the casters are many and throw fire while two others are at you, and the champion is quick and well escorted', async ({ page }) => {
+    test('a blow hurts (a fury takes about a fourteenth of your hit points: the user\'s, 30% less than a tenth, once the pack came round them), the casters are many and throw fire while two others are at you, and the champion is quick and well escorted', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
@@ -328,8 +328,10 @@ test.describe('Demons on the road, a fight you can lose', () => {
                 escort: champ.band.length - 1, escortCasters: champ.band.filter(k => k === 'warlock').length,
             };
         });
-        expect(r.fury).toBeGreaterThanOrEqual(0.095);
-        expect(r.brute).toBeGreaterThanOrEqual(0.18);
+        expect(r.fury).toBeGreaterThanOrEqual(0.065);
+        expect(r.fury).toBeLessThanOrEqual(0.08);
+        expect(r.brute).toBeGreaterThanOrEqual(0.13);
+        expect(r.brute).toBeLessThanOrEqual(0.16);
         expect(r.packsWithCaster).toBe(r.packs);
         expect(r.warlocks).toBeGreaterThanOrEqual(15);
         expect(r.escort).toBeGreaterThanOrEqual(5);
@@ -475,6 +477,116 @@ test.describe('Orcs on the coast west of the start', () => {
         await standAt(page, o[0], o[1] - 60);
         await expect.poll(families, { timeout: 30000 }).toEqual(['orcs']);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')))).toEqual([]);
+    });
+});
+
+test.describe('Falling out on the world', () => {
+    test("you come to where heroes start with all your hit points (the user's)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 30000 });
+        await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hp = window.__PHASER_GAME.scene.getScene('UIScene').hp;
+            fd._hurt(fd.you, hp.max * 10, { x: 0, y: 0 });
+        });
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(0);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene')._fallenInField, null, { timeout: 10000 });
+        const hp = await page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; return { now: hp.now, max: hp.max }; });
+        expect(hp.now).toBe(hp.max);
+    });
+});
+
+test.describe('An orc Wesnoth drew no walk for steps all the same', () => {
+    test("the grunt hops a step at a time by the distance it goes (two a tile, its shadow on the ground, dust at each footfall), squashes and stretches, rocks and leans, turns like paper; struck, it freezes, flashes, plays its defend and the ground shakes", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'grunt' && f.foe.slides), null, { timeout: 30000 });
+        // Walked by hand, frame by frame (no frame of the game's between): a tile right at full pace, a tile at half, then back left
+        const walk = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.kind === 'grunt');
+            const foe = f.foe, s = foe.sprite, fx = gs.effects;
+            let puffs = 0;
+            const footstep = fx.footstep.bind(fx);
+            fx.footstep = (x, y) => { puffs++; footstep(x, y); };
+            const out = { lifts: [], feet: [], shadow: [], tilts: [], stretch: [] };
+            const go = (dx, px, pace) => {
+                const x0 = s.x, falls0 = puffs;
+                for (let n = 0; n < 400 && Math.abs(s.x - x0) < px; n++) {
+                    fd._step(f, dx, 0, 0.016, pace);
+                    foe.tick(16);
+                    out.lifts.push(foe.lift);
+                    out.feet.push(foe.y - (s.y + 23));
+                    out.shadow.push(foe.shadow.y - foe.y);
+                    out.tilts.push(s.rotation * dx);
+                    out.stretch.push(Math.abs(s.scaleX * s.scaleY - foe.scale * foe.scale) / (foe.scale * foe.scale));
+                }
+                return { falls: puffs - falls0, moved: Math.abs(s.x - x0) };
+            };
+            f.state = 'post';
+            foe._flip(false);
+            foe._turnT = 0;
+            s.setFlipX(false);
+            const still = s.x;
+            for (let n = 0; n < 30; n++) { fd._step(f, 0, 0, 0.016); foe.tick(16); }
+            const restLift = foe.lift;
+            out.full = go(1, 33, 1);
+            out.half = go(1, 33, 0.5);
+            // turning: no instant mirror, the width goes through nothing
+            const widths = [];
+            let flipAt = null;
+            for (let n = 0; n < 20; n++) {
+                fd._step(f, -1, 0, 0.016);
+                foe.tick(16);
+                widths.push(Math.abs(s.scaleX) / foe.scale);
+                if (flipAt === null && s.flipX) flipAt = n;
+            }
+            out.turn = { min: Math.min(...widths), first: widths[0], end: widths.at(-1), flipAt, flipped: s.flipX };
+            out.back = go(-1, 33, 1);
+            fx.footstep = footstep;
+            return { ...out, restLift, still };
+        });
+        // Two footfalls a tile, at any pace: tied to the distance, not the time
+        expect(walk.full.falls).toBe(2);
+        expect(walk.half.falls).toBe(2);
+        expect(walk.restLift).toBe(0);
+        // A hop about three pixels high, its feet (where it is) never moved by it, its shadow on the ground
+        expect(Math.max(...walk.lifts)).toBeGreaterThan(2.5);
+        expect(Math.max(...walk.lifts)).toBeLessThanOrEqual(3.5);
+        expect(walk.feet.every(d => Math.abs(d) < 0.01)).toBe(true);
+        expect(walk.shadow.every(d => Math.abs(d) < 0.5)).toBe(true);
+        // Squash and stretch by a few per cent, its area kept
+        expect(Math.max(...walk.lifts.map((l, i) => walk.stretch[i]))).toBeLessThan(0.02);
+        // Leaning into the way it goes, rocking a few degrees either way
+        const deg = walk.tilts.map(r => r * 180 / Math.PI);
+        expect(deg.filter(d => d > 0).length).toBeGreaterThan(deg.length / 2);
+        expect(Math.max(...deg.map(Math.abs))).toBeLessThan(10);
+        // A paper turn: the width squeezed through nothing, flipped there, and opened out again
+        expect(walk.turn.first).toBeGreaterThan(0.5);
+        expect(walk.turn.min).toBeLessThan(0.2);
+        expect(walk.turn.flipAt).toBeGreaterThan(0);
+        expect(walk.turn.flipped).toBe(true);
+        expect(walk.turn.end).toBeGreaterThan(0.95);
+        expect(walk.back.falls).toBeGreaterThanOrEqual(2);       // (and one more, maybe, its feet coming on round)
+        // Struck: it holds still a moment, flashes white, plays its defend, and the ground shakes a little
+        const hit = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.kind === 'grunt');
+            f.state = 'chase';
+            fd._strikeFoe(f, 1, { x: f.foe.x - 30, y: f.foe.y });
+            return { freeze: fd._freeze, anim: f.foe.sprite.anims.currentAnim?.key, tinted: f.foe.sprite.isTinted, shake: gs.cameras.main.shakeEffect.isRunning };
+        });
+        expect(hit).toEqual({ freeze: 70, anim: 'foe-grunt-defend-s', tinted: true, shake: true });
+        // Gone with it: its shadow too
+        const gone = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), f = gs.fieldDemons.foes.find(f => f.kind === 'grunt');
+            const shadow = f.foe.shadow;
+            gs.fieldDemons.release();
+            return shadow.active;
+        });
+        expect(gone).toBe(false);
     });
 });
 
