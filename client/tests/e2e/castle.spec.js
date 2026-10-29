@@ -3,7 +3,7 @@
 // courtyard, the guard walking their beat; through the keep's door to the
 // throne room, the Duke before his throne, doors behind it to the feast hall
 // and the library, a stair up to his chambers and one down to the dungeon; and
-// a healer in the chapel who mends you for nothing.
+// a healer in the chapel who mends you for a price.
 import { test, expect } from '@playwright/test';
 
 async function enterWorld(page) {
@@ -136,56 +136,70 @@ test.describe('Castle Dunmere', () => {
         }
     });
 
-    test('the healer in the chapel mends you: yes, and your hit points and magic are full again', async ({ page }) => {
+    test('the healer in the chapel mends you for a price (the user\'s): yes, and your hit points and magic are full again and the gold is gone; without it, she can\'t', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await goTo(page, 'dunmere-chapel');
         const bars = () => page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            return { hp: ui.hp.now, hpMax: ui.hp.max, mp: ui.mp.now, mpMax: ui.mp.max };
+            return { hp: ui.hp.now, hpMax: ui.hp.max, mp: ui.mp.now, mpMax: ui.mp.max, gold: ui.inventory.gold };
         });
         await expect.poll(() => bars().then(b => b.hpMax), { timeout: 15000 }).toBeGreaterThan(1);
-        // Hurt and spent (no coming back on its own while you talk: hold it there)
-        await page.evaluate(() => {
-            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            ui.hp.now = 1;
-            ui.mp.now = 0;
-            ui.talkTo(window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'healer'));
-        });
         const d = () => page.evaluate(() => {
             const d = window.__PHASER_GAME.scene.getScene('UIScene').dialogue;
             return { open: d.visible, choices: d.choices.style.display !== 'none', text: d.text.text };
         });
-        for (let i = 0; i < 10 && !(await d()).choices; i++) {
-            await page.keyboard.press('Enter');
-            await page.waitForTimeout(150);
-        }
-        await expect.poll(d).toMatchObject({ choices: true, text: 'Shall I tend your wounds?' });
-        const hurt = await bars();
-        expect(hurt.hp).toBeLessThan(hurt.hpMax);
-        await page.locator('.story-choices button', { hasText: 'Yes' }).click();
+        const ask = async (more) => {
+            const price = await page.evaluate((more) => {
+                const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+                ui.hp.now = 1;
+                ui.mp.now = 0;
+                ui._lastTalk = null;
+                const price = ui.healPrice();
+                ui.inventory.gold = price + more;
+                ui.talkTo(window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'healer'));
+                return price;
+            }, more);
+            for (let i = 0; i < 10 && !(await d()).choices; i++) {
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(150);
+            }
+            await expect.poll(d).toMatchObject({ choices: true, text: `Shall I tend your wounds? (${price} gold)` });
+            await page.locator('.story-choices button', { hasText: 'Yes' }).click();
+            return price;
+        };
+        const done = async () => {
+            while ((await d()).open) {
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(150);
+            }
+        };
+        // With the gold: mended, and it's paid
+        const price = await ask(5);
+        expect(price).toBeGreaterThan(0);
         const mended = await bars();
-        expect(mended).toEqual({ hp: hurt.hpMax, hpMax: hurt.hpMax, mp: hurt.mpMax, mpMax: hurt.mpMax });
+        expect(mended).toMatchObject({ hp: mended.hpMax, mp: mended.mpMax, gold: 5 });
         await page.keyboard.press('Enter');
         await expect.poll(d).toMatchObject({ text: 'There. Hurts gone, and your strength back. Go carefully.' });
-        // Hurt again and back to her: she asks again, and mends you again
-        while ((await d()).open) {
-            await page.keyboard.press('Enter');
-            await page.waitForTimeout(150);
-        }
-        await page.evaluate(() => {
+        await done();
+        // Short of it: not mended, and she says so
+        await ask(-1);
+        const poor = await bars();
+        expect(poor.hp).toBe(1);
+        expect(poor.gold).toBe(price - 1);
+        await page.keyboard.press('Enter');
+        await expect.poll(d).toMatchObject({ text: expect.stringContaining('gold') });
+        await done();
+        // Worse hurt costs more; not hurt at all, nothing
+        const scale = await page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            ui.hp.now = 1;
-            ui._lastTalk = null;
-            ui.talkTo(window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'healer'));
+            ui.hp.now = Math.ceil(ui.hp.max / 2);
+            const half = ui.healPrice();
+            ui.hp.now = ui.hp.max;
+            return { half, whole: ui.healPrice() };
         });
-        for (let i = 0; i < 10 && !(await d()).choices; i++) {
-            await page.keyboard.press('Enter');
-            await page.waitForTimeout(150);
-        }
-        await expect.poll(d).toMatchObject({ choices: true, text: 'Shall I tend your wounds?' });
-        await page.locator('.story-choices button', { hasText: 'Yes' }).click();
-        expect((await bars()).hp).toBe(hurt.hpMax);
+        expect(scale.half).toBeLessThan(price);
+        expect(scale.whole).toBe(0);
     });
 
     test("Castle Grimhold, Dunmere's dark twin: its moat black, its black guard on watch, Lord Varek and his jester, demons and the dead in its cells", async ({ page }) => {

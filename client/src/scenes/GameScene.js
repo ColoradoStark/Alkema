@@ -616,7 +616,7 @@ export class GameScene extends Scene {
         if (near.length) loadPortraits(this, near.map(f => f.sprite.characterData.id));
     }
 
-    /** Fallen out on the world: you come to where you set out, all your hit points back (the user's), and they forget you. */
+    /** Fallen out on the world: you come to where you set out, with a hit point, and they forget you. */
     comeTo() {
         const at = { x: WORLD.spawn.x, y: WORLD.spawn.y - FEET };
         this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
@@ -628,7 +628,7 @@ export class GameScene extends Scene {
             me.stopAnimation?.();
             this.cameras.main.centerOn(at.x, at.y);
             const hp = this.scene.get('UIScene')?.hp;
-            if (hp) hp.now = hp.max;        // (all of them: the user's)
+            if (hp) hp.now = Math.max(1, hp.now);       // (a hit point: the rest at a healer, the user's)
             this.fieldDemons.forgive();
             this._fallenInField = false;
             this._sendMove(0, 0);

@@ -12,8 +12,9 @@ import { Spellbook } from '../magic/Spellbook.js';
 import { Upgrades } from '../upgrades/Upgrades.js';
 import { CastMenu } from '../ui/CastMenu.js';
 
-const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often
-const HP_BACK_MS = 3000;      // ...and a hit point this often
+const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often (hit points come back only at a healer, the user's)
+const HEAL_SHARE = 0.5;       // a healer mends you from nothing for this much of the cheapest upgrade you could buy next
+const TOO_POOR = ["You haven't the gold, I'm afraid. Come back when you have it."];
 import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
@@ -51,8 +52,9 @@ export class UIScene extends Scene {
         };
         this.dialogue.onChoice = (who, answer) => {
             this._toShop = answer === 'yes' && this._shopOf(who) ? who : null;
-            if (answer === 'yes' && who?.plan?.heals) this._healed(who);
+            if (answer === 'yes' && who?.plan?.heals) return this._heal(who);
         };
+        this.dialogue.priceOf = (who) => (who.plan?.heals ? this.healPrice() : 0);
 
         this._setupKeyboard();
         this._setupNetworkHandlers();
@@ -126,7 +128,21 @@ export class UIScene extends Scene {
         });
     }
 
-    /** A healer you said yes to (Castle Dunmere's, for nothing): hit points and magic full again. */
+    /** What a healer asks to mend you (the user's: they charged nothing): a share of your next upgrade, as much as you're hurt. */
+    healPrice() {
+        const hp = this.hp;
+        if (!hp?.max || hp.now >= hp.max) return 0;
+        return Math.max(1, Math.ceil(HEAL_SHARE * (this.upgrades?.cheapest() ?? 20) * (hp.max - hp.now) / hp.max));
+    }
+
+    /** A healer you said yes to: paid, mended; short of their price, what they say instead. */
+    _heal(folk) {
+        if (!this.inventory?.pay(this.healPrice())) return TOO_POOR;
+        this._healed(folk);
+        return null;
+    }
+
+    /** Mended: hit points and magic full again. */
     _healed(folk) {
         if (this.hp) this.hp.now = this.hp.max;
         if (this.mp) this.mp.now = this.mp.max;
@@ -307,7 +323,7 @@ export class UIScene extends Scene {
     update(time, delta) {
         // Hit points and magic in the top bar; magic comes back out of a fight
         const inFight = !!this.scene.get('GameScene')?.battle || !!this.scene.get('GameScene')?.fieldDemons?.engaged;
-        // Second Wind (an upgrade): both come back faster
+        // Second Wind (an upgrade): magic comes back faster
         const regen = this.upgrades?.regen ?? 1;
         // Focus (an upgrade) adds to their magic: as much more as their stats' magic has changed
         const mpMax = this.inventory?.stats?.mp?.max;
@@ -327,13 +343,6 @@ export class UIScene extends Scene {
         if (this.hp) {
             const max = this.inventory?.stats?.hp?.max;
             if (max && max !== this.hp.max) this.hp = Object.assign(this.hp, { max, now: Math.min(this.hp.now + Math.max(0, max - this.hp.max), max) });
-            if (!inFight && this.hp.now < this.hp.max) {
-                this._hpBack = (this._hpBack || 0) + delta;
-                if (this._hpBack >= HP_BACK_MS / regen) {
-                    this._hpBack = 0;
-                    this.hp.now++;
-                }
-            }
         }
         // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
         this.bottomControls.setControlsShown(!this.gear?.visible);

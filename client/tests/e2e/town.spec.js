@@ -562,7 +562,7 @@ test.describe('Riverhold', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.clip.muted ? 'silent' : 'voiced')).toBe('voiced');
     });
 
-    test("Riverhold's healer asks if she should see to your wounds, mends you on a yes, and asks again next time", async ({ page }) => {
+    test("Riverhold's healer asks if she should see to your wounds, mends you on a yes for her price (the user's), and asks again next time", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await page.evaluate(async () => {
@@ -582,16 +582,18 @@ test.describe('Riverhold', () => {
                 const ui = window.__PHASER_GAME.scene.getScene('UIScene');
                 ui.hp.now = 1;
                 ui._lastTalk = null;
+                ui.inventory.gold = ui.healPrice();
                 ui.talkTo(window.__PHASER_GAME.scene.getScene('GameScene').town.folk.find(f => f.plan.id === 'healer'));
-                return ui.hp.max;
+                return { max: ui.hp.max, price: ui.healPrice() };
             });
             for (let i = 0; i < 10 && !(await d()).choices; i++) {
                 await page.keyboard.press('Enter');
                 await page.waitForTimeout(150);
             }
-            await expect.poll(d).toMatchObject({ choices: true, text: 'Shall I see to your wounds?' });
+            await expect.poll(d).toMatchObject({ choices: true, text: `Shall I see to your wounds? (${max.price} gold)` });
             await page.locator('.story-choices button', { hasText: 'Yes' }).click();
-            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now), `visit ${visit}`).toBe(max);
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now), `visit ${visit}`).toBe(max.max);
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold)).toBe(0);
             while ((await d()).open) {
                 await page.keyboard.press('Enter');
                 await page.waitForTimeout(150);

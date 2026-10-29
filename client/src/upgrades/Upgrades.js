@@ -24,7 +24,7 @@ export const STAT_TRACKS = [
     { id: 'guard', name: 'Guard', glyph: '⛨', base: 50, per: 1, stat: 'defence', needs: ['might', 5], text: (n) => `+${n} defence` },
     { id: 'focus', name: 'Focus', glyph: '✦', base: 90, per: 1, stat: 'spell', needs: ['vigour', 5], text: (n, magic) => `+${n} spell power${magic ? `, +${n} magic` : ''}` },
     { id: 'fortune', name: 'Fortune', glyph: '◉', base: 160, per: 3, stat: 'gold', needs: ['guard', 10], text: (n) => `+${n}% gold found` },
-    { id: 'breath', name: 'Second Wind', glyph: '↻', base: 300, per: 4, stat: 'regen', needs: ['focus', 10], text: (n) => `hit points and magic back ${n}% faster` },
+    { id: 'breath', name: 'Second Wind', glyph: '↻', base: 300, per: 4, stat: 'regen', needs: ['focus', 10], text: (n) => `magic back ${n}% faster` },
 ];
 
 /** The legends: each a sixth as dear again as the last, each adding to everything; there's always another. */
@@ -119,7 +119,7 @@ function roundly(n) {
 export const GODDESS_FRAME = 64;
 const GIVES = {
     attack: 'attack', hp: 'hit points', defence: 'defence', spell: 'spell power', mp: 'magic',
-    gold: '% gold found', regen: '% faster hit points and magic back', all: '% to everything',
+    gold: '% gold found', regen: '% faster magic back', all: '% to everything',
 };
 export function givesText(gives, k = 1, magic = true) {
     return Object.entries(gives).filter(([s]) => s !== 'mp' || magic)
@@ -238,6 +238,12 @@ export class Upgrades {
      * buys of what's open, made up if need be from what's on its way. Shown cheapest first by their
      * first level. (The page picks them as it opens, and keeps them while you buy.)
      */
+    /** What the cheapest upgrade you could buy next costs (what the field's gold and the healers' price are reckoned in). */
+    cheapest() {
+        const costs = this.list().filter(t => this.open(t)).map(t => this.cost(t)).filter(n => n > 0);
+        return costs.length ? Math.min(...costs) : 20;
+    }
+
     list() {
         const shown = this.tracks();
         const kept = new Set([...shown].sort((a, b) => (this.open(b) - this.open(a)) || this.cost(a) - this.cost(b)).slice(0, SLOTS));
@@ -315,7 +321,7 @@ export class Upgrades {
         return 1 + (this.amount(STAT_TRACKS[4]) + this.blessing('gold')) / 100;
     }
 
-    /** How much faster hit points and magic come back (Second Wind, Eos). */
+    /** How much faster magic comes back (Second Wind, Eos; hit points come back only at a healer, the user's). */
     get regen() {
         return 1 + (this.amount(STAT_TRACKS[5]) + this.blessing('regen')) / 100;
     }

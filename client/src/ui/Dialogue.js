@@ -324,7 +324,9 @@ export class Dialogue {
         const { says, night_says: late, ask, id } = folk.plan;
         const lines = night && late ? late : Array.isArray(says) ? says : [says || '...'];
         if (ask && this.answers.get(id) === 'yes') return pages(ask.yes.slice(-1));
-        return [...pages(lines), ...(ask ? [{ text: ask.q, line: ask.q, ask }] : [])];
+        // (a healer's price after her question: its clip still hers, `line`)
+        const price = ask && this.priceOf?.(folk), q = ask && (price ? `${ask.q} (${price} gold)` : ask.q);
+        return [...pages(lines), ...(ask ? [{ text: q, line: ask.q, ask }] : [])];
     }
 
     /** The name plate: at the box's left under a painting, else beside the sprite portrait. */
@@ -473,9 +475,9 @@ export class Dialogue {
         if (!this.visible || !page?.ask || page.answer || this._typing) return;
         page.answer = answer;
         this.answers.set(this.who.plan.id, answer);
-        this.onChoice?.(this.who, answer);
+        const instead = this.onChoice?.(this.who, answer);      // (a healer you can't pay: what she says to that)
         audio.play('menu_open', { volume: 0.5 });
-        this.pages.splice(this.page + 1, Infinity, ...pages(page.ask[answer] || []));
+        this.pages.splice(this.page + 1, Infinity, ...pages(instead || page.ask[answer] || []));
         this.choices.style.display = 'none';
         this.advance();
     }

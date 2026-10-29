@@ -100,6 +100,14 @@ export class Inventory {
         return { ok: true };
     }
 
+    /** Pay `gold` (a healer): false, and nothing paid, if you haven't it. */
+    pay(gold) {
+        if (this.gold < gold) return false;
+        this.gold -= gold;
+        this._save();
+        return true;
+    }
+
     /** What `gold` found comes to with Fortune (an upgrade): every find goes through this before it's shown and looted. */
     found(gold) {
         return gold ? Math.round(gold * (this.upgrades?.fortune ?? 1)) : 0;

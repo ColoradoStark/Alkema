@@ -30,7 +30,8 @@
 //
 // Their three sheets load once you're near the coast (NEAR) with the spells'
 // effects, and are let go with the demons when you're far from it (FAR), or go
-// into a place. The slain stay down till then.
+// into a place. The slain stay down (the user's: with no hit points back but at a healer, a
+// beaten pack doesn't stand again while you're in the castle being mended).
 
 import { ActionBattle, Demon, DEMONS, DEMON_KINDS, loadDemons } from './ActionBattle.js';
 import { Orc, ORC_KINDS, ORC_HITS, ORC_HURTS, ORC_PAY, ORC_PACKS, loadOrcs, forgetOrcs } from './FieldOrcs.js';
@@ -68,7 +69,7 @@ const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter mo
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
-const LEASH = 12 * TILE;        // and gives up this far from its post, or this far from you
+const LEASH = 24 * TILE;        // and gives up this far from its post, or this far from you (the user's: at twelve it gave up too easily; run for a town)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
 const FAR = 40 * TILE;          // and go when you're this far from them all
 const REACH = 40, LUNGE = 26, SHOT_REACH = 220;
@@ -158,7 +159,7 @@ export class FieldDemons {
     constructor(scene) {
         this.scene = scene;
         this.foes = [];           // { foe: Demon, kind, spec, pack, tier, post, hp, maxHp, damage, state, t, cd, stun, and what spells leave on it }
-        this.slain = new Set();   // places whose demon is down (till the demons go)
+        this.slain = new Set();   // places whose demon is down (for good, this visit to the game)
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
         this.shots = [];          // arrows and spells in flight (ActionBattle._launch, _fly)
@@ -316,13 +317,12 @@ export class FieldDemons {
         }
     }
 
-    /** A band goes (you've left its stretch of coast), and its sheets; its slain will stand again. */
+    /** A band goes (you've left its stretch of coast), and its sheets; its slain stay down. */
     _dismiss(fam) {
         this._up.delete(fam);
         // (one sheet between many: destroyed together, the first lets it go)
         for (const f of this.foes) if (f.family === fam) f.foe.destroy();
         this.foes = this.foes.filter(f => f.family !== fam);
-        for (const p of PLACES) if (p.family === fam) this.slain.delete(p.i);
         this._forget(fam);
     }
 
@@ -505,9 +505,7 @@ export class FieldDemons {
 
     /** What the cheapest upgrade you could buy next costs (what the demons' gold is reckoned in). */
     _price(ui) {
-        const up = ui?.upgrades;
-        const costs = (up?.list?.() || []).filter(t => up.open(t)).map(t => up.cost(t)).filter(n => n > 0);
-        return costs.length ? Math.min(...costs) : 20;
+        return ui?.upgrades?.cheapest() ?? 20;
     }
 
     // ------------------------------------------------ them

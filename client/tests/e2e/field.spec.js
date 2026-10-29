@@ -117,7 +117,7 @@ test.describe('Demons on the coast', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length)).toBe(0);
     });
 
-    test('outrun one and it gives up, back to its post', async ({ page }) => {
+    test('outrun one, a long way, and it gives up, back to its post', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const { PLACES } = await places(page);
@@ -127,9 +127,19 @@ test.describe('Demons on the coast', () => {
         await page.evaluate(() => {          // it's after you...
             window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0).state = 'chase';
         });
-        // ...and you're back at the start, more than its leash from it? It goes home
-        await standAt(page, spawn.x, spawn.y + 300);
-        await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 20000 }).toBe('post');
+        // ...and keeps after you eighteen tiles off (the user's: it gave up at twelve, too easily; run for a town)...
+        const off = (tiles) => page.evaluate((tiles) => {
+            const f = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0);
+            return { x: f.foe.x, y: f.foe.y + tiles * 32 };
+        }, tiles);
+        const far = await off(18);
+        await standAt(page, far.x, far.y);
+        await page.waitForTimeout(1500);
+        expect(await field(page).then(f => f.states[0])).toBe('chase');
+        // ...but more than its leash, twenty-four, from it? It goes home
+        const away = await off(30);
+        await standAt(page, away.x, away.y);
+        await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 30000 }).toBe('post');
     });
 
     test('matched to your hero: a fury takes about three of your blows weak or strong, and the road toward Dunmere gets tougher and pays more', async ({ page }) => {
@@ -481,7 +491,7 @@ test.describe('Orcs on the coast west of the start', () => {
 });
 
 test.describe('Falling out on the world', () => {
-    test("you come to where heroes start with all your hit points (the user's)", async ({ page }) => {
+    test("you come to where heroes start with a hit point, and none come back on their own: the healer's for that (the user's)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
@@ -493,8 +503,39 @@ test.describe('Falling out on the world', () => {
         });
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(0);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene')._fallenInField, null, { timeout: 10000 });
-        const hp = await page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; return { now: hp.now, max: hp.max }; });
-        expect(hp.now).toBe(hp.max);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(1);
+        // Out of any fight a while (a hit point used to come back every 3 s): still one; magic still comes back
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            gs.fieldDemons.release();
+            ui.mp.max = Math.max(ui.mp.max, 10);       // (a warrior may have none to come back)
+            ui.mp.now = 0;
+            ui._mpBack = 5000;
+        });
+        await page.waitForTimeout(4000);
+        const bars = await page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); return { hp: ui.hp.now, mp: ui.mp.now, max: ui.mp.max, fight: ui.scene.get('GameScene').fieldDemons.engaged }; });
+        expect(bars.hp).toBe(1);
+        expect(bars.mp, JSON.stringify(bars)).toBeGreaterThan(0);
+    });
+
+    test("those you've slain stay down: into a place and out again (the user's, to try: the castle's healer between fights), or off and back", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        const { PLACES } = await places(page);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        const gone = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            const two = fd.foes.slice(0, 2);
+            for (const f of two) fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+            fd.release();           // (as going into a place does)
+            return two.map(f => f.i);
+        });
+        expect(await field(page).then(f => f.count)).toBe(0);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length - 2);
+        const back = await page.evaluate((gone) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => gone.includes(f.i)).length, gone);
+        expect(back).toBe(0);
     });
 });
 
