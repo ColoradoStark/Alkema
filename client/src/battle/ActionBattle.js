@@ -520,7 +520,7 @@ export class ActionBattle extends Battle {
         }
         sprite.setDepth(32);
         if (tint) sprite.setTint(tint);
-        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit, home, speed });
+        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit, home, speed, tint });
     }
 
     _fly(dt) {
@@ -558,7 +558,7 @@ export class ActionBattle extends Battle {
                 const m = this.fighting.find(o => near(o.who.sprite.x, o.who.sprite.y + FEET));
                 if (m) {
                     s.done = true;
-                    if (s.kind !== 'arrow') this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75 });
+                    if (s.kind !== 'arrow') this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75, tint: s.tint });      // (a water elemental's bursts in water's colour)
                     this._hurt(m, s.damage, { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 });
                 }
             }

@@ -4,8 +4,8 @@ export const WORLD = {
  "size": 16384,
  "tileSize": 32,
  "spawn": {
-  "x": 9712,
-  "y": 12144
+  "x": 10928,
+  "y": 10224
  },
  "places": [
   {

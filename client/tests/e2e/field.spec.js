@@ -30,11 +30,13 @@ const field = (page) => page.evaluate(() => {
         sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => [...looks].some(l => k === `sprite_${l}`)).length,
         looks: looks.size, kinds: [...new Set(demons.map(f => f.kind))].sort(),
         orcs: [...new Set(fd.foes.filter(f => f.family === 'orcs').map(f => f.kind))].sort(),
+        vanar: [...new Set(fd.foes.filter(f => f.family === 'vanar').map(f => f.kind))].sort(),
         states: Object.fromEntries(fd.foes.map(f => [f.i, f.state])), hp: Object.fromEntries(fd.foes.map(f => [f.i, f.hp])),
     };
 });
 
-const KIND_LEADS = ['champion', 'warlord'];     // (a leader's pack is six)
+const KIND_LEADS = ['champion', 'warlord', 'greatbear'];     // (a leader's pack is six)
+const onCoast = p => p.family !== 'vanar';      // (where heroes started: the demons' road and the orcs' coast, not Dunmere's north)
 
 const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES, PACKS: m.PACKS })));
 
@@ -48,11 +50,11 @@ test.describe('Demons on the coast', () => {
         const { PLACES, PACKS } = await places(page);
         expect(PACKS.every(p => p.band.length >= 3 && p.band.length <= (p.band.some(k => KIND_LEADS.includes(k)) ? 6 : 5))).toBe(true);
         // Where new heroes start: the coast's demons are near, on three sheets (fury, brute, warlock: the champion is a brute)
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const all = await field(page);
-        expect(all).toMatchObject({ count: PLACES.length, looks: 3, sheets: 3, kinds: ['brute', 'champion', 'fury', 'warlock'],
+        expect(all).toMatchObject({ count: PLACES.filter(onCoast).length, looks: 3, sheets: 3, kinds: ['brute', 'champion', 'fury', 'warlock'],
             orcs: ['archer', 'grunt', 'spearman', 'warlord', 'warrior'] });
         // None comes for you at the start
         expect(Object.values(all.states).every(s => s === 'post')).toBe(true);
@@ -103,14 +105,14 @@ test.describe('Demons on the coast', () => {
             window.__PHASER_GAME.textures.on('addtexture', (key) => window.__made.push(key));
         });
         await page.locator('#cc-play').click();
-        // The moment you're in the world (on the coast, where the demons start coming), you're off to Riverhold's road
+        // The moment you're in the world (by Dunmere, where the road's last demons and the Vanar north of it start coming), you're off to Riverhold's road
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.fieldDemons?._loading, null, { timeout: 30000, polling: 'raf' });
         await standAt(page, 6320, 11143);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._loading, null, { timeout: 20000 });
         await page.waitForTimeout(1500);
         expect(await page.evaluate(() => window.__made.filter(k => k.includes('demons-')))).toEqual([]);
         // (and what came with them is gone again: the orcs' sheets, the spells' effects)
-        expect(await page.evaluate(() => ['foe-archer', 'foe-warrior', 'foe-warlord', 'spell-fx', 'spell-icons'].filter(k => window.__PHASER_GAME.textures.exists(k)))).toEqual([]);
+        expect(await page.evaluate(() => ['foe-archer', 'foe-warrior', 'foe-warlord', 'foe-snowchaser', 'foe-icehornet', 'foe-kindredhunter', 'foe-crystalbeetle', 'foe-waterbear', 'foe-waterelemental', 'spell-fx', 'spell-icons'].filter(k => window.__PHASER_GAME.textures.exists(k)))).toEqual([]);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length)).toBe(0);
     });
 
@@ -118,9 +120,9 @@ test.describe('Demons on the coast', () => {
         test.setTimeout(120000);
         await enterWorld(page);
         const { PLACES } = await places(page);
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         await page.evaluate(() => {          // it's after you...
             window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0).state = 'chase';
         });
@@ -158,10 +160,10 @@ test.describe('Demons on the coast', () => {
         expect(r.tiers[0]).toBe(1);
         expect(r.tiers.every((t, k) => !k || t > r.tiers[k - 1])).toBe(true);
         // On the road: each demon has its numbers for this hero and its pack's place along it
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         const { PLACES } = await places(page);
-        await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const off = await page.evaluate(async () => {
             const { numbers } = await import('/src/battle/FieldDemons.js');
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hero = fd._hero();
@@ -174,9 +176,9 @@ test.describe('Demons on the coast', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PLACES } = await places(page);
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         // The first pack's warlock: stand five tiles off it (the others kept at their posts), and fire comes at you
         const w = PLACES.find(p => p.pack === 0 && p.kind === 'warlock');
         const spot = await page.evaluate((i) => {
@@ -251,9 +253,9 @@ test.describe('Demons on the coast', () => {
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.spellbook && window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
         const { PLACES, PACKS } = await places(page);
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         // Six tiles straight off the loneliest pack, on the side furthest from any other, facing it: they stay at their posts
         const lone = PACKS.map((p, i) => ({ i, p: p.at, gap: Math.min(...PACKS.filter((_, j) => j !== i).map(q => Math.hypot(q.at[0] - p.at[0], q.at[1] - p.at[1]))) }))
             .sort((a, b) => b.gap - a.gap)[0];
@@ -332,10 +334,10 @@ test.describe('Demons on the road, a fight you can lose', () => {
         expect(r.escort).toBeGreaterThanOrEqual(5);
         expect(r.escortCasters).toBeGreaterThanOrEqual(2);
         // On the road: the champion is nearly as quick as a fury; a warlock throws while two others wind up at you
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         const { PLACES } = await places(page);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const busy = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
             const champ = fd.foes.find(f => f.kind === 'champion'), fury = fd.foes.find(f => f.kind === 'fury');
@@ -355,10 +357,10 @@ test.describe('Demons on the road, a fight you can lose', () => {
     test('crowded onto you, no demon turns back and forth on the spot (a warlock backing off faced away and back every frame)', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         const { PLACES } = await places(page);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const pack = PLACES.find(p => p.kind === 'warlock' && PLACES.filter(q => q.pack === p.pack).length >= 5).pack;     // (a demons' pack)
         const turns = await page.evaluate(async (pack) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = window.__PHASER_GAME.scene.getScene('UIScene');
@@ -388,7 +390,7 @@ test.describe('Orcs on the coast west of the start', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PLACES, PACKS } = await places(page);
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         const orcs = PACKS.map((p, i) => ({ ...p, i })).filter(p => p.family === 'orcs');
         // West of the start, the other way from Dunmere's road (whose packs are north-east)
         expect(orcs.length).toBe(9);
@@ -397,7 +399,7 @@ test.describe('Orcs on the coast west of the start', () => {
         expect(orcs.some(p => p.band.includes('warlord'))).toBe(true);
         expect(orcs.flatMap(p => p.band).some(k => /rider|knight|pillager/.test(k))).toBe(false);      // (none mounted, the user's)
         await standAt(page, spawn.x, spawn.y);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         // Each stands on open ground, drawn from its Wesnoth sheet
         const drawn = await page.evaluate(() => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
@@ -466,7 +468,8 @@ test.describe('Orcs on the coast west of the start', () => {
         const last = (fam) => PACKS.filter(p => p.family === fam).at(-1).at;
         const d = last('demons');
         await standAt(page, d[0], d[1] + 40);
-        await expect.poll(families, { timeout: 30000 }).toEqual(['demons']);
+        await expect.poll(families, { timeout: 30000 }).toContain('demons');      // (by Dunmere: the Vanar north of it too)
+        expect(await families()).not.toContain('orcs');
         const o = last('orcs');
         await standAt(page, o[0], o[1] - 60);
         await expect.poll(families, { timeout: 30000 }).toEqual(['orcs']);
@@ -474,11 +477,98 @@ test.describe('Orcs on the coast west of the start', () => {
     });
 });
 
+test.describe("Duelyst's Vanar north of Dunmere", () => {
+    test("new heroes start at Dunmere's drawbridge; thirty of the grotto's Duelyst foes in packs north of it, every pack with a water elemental, a great bear halfway; they come round to your side, level with you, to swing, and miss you stepped out of their line", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const { PLACES, PACKS } = await places(page);
+        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        expect(spawn).toEqual({ x: 10928, y: 10224 });
+        const vanar = PACKS.map((p, i) => ({ ...p, i })).filter(p => p.family === 'vanar');
+        expect(vanar.flatMap(p => p.band).length).toBe(30);
+        expect(vanar.every(p => p.at[1] < spawn.y - 300)).toBe(true);           // (north of it)
+        expect(vanar.every((p, k) => !k || p.at[1] < vanar[k - 1].at[1])).toBe(true);
+        expect(vanar.every(p => p.band.includes('waterelemental'))).toBe(true);
+        expect(vanar[Math.floor(vanar.length / 2)].band).toContain('greatbear');
+        // From the start they come, on the grotto's sheets (the creator's look), on open ground
+        await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBe(7);
+        const all = PLACES.filter(p => p.family === 'vanar');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'vanar' && f.foe.ready).length), { timeout: 30000 }).toBe(all.length);
+        const drawn = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return fd.foes.filter(f => f.family === 'vanar').map(f => ({ key: f.foe.sprite.texture.key, open: fd._open(f.foe.x, f.foe.y), post: f.state === 'post' }));
+        });
+        expect(drawn.every(d => d.open && d.post)).toBe(true);
+        expect([...new Set(drawn.map(d => d.key))].sort()).toEqual(['foe-crystalbeetle', 'foe-icehornet', 'foe-kindredhunter', 'foe-snowchaser', 'foe-waterbear', 'foe-waterelemental']);
+        // The first pack's snowchaser, alone (the rest held still), with you three tiles below it: it comes round to your side and winds up level with you
+        await keepUp(page);
+        const chaser = PLACES.find(p => p.pack === vanar[0].i && p.kind === 'snowchaser');
+        const setUp = (dy) => page.evaluate(([i, dy]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
+            for (const o of fd.foes) if (o !== f) o.stun = 1e9;
+            Object.assign(f, { state: 'chase', cd: 0, flank: 0 });
+            f.foe.sprite.setPosition(f.post.x, f.post.y - 23);
+            me.setPosition(f.post.x, f.post.y + dy - 23);
+            me.body.reset(me.x, me.y);
+            fd.you.guard = 0;
+        }, [chaser.i, dy]);
+        await setUp(96);
+        const wound = await page.waitForFunction((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), f = gs.fieldDemons.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
+            return f.state === 'windup' && { dx: f.foe.x - me.x, dy: f.foe.y - (me.y + 23) };
+        }, chaser.i, { timeout: 10000 }).then(h => h.jsonValue());
+        expect(Math.abs(wound.dy)).toBeLessThanOrEqual(12);
+        expect(Math.abs(wound.dx)).toBeGreaterThan(20);
+        // You step up out of its line as it winds up: its swing goes by
+        const hp = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now);
+        const before = await hp();
+        await page.evaluate(() => { const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite; me.setPosition(me.x, me.y - 40); me.body.reset(me.x, me.y); });
+        await expect.poll(() => field(page).then(f => f.states[chaser.i]), { timeout: 5000 }).toBe('recover');
+        await page.waitForTimeout(400);
+        expect(await hp()).toBe(before);
+        // Stood still, it lands
+        await setUp(96);
+        await expect.poll(hp, { timeout: 10000 }).toBeLessThan(before);
+        // The great bear leaves a chest, and is labelled
+        const bear = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, b = fd.foes.find(f => f.kind === 'greatbear');
+            const chests = gs.encounters.chests.length;
+            fd._strikeFoe(b, b.hp, { x: b.foe.x, y: b.foe.y + 30 });
+            return { chests: gs.encounters.chests.length - chests, label: b.foe.nameText.text };
+        });
+        expect(bear).toEqual({ chests: 1, label: 'Great Bear' });
+    });
+
+    test('a water elemental hangs back and throws water at you', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const { PLACES, PACKS } = await places(page);
+        const first = PACKS.findIndex(p => p.family === 'vanar');
+        const w = PLACES.find(p => p.pack === first && p.kind === 'waterelemental');
+        await expect.poll(() => page.evaluate((i) => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i)?.foe.ready, w.i), { timeout: 30000 }).toBe(true);
+        await page.evaluate((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
+            for (const o of fd.foes) if (o !== f) o.stun = 1e9;
+            Object.assign(f, { state: 'chase', cd: 0 });
+            me.setPosition(f.post.x, f.post.y + 140 - 23);
+            me.body.reset(me.x, me.y);
+        }, w.i);
+        const shot = await page.waitForFunction(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hp = window.__PHASER_GAME.scene.getScene('UIScene').hp;
+            hp.now = hp.max;
+            const s = fd.shots.find(s => s.side === 'foe');
+            return s && { kind: s.kind, tint: s.sprite.tintTopLeft };
+        }, null, { timeout: 15000 }).then(h => h.jsonValue());
+        expect(shot.kind).toBe('fire');
+        expect(shot.tint).toBe(0x7fd8ff);
+    });
+});
+
 test.describe('Demons on the road, armed', () => {
     test('a demon walks and strikes with its weapon in hand (the oversized frames it is drawn in)', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
-        const spawn = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.spawn);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.foe.kind === 'fury' && f.foe.who.sprite.sprite), null, { timeout: 30000 });
         // (its weapon is cut from its sheet once it has come)

@@ -34,13 +34,13 @@
 
 import { ActionBattle, Demon, DEMONS, DEMON_KINDS, loadDemons } from './ActionBattle.js';
 import { Orc, ORC_KINDS, ORC_HITS, ORC_HURTS, ORC_PAY, ORC_PACKS, loadOrcs, forgetOrcs } from './FieldOrcs.js';
+import { VANAR_KINDS, VANAR_HITS, VANAR_HURTS, VANAR_PAY, VANAR_PACKS, loadVanar, forgetVanar } from './FieldVanar.js';
 import { rollLoot } from './Encounters.js';
 import { ACTION_SPELLS } from './ActionSpells.js';
 import { Battle, forgetFx, loadSpellFx, spellParticles } from './Battle.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
-import { WORLD } from '../world/places.js';
 import { audio } from '../audio/audio.js';
 
 const FEET = Ship.BELOW_HERO;
@@ -53,13 +53,15 @@ const KINDS = {
     champion: { ...DEMON_KINDS.brute, speed: 74, reach: 46, windup: 750, recover: 950, sheet: 'brute', scale: 1.35, label: 'Champion', chest: true },
     // The orcs west of the start (FieldOrcs.js), the same mix in Wesnoth's
     ...ORC_KINDS, warlord: { ...ORC_KINDS.warlord, chest: true },
+    // Duelyst's Vanar north of Dunmere (FieldVanar.js)
+    ...VANAR_KINDS,
 };
 // Matched to your hero (`numbers`): how many of your blows each takes, and how much of your hit points its blow takes
-const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS };
+const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS, ...VANAR_HITS };
 // (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
-const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS };
+const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS, ...VANAR_HURTS };
 // What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
-const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY };      // (a pack near the start buys about one)
+const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY, ...VANAR_PAY };      // (a pack near the start buys about one)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
 const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
@@ -76,6 +78,7 @@ const ATTACKERS = 2;            // at most this many wind up a blow at you at on
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
 const BODY = 22;
+const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 const FALL_MS = 1600;
 
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
@@ -93,7 +96,8 @@ export const PACKS = [
     { at: [11088, 10800], band: ['brute', 'brute', 'fury', 'warlock', 'warlock'] },
     { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
 ].map((p, k, all) => ({ ...p, family: 'demons', tier: 1 + (TIER_END - 1) * k / (all.length - 1) }))
-    .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })));
+    .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })))
+    .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })));
 
 /** Each band's bodies: their sheets loaded and let go, and one made (feet at x, y). */
 const FAMILIES = {
@@ -108,6 +112,12 @@ const FAMILIES = {
         forget: (scene) => forgetOrcs(scene),
         make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
         sheet: (kind) => kind,
+    },
+    vanar: {
+        load: (scene) => loadVanar(scene),
+        forget: (scene) => forgetVanar(scene),
+        make: (scene, x, y, kind, spec) => new Orc(scene, x, y, spec.sheet || kind, spec.label),
+        sheet: (kind) => KINDS[kind].sheet || kind,
     },
 };
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
@@ -544,6 +554,7 @@ export class FieldDemons {
             return;
         }
         const free = this.foes.filter(o => o.state === 'windup' && !o.spec.ranged).length < ATTACKERS;
+        if (f.spec.side) return this._flank(f, you, d, free, dt);
         if (d <= f.spec.reach) {
             this._step(f, 0, 0, dt);
             foe.face(you.x, you.y);
@@ -556,6 +567,32 @@ export class FieldDemons {
             return this._step(f, (-dy / u) * side + (dx / u) * away, (dx / u) * side + (dy / u) * away, dt, 0.6);
         }
         this._step(f, dx / u, dy / u, dt);
+    }
+
+    /**
+     * Drawn side-on with one sideways swing (Duelyst's, the user's): it comes round to your left or right
+     * (the side it's on, or the other if one's winding up there already), level with you, and swings
+     * across; waiting its turn, it hangs back on its side.
+     */
+    _flank(f, you, d, free, dt) {
+        const { foe, spec } = f;
+        const taken = (side) => this.foes.some(o => o !== f && o.hp > 0 && o.state === 'windup' && o.flank === side);
+        if (!f.flank || d > spec.reach + 70) f.flank = foe.x < you.x ? -1 : 1;
+        if (taken(f.flank) && !taken(-f.flank)) f.flank = -f.flank;
+        const off = foe.x - you.x;
+        if (free && Math.abs(you.y - foe.y) <= LEVEL && Math.sign(off) === f.flank && Math.abs(off) <= spec.reach) {
+            this._step(f, 0, 0, dt);
+            foe.face(you.x, foe.y);
+            if (f.cd <= 0) this._windup(f);
+            return;
+        }
+        const spot = { x: you.x + f.flank * (free ? spec.reach * 0.75 : spec.reach + 50), y: you.y };
+        const dx = spot.x - foe.x, dy = spot.y - foe.y, to = Math.hypot(dx, dy);
+        if (to < 4) {
+            this._step(f, 0, 0, dt);
+            return foe.face(you.x, foe.y);
+        }
+        this._step(f, dx / to, dy / to, dt, free ? 1 : 0.6);
     }
 
     _home(f, dt, fromPost) {
@@ -603,22 +640,24 @@ export class FieldDemons {
         if (spec.ranged) {          // a warlock's fire, an archer's arrow (its bow's own twang)
             if (!spec.missile) audio.play('cast', { volume: 0.5 });
             this.scene.time.delayedCall(250, () => {
-                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage);
+                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage, { tint: spec.tint });
             });
             f.t = 600;
             return;
         }
         audio.play('swing', { volume: 0.7 });
-        const d = Math.hypot(you.x - foe.x, you.y - foe.y) || 1;
+        // (a side-on one lunges straight across)
+        const ty = spec.side ? foe.y : you.y, d = Math.hypot(you.x - foe.x, ty - foe.y) || 1;
         const k = Math.min(spec.lunge || 0, Math.max(0, d - 16)) / d;
-        const x = foe.sprite.x + (you.x - foe.x) * k, y = foe.sprite.y + (you.y - foe.y) * k;
+        const x = foe.sprite.x + (you.x - foe.x) * k, y = foe.sprite.y + (ty - foe.y) * k;
         if (k && this._open(x, y + FEET)) this.scene.tweens.add({ targets: foe.sprite, x, y, duration: 140 });
         this.scene.time.delayedCall(200, () => {
             const now = this._you();
             if (f.hp <= 0 || !now || !this.foes.includes(f)) return;
             // Cursed (Evil Eye), or swinging at smoke (Smoke Bomb, Vanish): a miss
             if ((f.curse > 0 && Math.random() < f.miss) || this.you.hidden > 0) this.scene.effects.floatText(now.x, now.y - 52, 'Missed', '#c4b59f', 14);
-            else if (Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.reach + 8) this._hurt(this.you, Math.round(f.damage * (0.8 + Math.random() * 0.4)), { x: foe.x, y: foe.y });
+            else if (spec.side ? Math.abs(now.y - foe.y) <= LEVEL + 6 && Math.abs(now.x - foe.x) <= spec.reach + 8
+                : Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.reach + 8) this._hurt(this.you, Math.round(f.damage * (0.8 + Math.random() * 0.4)), { x: foe.x, y: foe.y });
             else this.scene.effects.floatText(now.x, now.y - 52, 'Dodged', '#c4b59f', 14);
         });
     }
@@ -746,4 +785,5 @@ for (const [from, names] of BORROWED) {
     }
 }
 
-export const FIELD_START = { x: WORLD.spawn.x, y: WORLD.spawn.y };
+/** Where new heroes started (below the grotto, October 2026), between the demons' road and the orcs' coast. */
+export const FIELD_START = { x: 9712, y: 12144 };

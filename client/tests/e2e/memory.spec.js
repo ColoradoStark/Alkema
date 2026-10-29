@@ -244,10 +244,10 @@ test.describe('Memory', () => {
             me.setPosition(x, y);
             me.body.reset(x, y);
         }, [x, y]);
-        const { spawn } = await page.evaluate(async () => ({ spawn: (await import('/src/world/places.js')).WORLD.spawn }));
+        const { spawn } = await page.evaluate(async () => ({ spawn: (await import('/src/battle/FieldDemons.js')).FIELD_START }));
         await go(spawn.x, spawn.y - 23);
         const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES })));
-        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.length, { timeout: 30000 });
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.filter(p => p.family !== 'vanar').length, { timeout: 30000 });
         // (and the frames their weapons are drawn in, cut from their sheets)
         await page.waitForFunction(() => ['fury', 'brute'].every(k => window.__PHASER_GAME.textures.getTextureKeys().some(t => t.startsWith(`sprite_demons-${k}_os_`))), null, { timeout: 15000 });
         const coast = await settled(page);
@@ -262,6 +262,34 @@ test.describe('Memory', () => {
             sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, fx: false, sheets: [] });
         // and the orcs' (Riverhold's road has its own grunt and spearman posted: only theirs stay)
         expect(await page.evaluate(() => ['archer', 'warrior', 'warlord'].filter(k => window.__PHASER_GAME.textures.exists(`foe-${k}`)))).toEqual([]);
+    });
+
+    test("Duelyst's Vanar north of Dunmere: thirty on the grotto's six sheets, under budget, and let go when you leave their road", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        // (measured from Riverhold's road, away from every band: new heroes start by Dunmere, among them)
+        await go(6320, 11120);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+        const base = await settled(page);
+        const { PACKS, PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PACKS: m.PACKS, PLACES: m.PLACES })));
+        const mid = PACKS.filter(p => p.family === 'vanar')[3].at;          // (past the demons' reach)
+        await go(mid[0], mid[1] - 23);
+        const n = PLACES.filter(p => p.family === 'vanar').length;
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'vanar' && f.foe.ready).length === n, n, { timeout: 30000 });
+        const road = await settled(page);
+        await go(6320, 11120);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+        const after = await settled(page);
+        console.log("the Vanar north of Dunmere", +(road.mb - base.mb).toFixed(2), 'MB');
+        expect(road.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => ['snowchaser', 'icehornet', 'kindredhunter', 'crystalbeetle', 'waterbear', 'waterelemental', 'spell-fx']
+            .filter(k => window.__PHASER_GAME.textures.exists(k === 'spell-fx' ? k : `foe-${k}`)))).toEqual([]);
     });
 
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
