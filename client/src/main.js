@@ -104,6 +104,12 @@ if (isMobile) {
         // Exact (not floored) sizes, so the game meets the screen edges without a sub-pixel gap
         canvas.style.width = (width * scale) + 'px';
         canvas.style.height = (BASE_HEIGHT * scale) + 'px';
+        // and Phaser where it now is and how big: it reads touches against the canvas as it measured it on
+        // the screen's resize, before this (the user's: with the screen changing shape in the creator,
+        // nothing they touched worked in the world, till a refresh)
+        const s = game.scale;
+        s.updateBounds();
+        s.displayScale.set(s.baseSize.width / s.canvasBounds.width, s.baseSize.height / s.canvasBounds.height);
     }
 
     // Wait for Phaser to create the canvas, then size it

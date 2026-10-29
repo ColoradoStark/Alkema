@@ -55,3 +55,22 @@ test('a screen that changes shape in the creator is filled once you enter the wo
     });
     expect(chip).toBe(true);
 });
+
+test("the screen changing shape in the creator leaves the controls answering your touch in the world (the user's: twice the game came up with nothing they touched working, till a refresh)", async ({ page }) => {
+    test.setTimeout(120000);
+    await page.goto('/');
+    await creatorUp(page);
+    await page.setViewportSize(PHONE);
+    await play(page);
+    await page.waitForTimeout(400);
+    // Touch the attack button where it's drawn on the screen: you swing
+    const at = await page.evaluate(() => {
+        const g = window.__PHASER_GAME, bc = g.scene.getScene('UIScene').bottomControls, r = g.canvas.getBoundingClientRect();
+        const x = bc.offsetX + 174, y = 480 + 60;
+        return { x: r.left + x * r.width / g.scale.width, y: r.top + y * r.height / g.scale.height };
+    });
+    const swings = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').quests.progress);
+    const before = await swings();
+    await page.touchscreen.tap(at.x, at.y);
+    await expect.poll(swings, { timeout: 3000 }).toBe(before + 1);
+});
