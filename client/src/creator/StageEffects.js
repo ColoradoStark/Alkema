@@ -1,14 +1,12 @@
 // Particles and little flourishes for the creator stage and the world: dust,
 // impacts that match what was struck (wood splinters, metal sparks, spell
 // glints; skeletons just rattle), coins that bounce and settle, damage numbers,
-// arrows and magic bolts, fireflies, and the treasure chest (the LPC base set's). Particles are small
+// arrows and magic bolts, and fireflies. Particles are small
 // hand-drawn pixel sprites in the DawnBringer-32 palette the UI uses.
 
 import { audio } from '../audio/audio.js';
 
 const SPARK = 'cc-spark';
-const CHESTS = 'cc-chests';                  // 2 columns of chests; rows: shut, ajar, open
-const CHEST_FRAMES = { shut: 0, ajar: 2, open: 4 };
 
 export class StageEffects {
     /**
@@ -196,29 +194,6 @@ export class StageEffects {
                 onHit();
             },
         });
-    }
-
-    /** Drop a chest at (x, y), pop it open, burst coins. Resolves when open. */
-    async chest(x, y) {
-        const s = this.scene;
-        const chest = s.add.image(x, y - 90, CHESTS, CHEST_FRAMES.shut).setScale(1.5).setOrigin(0.5, 1).setDepth(4);
-        this._chest = chest;
-        // Thud when it first touches down (Bounce.easeOut lands at ~36% of the tween)
-        s.time.delayedCall(150, () => audio.play('chest_drop'));
-        await tween(s, { targets: chest, y, duration: 420, ease: 'Bounce.easeOut' });
-        this.dust.explode(6, x, y);
-        audio.play('latch', { volume: 0.7 });
-        await delay(s, 220);
-        audio.play('chest_open');
-        audio.play('coins');
-        chest.setFrame(CHEST_FRAMES.ajar);
-        await delay(s, 70);
-        chest.setFrame(CHEST_FRAMES.open);
-        this.coinBurst(x, y - 22, y);
-        this.stars.explode(12, x, y - 22);
-        const glow = s.add.ellipse(x, y - 20, 34, 14, 0xfbf236, 0.6).setDepth(3).setBlendMode('ADD');
-        s.tweens.add({ targets: glow, alpha: 0.15, duration: 500, yoyo: true, repeat: -1 });
-        return chest;
     }
 }
 

@@ -75,7 +75,7 @@ Every session opens in a character creator built for one-thumb play on a phone:
 - Random heroes get natural skin tones; fur, lavender and other race colors are yours to choose in **Customize look**, along with race kind (e.g. Cat, Fox, Wolf, Bunny), hair style, hair color and outfit colors
 - A live preview walks your hero through the town and shows off only the moves their gear fully supports; rotate them to see every side
 - Between walks, your hero spars a skeleton, goblin or orc with their class's real attacks: sword swings, arrows, magic bolts. Hits match what was struck (skeletons rattle, arrows throw splinters and a drifting feather, shields spark, spells scatter glints), and the winnings spill out as spinning coins that bounce and settle (just for show: sparring wins no real gold)
-- Each class starts with a humble kit (e.g. a warrior gets legion armor, an arming sword and a wooden shield), revealed from a treasure chest (the classic LPC chest) when you press **Play**
+- Each class starts with a humble kit (e.g. a warrior gets legion armor, an arming sword and a wooden shield), and **Play** takes you straight into the world
 - **Play** is always one tap away
 
 Other races and classes are reserved for NPCs and enemies.
@@ -93,7 +93,6 @@ Other races and classes are reserved for NPCs and enemies.
 - Music that follows you: a heroic overture in the character creator, then a rotating playlist of town and countryside tracks in the world; lost in a dark forest the music turns to shadows, at sea a rollicking sailors' jig, in the snows of the far north (and Tumbledown) the songs of the north, and in a fight Wesnoth's battle music, crossfading as you go
 - Every tap, pick and roll has a sound: dice rattle for **Random New Hero**, each class answers with its weapon (a sword drawn, a bow twang, a spell), pages turn in **Customize look**
 - The creator's sparring bouts and the world's fights are fully voiced: whooshes, bone clacks, blocks, monster cries, a victory fanfare and coins
-- The starter chest thuds down, creaks open and chimes for each item
 - A speaker button cycles sound on, music off, or silent, and remembers your choice
 
 ## Battles

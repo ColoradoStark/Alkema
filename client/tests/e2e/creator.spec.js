@@ -305,6 +305,19 @@ test.describe('Character creator', () => {
         await expect(page.locator('#creator')).toHaveCount(0);
     });
 
+    test("Play goes straight into the world: no chest of the starter kit on the way (the user's: it wasn't really the weapon)", async ({ page }) => {
+        await page.goto('/');
+        await waitForPreview(page);
+        await page.evaluate(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            window.__chests = 0;
+            s.events.on('addedtoscene', o => { if (o.texture?.key === 'cc-chests') window.__chests++; });
+        });
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer, null, { timeout: 20000 });
+        expect(await page.evaluate(() => window.__chests)).toBe(0);
+    });
+
     test('after playing a hero, coming back shows that hero; the dice still rolls a new one', async ({ page }) => {
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });

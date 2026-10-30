@@ -14,7 +14,7 @@ import { CreatorState } from '../creator/CreatorState.js';
 import { CreatorPanel } from '../creator/CreatorPanel.js';
 import { Showcase } from '../creator/Showcase.js';
 import { StageBackdrop } from '../creator/StageBackdrop.js';
-import { StageEffects, delay, tween } from '../creator/StageEffects.js';
+import { StageEffects } from '../creator/StageEffects.js';
 import { audio } from '../audio/audio.js';
 import { account } from '../account/account.js';
 import { AccountMenu } from '../account/AccountMenu.js';
@@ -23,7 +23,6 @@ const FIGURE_Y = 160;
 const FIGURE_SCALE = 2;
 const FEET_Y = FIGURE_Y + 28 * FIGURE_SCALE; // LPC feet sit ~28px below frame centre
 const STAGE_HEIGHT = 296;
-const CHEST_MAX_MS = 4000;
 // A cobblestone plaza just south of the park fountain (map pixels).
 const MAP_SPOT = { x: 3440, y: 2835 };
 const WALK_SPEED = 35;   // map px / second while the preview walks
@@ -408,41 +407,7 @@ export class CreateScene extends Scene {
             summary: this.state.summary(),
         }).catch(() => undefined);
         if (saved === null) this.accountMenu.toast('All 10 hero slots are full. Free one in My heroes to save this hero.');
-        // The chest is a flourish: never let it hold up entering the world. Hidden
-        // tabs barely advance animations, so skip it there.
-        if (!document.hidden) {
-            await Promise.race([this._openChest(), new Promise(resolve => setTimeout(resolve, CHEST_MAX_MS))]);
-        }
         this._enterWorld();
-    }
-
-    /** The starter kit pops out of a treasure chest on the way into the world. */
-    async _openChest() {
-        if (!this.figure?.visible) return;
-        this.showcase.stop();
-        const figure = this.figure;
-        const items = this.state?.options.classes.find(c => c.id === this.state.current('character_class'))?.starter_items || [];
-        figure.x = this.figureX - 26;
-        figure.playAnimation('idle', 'right');
-        this.panel?.setMove('');
-
-        const chestX = this.figureX + 30;
-        audio.duck(3200, 0.25);
-        await this.effects.chest(chestX, FEET_Y - 4);
-        if (figure.active) figure.playAnimation(figure.characterData.animations?.complete?.includes('emote') ? 'emote' : 'idle', 'down');
-
-        for (let i = 0; i < items.length; i++) {
-            const label = this.add.text(this.figureX, FEET_Y - 40, items[i], {
-                fontFamily: 'Alagard', fontSize: '15px', color: '#fbf236', stroke: '#222034', strokeThickness: 4,
-            }).setOrigin(0.5).setDepth(8).setAlpha(0).setScale(0.5);
-            const y = FIGURE_Y - 80 + i * 20;
-            tween(this, { targets: label, alpha: 1, scale: 1, y, duration: 280, ease: 'Back.easeOut' });
-            audio.play('reveal', { variant: i, drift: 0, volume: 0.8 });
-            this.effects.hit(chestX, FEET_Y - 26);
-            await delay(this, 300);
-        }
-        audio.play('reveal', { variant: 3, drift: 0, volume: 0.6 });
-        await delay(this, 700);
     }
 
     _enterWorld() {
