@@ -56,6 +56,21 @@ test('a screen that changes shape in the creator is filled once you enter the wo
     expect(chip).toBe(true);
 });
 
+test("a screen that reads short till the creator is up still fills it there (the user's, Chrome on an iPhone 16: the creator came up with black below it)", async ({ page }) => {
+    test.setTimeout(120000);
+    await page.goto('/');
+    await creatorUp(page);
+    await page.setViewportSize(PHONE);
+    await page.waitForTimeout(800);
+    await fills(page);
+    // the hero still stands in the middle of the wider-or-narrower stage
+    const mid = await page.evaluate(() => {
+        const g = window.__PHASER_GAME, s = g.scene.getScene('CreateScene');
+        return { x: s.figure.x, half: g.scale.width / 2 };
+    });
+    expect(mid.x).toBe(mid.half);
+});
+
 test("the screen changing shape in the creator leaves the controls answering your touch in the world (the user's: twice the game came up with nothing they touched working, till a refresh)", async ({ page }) => {
     test.setTimeout(120000);
     await page.goto('/');

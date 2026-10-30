@@ -54,6 +54,15 @@ export class CreateScene extends Scene {
             stage: { centerX: this.figureX, figureY: FIGURE_Y, feetY: FEET_Y, width: this.scale.width, scale: FIGURE_SCALE },
         });
 
+        // The screen can read short as the page opens and settle once the creator is up (the user's,
+        // Chrome on an iPhone 16: black below the creator): measure again whenever it changes shape
+        let wait;
+        this._onScreen = () => { clearTimeout(wait); wait = setTimeout(() => refit(this.game), 150); };
+        window.addEventListener('resize', this._onScreen);
+        window.visualViewport?.addEventListener('resize', this._onScreen);
+        this._onRefit = w => this._reshape(w);
+        this.game.events.on('refit', this._onRefit);
+
         this.events.once('shutdown', () => this._teardown());
         audio.playMusic('creator');
         account.init();
@@ -102,6 +111,19 @@ export class CreateScene extends Scene {
             stroke: '#222034', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(6);
         this.summon.start();
+    }
+
+    /** The game took a new width (screenShape.refit): the stage is centred again in it. */
+    _reshape(width) {
+        const x = this.figureX = width / 2;
+        for (const o of [this.figure, this.poof, this.summon, this.loadingText]) if (o) o.x = x;
+        if (this.showcase) Object.assign(this.showcase.stage, { centerX: x, width });
+        if (this.effects?.area) this.effects.area.width = width;
+        this.stageBackdrop.figure.x = x;
+        this.stageBackdrop.gameWidth = width;
+        this._placeBackdrop();
+        if (this.panel) { this.panel.gameWidth = width; this.panel.fitToCanvas(); }
+        this.accountMenu?.setWidth(width);
     }
 
     _placeBackdrop() {
@@ -471,6 +493,9 @@ export class CreateScene extends Scene {
     }
 
     _teardown() {
+        window.removeEventListener('resize', this._onScreen);
+        window.visualViewport?.removeEventListener('resize', this._onScreen);
+        this.game.events.off('refit', this._onRefit);
         this.showcase?.stop();
         this.stageBackdrop?.destroy();
         this.stageBackdrop = null;
