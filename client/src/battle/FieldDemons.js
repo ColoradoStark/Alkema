@@ -89,6 +89,9 @@ const RING = 64;                // a flanker makes for this far off you, on the 
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
+const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
+const CORNERED_MS = 3000;       // ...comes straight on this long
+const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // ways along a wall, tried in turn
 
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
 // out from the world map's walking and sailing layers), and who's in it, each tougher than the last
@@ -578,7 +581,8 @@ export class FieldDemons {
             this._step(f, 0, 0, dt);
             return foe.face(you.x, you.y);
         }
-        if (f.spec.side) return this._flank(f, you, d, free, dt);
+        if (f.spec.side && !(f.cornered > 0)) return this._flank(f, you, d, free, dt, delta);
+        if (f.cornered > 0) f.cornered -= delta;
         if (d <= f.spec.reach) {
             this._step(f, 0, 0, dt);
             foe.face(you.x, you.y);
@@ -649,15 +653,27 @@ export class FieldDemons {
      * (the side it's on, or the other if one's winding up there already), level with you, and swings
      * across; waiting its turn, it hangs back on its side.
      */
-    _flank(f, you, d, free, dt) {
+    _flank(f, you, d, free, dt, delta) {
         const { foe, spec } = f;
         const taken = (side) => this.foes.some(o => o !== f && o.hp > 0 && o.state === 'windup' && o.flank === side);
+        // (a side it can't stand on, rock or sea: the other; neither, it comes straight on, `cornered`)
+        const open = (side) => this._open(you.x + side * spec.reach * 0.75, you.y) || this._open(you.x + side * (spec.reach + 50), you.y);
         if (!f.flank || d > spec.reach + 70) f.flank = foe.x < you.x ? -1 : 1;
         if (taken(f.flank) && !taken(-f.flank)) f.flank = -f.flank;
+        if (!open(f.flank)) f.flank = -f.flank;
+        if (!open(f.flank)) return this._corner(f);
+        // Getting nowhere toward its side (the way round walled off): straight on a while
+        f.stall = (f.stall || 0) + delta;
+        if (!f.stallAt || Math.hypot(foe.x - f.stallAt.x, foe.y - f.stallAt.y) > 12) {
+            f.stallAt = { x: foe.x, y: foe.y };
+            f.stall = 0;
+        }
+        if (f.stall > STALL_MS) return this._corner(f);
         const off = foe.x - you.x;
         if (free && Math.abs(you.y - foe.y) <= LEVEL && Math.sign(off) === f.flank && Math.abs(off) <= spec.reach) {
             this._step(f, 0, 0, dt);
             foe.face(you.x, foe.y);
+            f.stall = 0;
             if (f.cd <= 0) this._windup(f);
             return;
         }
@@ -665,9 +681,17 @@ export class FieldDemons {
         const dx = spot.x - foe.x, dy = spot.y - foe.y, to = Math.hypot(dx, dy);
         if (to < 4) {
             this._step(f, 0, 0, dt);
+            f.stall = 0;
             return foe.face(you.x, foe.y);
         }
         this._step(f, dx / to, dy / to, dt, free ? 1 : 0.6);
+    }
+
+    /** A side-on foe that can't get to your side comes straight on, and swings at you from wherever it is, for a while. */
+    _corner(f) {
+        f.cornered = CORNERED_MS;
+        f.stall = 0;
+        f.stallAt = null;
     }
 
     _home(f, dt, fromPost) {
@@ -690,6 +714,17 @@ export class FieldDemons {
         const x0 = s.x, y0 = s.y, x = s.x + dx * v, y = s.y + dy * v;
         if (this._open(x, s.y + FEET)) s.x = x;
         if (this._open(s.x, y + FEET)) s.y = y;
+        if (v && (dx || dy) && s.x === x0 && s.y === y0) {
+            // Walked square into rock (a cliff's diagonal stopped both ways at once): along it instead
+            for (const a of SLIDE) {
+                const c = Math.cos(a), n = Math.sin(a), rx = dx * c - dy * n, ry = dx * n + dy * c;
+                if (this._open(x0 + rx * v, y0 + ry * v + FEET)) {
+                    s.x = x0 + rx * v;
+                    s.y = y0 + ry * v;
+                    break;
+                }
+            }
+        }
         const went = Math.hypot(s.x - x0, s.y - y0);
         if (went) foe.travel?.(went, (s.x - x0) / went);        // (one that slides steps by how far it went)
         if (foe.striking) return;
@@ -725,7 +760,8 @@ export class FieldDemons {
         }
         audio.play('swing', { volume: 0.7 });
         // (a side-on one lunges straight across)
-        const ty = spec.side ? foe.y : you.y, d = Math.hypot(you.x - foe.x, ty - foe.y) || 1;
+        const side = spec.side && !(f.cornered > 0);
+        const ty = side ? foe.y : you.y, d = Math.hypot(you.x - foe.x, ty - foe.y) || 1;
         const k = Math.min(spec.lunge || 0, Math.max(0, d - 16)) / d;
         const x = foe.sprite.x + (you.x - foe.x) * k, y = foe.sprite.y + (ty - foe.y) * k;
         if (k && this._open(x, y + FEET)) this.scene.tweens.add({ targets: foe.sprite, x, y, duration: 140 });
@@ -734,7 +770,7 @@ export class FieldDemons {
             if (f.hp <= 0 || !now || !this.foes.includes(f)) return;
             // Cursed (Evil Eye), or swinging at smoke (Smoke Bomb, Vanish): a miss
             if ((f.curse > 0 && Math.random() < f.miss) || this.you.hidden > 0) this.scene.effects.floatText(now.x, now.y - 52, 'Missed', '#c4b59f', 14);
-            else if (spec.side ? Math.abs(now.y - foe.y) <= LEVEL + 6 && Math.abs(now.x - foe.x) <= spec.reach + 8
+            else if (side ? Math.abs(now.y - foe.y) <= LEVEL + 6 && Math.abs(now.x - foe.x) <= spec.reach + 8
                 : Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.reach + 8) this._hurt(this.you, Math.round(f.damage * (0.8 + Math.random() * 0.4)), { x: foe.x, y: foe.y });
             else this.scene.effects.floatText(now.x, now.y - 52, 'Dodged', '#c4b59f', 14);
         });

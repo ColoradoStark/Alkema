@@ -518,6 +518,26 @@ test.describe('Falling out on the world', () => {
         expect(bars.mp, JSON.stringify(bars)).toBeGreaterThan(0);
     });
 
+    test("fallen as you go into a place, you're there, standing, with a hit point (the user's: they went into Dunmere as a blow felled them, and were nowhere: put back at the world's start inside the castle's map)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 30000 });
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, hp = gs.scene.get('UIScene').hp;
+            fd._hurt(fd.you, hp.max * 10, { x: 0, y: 0 });
+            gs.enterPlace({ name: 'Castle Dunmere', x: 10928, y: 10220 });
+        });
+        await page.waitForTimeout(5000);
+        const r = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            return { town: !!gs.town, on: !!gs.town && me.x > 0 && me.y > 0 && me.x < gs.town.width && me.y < gs.town.height,
+                visible: me.visible, fallen: !!gs._fallenInField, hp: gs.scene.get('UIScene').hp.now };
+        });
+        expect(r).toEqual({ town: true, on: true, visible: true, fallen: false, hp: 1 });
+    });
+
     test("those you've slain stay down: into a place and out again (the user's, to try: the castle's healer between fights), or off and back", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
@@ -768,6 +788,34 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
             return { chests: gs.encounters.chests.length - chests, label: b.foe.nameText.text };
         });
         expect(bear).toEqual({ chests: 1, label: 'Great Bear' });
+    });
+
+    test("with the side it's on walled off (a mountain, the sea), it comes round the other side or straight on, and swings: never stuck at the rock (the user's: the great bear stood against the mountain, you on the strand below)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        // You on the strand below the castle, rock to your left; the bear up and to the left of you
+        const you = [11060, 10100], bear = [11000, 10000];
+        await standAt(page, you[0], you[1]);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'greatbear' && f.foe.ready), null, { timeout: 30000 });
+        const r = await page.evaluate(async ([you, bear]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
+            const walled = !fd._open(you[0] - 104, you[1]) && !fd._open(you[0] - 40, you[1]);
+            for (const o of fd.foes) if (o.kind !== 'greatbear') { o.hp = 0; o.foe.setVisible(false); }
+            const f = fd.foes.find(f => f.kind === 'greatbear');
+            Object.assign(f, { state: 'chase', cd: 0, post: { x: bear[0], y: bear[1] } });
+            f.foe.sprite.setPosition(bear[0], bear[1] - 23);
+            let wound = 0;
+            const w = fd._windup.bind(fd);
+            fd._windup = (o) => { if (o === f) wound++; w(o); };
+            for (const t0 = performance.now(); performance.now() - t0 < 8000 && !wound;) {
+                ui.hp.now = ui.hp.max = 1e6;
+                await new Promise(r => setTimeout(r, 100));
+            }
+            fd._windup = w;
+            return { walled, wound };
+        }, [you, bear]);
+        expect(r.walled).toBe(true);
+        expect(r.wound).toBeGreaterThan(0);
     });
 
     test('a water elemental hangs back and throws water at you', async ({ page }) => {

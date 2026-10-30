@@ -619,8 +619,22 @@ export class GameScene extends Scene {
     /** Fallen out on the world: you come to where you set out, with a hit point, and they forget you. */
     comeTo() {
         const at = { x: WORLD.spawn.x, y: WORLD.spawn.y - FEET };
+        // Gone into a place as you fell (the user's: into Dunmere, and put back at the world's start inside its map,
+        // nowhere to be seen): you come to there instead
+        const away = () => this.town || this.battle || this._changingRoom;
+        const there = () => {
+            const hp = this.scene.get('UIScene')?.hp;
+            if (hp) hp.now = Math.max(1, hp.now);
+            this.fieldDemons.forgive();
+            this._fallenInField = false;
+        };
+        if (away()) return there();
         this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
+            if (away()) {
+                if (!this._changingRoom) this.cameras.main.fadeIn(FADE_MS);     // (in already: not left in the dark)
+                return there();
+            }
             const me = this.localPlayer.sprite;
             me.setPosition(at.x, at.y);
             me.body.reset(at.x, at.y);
