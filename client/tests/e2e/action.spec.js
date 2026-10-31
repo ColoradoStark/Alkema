@@ -115,8 +115,15 @@ test.describe('A real-time fight', () => {
         expect(Math.min(...first.foes.map(([x, y]) => Math.hypot(x - first.you[0], y - first.you[1])))).toBeGreaterThanOrEqual(185);
         // Held (1.5 s from when they're drawn; the wait for their sheets above may have used some)
         expect(first.hold).toBeGreaterThan(300);
-        await page.waitForTimeout(first.hold - 200);
-        expect((await look()).foes).toEqual(first.foes);
+        // Still held near its end, by the fight's own clock (a wait in real time raced it under load: four browsers at
+        // once slow every frame, and the foes had just set off)
+        const late = await page.evaluate(() => new Promise((done) => {
+            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
+            const tick = () => ((b._hold ?? 0) < 500 ? done({ hold: b._hold ?? 0, foes: b.foes.map(f => [f.foe.x, f.foe.y]) }) : requestAnimationFrame(tick));
+            tick();
+        }));
+        if (late.hold > 0) expect(late.foes).toEqual(first.foes);
+        else expect(late.hold, 'caught before the hold ran out').toBeGreaterThan(0);
         await page.waitForTimeout(800);
         const t0 = Date.now(), a = await look();
         await page.waitForTimeout(1000);

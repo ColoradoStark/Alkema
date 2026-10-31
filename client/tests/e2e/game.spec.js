@@ -177,6 +177,7 @@ test.describe('Rendering', () => {
 
 test.describe('Multiplayer', () => {
     test('second player appears in first player\'s game', async ({ browser }) => {
+        test.setTimeout(90000);         // (two players into the world, one after the other)
         // Open two browser contexts (two separate players)
         const context1 = await browser.newContext();
         const context2 = await browser.newContext();
@@ -228,6 +229,7 @@ test.describe('Multiplayer', () => {
         // remote clients because CompositeCharacter.playAnimation silently
         // dropped calls that arrived before the async spritesheet load finished,
         // and onTextureReady always forced idle. Queue-and-replay fixes that.
+        test.setTimeout(90000);         // (two players into the world, one after the other: past 30 s with four browsers at once)
         const context1 = await browser.newContext();
         const context2 = await browser.newContext();
         const page1 = await context1.newPage();
@@ -279,6 +281,11 @@ test.describe('Multiplayer', () => {
             };
         });
 
+        // Player 1, by id: other tests share this server (four browsers at once), so another of
+        // theirs, standing idle, was taken for player 1
+        const player1Id = await page1.evaluate(() =>
+            window.__PHASER_GAME.registry.get('networkManager').socket.id);
+
         // Run two loops concurrently: page1 emits moves continuously, page2
         // polls the remote player's animation. Resolve as soon as walk is seen.
         let walkDetected = false;
@@ -294,14 +301,13 @@ test.describe('Multiplayer', () => {
         const pollLoop = (async () => {
             const deadline = Date.now() + 15000;
             while (Date.now() < deadline) {
-                const key = await page2.evaluate(() => {
+                const key = await page2.evaluate((id) => {
                     const gs = window.__PHASER_GAME?.scene?.getScene('GameScene');
                     if (!gs?.players) return '';
-                    let remote = null;
-                    gs.players.forEach(p => { if (p !== gs.localPlayer) remote = p; });
+                    const remote = gs.players.get(id);
                     // The sprite showing: a bow's walk plays on the oversized one
                     return remote?.sprite?.getActiveSprite?.()?.anims?.currentAnim?.key || '';
-                });
+                }, player1Id);
                 if (key.includes('walk')) { walkDetected = true; break; }
                 await new Promise(r => setTimeout(r, 100));
             }
@@ -317,6 +323,7 @@ test.describe('Multiplayer', () => {
     });
 
     test('player disappears when disconnecting', async ({ browser }) => {
+        test.setTimeout(90000);         // (two players into the world, one after the other)
         const context1 = await browser.newContext();
         const context2 = await browser.newContext();
         const page1 = await context1.newPage();

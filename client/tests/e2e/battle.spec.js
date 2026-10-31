@@ -78,6 +78,7 @@ async function step(page, dir) {
     await yourTurn(page);
     await page.evaluate((dir) => new Promise(resolve => {
         const b = window.__PHASER_GAME.scene.getScene('GameScene').battle, keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
+        if (!b) return resolve();       // (fled already: the step before took you off the edge, and the fight's gone since it was looked at)
         keys[dir] = true;
         const tick = () => {
             if (b.busy || b.over) { keys[dir] = false; return resolve(); }
@@ -298,9 +299,10 @@ test.describe('Battle', () => {
         expect((await hp()).now).toBeLessThan(5);
         expect(s.chests).toHaveLength(0);                 // no spoils for falling
         expect(s.foe).toBeTruthy();                       // the band still at its post
-        // Out of the fight, your hit points come back
+        // Out of the fight, they don't come back on their own (the user's: a healer mends you, for a price)
         const was = (await hp()).now;
-        await expect.poll(async () => (await hp()).now, { timeout: 10000 }).toBeGreaterThan(was);
+        await page.waitForTimeout(4000);
+        expect((await hp()).now).toBe(was);
     });
 
     test('the slain fall and then fade away, leaving no body on a tile', async ({ page }) => {
