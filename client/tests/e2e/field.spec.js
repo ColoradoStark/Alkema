@@ -41,8 +41,19 @@ const onCoast = p => p.family !== 'vanar';      // (where heroes started: the de
 
 const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES, PACKS: m.PACKS })));
 
+/** A hero grown strong enough for the demons' zone (south of Dunmere, made for a hero forty times a new one's), and kept standing. */
+const mighty = (page) => page.evaluate(() => {
+    const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
+    Object.defineProperty(stats, 'attack', { value: 300, configurable: true, writable: true });
+}).then(() => keepUp(page));
+
 /** Keep the hero standing (full hit points: and so many that no flurry between two checks fells them, now blows hurt). */
-const keepUp = (page) => page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; hp.max = Math.max(hp.max, 100000); hp.now = hp.max; });
+const keepUp = (page) => page.evaluate(() => {
+    // (in its stats too: the game sets your most hit points from them every frame, and a demon's blow now fells a new hero)
+    const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
+    if (stats && !(stats.hp?.max >= 100000)) Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 100000 }, configurable: true, writable: true });
+    ui.hp.max = Math.max(ui.hp.max, 100000); ui.hp.now = ui.hp.max;
+});
 
 test.describe('Demons on the coast', () => {
     test('packs of three to five (the champion\'s six), the three kinds mixed, come as you near the coast; rouse one and its pack comes; they fall to your blows in gold; far off, they go', async ({ page }) => {
@@ -71,6 +82,7 @@ test.describe('Demons on the coast', () => {
             return null;
         }, [fury.i]);
         expect(near).not.toBe(null);
+        await mighty(page);
         await standAt(page, near.x, near.y);
         await expect.poll(() => field(page).then(f => pack.every(p => f.states[p.i] !== 'post')), { timeout: 3000 }).toBe(true);
         // They come at you, and one lands a blow
@@ -124,6 +136,7 @@ test.describe('Demons on the coast', () => {
         const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        await keepUp(page);
         await page.evaluate(() => {          // it's after you...
             window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0).state = 'chase';
         });
@@ -150,43 +163,38 @@ test.describe('Demons on the coast', () => {
         await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 30000 }).toBe('post');
     });
 
-    test('matched to your hero: a fury takes about three of your blows weak or strong, and the road toward Dunmere gets tougher and pays more', async ({ page }) => {
+    test("a fury takes about three of its zone's hero's blows, a brute twice that; the road toward Dunmere gets tougher and pays more; each foe on it is made for its zone's hero", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
-            const { numbers, bounty, PACKS } = await import('/src/battle/FieldDemons.js');
-            const weak = { attack: 4, hp: 30, defence: 1 }, strong = { attack: 400, hp: 3000, defence: 60 };
+            const { numbers, bounty, PACKS, ZONES } = await import('/src/battle/FieldDemons.js');
+            const hero = ZONES.demons;
             const first = PACKS[0].tier, last = PACKS[PACKS.length - 1].tier;
             return {
-                weak: numbers('fury', first, weak).hp / weak.attack, strong: numbers('fury', first, strong).hp / strong.attack,
-                // a blow's share of your hit points, once your defence has taken its half off (as _hurt does)
-                weakHurt: (numbers('fury', first, weak).damage - Math.floor(weak.defence / 2)) / weak.hp,
-                strongHurt: (numbers('fury', first, strong).damage - Math.floor(strong.defence / 2)) / strong.hp,
-                tougher: numbers('brute', last, weak).hp > numbers('brute', first, weak).hp && numbers('brute', last, weak).damage > numbers('brute', first, weak).damage,
-                bruteVsFury: numbers('brute', first, weak).hp / numbers('fury', first, weak).hp,
+                blows: numbers('fury', first, hero).hp / hero.attack,
+                tougher: numbers('brute', last, hero).hp > numbers('brute', first, hero).hp && numbers('brute', last, hero).damage > numbers('brute', first, hero).damage,
+                bruteVsFury: numbers('brute', first, hero).hp / numbers('fury', first, hero).hp,
                 richer: bounty('fury', last, 100) > bounty('fury', first, 100),
                 combo: [1, 2, 5, 20].map(n => bounty('fury', 1, 100, n)),
                 tiers: PACKS.filter(p => p.family === 'demons').map(p => p.tier),
             };
         });
-        expect(r.weak).toBeCloseTo(3, 0);
-        expect(r.strong).toBeCloseTo(3, 0);
-        expect(Math.abs(r.weakHurt - r.strongHurt)).toBeLessThan(0.03);
+        expect(r.blows).toBeCloseTo(3, 0);
         expect(r.tougher).toBe(true);
         expect(r.bruteVsFury).toBeCloseTo(2, 0);
         expect(r.richer).toBe(true);
         expect(r.combo).toEqual([30, 38, 60, 90]);      // a quarter more for each in the combo, up to three times
         expect(r.tiers[0]).toBe(1);
         expect(r.tiers.every((t, k) => !k || t > r.tiers[k - 1])).toBe(true);
-        // On the road: each demon has its numbers for this hero and its pack's place along it
+        // On the road: each has its numbers for its zone and its pack's place along it
         const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         const { PLACES } = await places(page);
         await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const off = await page.evaluate(async () => {
-            const { numbers } = await import('/src/battle/FieldDemons.js');
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hero = fd._hero();
-            return fd.foes.filter(f => f.maxHp !== numbers(f.kind, f.tier, hero).hp || f.damage !== numbers(f.kind, f.tier, hero).damage).length;
+            const { numbers, ZONES } = await import('/src/battle/FieldDemons.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return fd.foes.filter(f => f.maxHp !== numbers(f.kind, f.tier, ZONES[f.family]).hp || f.damage !== numbers(f.kind, f.tier, ZONES[f.family]).damage).length;
         });
         expect(off).toBe(0);
     });
@@ -391,6 +399,7 @@ test.describe('Demons on the road, a fight you can lose', () => {
         const { PLACES } = await places(page);
         await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const pack = PLACES.find(p => p.kind === 'warlock' && PLACES.filter(q => q.pack === p.pack).length >= 5).pack;     // (a demons' pack)
+        await keepUp(page);
         const turns = await page.evaluate(async (pack) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = window.__PHASER_GAME.scene.getScene('UIScene');
             const them = fd.foes.filter(f => f.pack === pack), me = gs.localPlayer.sprite, p = them[0].post;
@@ -450,6 +459,7 @@ test.describe("A foe after you doesn't let go while you're near", () => {
         const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        await keepUp(page);
         const r = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
             const { audio } = await import('/src/audio/audio.js');
@@ -495,26 +505,40 @@ test.describe("A foe after you doesn't let go while you're near", () => {
     });
 });
 
-test.describe('Matched to the hero you are', () => {
-    test("the foes by Dunmere, made as you arrive, are matched to your hero's real strength, and to it again as it grows (the user's: their archer one-shot every Vanar north of Dunmere)", async ({ page }) => {
+test.describe('The zone, not your hero, says how hard its foes are', () => {
+    test("north of Dunmere they're a fair fight for a new hero; the demons south are far beyond one, a blow felling them, a fury standing a hundred arrows; the same whoever you are, and a stronger hero finds them easier (the user's: no invisible wall, but no going that way yet)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
-        const matched = () => page.evaluate(async () => {
-            const { numbers } = await import('/src/battle/FieldDemons.js');
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hero = fd._hero();
-            const wrong = fd.foes.filter(f => f.state === 'post' && f.maxHp !== numbers(f.kind, f.tier, hero).hp);
-            return { foes: fd.foes.length, attack: hero.attack, wrong: wrong.slice(0, 3).map(f => `${f.kind} ${f.maxHp} for ${numbers(f.kind, f.tier, hero).hp}`) };
-        });
-        await expect.poll(() => matched().then(m => m.foes), { timeout: 30000 }).toBeGreaterThan(0);
-        expect((await matched()).wrong).toEqual([]);
-        // grown stronger (an upgrade bought), those still at their posts are matched again
+        const fresh = { attack: 7, hp: 20, defence: 4 };       // (a new hero: attack 4-9, hit points 16-31)
+        // a blow's share of a new hero's hit points (less half their defence, as _hurt takes), and the blows a foe takes
+        const look = () => page.evaluate(async (fresh) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            const of = (fam) => fd.foes.filter(f => f.family === fam && f.state === 'post' && !f.spec.label)
+                .map(f => ({ blows: f.maxHp / fresh.attack, hurt: (f.damage - Math.floor(fresh.defence / 2)) / fresh.hp }));
+            return { vanar: of('vanar'), demons: of('demons'), all: Object.fromEntries(fd.foes.map(f => [f.i, [f.maxHp, f.damage]])) };
+        }, fresh);
+        await expect.poll(() => look().then(r => r.vanar.length), { timeout: 30000 }).toBeGreaterThan(5);
+        const north = await look();
+        for (const v of north.vanar) {
+            expect(v.blows).toBeLessThan(25);
+            expect(v.hurt).toBeLessThan(0.4);
+        }
+        // grown far stronger: the same foes
         await page.evaluate(() => {
             const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
-            Object.defineProperty(stats, 'attack', { value: (stats.attack || 5) * 3, configurable: true, writable: true });
+            Object.defineProperty(stats, 'attack', { value: (stats.attack || 5) * 30, configurable: true, writable: true });
         });
         await page.waitForTimeout(300);
-        const m = await matched();
-        expect(m.wrong, `attack ${m.attack}`).toEqual([]);
+        const now = (await look()).all;
+        for (const [i, was] of Object.entries(north.all)) if (now[i]) expect(now[i], `foe ${i}`).toEqual(was);
+        // south, by the grotto
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await expect.poll(() => look().then(r => r.demons.length), { timeout: 30000 }).toBeGreaterThan(5);
+        for (const d of (await look()).demons) {
+            expect(d.hurt).toBeGreaterThanOrEqual(1);
+            expect(d.blows).toBeGreaterThanOrEqual(80);
+        }
     });
 });
 
@@ -524,6 +548,7 @@ test.describe('Demons that close in keep their heads', () => {
         await enterWorld(page);
         const { PLACES } = await places(page);
         const packs = [...new Set(PLACES.filter(p => p.family === 'demons').map(p => p.pack))].slice(2, 6);
+        await keepUp(page);
         const flips = await page.evaluate(async (packs) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
             const { PLACES } = await import('/src/battle/FieldDemons.js');
@@ -874,6 +899,7 @@ test.describe('Each in a pack comes its own way (after Pac-Man\'s ghosts)', () =
         await standAt(page, spawn.x, spawn.y);
         await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
         const pack = PLACES.find(p => p.role === 'flanker' && p.family === 'demons').pack;
+        await keepUp(page);
         const spread = await page.evaluate(async (pack) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
             const them = fd.foes.filter(f => f.pack === pack && !f.spec.ranged);
@@ -966,6 +992,7 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
         const you = [11060, 10100], bear = [11000, 10000];
         await standAt(page, you[0], you[1]);
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'greatbear' && f.foe.ready), null, { timeout: 30000 });
+        await keepUp(page);
         const r = await page.evaluate(async ([you, bear]) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
             const walled = !fd._open(you[0] - 104, you[1]) && !fd._open(you[0] - 40, you[1]);

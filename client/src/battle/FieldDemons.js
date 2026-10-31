@@ -57,7 +57,7 @@ const KINDS = {
     // Duelyst's Vanar north of Dunmere (FieldVanar.js)
     ...VANAR_KINDS,
 };
-// Matched to your hero (`numbers`): how many of your blows each takes, and how much of your hit points its blow takes
+// Made for its zone's hero (`numbers`, `ZONES`): how many of that hero's blows each takes, and how much of their hit points its blow takes
 const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS, ...VANAR_HITS };
 // (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
 const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS, ...VANAR_HURTS };
@@ -112,6 +112,18 @@ export const PACKS = [
     .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })))
     .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })));
 
+/**
+ * How hard each band is is its zone's, not matched to you (the user's, October 2026, a crude first try): each is
+ * made for a hero this strong. North of Dunmere, where heroes start, a new one (attack 4-9, hit points 16-31); the
+ * orcs west, one about four times as strong; the demons south, one forty times: no invisible wall, but no going
+ * that way yet. Grow, and a band gets easier.
+ */
+export const ZONES = {
+    vanar: { attack: 7, hp: 22, defence: 4 },
+    orcs: { attack: 28, hp: 90, defence: 14 },
+    demons: { attack: 300, hp: 900, defence: 60 },
+};
+
 /** Each band's bodies: their sheets loaded and let go, and one made (feet at x, y). */
 const FAMILIES = {
     demons: {
@@ -141,12 +153,12 @@ export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
     role: KINDS[kind].ranged ? 'caster' : ROLES[p.band.slice(0, k).filter(o => !KINDS[o].ranged).length % ROLES.length],
 }))).map((p, i) => ({ ...p, i }));
 
-/** A demon matched to a hero ({attack, hp: max hit points, defence}) `tier` along the road: its hit points and blow. */
+/** A foe made for a hero ({attack, hp: max hit points, defence}: its zone's, `ZONES`) `tier` along the road: its hit points and blow. */
 export function numbers(kind, tier, hero) {
     const attack = Math.max(1, hero.attack || 5), hp = Math.max(10, hero.hp || 30);
     return {
         hp: Math.max(4, Math.round(HITS[kind] * attack * tier)),
-        // (your defence takes half of itself off a blow, `_hurt`: given back here, as it's matched to you too; a
+        // (your defence takes half of itself off a blow, `_hurt`: given back here, as it's made for that hero's; a
         // quarter given back rounded a weak hero's fury down to a fortieth of their hit points)
         damage: Math.max(1, Math.round(HURTS[kind] * SOFTER * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 2),
     };
@@ -241,7 +253,6 @@ export class FieldDemons {
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
         if (!this.foes.length) return;
-        this._rematch();
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             if (this._freeze <= 0) this.scene.anims.resumeAll();
@@ -301,7 +312,6 @@ export class FieldDemons {
             }
             const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i));
             if (!left.length) return;
-            const hero = this._hero();
             const make = (p) => {
                 const spec = KINDS[p.kind];
                 const at = this._clear(p);
@@ -309,7 +319,7 @@ export class FieldDemons {
                 if (spec.scale) foe.grow(spec.scale);
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
-                const { hp, damage } = numbers(p.kind, p.tier, hero);
+                const { hp, damage } = numbers(p.kind, p.tier, ZONES[fam]);
                 return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
@@ -359,27 +369,6 @@ export class FieldDemons {
     }
 
     /** Your hero as the demons are matched to: attack, most hit points, defence. */
-    /**
-     * Your hero grown (an upgrade bought, a save's upgrades counted once they're in): those still untouched at
-     * their posts are matched to it again (made for the hero as they first came, a grown archer one-shot every
-     * Vanar north of Dunmere, the user's).
-     */
-    _rematch() {
-        const hero = this._hero(), key = `${hero.attack} ${hero.hp} ${hero.defence}`;
-        if (key === this._matched) return;
-        this._matched = key;
-        for (const f of this.foes) {
-            if (f.state !== 'post' || f.hp !== f.maxHp) continue;
-            const { hp, damage } = numbers(f.kind, f.tier, hero);
-            Object.assign(f, { hp, maxHp: hp, damage });
-        }
-    }
-
-    _hero() {
-        const ui = this.scene.scene.get('UIScene'), stats = ui?.inventory?.stats;
-        return { attack: stats?.attack ?? 5, hp: ui?.hp?.max ?? stats?.hp?.max ?? 30, defence: stats?.defence ?? 0 };
-    }
-
     /** The blue button shows the spell you equipped (or, with null, the plain cast again). */
     _showSpell() {
         const ui = this.scene.scene.get('UIScene'), book = ui?.spellbook;
