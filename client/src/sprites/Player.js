@@ -242,7 +242,7 @@ export class Player {
     }
 
     /**
-     * Aboard ship (the hero is below decks, so only the ship shows) or on foot.
+     * Aboard ship (the hero is below decks, so only the ship shows: the user's) or on foot.
      * @param {boolean} on
      * @param {number} [heading]  which way the ship points, radians
      */

@@ -13,9 +13,9 @@
 // swings the bow and pitches them; and as rowboats, each stroke of the oars
 // surges them on and splashes at their sides. They push a bow wave out either
 // side, wash along the hull and leave a V of foam behind, with ripples lapping at
-// the hull while they wait. Wesnoth's "boat", its rowboat (boats.png, the user's
-// pick), is drawn bow to the right, BOW below east, and turned to the way it
-// goes: mirrored, not upside down, when going west.
+// the hull while they wait. The river ferry, drawn from above (boats.png, tools/shipart.py; the user's: an
+// expensive ferry up the river with a captain and a crowd aboard, not a seagoing ship, in place of
+// Wesnoth's side-on "boat"), bow to the right, turned to the way it goes.
 //
 // The boats' picture loads as you come within NEAR of a river and goes beyond FAR,
 // or when you go into a place.
@@ -26,11 +26,10 @@ import { voyage } from './voyage.js';
 const KEY = 'river-boats';
 const NEAR = 30 * 32;         // px from a river's middle: the boats come
 const FAR = 42 * 32;          // ...and go
-const BOW = 0.35;             // radians below east the drawn boat points
-export const STERN = 36;             // px from the hull's middle back to the stern
-export const PROW = 39;              // ...and forward to the bow
-export const BEAM = 26;       // px from the hull's middle out to the oars' tips
-const LANE = 22;              // px right of the river's middle each keeps to, room allowing
+export const STERN = 33;             // px from the hull's middle back to the stern (shipart.py river_boat: the ferry)
+export const PROW = 36;              // ...and forward to the bow, her pennant
+export const BEAM = 24;       // px from the hull's middle out to the oars' tips
+const LANE = 30;              // px right of the river's middle each keeps to, room allowing (the ferry's oars span 54)
 const DOWN = 34;              // px/s with the current
 const UP = 24;                // ...against it
 const WAIT = 5;               // s at each end of the route before turning round
@@ -88,7 +87,7 @@ export class RiverBoats {
         const longest = Math.max(...this.routes.map(r => r.length));
         for (const r of this.routes) r.pace = r.length / longest;
         this.boats = this.routes.length ? BOATS.filter(b => this.routes[b.route]).map(b => ({
-            ...b, s: 0, way: 1, waiting: false, side: null, heading: null, flipped: false,
+            ...b, s: 0, way: 1, waiting: false, side: null, heading: null,
             t: Math.random() * 10, stroke: Math.random(), trail: 0, ripple: 0, sprite: null, last: null,
         })) : [];
         this.up = false;          // wanted (you're near a river)
@@ -174,17 +173,12 @@ export class RiverBoats {
         const want = Math.atan2(ahead.y - y, ahead.x - x);
         if (b.heading === null) b.heading = want;
         b.heading = wrapAngle(b.heading + wrapAngle(want - b.heading) * Math.min(1, (b.waiting ? 0.6 : 2.5) * dt));
-        // Mirrored rather than upside down going west (a little either way of north or south, she stays as she is)
-        const c = Math.cos(b.heading);
-        if (c < -0.26) b.flipped = true;
-        else if (c > 0.26) b.flipped = false;
         const swell = 0.075 * Math.sin(b.t * 0.7) + 0.035 * Math.sin(b.t * 1.9 + 1.3);
         const yaw = swell * (0.4 + 0.6 * way) + Math.sin(b.t * 2.3) * 0.02;
         const pitch = Math.sin(b.t * 2.1) * (0.025 + 0.02 * way);
-        const turn = b.flipped ? b.heading - (Math.PI - BOW) : b.heading - BOW;
+        // Drawn from above, bow to the right: turned to the way she heads
         b.sprite.setPosition(x, y + Math.sin(b.t * 1.7) * 0.8)
-            .setFlipX(b.flipped)
-            .setRotation(wrapAngle(turn + yaw))
+            .setRotation(wrapAngle(b.heading + yaw))
             .setScale(1 + pitch, 1 - pitch * 0.5);
         this._foam(b, x, y, dt, way, stroked);
     }
@@ -210,7 +204,7 @@ export class RiverBoats {
         }
         if (stroked) {
             // the blades bite: a splash at each oar's tip, thrown out and back
-            for (const side of [-1, 1]) this.foam.emit('splash', ...at(-4, side * BEAM), b.heading + side * 2.2, 5);
+            for (const side of [-1, 1]) for (const along of [-15, -4, 7]) this.foam.emit('splash', ...at(along, side * BEAM), b.heading + side * 2.2, 2);
         }
         b.ripple += dt;
         if (way < 0.1 && b.ripple > 1.4) {

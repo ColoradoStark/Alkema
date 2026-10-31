@@ -345,8 +345,8 @@ export const WORLD = {
   }
  ],
  "boat": {
-  "x": 11120,
-  "y": 10224,
-  "heading": -0.29
+  "x": 11152,
+  "y": 10256,
+  "heading": -0.79
  }
 };

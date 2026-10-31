@@ -1,9 +1,7 @@
-// Ships at sea (scenery): Wesnoth's carracks and raiders sail straight lanes off
-// the coast in sight of the shore, only the ways a side-on ship looks right
-// (east, bow up no more than RISE; west, mirrored, bow down as much), one to a
-// lane, lanes far enough apart that no two ever overlap; your ship runs into
-// them rather than over them; they go, picture and all, when you head inland or
-// into a place.
+// Ships at sea (scenery): merchant carracks, raiders and pirate carracks drawn from above sail
+// lanes off the coast in sight of the shore, turned the way they go; no two are ever drawn over
+// one another, nor over your ship, sailing or at anchor: they push apart; they go, picture and all,
+// when you head inland or into a place.
 import { test, expect } from '@playwright/test';
 
 const DUNMERE = [10928, 10224];      // Castle Dunmere's drawbridge, where new heroes start, by the sea
@@ -29,82 +27,124 @@ const go = (page, [x, y]) => page.evaluate(([x, y]) => {
 const loaded = page => page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').seaShips.loaded, null, { timeout: 15000 });
 
 test.describe('Ships at sea', () => {
-    test('straight lanes rising east no steeper than RISE, on open water, far enough apart that no two ships overlap', async ({ page }) => {
+    test('carracks, raiders and pirates sail the lanes on open water, in sight of the shore, turned the way they go', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await go(page, DUNMERE);
         await loaded(page);
+        await page.waitForTimeout(500);
         const found = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips, w = gs.world;
-            const { RISE } = await import('/src/world/SeaShips.js');
+            const { at, LANE, pointAt } = await import('/src/world/SeaShips.js');
             const kinds = [...new Set(ss.ships.map(s => s.kind))].sort();
-            const wrong = [];
-            // A ship's picture reaches this far from her middle at most (its opaque pixels, measured)
-            const src = gs.textures.get('sea-ships').getSourceImage(), f = ss.frame;
-            const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
-            const g = c.getContext('2d'); g.drawImage(src, 0, 0);
-            const px = g.getImageData(0, 0, c.width, c.height).data;
-            let reach = 0;
-            for (let i = 3; i < px.length; i += 4) if (px[i] > 40) {
-                const x = (i >> 2) % c.width, y = Math.floor((i >> 2) / c.width);
-                reach = Math.max(reach, Math.hypot(x % f - f / 2, y - f / 2));
-            }
-            const seg = (r, t) => ({ x: r.x0 + (r.x1 - r.x0) * t, y: r.y0 + (r.y1 - r.y0) * t });
+            // Every lane, both ways, sailed end to end: the hull clear of the shore all along it
+            const aground = [];
             for (const [i, r] of ss.lanes.entries()) {
-                if (!(r.x1 > r.x0) || r.slope > 0.001 || r.slope < -RISE - 0.001) wrong.push(`lane ${i} slope ${r.slope.toFixed(2)}`);
-                // her hull clear of the shore all along it
                 const k = ss.kinds.merchant;
                 for (let s = 0; s <= r.length; s += 16) {
-                    const x = r.x0 + r.ux * s, y = r.y0 + r.uy * s;
-                    for (const [dx, dy] of [[0, 0], [k.bow, 0], [-k.stern, 0], [0, k.beam], [0, -k.beam]]) {
-                        if (!w.isSailable(x + dx, y + dy)) wrong.push(`lane ${i} aground at (${Math.round(x + dx)}, ${Math.round(y + dy)})`);
+                    const p = pointAt(r, s);
+                    for (const side of [-1, 1]) {
+                        const cx = p.x - p.dy * LANE * side, cy = p.y + p.dx * LANE * side;
+                        for (const [along, across] of [[0, 0], [k.bow, 0], [-k.stern, 0], [0, k.beam], [0, -k.beam]]) {
+                            const x = cx + p.dx * along - p.dy * across, y = cy + p.dy * along + p.dx * across;
+                            if (!w.isSailable(x, y)) aground.push(`lane ${i} at ${Math.round(s)}, side ${side}: (${Math.round(x)}, ${Math.round(y)})`);
+                        }
                     }
-                }
-                // and never within two pictures' reach of another lane (wherever on them, both ships could be)
-                for (const [j, q] of ss.lanes.entries()) {
-                    if (j <= i) continue;
-                    let near = Infinity;
-                    for (let a = 0; a <= 40; a++) for (let b = 0; b <= 40; b++) {
-                        const p = seg(r, a / 40), o = seg(q, b / 40);
-                        const dx = ((o.x - p.x) % 16384 + 24576) % 16384 - 8192, dy = ((o.y - p.y) % 16384 + 24576) % 16384 - 8192;
-                        near = Math.min(near, Math.hypot(dx, dy));
-                    }
-                    if (near < 2 * reach) wrong.push(`lanes ${i} and ${j} ${Math.round(near)} px apart, pictures reach ${Math.round(reach)}`);
                 }
             }
-            return { kinds, lanes: ss.lanes.length, ships: ss.ships.length, wrong: wrong.slice(0, 10) };
+            // Turned the way she goes, never mirrored
+            const turned = [];
+            for (const ship of ss.inSight) {
+                const off = Math.atan2(Math.sin(ship.sprite.rotation - ship.heading), Math.cos(ship.sprite.rotation - ship.heading));
+                if (Math.abs(off) > 0.2 || ship.sprite.flipX) turned.push(`${ship.kind} drawn ${ship.sprite.rotation.toFixed(2)}, heading ${ship.heading.toFixed(2)}`);
+            }
+            const t0 = ss.time, r0 = ss.lanes[ss.ships[0].lane];
+            const same = JSON.stringify(at(r0, ss.ships[0], t0)) === JSON.stringify(at(r0, ss.ships[0], t0));
+            return { kinds, aground: aground.slice(0, 10), turned, same };
         });
-        expect(found).toEqual({ kinds: ['ironraider', 'merchant', 'pirate', 'raider'], lanes: 13, ships: 13, wrong: [] });
+        expect(found).toEqual({ kinds: ['merchant', 'pirate', 'raider'], aground: [], turned: [], same: true });
     });
 
-    test('a ship is drawn only sailing east bow up, or west mirrored bow down, never turned more than RISE', async ({ page }) => {
+    test('no two ships are ever drawn over one another, nor over your ship at anchor: they push apart', async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        await go(page, DUNMERE);
+        await loaded(page);
+        const worst = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips, moored = gs.mooredShip;
+            const { overlapOf, capsule, pointAt } = await import('/src/world/SeaShips.js');
+            window.__seaAt = await import('/src/world/SeaShips.js');
+            const { HULL } = await import('/src/world/Ship.js');
+            ss.update = () => {};                   // (driven by hand here, the clock run on)
+            let T = 1e6;
+            Object.defineProperty(ss, 'time', { get: () => T });
+            const bad = [];
+            const anchored = () => capsule(moored.x, moored.y, moored.heading, HULL.bow, HULL.stern, HULL.radius);
+            // Watch from each lane's ends and middle (where lanes meet by a harbour, and where ships pass), and by your
+            // ship at anchor, a whole hour of the clock each
+            const spots = ss.lanes.flatMap(r => [pointAt(r, 0), pointAt(r, r.length / 2), pointAt(r, r.length)]);
+            spots.push({ x: moored.x, y: moored.y });
+            for (const feet of spots) {
+                const byAnchor = Math.hypot(moored.x - feet.x, moored.y - feet.y) < 800;
+                for (let t = 0; t < 3600; t += 1) {
+                    T += 1;
+                    for (const ship of ss.ships) ss._sail(ship, 0.1, T, feet);
+                    ss._part();
+                    if (byAnchor) ss.shove(anchored(), () => false);
+                    const seen = ss.inSight;
+                    for (let i = 0; i < seen.length; i++) {
+                        for (let j = i + 1; j < seen.length; j++) {
+                            const o = overlapOf(ss.hullOf(seen[i]), ss.hullOf(seen[j])).overlap;
+                            if (o > 2) { const { at } = window.__seaAt; const d = s => { const w = at(ss.lanes[s.lane], s, T); return `L${s.lane}@${Math.round(w.s)}/${Math.round(ss.lanes[s.lane].length)}${w.waiting ? ' waiting' : ''} way${w.way} push${Math.round(Math.hypot(s.push.x, s.push.y))}`; };
+                                bad.push(`${seen[i].kind} and ${seen[j].kind} overlap ${o.toFixed(1)} px at (${Math.round(seen[i].x)}, ${Math.round(seen[i].y)}) ${d(seen[i])} | ${d(seen[j])}`); }
+                        }
+                        if (!ss._afloat(seen[i], seen[i].x, seen[i].y)) { const w = window.__seaAt.at(ss.lanes[seen[i].lane], seen[i], T); bad.push(`${seen[i].kind} aground at (${Math.round(seen[i].x)}, ${Math.round(seen[i].y)}) L${seen[i].lane}@${Math.round(w.s)}${w.waiting ? ' waiting' : ''} push${Math.round(Math.hypot(seen[i].push.x, seen[i].push.y))} heading ${seen[i].heading.toFixed(2)}`); }
+                        const m = byAnchor ? overlapOf(anchored(), ss.hullOf(seen[i])).overlap : 0;
+                        if (m > 2) bad.push(`${seen[i].kind} over your ship at anchor by ${m.toFixed(1)} px`);
+                    }
+                    if (bad.length > 10) return bad;
+                }
+            }
+            return bad;
+        });
+        expect(worst).toEqual([]);
+    });
+
+    test('your ship runs into them rather than over them: the two push each other apart', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await go(page, DUNMERE);
         await loaded(page);
-        const wrong = await page.evaluate(async () => {
+        // Hold the clock still, by a ship, then aboard your ship sitting right on top of her
+        const which = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips;
-            const { RISE, at } = await import('/src/world/SeaShips.js');
-            const bad = [], start = ss.time;
-            for (const ship of ss.ships) {
-                let was = null;
-                for (let t = 0; t < 900; t += 1) {
-                    const r = ss.lanes[ship.lane];
-                    // stand by her, wherever she is, so she's drawn
-                    const p = { x: r.x0 + r.ux * r.length / 2, y: r.y0 + r.uy * r.length / 2 };
-                    ss._sail(ship, 1, start + t, p);
-                    const s = ship.sprite, here = { x: ship.x, y: ship.y };
-                    if (s.rotation > 0.08 || s.rotation < -RISE - 0.08) bad.push(`${ship.kind} on lane ${ship.lane} turned ${s.rotation.toFixed(2)}`);
-                    if (was && !ship.turning) {
-                        const dx = here.x - was.x;
-                        if (dx > 1 && s.flipX || dx < -1 && !s.flipX) bad.push(`${ship.kind} on lane ${ship.lane} facing backwards at ${t}: dx ${dx.toFixed(1)} flip ${s.flipX} ${JSON.stringify(at(r, ship, start + t))}`);
-                    }
-                    was = here;
-                }
-            }
-            return bad.slice(0, 10);
+            const frozen = ss.time;
+            Object.defineProperty(ss, 'time', { get: () => frozen });
+            const ship = ss.ships[0], me = gs.localPlayer.sprite;
+            me.setPosition(ship.x || ss.lanes[ship.lane].pts[0].x, ship.y || ss.lanes[ship.lane].pts[0].y);
+            me.body.reset(me.x, me.y);
+            return 0;
         });
-        expect(wrong).toEqual([]);
+        await page.waitForFunction((i) => window.__PHASER_GAME.scene.getScene('GameScene').seaShips.ships[i].sprite?.visible, which, { timeout: 5000 });
+        await page.evaluate((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ship = gs.seaShips.ships[i];
+            gs.mooredShip.setPosition(ship.x + 6, ship.y);
+            gs.localPlayer.sprite.setPosition(ship.x + 6, ship.y - 23);
+            gs.setSailing(true);
+        }, which);
+        await page.waitForTimeout(600);
+        const after = await page.evaluate(async (i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips, ship = ss.ships[i];
+            const { overlapOf, capsule } = await import('/src/world/SeaShips.js');
+            const { HULL } = await import('/src/world/Ship.js');
+            const me = gs.localPlayer.sprite, mine = gs.localPlayer.ship;
+            const o = overlapOf(capsule(me.x, me.y + 23, mine.heading, HULL.bow, HULL.stern, HULL.radius), ss.hullOf(ship)).overlap;
+            return { sailing: gs.localPlayer.sailing, overlap: o, pushed: Math.hypot(ship.push.x, ship.push.y), yours: Math.hypot(me.x - ship.x, me.y + 23 - ship.y) };
+        }, which);
+        expect(after.sailing).toBe(true);
+        expect(after.overlap).toBeLessThan(2);          // apart, not over each other
+        expect(after.pushed).toBeGreaterThan(4);        // she was knocked aside...
+        expect(after.yours).toBeGreaterThan(30);        // ...and you pushed back
     });
 
     test('a ship in sight leaves a wake', async ({ page }) => {
@@ -115,13 +155,14 @@ test.describe('Ships at sea', () => {
         // Set the ships' clock on to a moment one is under way in sight of Dunmere's shore
         const found = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips, me = gs.localPlayer.sprite;
-            const { at } = await import('/src/world/SeaShips.js');
+            const { at, pointAt } = await import('/src/world/SeaShips.js');
             const now = Date.now() / 1000;
             for (let ahead = 0; ahead < 3600; ahead += 5) {
                 for (const ship of ss.ships) {
                     const r = ss.lanes[ship.lane], w = at(r, ship, now + ahead);
                     if (w.waiting || w.speed < ship.speed * 0.8) continue;
-                    if (Math.hypot(r.x0 + r.ux * w.s - me.x, r.y0 + r.uy * w.s - me.y) < 400) {
+                    const p = pointAt(r, w.s);
+                    if (Math.hypot(p.x - me.x, p.y - me.y) < 700) {      // (lanes keep 7 tiles off your mooring, below the castle)
                         Object.defineProperty(ss, 'time', { get: () => Date.now() / 1000 + ahead });
                         return true;
                     }
@@ -131,52 +172,6 @@ test.describe('Ships at sea', () => {
         });
         expect(found).toBe(true);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').seaShips.foam.alive), { timeout: 15000 }).toBeGreaterThan(5);
-    });
-
-    test('your ship runs into them rather than over them: the two push each other apart', async ({ page }) => {
-        test.setTimeout(90000);
-        await enterWorld(page);
-        await go(page, DUNMERE);
-        await loaded(page);
-        // Hold the clock still, aboard your ship, sitting right on top of a ship in sight
-        const start = await page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips;
-            const frozen = ss.time;
-            Object.defineProperty(ss, 'time', { get: () => frozen });
-            const ship = ss.ships.find(s => s.sprite?.visible) || ss.ships[0];
-            const me = gs.localPlayer.sprite, r = ss.lanes[ship.lane];
-            // (to her, then let a frame draw her where she is)
-            me.setPosition(r.x0 + r.ux * r.length / 2, r.y0 + r.uy * r.length / 2);
-            me.body.reset(me.x, me.y);
-            return ss.ships.indexOf(ship);
-        });
-        await page.waitForTimeout(300);
-        const before = await page.evaluate((i) => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ship = gs.seaShips.ships[i];
-            gs.mooredShip.setPosition(ship.x + 6, ship.y);
-            gs.localPlayer.sprite.setPosition(ship.x + 6, ship.y - 23);
-            gs.setSailing(true);
-            return { x: ship.x, y: ship.y };
-        }, start);
-        await page.waitForTimeout(400);
-        const after = await page.evaluate((i) => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ss = gs.seaShips, ship = ss.ships[i];
-            const me = gs.localPlayer.sprite, mine = gs.localPlayer.ship;
-            const h = ss.hullOf(ship), c = Math.cos(mine.heading), s = Math.sin(mine.heading);
-            // the nearest the two hulls come now, less what they need between them
-            let gap = Infinity;
-            for (let a = 0; a <= 20; a++) for (let b = 0; b <= 20; b++) {
-                const px = me.x + c * 22 * (a / 10 - 1), py = me.y + 23 + s * 22 * (a / 10 - 1);
-                const qx = h.a.x + (h.b.x - h.a.x) * b / 20, qy = h.a.y + (h.b.y - h.a.y) * b / 20;
-                gap = Math.min(gap, Math.hypot(px - qx, py - qy) - 10 - h.radius);
-            }
-            return { sailing: gs.localPlayer.sailing, gap, pushed: Math.hypot(ship.push.x, ship.push.y), yours: Math.hypot(me.x - ship.x, me.y + 23 - ship.y) };
-        }, start);
-        expect(after.sailing).toBe(true);
-        expect(after.gap).toBeGreaterThan(-2);          // apart, not over each other
-        expect(after.pushed).toBeGreaterThan(4);        // she was knocked aside...
-        expect(after.yours).toBeGreaterThan(20);        // ...and you pushed back
-        expect(before).toBeTruthy();
     });
 
     test('they go, picture and all, when you head inland or into a place, and come back', async ({ page }) => {

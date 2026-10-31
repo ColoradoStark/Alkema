@@ -6,7 +6,7 @@ import { StageEffects } from '../creator/StageEffects.js';
 import { Overworld, wrap, wrapDelta } from '../world/Overworld.js';
 import { sortDepth } from '../world/Forest.js';
 import { WORLD } from '../world/places.js';
-import { Ship } from '../world/Ship.js';
+import { Ship, HULL } from '../world/Ship.js';
 import { Town, TOWNS, preloadTown, forgetFires, prefetchTown, mapTitle } from '../world/Town.js';
 import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
@@ -16,7 +16,7 @@ import { ActionBattle, loadDemons } from '../battle/ActionBattle.js';
 import { Encounters } from '../battle/Encounters.js';
 import { FieldDemons } from '../battle/FieldDemons.js';
 import { RiverBoats } from '../world/RiverBoats.js';
-import { SeaShips } from '../world/SeaShips.js';
+import { SeaShips, capsule } from '../world/SeaShips.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
@@ -25,7 +25,7 @@ const WALK_SPEED = 128;        // px a second (the user's: a fifth slower than t
 const EASE_IN_MS = 250;         // from standing to full speed, easing in (the user's)
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
 const HULL_HALF = 13;           // half the ship's collision box (26 x 26)
-const BOARD_REACH = 96;         // walk towards the ship from this close to go aboard
+const BOARD_REACH = 176;        // walk towards the ship from this close to go aboard (she's moored clear of the sand, nearly four tiles long)
 const SETTLE_MS = 600;          // just aboard, she won't put you ashore again (land right past her, in a narrow river)
 const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
@@ -156,14 +156,20 @@ export class GameScene extends Scene {
         this.fieldDemons.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         this.riverBoats.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
         this.seaShips.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
-        // Your ship runs into the ships at sea rather than over them: the two push each other apart
-        if (this.localPlayer?.sailing && this.seaShips.loaded) {
-            const me = this.localPlayer.sprite, ship = this.localPlayer.ship;
-            const push = this.seaShips.shove(me.x, me.y + FEET, ship.heading, (x, y) => this.world.isSailable(x, y));
-            if (push) {
-                me.setPosition(me.x + push.x, me.y + push.y);
-                me.body.reset(me.x, me.y);
-                ship.shoved(push.nx, push.ny);
+        // Your ship runs into the ships at sea rather than over them: the two push each other apart (at anchor,
+        // she doesn't move: they go round her)
+        if (this.seaShips.loaded && this.world === this.overworld) {
+            const hullAt = (s, x, y) => capsule(x, y, s.heading, HULL.bow, HULL.stern, HULL.radius);
+            if (this.localPlayer?.sailing) {
+                const me = this.localPlayer.sprite, ship = this.localPlayer.ship;
+                const push = this.seaShips.shove(hullAt(ship, me.x, me.y + FEET), (dx, dy) => this.world.isSailable(me.x + dx, me.y + FEET + dy));
+                if (push) {
+                    me.setPosition(me.x + push.x, me.y + push.y);
+                    me.body.reset(me.x, me.y);
+                    ship.shoved(push.nx, push.ny);
+                }
+            } else if (this.mooredShip?.sprite.visible) {
+                this.seaShips.shove(hullAt(this.mooredShip, this.mooredShip.x, this.mooredShip.y), () => false);
             }
         }
         // Walked into someone: story mode
@@ -249,7 +255,7 @@ export class GameScene extends Scene {
         // Dead ahead, or either side of the bow: on a slanting shore the hull
         // runs aground on land beside the bow while the water straight ahead is open
         // ...and a little further on, past a thin bank you couldn't stand on
-        for (const reach of [30, 46]) {
+        for (const reach of [56, 72]) {      // (her bow, as big as the ships at sea now, and a little past)
             for (const side of [0, -HULL_HALF, HULL_HALF]) {
                 const ahead = { x: me.x + ux * reach - uy * side, y: me.y + FEET + uy * reach + ux * side };
                 const footing = this.world.isSailable(ahead.x, ahead.y) ? null : this.world.footing(ahead.x, ahead.y);
