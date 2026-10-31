@@ -34,6 +34,9 @@ const PORTRAIT_NEAR = 192;      // a townsperson's painted portrait is fetched o
 const PREFETCH_AFTER_MS = 1500; // settled in a map, the maps behind its doors are fetched ahead (into the browser's cache)
 const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
 const BACK_OFF = 40;            // back from a fight, you stand this far from where the foe stood
+// Places seen closer, at the character creator's scale (the user's trial, Castle Dunmere first): every map of theirs
+const ZOOMED = { dunmere: 2 };
+const zoomFor = (key) => ZOOMED[key?.split('-')[0]] || 1;
 
 export class GameScene extends Scene {
     constructor() {
@@ -370,6 +373,7 @@ export class GameScene extends Scene {
             this._doorBehind = new Set(this.town.data.exits.filter(e => this.town.inExit(e, at.x, at.y + FEET)));
             if (this.town.data.name) this.scene.get('UIScene')?.notice?.(this.town.data.name, 2600);   // a dungeon level's name
             this.cameras.main.setBounds(0, 0, this.town.width, this.town.height);
+            this.cameras.main.setZoom(zoomFor(key));
             this.cameras.main.centerOn(at.x, at.y);
             this.cameras.main.fadeIn(FADE_MS);
             this._loadFolk(this.town);
@@ -411,6 +415,7 @@ export class GameScene extends Scene {
             this.encounters.setVisible(true);
             this.cameras.main.setBackgroundColor('#1d5d8c');
             this.cameras.main.removeBounds();
+            this.cameras.main.setZoom(1);
             this._arriveAt(at, 'down', res?.players);
             this.cameras.main.centerOn(at.x, at.y);
             this._place = place;     // standing at the gate: don't ask to go straight back in
@@ -461,6 +466,7 @@ export class GameScene extends Scene {
                 onWon: () => spot.town && this._loadTown(spot.town).catch(() => null) });     // (the level you'll be back on, as Victory! shows)
             const cam = this.cameras.main;
             cam.setBackgroundColor('#000000');
+            cam.setZoom(1);
             cam.stopFollow();
             this.localPlayer.nameText.setVisible(false);      // no names over the fight (it would cover the foe)
             this._arriveAt(this.battle.heroAt, 'up', res?.players);

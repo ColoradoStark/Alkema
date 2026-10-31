@@ -439,4 +439,38 @@ test.describe('Castle Dunmere', () => {
         await out;
         await expect.poll(card, { timeout: 2000 }).toBe(null);
     });
+
+    test("Dunmere is seen closer, at the creator's scale, and the world as it was (the user's trial); its night light stays on you", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const zoom = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').cameras.main.zoom);
+        expect(await zoom()).toBe(1);
+        await goTo(page, 'dunmere');
+        expect(await zoom()).toBe(2);
+        await goTo(page, 'dunmere-keep');
+        expect(await zoom()).toBe(2);
+        // By night, your own light is laid where you stand, zoomed as the world is (the light map is drawn over the screen)
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 0; });
+        await page.waitForTimeout(600);
+        const light = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), cam = gs.cameras.main, dn = gs.dayNight;
+            const me = gs.localPlayer.sprite, scale = dn.map.scaleX;
+            // Where the hero is on screen, and so on the map (zoomed about the screen's centre)
+            const sx = (me.x - cam.worldView.x) * cam.zoom, sy = (me.y - 20 - cam.worldView.y) * cam.zoom;
+            const at = (x, y) => { const mx = cam.width / 2 + (x - cam.width / 2) / cam.zoom, my = cam.height / 2 + (y - cam.height / 2) / cam.zoom; return [mx / scale, my / scale]; };
+            const px = ([x, y]) => new Promise(r => dn.map.snapshotPixel(Math.round(x), Math.round(y), c => r(c.red + c.green + c.blue)));
+            // ...and where it went before, from the zoomed view's corner: a quarter of the screen off towards its corner
+            const wrong = [(me.x - cam.worldView.x) / scale, (me.y - 20 - cam.worldView.y) / scale];
+            return { drawn: dn.drawn, onYou: await px(at(sx, sy)), wrong: await px(wrong), hero: dn.hero.strength };
+        });
+        expect(light.drawn).toBe(true);
+        expect(light.onYou).toBeGreaterThan(light.wrong);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+        // Out to the world, and into another town: as they were
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await expect.poll(zoom, { timeout: 10000 }).toBe(1);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => where(page), { timeout: 15000 }).toBe('riverhold');
+        expect(await zoom()).toBe(1);
+    });
 });

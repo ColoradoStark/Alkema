@@ -305,7 +305,9 @@ export class DayNight {
 
     /** Fill the light map with the hour's light and add every lamp in view. */
     _draw() {
-        const view = this.scene.cameras.main.worldView;
+        // The map is laid over the screen and zoomed with the camera about its centre, so a lamp goes
+        // where it is from the camera's scroll (its view's corner unzoomed), not the zoomed view's corner
+        const cam = this.scene.cameras.main, view = cam.worldView;
         const mx = view.centerX, my = view.centerY;
         const k = this.half ? 0.5 : 1;
         const a = this.ambient;
@@ -314,8 +316,8 @@ export class DayNight {
         for (const lamp of [...this.lamps, this.hero]) {
             if (lamp.strength < 0.02) continue;
             const r = lamp.def.radius;
-            const x = mx + wrapDelta(mx, lamp.x) - view.x, y = my + wrapDelta(my, lamp.y) - view.y;
-            if (x < -r || y < -r || x > view.width + r || y > view.height + r) continue;
+            const x = mx + wrapDelta(mx, lamp.x) - cam.scrollX, y = my + wrapDelta(my, lamp.y) - cam.scrollY;
+            if (x < -r || y < -r || x > cam.width + r || y > cam.height + r) continue;
             this.stamp.setTexture(glowTexture(this.scene, r)).setTint(lamp.def.colour).setAlpha(Math.min(1, lamp.strength * k)).setScale(r * 2 / GLOW_SIZE / SCALE);
             this.map.batchDraw(this.stamp, x / SCALE, y / SCALE);
         }
