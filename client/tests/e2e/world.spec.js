@@ -270,6 +270,8 @@ test.describe('Living world', () => {
             const boarded = gs.localPlayer.sailing && !me.visible;
             await hold(toShip, 2500);
             const atSea = gs.localPlayer.sailing && !gs.world.isWalkable(me.x, me.y + 23);
+            // Under way, foam washes off her sides and bow, as the ships at sea's does (the user's), and a wake astern
+            const foam = gs.localPlayer.ship.foam, wash = foam.wash.getAliveParticleCount() > 0, wake = foam.wake.getAliveParticleCount() > 0;
             // Let go: she keeps sailing on for a moment before she slows
             const [ox, oy] = DIRS[toShip], before = me.x * ox + me.y * oy;
             await wait(400);
@@ -279,10 +281,10 @@ test.describe('Living world', () => {
             for (let t = 0; t < 250 && gs.localPlayer.sailing; t++) await wait(100);
             keys[side] = false;
             await wait(150);
-            return { shore, boarded, atSea, coasts, ashore: !gs.localPlayer.sailing && gs.world.isWalkable(me.x, me.y + 23),
+            return { shore, boarded, atSea, wash, wake, coasts, ashore: !gs.localPlayer.sailing && gs.world.isWalkable(me.x, me.y + 23),
                      heroBack: me.visible, shipAtAnchor: gs.mooredShip.sprite.visible };
         });
-        expect(result).toEqual({ shore: true, boarded: true, atSea: true, coasts: true, ashore: true, heroBack: true, shipAtAnchor: true });
+        expect(result).toEqual({ shore: true, boarded: true, atSea: true, wash: true, wake: true, coasts: true, ashore: true, heroBack: true, shipAtAnchor: true });
     });
 
     test('the ship lands on a slanting shore: land beside the bow counts, not only dead ahead', async ({ page }) => {

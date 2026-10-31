@@ -6,6 +6,8 @@
 // few degrees, surges it on and eases it back, and pitches it gently. It
 // leaves a V of foam behind and ripples around it at rest.
 
+import { Foam } from './Foam.js';
+
 const MAX_SPEED = 210;      // px/s, flat out
 const ACCEL = 70;           // px/s² with the wind behind you
 const TURN = 1.7;           // rad/s at full speed
@@ -15,20 +17,14 @@ const DRAG_COASTING = 0.45; // ...and with the sails slack
 const SLIDE = 2;            // how quickly momentum follows the bow (per second)
 const STERN = 32;           // px from the centre back to the stern (the galleon drawn in Wesnoth's manner, tools/shipart.py; 40% smaller than the ships at sea, the user's)
 const BOW = 35;             // ...and forward to the bow
+const BEAM = 16;            // ...and out to either side
 export const HULL = { bow: 30, stern: 30, radius: 16 };    // her hull as a capsule, for meeting the ships at sea (SeaShips.shove)
 const WAKE_EVERY = 7;       // px travelled per set of wake puffs
 
 const TWO_PI = Math.PI * 2;
 const wrapAngle = a => ((a + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
 
-
-export function foamTexture(scene) {
-    if (scene.textures.exists('fx-foam')) return;
-    const g = scene.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(0xffffff, 1).fillRect(1, 0, 1, 3).fillRect(0, 1, 3, 1);
-    g.generateTexture('fx-foam', 3, 3);
-    g.destroy();
-}
+export { foamTexture } from './Foam.js';
 
 export class Ship {
     /** The ship's centre sits this far below its hidden captain's (where their feet are). */
@@ -43,18 +39,8 @@ export class Ship {
      */
     constructor(scene, x, y, depth, heading = 0) {
         this.scene = scene;
-        foamTexture(scene);
         this.sprite = scene.add.image(x, y, 'ship').setDepth(depth).setRotation(heading);
-        this._emitAngle = 0;
-        this.wake = scene.add.particles(0, 0, 'fx-foam', {
-            lifespan: { min: 900, max: 1700 },
-            speed: { min: 8, max: 24 },
-            angle: { onEmit: () => this._emitAngle + (Math.random() - 0.5) * 20 },
-            scale: { start: 1.6, end: 0.4 },
-            alpha: { start: 0.85, end: 0 },
-            tint: [0xffffff, 0xe6f2ff, 0xcbdbfc, 0x9bd5ef],
-            emitting: false,
-        }).setDepth(-9);
+        this.foam = new Foam(scene);       // (the ships at sea's own: a wake astern, a bow wave and wash off her sides)
         this.heading = heading;
         this.targetHeading = heading;
         this.speed = 0;
@@ -133,9 +119,8 @@ export class Ship {
         this.speed = this.vx = this.vy = 0;
     }
 
-    _emit(x, y, angleRad) {
-        this._emitAngle = angleRad * 180 / Math.PI;
-        this.wake.emitParticleAt(x, y, 1);
+    _emit(x, y, angleRad, kind = 'wake', count = 1) {
+        this.foam.emit(kind, x, y, angleRad, count);
     }
 
     /**
@@ -166,9 +151,13 @@ export class Ship {
                 this._emit(x - cos * STERN - sin * side * 7, y - sin * STERN + cos * side * 7, back + side * 0.75);
             }
             this._emit(x - cos * (STERN + 2), y - sin * (STERN + 2), back);
-            if (way > 0.55) {
-                const side = Math.random() < 0.5 ? -1 : 1;
-                this._emit(x + cos * BOW - sin * side * 3, y + sin * BOW + cos * side * 3, this.heading + side * 1.3);   // bow spray
+            // Under way, a bow wave pushed out either side and wash off her sides, as the ships at sea have (the user's)
+            if (way > 0.15) {
+                const at = (along, across) => [x + cos * along - sin * across, y + sin * along + cos * across];
+                for (const side of [-1, 1]) {
+                    this._emit(...at(BOW * 0.8, side * BEAM * 0.4), this.heading + side * 1.75, 'wash', way > 0.55 ? 2 : 1);
+                    this._emit(...at(0, side * BEAM), this.heading + side * 2.1, 'wash');
+                }
             }
         }
         // At rest, slow rings of ripple lap at the hull
@@ -189,6 +178,6 @@ export class Ship {
 
     destroy() {
         this.sprite.destroy();
-        this.wake.destroy();
+        this.foam.destroy();
     }
 }

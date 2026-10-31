@@ -1,9 +1,17 @@
-// Foam on the water for boats and ships sailing as scenery (RiverBoats.js,
-// SeaShips.js): `wake` drifting off a stern, `wash` spreading out wider from a
+// Foam on the water for boats and ships (RiverBoats.js, SeaShips.js, and your
+// own, Ship.js): `wake` drifting off a stern, `wash` spreading out wider from a
 // bow and a hull's sides, `splash` thrown quick and bright off an oar's blade.
 // Made with the boats, gone with them.
-import { foamTexture } from './Ship.js';
 import { DEPTH } from './Overworld.js';
+
+/** The little cross of foam every puff is drawn with. */
+export function foamTexture(scene) {
+    if (scene.textures.exists('fx-foam')) return;
+    const g = scene.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(0xffffff, 1).fillRect(1, 0, 1, 3).fillRect(0, 1, 3, 1);
+    g.generateTexture('fx-foam', 3, 3);
+    g.destroy();
+}
 
 const TINT = [0xffffff, 0xe6f2ff, 0xcbdbfc, 0x9bd5ef];
 
