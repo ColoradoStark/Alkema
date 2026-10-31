@@ -63,7 +63,7 @@ test.describe('Demons on the coast', () => {
         const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.bars, null, { timeout: 30000 });
-        const shown = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls._spellIcon?.frame.name);
+        const shown = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.spellFrame);
         const other = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), book = gs.scene.get('UIScene').spellbook;
             const rows = gs.cache.json.get('spell-icons-index').rows;

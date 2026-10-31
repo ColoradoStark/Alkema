@@ -7,6 +7,9 @@ import { audio } from '../audio/audio.js';
 const STICK_DEAD = 7;       // px from the pad's middle where the stick's still
 const STICK_REACH = 30;     // how far the thumb goes from the middle
 
+const ROUND = 'spell-round';    // the blue button's spell, made round
+const WEAPON_SCALE = 0.8;     // the attack button's sword as it always was: every weapon is drawn as long as it
+
 export class BottomControls {
     constructor(scene, { onAttack, onAbility, onTabChange }) {
         this.scene = scene;
@@ -192,15 +195,43 @@ export class BottomControls {
         this.scene.events.on('update', () => this._drawCooldown());
     }
 
-    /** The blue button shows a spell's icon (a frame of `key`), or its scroll again (null). */
+    /**
+     * The blue button shows a spell's icon (a frame of `key`), or its scroll again (null). The square
+     * painting is made round to fill the button (the user's: a box inside the circle looked bad): cut to
+     * the circle, its rim sinking into shadow, the button's ring over the seam (`ROUND`, made afresh
+     * for each spell and let go when it changes).
+     */
     showSpell(key, frame) {
         const button = this.abilityButton;
         if (!button) return;
         this._spellIcon?.destroy();
         this._spellIcon = null;
+        if (this.scene.textures.exists(ROUND)) this.scene.textures.remove(ROUND);
+        this.spellFrame = key ? frame : null;
         const scroll = button.list[1];
         if (key && this.scene.textures.exists(key)) {
-            this._spellIcon = this.scene.add.image(0, 0, key, frame).setDisplaySize(44, 44);
+            const size = button.getData('size'), r = size / 2;
+            const src = this.scene.textures.getFrame(key, frame);
+            const canvas = this.scene.textures.createCanvas(ROUND, size, size), ctx = canvas.getContext();
+            ctx.imageSmoothingEnabled = true;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(r, r, r - 1, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(src.source.image, src.cutX, src.cutY, src.cutWidth, src.cutHeight, 0, 0, size, size);
+            const shade = ctx.createRadialGradient(r, r, r * 0.7, r, r, r);
+            shade.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            shade.addColorStop(1, 'rgba(0, 0, 20, 0.7)');
+            ctx.fillStyle = shade;
+            ctx.fillRect(0, 0, size, size);
+            ctx.restore();
+            ctx.beginPath();
+            ctx.arc(r, r, r - 1.5, 0, Math.PI * 2);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(40, 40, 255, 0.9)';
+            ctx.stroke();
+            canvas.refresh();
+            this._spellIcon = this.scene.add.image(0, 0, ROUND);
             button.addAt(this._spellIcon, 2);
         }
         scroll?.setVisible(!this._spellIcon);
@@ -250,7 +281,7 @@ export class BottomControls {
 
         if (s.textures.exists(textureKey)) {
             icon = s.add.image(0, 0, textureKey, iconType === 'sword' ? s.cache.json.get('weapon-icons')?.unarmed ?? 0 : undefined);
-            icon.setScale(iconType === 'sword' ? 0.8 : 0.7);
+            icon.setScale(iconType === 'sword' ? WEAPON_SCALE : 0.7);
         } else {
             const label = iconType === 'sword' ? '⚔' : '📜';
             icon = s.add.text(0, 0, label, { fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
@@ -266,6 +297,7 @@ export class BottomControls {
         hitArea.on('pointerup', () => buttonContainer.setScale(1));
         hitArea.on('pointerout', () => buttonContainer.setScale(1));
         buttonContainer.setData('icon', icon);
+        buttonContainer.setData('size', size);
         return buttonContainer;
     }
 
@@ -279,7 +311,9 @@ export class BottomControls {
         if (!icon?.setFrame || !map) return;
         const kind = weapon?.item?.split('_').slice(0, 2).join('_');
         const frame = weapon ? map.items[`${weapon.item}:${weapon.variant}`] ?? map.items[weapon.item] ?? map.kinds[kind] ?? map.unarmed : map.unarmed;
-        icon.setFrame(frame);
+        // As long as the sword the button always had, its middle where the sword's was (weapons.json fit)
+        const [k, dx, dy] = map.fit?.[frame] || [1, 0, 0];
+        icon.setFrame(frame).setScale(WEAPON_SCALE * k).setPosition(dx * WEAPON_SCALE, dy * WEAPON_SCALE);
         this.weaponFrame = frame;
     }
 

@@ -157,10 +157,17 @@ test.describe('Spells in the real-time fight', () => {
         // Heal: mends you
         await asClass(page, 'cleric', 'heal');
         await stage(page, [176, 330], [176, 120]);
-        const low = await page.evaluate(() => { const life = window.__PHASER_GAME.scene.getScene('GameScene').battle.party[0].life; return (life.now = Math.ceil(life.max * 0.3)); });
+        // (after a frame or two: stage gives you 500, and the game sets your most hit points from your stats each frame,
+        // so set before it has, your 150 of 500 came back as full health, nothing to mend, whenever no frame fell between)
+        const low = await page.evaluate(async () => {
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const life = window.__PHASER_GAME.scene.getScene('GameScene').battle.party[0].life;
+            return (life.now = Math.ceil(life.max * 0.3));
+        });
         await blue(page);
         await expect.poll(async () => (await state(page)).life, { timeout: 5000 }).toBeGreaterThan(low);
-        expect((await state(page)).fx.some(k => k.startsWith('spell-fx-healing'))).toBe(true);
+        // (effects are noted a frame after they start: the heal can land between two)
+        await expect.poll(async () => (await state(page)).fx.some(k => k.startsWith('spell-fx-healing')), { timeout: 3000 }).toBe(true);
         expect((await state(page)).played).toContain('holy');
     });
 
