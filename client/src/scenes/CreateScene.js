@@ -307,7 +307,10 @@ export class CreateScene extends Scene {
         if (!this.scene.isActive() || this._joining) return;
 
         if (this._pending) {
-            // Something changed while we waited; show the newest state instead.
+            // Something changed while we waited; show the newest state instead. A dice roll is kept first,
+            // the change made on the hero it rolled: asked again while still rolling, the roll was thrown
+            // away and rolled again, the change with it (the user tapped a class and got a thief)
+            if (res?.ok && this.state.rolling) this.state.applyPreview(res.previewId, res.character, { identityChanged: true });
             this._pending = false;
             this._identityChange = this._identityChange || identity;
             this._requestPreview({ identityChanged: false });

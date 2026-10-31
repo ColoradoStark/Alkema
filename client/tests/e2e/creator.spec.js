@@ -335,6 +335,26 @@ test.describe('Character creator', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('world-ground-0'))).toBe(true);
     });
 
+    test("a class picked while the dice is still rolling is the class you get, on the hero it rolled (the user's: it came out a thief)", async ({ page }) => {
+        test.setTimeout(120000);
+        await page.goto('/');
+        await waitForPreview(page);
+        for (const cls of ['ranger', 'mage', 'cleric', 'warrior']) {
+            // A roll that goes to the server (nothing rolled ahead), and the class tapped while it's out
+            const before = await page.evaluate(() => {
+                const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+                s._prefetch = null;
+                return s.state.seed;
+            });
+            await page.locator('#cc-randomize').click();
+            await page.locator(`.cc-tile[data-id="${cls}"]`).click();
+            await page.waitForFunction(() => { const s = window.__PHASER_GAME.scene.getScene('CreateScene'); return !s._inFlight && !s._pending && s.figure?.visible; }, null, { timeout: 45000 });
+            const now = await creatorState(page);
+            expect(now.character.character_class, `tapped ${cls}`).toBe(cls);
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('CreateScene').state.seed), 'a new hero').not.toBe(before);
+        }
+    });
+
     test('after playing a hero, coming back shows that hero; the dice still rolls a new one', async ({ page }) => {
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });
