@@ -1294,6 +1294,28 @@ test.describe('Shadowstrike on the map', () => {
     });
 });
 
+test.describe('A blow holds the world only a moment', () => {
+    test("a blow landing as they go (a spell's, struck just as you go through a door) doesn't leave everything held still (the user had seen it)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await keepUp(page);
+        await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
+        const paused = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            const f = fd.foes.find(o => o.family === 'vanar' && o.foe.ready);
+            const from = { x: f.foe.x + 30, y: f.foe.y };
+            gs._changingRoom = true;        // (gone through a door: they're let go)
+            await new Promise(r => setTimeout(r, 200));
+            fd._strikeFoe(f, 1, from);      // (and the spell's blow lands)
+            await new Promise(r => setTimeout(r, 1500));
+            const paused = gs.anims.paused;
+            gs._changingRoom = false;
+            return paused;
+        });
+        expect(paused).toBe(false);
+    });
+});
+
 test.describe('Demons on the road, armed', () => {
     test('a demon walks and strikes with its weapon in hand (the oversized frames it is drawn in)', async ({ page }) => {
         test.setTimeout(120000);

@@ -290,13 +290,13 @@ export class FieldDemons {
         if (!this._near.size) return this.release();
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
-        if (!this.foes.length) return;
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             if (this._freeze <= 0) this.scene.anims.resumeAll();
             for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
             return;
         }
+        if (!this.foes.length) return;
         // A menu open (Upgrade, Equip, Items, a shop), the fight holds (the user's: upgrading, they were struck);
         // back from it, a moment before anything strikes you
         const menu = !!this.scene.scene.get('UIScene')?.gear?.visible;
@@ -438,9 +438,9 @@ export class FieldDemons {
     release() {
         this._warned?.clear();
         for (const fam of [...this._up]) this._dismiss(fam);
-        if (!this.bars) return;
-        this.scene.anims.resumeAll();
+        if (this._freeze > 0) this.scene.anims.resumeAll();        // (a hit-stop never outlives them)
         this._freeze = 0;
+        if (!this.bars) return;
         this.combo = 0;
         this.bars?.destroy();
         this.bars = null;
@@ -984,6 +984,13 @@ export class FieldDemons {
         else foe.halt();
     }
 
+    /** Everything holds a moment as a blow lands; none once they're gone (a spell's blow landing as you went through a door held the world still). */
+    _hitStop(ms = 55) {
+        if (this.over || this._freeze > 0) return;
+        this._freeze = ms;
+        this.scene.anims.pauseAll();
+    }
+
     /** It stops, and flashes red: its blow is coming. */
     _windup(f) {
         f.state = 'windup';
@@ -1141,7 +1148,7 @@ export class FieldDemons {
 // standing, foes, over, shots, sparks/motes/glints, _feet, _wet, _inside, _knock, _strikeFoe, _hurt, say.
 const BORROWED = [
     [ActionBattle, ['_aim', '_swing', '_shoot', '_launch', '_fly', '_bigSwing', '_nearestTo', '_dirOf', '_castNow', '_no', '_blow',
-        '_calm', '_statuses', '_mend', '_feet', '_hitStop']],
+        '_calm', '_statuses', '_mend', '_feet']],
     [Battle, ['_sparkle', '_rise', '_lightning', '_swell', '_shakeFor', '_live', '_fx', '_spellBlow']],
 ];
 for (const [from, names] of BORROWED) {
