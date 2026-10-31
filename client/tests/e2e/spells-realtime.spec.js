@@ -138,6 +138,9 @@ test.describe('Spells in the real-time fight', () => {
         for (const [cls, id, fx, sound] of SPELLS) {
             await asClass(page, cls, id);
             await stage(page, [176, 330], [176, 296]);
+            // (no magic back while it's measured: a point comes back every 3 s of a fight, its count carried from the
+            // spell before, and with the arrow slow to land under load one came back before the cost was read)
+            await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').battle._mpT = -60000; });
             const before = await state(page);
             await blue(page);
             await expect.poll(async () => (await state(page)).hp, { timeout: 5000, message: id }).toBeLessThan(before.max);

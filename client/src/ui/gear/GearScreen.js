@@ -15,7 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
-import { BUY, GODDESSES, GODDESS_FRAME, HEROES, MASTERY, MIGHT, RANKS, short } from '../../upgrades/Upgrades.js';
+import { GODDESSES, GODDESS_FRAME, HEROES, MASTERY, MAX, MIGHT, RANKS, short } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -90,7 +90,6 @@ export class GearScreen {
         this.spellbook = spellbook;
         this.upgrades = upgrades;
         this.equipTab = 'gear';
-        this.buyHowMany = 1;
         this.upgradeTab = 'upgrades';
         this.hero = hero;
         this.request = request;
@@ -645,9 +644,9 @@ export class GearScreen {
     }
 
     /**
-     * The heroes, as Clicker Heroes lists them (the user's): Strength of Arm, each goddess you've hired, and the
-     * next to hire, each with her level, what she gives you, her price for as many levels as the toggle says, and
-     * her boost once she's reached it; the best buy for its price aglow; the goddesses still to come, shadows.
+     * Strength of Arm and the goddesses, one at a time (the user's): the maxed ones sealed, done; the one you're
+     * on, what a level does in your own numbers, how far to maxing her, what that teaches, the one buy button;
+     * the rest shadows till the one before is maxed. Maxing one breaks her seal out and lights the next up.
      */
     _renderUpgrades(panel) {
         const up = this.upgrades?.();
@@ -656,64 +655,59 @@ export class GearScreen {
             return;
         }
         const inv = this.inventory;
-        const how = el('div', 'gear-buy-how');
-        how.append(el('span', 'gear-buy-how-label', { text: 'Buy' }));
-        for (const n of BUY) {
-            const b = el('button', `gear-buy-n${this.buyHowMany === n ? ' is-current' : ''}`, { type: 'button', text: n === 'max' ? 'Max' : `×${n}`, 'data-n': String(n) });
-            b.addEventListener('click', () => {
-                audio.play('page', { volume: 0.5 });
-                this.buyHowMany = n;
-                this.render();
-            });
-            how.append(b);
-        }
-        panel.append(how);
-
         const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
-        const best = up.best(true) || up.best();       // (what your essence buys best; or, short of everything, what to save for)
-        const shown = new Set(up.heroes().map(h => h.id));
+        const on = up.current;
+        let lit = null;
         for (const h of HEROES) {
-            const open = shown.has(h.id), level = up.level(h.id);
-            if (!open && h === MIGHT) continue;
-            const row = el('div', `gear-up${h.goddess ? ' is-goddess' : ''}${open ? '' : ' is-locked'}`, { 'data-up': h.id });
-            row.append(h.goddess ? this._goddessFace(h, open) : el('span', 'gear-icon gear-up-glyph gear-up-glyph--attack', { text: h.glyph }));
+            const level = up.level(h.id), maxed = up.maxed(h), here = h === on || h.id === on?.id;
+            const row = el('div', `gear-up${h.goddess ? ' is-goddess' : ''}${maxed ? ' is-maxed' : here ? ' is-current' : ' is-locked'}`
+                + `${this.justMaxed === h.id ? ' is-just-maxed' : ''}${this.justUnlocked === h.id ? ' is-unlocked' : ''}`, { 'data-up': h.id });
+            row.append(h.goddess ? this._goddessFace(h, maxed || here) : el('span', 'gear-icon gear-up-glyph gear-up-glyph--attack', { text: h.glyph }));
             const words = el('div', 'gear-up-words');
             const name = el('div', 'gear-up-name', { text: h.name });
-            if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
+            if (here) name.append(el('span', 'gear-up-level', { text: `${level}/${MAX}` }));
             words.append(name, el('div', 'gear-up-title', { text: h.title }));
-            if (open) {
-                const g = up.gives(h);
-                words.append(el('div', 'gear-up-gives', { text: level ? this._givesText(g, up.magic) : `Each level: ${this._givesText({ attack: h.power, hp: h.power * h.hp }, up.magic)}` }));
-                const b = up.nextBoost(h);
-                if (b?.ready) {
-                    const boost = el('button', `gear-up-boost${b.price > inv.essence ? ' is-dear' : ''}${best?.h.id === h.id && best.kind === 'boost' ? ' is-best' : ''}`, { type: 'button', 'data-boost': h.id });
-                    boost.append(el('span', 'gear-up-boost-what', { text: `×${b.times}${b.teaches ? ` · ${this._taught(b.teaches)}` : ''}` }), essence(b.price));
-                    boost.addEventListener('click', () => this._boost(h, b.price));
-                    words.append(boost);
-                } else if (b) words.append(el('div', 'gear-up-next-boost', { text: `×${b.times} at Lv ${b.at}${b.teaches ? `, and ${this._taught(b.teaches)}` : ''}` }));
-            } else words.append(el('div', 'gear-up-gives', { text: `🔒 Hire ${HEROES[HEROES.indexOf(h) - 1].name} first` }));
+            if (here) {
+                const bar = el('div', 'gear-up-bar');
+                const fill = el('span', 'gear-up-fill');
+                fill.style.width = `${Math.round(100 * level / MAX)}%`;
+                bar.append(fill);
+                words.append(bar);
+                const now = inv.stats, then = up.after(h.id);
+                const lines = [['Attack', now?.attack, then?.attack], ...(up.magic ? [['Spell power', now?.spell, then?.spell]] : []),
+                    ...(h.goddess ? [['Hit points', now?.hp.max, then?.hp.max]] : [])];
+                for (const [what, a, b] of lines) if (a != null && b != null) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
+                const r = up.teaches;
+                if (r) words.append(el('div', 'gear-up-reward', { text: `Max ${h.goddess ? 'her' : 'it'}: ${this._taught(r)}` }));
+            } else if (!maxed) {
+                const before = HEROES[HEROES.indexOf(h) - 1];
+                words.append(el('div', 'gear-up-gives', { text: `🔒 Max ${before.name} first` }));
+            }
             row.append(words);
-            if (open) {
-                const n = up.howMany(h, this.buyHowMany), price = up.cost(h, this.buyHowMany);
-                const buy = el('button', `gear-up-buy${best?.h.id === h.id && best.kind === 'level' ? ' is-best' : ''}`, { type: 'button', 'data-buy': h.id });
-                buy.append(el('span', 'gear-up-n', { text: level ? `+${n}` : 'Hire' }), essence(price));
+            if (maxed) row.append(el('span', 'gear-up-seal', { text: '✓ Maxed' }));
+            else if (here) {
+                const price = up.price();
+                const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': h.id });
+                buy.append(essence(price));
                 buy.classList.toggle('is-dear', price > inv.essence);
                 buy.addEventListener('click', () => this._buyUpgrade(h, price));
-                if (this.tutor && h.id === (best?.h || MIGHT).id) {     // (the tutorial's, the first time: an arrow on the button to tap)
+                if (this.justUnlocked === h.id) row.append(el('span', 'gear-up-ribbon', { text: 'Unlocked!' }));
+                if (this.tutor) {     // (the tutorial's, the first time: an arrow on the button to tap)
                     row.classList.add('is-tutor');
                     row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
                 }
                 row.append(buy);
+                lit = row;
             }
-            if (h === MIGHT) {
-                list.append(row);
-                list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
-            } else list.append(row);
+            list.append(row);
+            if (h === MIGHT) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
         }
         panel.append(list);
+        // (the one you're on in sight: newly unlocked, scrolled to)
+        if (lit && this.justUnlocked) requestAnimationFrame(() => lit.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }));
     }
 
-    /** A goddess's picture: her figure in its frame's lower middle; a shadow till she can be hired. */
+    /** A goddess's picture: her figure in its frame's lower middle; a shadow till she's reached. */
     _goddessFace(g, lit) {
         const face = el('span', `gear-goddess${lit ? '' : ' is-shadow'}`);
         face.style.backgroundPosition = `${-g.frame * GODDESS_FRAME * 2 - 12}px -40px`;
@@ -721,41 +715,32 @@ export class GearScreen {
         return face;
     }
 
-    /** +12 attack (and spell power), +36 HP. */
-    _givesText(g, magic) {
-        return [`+${short(g.attack)} ${magic ? 'attack and spell' : 'attack'}`, ...(g.hp ? [`+${short(g.hp)} HP`] : [])].join(', ');
-    }
-
-    /** What a boost teaches: "learn Frost Lance", "Fireball rank II". */
+    /** What maxing teaches: "learn Frost Lance", "Fireball rank II". */
     _taught(r) {
         return r.rank === 1 ? `learn ${r.spell.name}` : `${r.spell.name} rank ${RANK_NAMES[r.rank]}`;
     }
 
     _buyUpgrade(h, price) {
         const up = this.upgrades?.();
-        const res = up.buy(h.id, this.buyHowMany);
+        const res = up.buy(h.id);
+        this.justMaxed = this.justUnlocked = null;
         if (!res.ok) {
             audio.play('error', { volume: 0.5 });
             this.notice = res.error === 'poor' ? `${h.name} costs ${goldText(price)} essence.` : SAY[res.error] || '';
             return this.render();
         }
-        audio.play(res.hired && h.goddess ? 'reveal' : 'coins', { volume: 0.6, drift: 0 });
-        this.notice = res.hired && h.goddess ? `${h.name} answers your call!` : `${h.name} Lv ${up.level(h.id)}.`;
-        this.render();
-    }
-
-    _boost(h, price) {
-        const up = this.upgrades?.();
-        const res = up.boost(h.id);
-        if (!res.ok) {
-            audio.play('error', { volume: 0.5 });
-            this.notice = res.error === 'poor' ? `${h.name}'s boost costs ${goldText(price)} essence.` : SAY[res.error] || '';
-            return this.render();
+        if (res.maxed) {
+            // (an achievement: her seal, the next lit up, a fanfare)
+            audio.play('reveal', { volume: 0.9, drift: 0 });
+            this.justMaxed = h.id;
+            this.justUnlocked = res.next?.id || null;
+            this.notice = `${h.name} maxed!${res.next ? ` ${res.next.name} is unlocked.` : ''}`;
+            const r = res.learned;
+            if (r) this.notice += r.rank === 1 ? ` You've learned ${r.spell.name}! Equip it on Equip's Magic tab.` : ` ${r.spell.name} is rank ${RANK_NAMES[r.rank]} now.`;
+        } else {
+            audio.play('coins', { volume: 0.6 });
+            this.notice = `${h.name}: ${up.level(h.id)}/${MAX}.`;
         }
-        audio.play('reveal', { volume: 0.8, drift: 0 });
-        this.notice = `${h.name} is ${res.times} times as strong!`;
-        const r = res.learned;
-        if (r) this.notice += r.rank === 1 ? ` You've learned ${r.spell.name}! Equip it on Equip's Magic tab.` : ` ${r.spell.name} is rank ${RANK_NAMES[r.rank]} now.`;
         this.render();
     }
 

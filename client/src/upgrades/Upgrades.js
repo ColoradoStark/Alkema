@@ -1,42 +1,37 @@
-// Upgrades, as Clicker Heroes does them (the user's, October 2026, after three tries of our own: "a problem the
-// world solved ten or fifteen years ago"; its rules from its wiki: clickerheroes.fandom.com, Heroes, Formulas,
-// Upgrades). Its heroes are ours: Strength of Arm plays Cid (your own blows), the fifty goddesses the heroes each
-// hired after the last. A level costs GROW (1.07) times the last and adds the same again (`power`: attack and
-// spell power, `hp` times that in hit points), so a hero's worth for its price falls as you level her and the next,
-// HIRE_MORE times dearer and POWER_MORE times stronger, takes over: one levelled till the next is better, as the
-// user remembered. At her 10th, 25th, 50th and 75th levels a boost to buy (BOOSTS) doubles her (Clicker Heroes'
-// hero upgrades), every 25 levels from 200 she's four times stronger, and some boosts teach a spell (Clicker
-// Heroes' skills, `rewards`). Buy one, ten, twenty-five or as many as you can (BUY). Kept in the hero's save as
-// `upgrades` ({ hero id: level, `${hero id}+`: boosts bought, spell id: its level }).
+// Upgrades (the user's, after Clicker Heroes): Strength of Arm, then the fifty goddesses, one at a time, each
+// levelled till she's maxed (MAX) before the next can be hired (the user's, October 2026, having played Clicker
+// Heroes' own rules here: its power felt about right, but sixty buys in the first couple of waves, five goddesses
+// open at once and nothing ever finished was too much; a maxed one shows it, and the next lights up). A level of
+// Strength of Arm makes your attack (and spell power) TIMES what it was; a level of a goddess all of attack, spell
+// power and hit points GODDESS_TIMES (so either way your strength, attack times hit points, TIMES); every level
+// PATH_GROW dearer than the last, so what a pack up the climb pays buys two or three. Your class's spells come as
+// they're maxed (`rewards`, REWARD_AT). Kept in the hero's save as `upgrades` ({ hero id: level, spell id: its
+// level }).
 
 import { account } from '../account/account.js';
 
-export const GROW = 1.07;
-export const BUY = [1, 10, 25, 'max'];
-export const RANKS = [1, 10, 25];            // a spell's level at which each of its ranks is learned (taught by boosts)
+export const RANKS = [1, 10, 25];            // a spell's level at which each of its ranks is learned
 export const MASTERY = 50;                   // ...and its mastery, its fourth tier (not taught yet)
 const SPELL_BOOST = 0.05;                    // a spell's power, each level past its first
-/** A hero's boosts (Clicker Heroes' upgrades): at her level, for so many times her first level's price, her power times. */
-export const BOOSTS = [{ at: 10, price: 10, times: 2 }, { at: 25, price: 25, times: 2 }, { at: 50, price: 100, times: 2 }, { at: 75, price: 800, times: 2.5 }];
-export const HIRE_MORE = 5, POWER_MORE = 4;      // each goddess so much dearer than the last, and so much stronger
-const HP_PER = 3;                                // a goddess's hit points, for each point of her power
+export const MAX = 10;
+export const PATH_BASE = 30, PATH_GROW = 1.65;
+export const TIMES = 1.85;
+export const GODDESS_TIMES = Math.sqrt(TIMES);
 
-/** Strength of Arm, Cid's part: your own blows, and nothing else. */
-export const MIGHT = { id: 'might', name: 'Strength of Arm', glyph: '⚔', base: 5, power: 1, hp: 0, title: 'Your own blows' };
+/** Strength of Arm: your own blows. */
+export const MIGHT = { id: 'might', name: 'Strength of Arm', glyph: '⚔', title: 'Your own blows' };
 
-/** Guard, Fortune and Second Wind (not sold now: heroes from before keep what they bought, `per` a level). */
+/** Guard, Fortune and Second Wind (not sold now: heroes from before keep what they bought, so much a level). */
 const KEPT = { guard: 1, fortune: 3, breath: 4 };
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 /** The legends (not sold now: heroes from before keep theirs), each adding to everything. */
 export function legend(k) {
-    return { id: `legend-${k + 1}`, per: 3, legend: k };
+    return { id: `legend-${k + 1}`, legend: k };
 }
 
 /**
  * The goddesses (the user's: heroes to buy, after Clicker Heroes' long list of heroes; fifty, as the user asked):
- * `frame` her picture in /goddesses.png (tools/bake_goddesses.py, which follows this order). (Her `stats` say
- * what she's goddess of; every one gives attack, spell power and hit points, as every Clicker Heroes hero gives
- * damage.)
+ * `frame` her picture in /goddesses.png (tools/bake_goddesses.py, which follows this order). (Her `stats` say what
+ * she's goddess of; every one makes you stronger in attack, spell power and hit points alike.)
  */
 export const GODDESSES = [
     ['brigid', 'Brigid', 'of the Forge', ['attack']],
@@ -89,20 +84,19 @@ export const GODDESSES = [
     ['nut', 'Nut', 'of the Sky', ['all']],
     ['tiamat', 'Tiamat', 'of the Primordial Sea', ['attack', 'spell', 'hp']],
     ['gaia', 'Gaia', 'Mother of All', ['all']],
-].map(([id, name, title, stats], k) => ({ id: `goddess-${id}`, name, title, stats, goddess: true, frame: k,
-    base: 50 * HIRE_MORE ** k, power: 2 * POWER_MORE ** k, hp: HP_PER }));
+].map(([id, name, title, stats], k) => ({ id: `goddess-${id}`, name, title, stats, goddess: true, frame: k }));
 
 export const GODDESS_FRAME = 64;
 
-/** Everyone you level, in order. */
+/** Everyone, in the order they're hired. */
 export const HEROES = [MIGHT, ...GODDESSES];
 
 /**
- * Which boosts teach your class's spells (Clicker Heroes' skills, each on a hero's upgrade): the `k`th spell or
- * rank, every third goddess's first boost (the user's: half their spells in fifteen minutes was far too fast;
- * all of them should take a typical game's forty hours or so).
+ * How many must be maxed for each spell or rank you're taught (the user's: half their spells in the first wave of
+ * foes was far too fast; all of them should take a typical game's forty hours or so): the first once Strength of
+ * Arm is maxed, then one every third goddess maxed, the last of them far down the goddesses.
  */
-export const TEACHES = (k) => ({ hero: GODDESSES[3 * k]?.id, boost: 0 });
+export const REWARD_AT = (k) => (k ? 3 * k + 1 : 1);
 
 /** A big number as it reads: 9500, then 12.3K, 4.5M, 6B, 7T, 8Qa... and past those, 1.2e48. */
 const UNITS = ['K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid'];
@@ -127,13 +121,6 @@ export function rankAt(level) {
     return RANKS.filter(r => level >= r).length;
 }
 
-/** What `n` levels of a hero cost from `level` (each GROW times the last, rounded down, as Clicker Heroes'). */
-export function costOf(base, level, n = 1) {
-    let sum = 0;
-    for (let i = 0; i < n; i++) sum += Math.floor(base * GROW ** (level + i));
-    return sum;
-}
-
 export class Upgrades {
     /**
      * @param {object} opts
@@ -147,13 +134,13 @@ export class Upgrades {
         const saved = account.current?.data?.upgrades || {};
         this.levels = {};
         for (const [id, n] of Object.entries(saved)) if (Number.isFinite(n) && n > 0) this.levels[id] = Math.floor(n);
-        // (a hero from before the goddesses were Clicker Heroes' heroes: what they bought was reckoned other ways,
-        // so it's let go and they start the heroes afresh; the spells they know they keep)
-        if (account.current && account.current.data?.upgradesHeroes !== true) {
+        // (a hero from before the goddesses were hired one at a time: what they bought was reckoned other ways, so
+        // it's let go and they start afresh; the spells they know they keep)
+        if (account.current && account.current.data?.upgradesMaxed !== true) {
             for (const id of Object.keys(this.levels)) {
                 if (['might', 'vigour', 'focus'].includes(id) || id.startsWith('goddess-') || id.endsWith('+')) delete this.levels[id];
             }
-            account.updateProgress({ upgrades: { ...this.levels }, upgradesTimes: true, upgradesHeroes: true });
+            account.updateProgress({ upgrades: { ...this.levels }, upgradesTimes: true, upgradesHeroes: true, upgradesMaxed: true });
         }
         this.version = 0;
         this._listeners = new Set();
@@ -166,13 +153,12 @@ export class Upgrades {
             if (known) this.levels[spell.id] = Math.max(this.levels[spell.id] || 0, RANKS[known - 1]);
             return { id: spell.id, name: spell.name, spell };
         });
-        // What the boosts teach, in turn (TEACHES): the spells you don't start with, each new one with the rank
+        // What maxing teaches, in turn (REWARD_AT): the spells you don't start with, each new one with the rank
         // before it of the one before that (learn the second, rank the first up, learn the third...)
         this.rewards = list.flatMap((spell, i) => [1, 2, 3].map(rank => ({ spell, rank, k: i + 2 * (rank - 1) })))
             .filter(r => r.rank > 1 || r.spell.ranks[0].level > 1)
             .sort((a, b) => a.k - b.k)
-            .map((r, k) => ({ spell: r.spell, rank: r.rank, ...TEACHES(k) }))
-            .filter(r => r.hero);
+            .map((r, k) => ({ spell: r.spell, rank: r.rank, at: REWARD_AT(k) }));
         if (spellbook) spellbook.boost = (id) => this.spellBoost(id);
         this._teach();
     }
@@ -186,125 +172,81 @@ export class Upgrades {
             || (id.startsWith('legend-') ? legend(Number(id.slice(7)) - 1) : null);
     }
 
-    /** Can she be hired (or levelled): Strength of Arm and Brigid always, each goddess after once the one before her is. */
-    open(h) {
-        const k = GODDESSES.findIndex(g => g.id === h.id);
-        return k <= 0 || this.level(GODDESSES[k - 1].id) > 0;
+    /** How many are maxed: the one you're on is the next (HEROES.length: all of them). */
+    get done() {
+        const i = HEROES.findIndex(h => this.level(h.id) < MAX);
+        return i < 0 ? HEROES.length : i;
     }
 
-    /** Those you've hired, and the next to hire. */
-    heroes() {
-        return HEROES.filter(h => this.open(h));
+    /** The one you're on (null once every one is maxed). */
+    get current() {
+        return HEROES[this.done] || null;
     }
 
-    /** Her boosts bought, and the next ({ at, price (its essence), times, ready, teaches }) or null. */
-    boosts(h) {
-        return this.level(`${h.id}+`);
+    /** Maxed. */
+    maxed(h) {
+        return this.level(h.id) >= MAX;
     }
 
-    nextBoost(h) {
-        const b = BOOSTS[this.boosts(h)];
-        if (!b) return null;
-        return { ...b, price: h.base * b.price, ready: this.level(h.id) >= b.at, teaches: this.rewards.find(r => r.hero === h.id && r.boost === this.boosts(h)) || null };
+    /** What maxing the one you're on teaches, or null. */
+    get teaches() {
+        return this.rewards.find(r => r.at === this.done + 1) || null;
     }
 
-    /** How many times her power her boosts and her levels past 200 make it. */
-    times(h) {
+    /** What the next level costs (every level dearer than the last, whoever's it is). */
+    price() {
+        const bought = HEROES.reduce((n, h) => n + Math.min(MAX, this.level(h.id)), 0);
+        return Math.ceil(PATH_BASE * PATH_GROW ** bought);
+    }
+
+    /** What the next upgrade costs (what the field's essence and the healers' price are reckoned in). */
+    cheapest() {
+        return this.price();
+    }
+
+    /** Your stats with one more level of `id`: what buying it does. */
+    after(id) {
+        const base = this.inventory.stats?.base;
+        if (!base) return null;
+        this.levels[id] = this.level(id) + 1;
+        try {
+            return this.apply(base);
+        } finally {
+            if (--this.levels[id] === 0) delete this.levels[id];
+        }
+    }
+
+    /** Buy a level of the one you're on: { ok, price, maxed (she is now), next (who's unlocked), learned } or { ok: false, error }. */
+    buy(id) {
+        const h = this.current;
+        if (!h || h.id !== id) return { ok: false, error: HEROES.some(o => o.id === id) ? 'locked' : 'no-such-upgrade' };
+        const price = this.price();
+        if (this.inventory.essence < price) return { ok: false, error: 'poor', price };
+        this.inventory.essence -= price;
+        this.levels[id] = this.level(id) + 1;
+        const res = { ok: true, price, maxed: this.maxed(h) };
+        if (res.maxed) {
+            res.next = this.current;
+            res.learned = this.rewards.find(r => r.at === this.done) || null;
+        }
+        this._teach();
+        this._save();
+        this.inventory._save();       // (the essence spent; tells its listeners)
+        return res;
+    }
+
+    /** How many times stronger the upgrades make your attack (and spell power), and your hit points. */
+    times(stat) {
         let k = 1;
-        for (let i = 0; i < this.boosts(h); i++) k *= BOOSTS[i].times;
-        const level = this.level(h.id);
-        if (level >= 200) k *= 4 ** Math.floor((level - 175) / 25);
+        for (const h of HEROES) {
+            const level = Math.min(MAX, this.level(h.id));
+            if (!level) continue;
+            if (h === MIGHT) { if (stat !== 'hp') k *= TIMES ** level; } else k *= GODDESS_TIMES ** level;
+        }
         return k;
     }
 
-    /** What she adds now: { attack (and spell power), hp }. */
-    gives(h) {
-        const p = h.power * this.level(h.id) * this.times(h);
-        return { attack: p, hp: p * h.hp };
-    }
-
-    /** How many levels `n` buys (`max`: as many as your essence runs to, at least one). */
-    howMany(h, n) {
-        if (n !== 'max') return n;
-        let k = 0, sum = 0;
-        while (k < 10000) {
-            const next = costOf(h.base, this.level(h.id) + k);
-            if (sum + next > this.inventory.essence) break;
-            sum += next;
-            k++;
-        }
-        return Math.max(1, k);
-    }
-
-    cost(h, n = 1) {
-        return costOf(h.base, this.level(h.id), this.howMany(h, n));
-    }
-
-    /** Level her up `n` times (hiring her, the first): { ok, levels, price } or { ok: false, error }. */
-    buy(id, n = 1) {
-        const h = HEROES.find(t => t.id === id);
-        if (!h) return { ok: false, error: 'no-such-upgrade' };
-        if (!this.open(h)) return { ok: false, error: 'locked' };
-        const k = this.howMany(h, n), price = costOf(h.base, this.level(id), k);
-        if (this.inventory.essence < price) return { ok: false, error: 'poor', price };
-        const was = this.level(id);
-        this.inventory.essence -= price;
-        this.levels[id] = was + k;
-        this._changed();
-        return { ok: true, levels: k, price, hired: !was };
-    }
-
-    /** Buy her next boost: { ok, times, learned } or { ok: false, error }. */
-    boost(id) {
-        const h = HEROES.find(t => t.id === id), b = h && this.nextBoost(h);
-        if (!b) return { ok: false, error: 'no-such-upgrade' };
-        if (!b.ready) return { ok: false, error: 'locked' };
-        if (this.inventory.essence < b.price) return { ok: false, error: 'poor', price: b.price };
-        this.inventory.essence -= b.price;
-        this.levels[`${id}+`] = this.boosts(h) + 1;
-        this._changed();
-        return { ok: true, price: b.price, times: b.times, learned: b.teaches };
-    }
-
-    /** What's to buy now: a level of each you can level, each boost that's ready. */
-    _choices() {
-        return this.heroes().flatMap(h => {
-            const b = this.nextBoost(h);
-            return [{ h, kind: 'level', price: this.cost(h) }, ...(b?.ready ? [{ h, kind: 'boost', price: b.price }] : [])];
-        });
-    }
-
-    /** The cheapest thing to buy (what the field's essence and the healers' price are reckoned in). */
-    cheapest() {
-        return Math.min(...this._choices().map(c => c.price));
-    }
-
-    /**
-     * The best buy for its price (the most strength, attack times hit points, for its essence), shown so: what a
-     * Clicker Heroes player works out, the next hero overtaking the last (`affordable`: of what your essence
-     * buys now). Null without your stats, or with nothing to buy.
-     */
-    best(affordable = false) {
-        const base = this.inventory.stats?.base;
-        if (!base) return null;
-        const strength = () => {
-            const s = this.apply(base);
-            return s.attack * s.hp.max;
-        };
-        const now = strength();
-        let top = null;
-        for (const c of this._choices()) {
-            if (affordable && c.price > this.inventory.essence) continue;
-            const key = c.kind === 'level' ? c.h.id : `${c.h.id}+`;
-            this.levels[key] = this.level(key) + 1;
-            const gain = (strength() - now) / c.price;
-            if (--this.levels[key] === 0) delete this.levels[key];
-            if (!top || gain > top.gain) top = { ...c, gain };
-        }
-        return top;
-    }
-
-    /** What a track from before gives at its level: its `per` a level, doubled at each milestone. */
+    /** What a track from before gives at its level: so much a level, doubled at each milestone. */
     amount(per, level) {
         return per * level * 2 ** milestonesAt(level);
     }
@@ -336,34 +278,22 @@ export class Upgrades {
     /** The hero's stats with their upgrades: what the server reckoned from their race, class and gear, and these. */
     apply(base) {
         if (!base) return base;
-        let attack = 0, hp = 0;
-        for (const h of HEROES) {
-            if (!this.level(h.id)) continue;
-            const g = this.gives(h);
-            attack += g.attack;
-            hp += g.hp;
-        }
-        const all = this.legendary, life = Math.round((base.hp.max + hp) * all);
+        const all = this.legendary, life = Math.round(base.hp.max * this.times('hp') * all);
         return {
             ...base,
             hp: { now: life, max: life },
             mp: { ...base.mp },
-            attack: Math.round((base.attack + attack) * all),
+            attack: Math.round(base.attack * this.times('attack') * all),
             defence: base.defence + this.amount(KEPT.guard, this.level('guard')),
-            spell: Math.round((base.spell + attack) * all),
+            spell: Math.round(base.spell * this.times('attack') * all),
             base,
         };
     }
 
-    _changed() {
-        this._teach();
-        this._save();
-        this.inventory._save();       // (the essence spent; tells its listeners)
-    }
-
-    /** The spellbook knows each spell at the rank its track's level has reached (and what the boosts have taught). */
+    /** The spellbook knows each spell at the rank its track's level has reached (and what maxing has taught). */
     _teach() {
-        for (const r of this.rewards) if (this.level(`${r.hero}+`) > r.boost) this.levels[r.spell.id] = Math.max(this.level(r.spell.id), RANKS[r.rank - 1]);
+        const done = this.done;
+        for (const r of this.rewards) if (r.at <= done) this.levels[r.spell.id] = Math.max(this.level(r.spell.id), RANKS[r.rank - 1]);
         if (!this.book) return;
         let learned = false;
         for (const t of this.spellTracks) {
