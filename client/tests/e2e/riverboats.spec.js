@@ -27,7 +27,7 @@ const go = (page, [x, y]) => page.evaluate(([x, y]) => {
 const boats = (page) => page.evaluate(() => {
     const gs = window.__PHASER_GAME.scene.getScene('GameScene');
     return gs.riverBoats.boats.map(b => ({
-        x: b.sprite?.x, y: b.sprite?.y, heading: b.heading, waiting: b.wait > 0,
+        x: b.sprite?.x, y: b.sprite?.y, heading: b.heading, waiting: b.waiting, underWay: b.underWay,
         water: b.sprite ? !gs.overworld.isWalkable(b.sprite.x, b.sprite.y) : null,
     }));
 });
@@ -43,19 +43,19 @@ test.describe('River boats', () => {
         const after = await boats(page);
         expect(before.length).toBe(8);
         // both ways on each river
-        const ways = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.boats.map(b => [b.route, b.way]));
+        const ways = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.boats.map(b => [b.route, b.waiting ? -b.way : b.way]));
         for (const route of [0, 1]) expect(new Set(ways.filter(([r]) => r === route).map(([, w]) => w)).size, `route ${route}`).toBe(2);
         for (const [i, a] of after.entries()) {
             expect(a.water, `boat ${i} on the water`).toBe(true);
             const b = before[i];
             const moved = Math.hypot(a.x - b.x, a.y - b.y);
-            if (b.waiting || a.waiting) continue;
+            if (!b.underWay || !a.underWay) continue;          // (waiting at an end, or easing in or out of it)
             expect(moved, `boat ${i} under way`).toBeGreaterThan(20);
             // its bow is the way it went (give or take the swell and the bends)
             const dir = Math.atan2(a.y - b.y, a.x - b.x);
             expect(Math.cos(dir - a.heading), `boat ${i} faces its way`).toBeGreaterThan(0.8);
         }
-        const foam = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.wake.getAliveParticleCount());
+        const foam = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.foam.alive);
         expect(foam).toBeGreaterThan(5);
     });
 
@@ -67,10 +67,11 @@ test.describe('River boats', () => {
         const together = await page.evaluate(() => {
             const rb = window.__PHASER_GAME.scene.getScene('GameScene').riverBoats;
             let close = 0, steps = 0;
+            const start = Date.now() / 1000;
             for (let t = 0; t < 600; t += 0.1) {
-                for (const b of rb.boats) { b.last = null; rb._sail(b, 0.1); }       // (no foam while fast-forwarding)
+                for (const b of rb.boats) { b.last = null; rb._sail(b, 0.1, start + t); }       // (no foam while fast-forwarding)
                 steps++;
-                const moving = rb.boats.filter(b => b.wait <= 0);
+                const moving = rb.boats.filter(b => !b.waiting);
                 if (moving.some((a, i) => moving.slice(i + 1).some(c =>
                     Math.cos(a.heading - c.heading) > 0.5 && Math.hypot(a.sprite.x - c.sprite.x, a.sprite.y - c.sprite.y) < 150))) close++;
             }
@@ -123,7 +124,7 @@ test.describe('River boats', () => {
         await enterWorld(page);
         const state = () => page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return { picture: gs.textures.exists('river-boats'), drawn: gs.riverBoats.boats.filter(b => b.sprite).length, wake: !!gs.riverBoats.wake };
+            return { picture: gs.textures.exists('river-boats'), drawn: gs.riverBoats.boats.filter(b => b.sprite).length, wake: !!gs.riverBoats.foam };
         });
         await go(page, RIVERSIDE);
         await expect.poll(state, { timeout: 15000 }).toEqual({ picture: true, drawn: 8, wake: true });

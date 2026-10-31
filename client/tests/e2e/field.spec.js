@@ -17,6 +17,7 @@ async function enterWorld(page) {
 /** Put the hero's feet at (x, y). */
 const standAt = (page, x, y) => page.evaluate(([x, y]) => {
     const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+    gs.tweens.killTweensOf(me);         // (a knock back under way would carry you back to the fight, its 90 ms longer on a busy machine)
     me.setPosition(x, y - 23);
     me.body.reset(me.x, me.y);
     gs.cameras.main.centerOn(me.x, me.y);
@@ -1056,24 +1057,35 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
         const setUp = (dy) => page.evaluate(([i, dy]) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
             for (const o of fd.foes) if (o !== f) o.stun = 1e9;
-            Object.assign(f, { state: 'chase', cd: 0, flank: 0 });
+            Object.assign(f, { state: 'chase', cd: 0, flank: 0, stun: 0 });
             f.foe.sprite.setPosition(f.post.x, f.post.y - 23);
             me.setPosition(f.post.x, f.post.y + dy - 23);
             me.body.reset(me.x, me.y);
             fd.you.guard = 0;
         }, [chaser.i, dy]);
         await setUp(96);
+        // You step up out of its line the moment it winds up (in the same moment it's seen: a round trip to the
+        // browser between could let a quick windup's blow land first): its swing goes by
+        const hp = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now);
         const wound = await page.waitForFunction((i) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), f = gs.fieldDemons.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
-            return f.state === 'windup' && { dx: f.foe.x - me.x, dy: f.foe.y - (me.y + 23) };
-        }, chaser.i, { timeout: 10000 }).then(h => h.jsonValue());
+            if (f.state !== 'windup') return false;
+            const seen = { dx: f.foe.x - me.x, dy: f.foe.y - (me.y + 23), hp: window.__PHASER_GAME.scene.getScene('UIScene').hp.now };
+            me.setPosition(me.x, me.y - 40);
+            me.body.reset(me.x, me.y);
+            return seen;
+        }, chaser.i, { timeout: 10000, polling: 'raf' }).then(h => h.jsonValue());
         expect(Math.abs(wound.dy)).toBeLessThanOrEqual(12);
         expect(Math.abs(wound.dx)).toBeGreaterThan(20);
-        // You step up out of its line as it winds up: its swing goes by
-        const hp = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now);
-        const before = await hp();
-        await page.evaluate(() => { const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite; me.setPosition(me.x, me.y - 40); me.body.reset(me.x, me.y); });
-        await expect.poll(() => field(page).then(f => f.states[chaser.i]), { timeout: 5000 }).toBe('recover');
+        const before = wound.hp;
+        // Its swing goes by, and it's held there the moment it does (left be, it comes level again a moment later and
+        // strikes you stood still, as it should)
+        await page.waitForFunction((i) => {
+            const f = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i);
+            if (f.state !== 'recover') return false;
+            f.stun = 1e9;
+            return true;
+        }, chaser.i, { timeout: 5000, polling: 'raf' });
         await page.waitForTimeout(400);
         expect(await hp()).toBe(before);
         // Stood still, it lands

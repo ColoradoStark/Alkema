@@ -250,25 +250,34 @@ test.describe('Living world', () => {
             const me = gs.localPlayer.sprite;
             const wait = ms => new Promise(r => setTimeout(r, ms));
             const hold = async (dir, ms) => { keys[dir] = true; await wait(ms); keys[dir] = false; };
-            // Stand on the shore just north of the anchored ship, then walk down into it
+            // Stand on the beach beside the anchored ship, then walk into her
             const ship = gs.mooredShip;
-            const x = ship.x, y = Math.floor(ship.y / 32) * 32 - 32 + 16 - 23 + 6;
+            const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+            const AWAY = { up: 'down', down: 'up', left: 'right', right: 'left' };
+            let side = null, x = 0, y = 0;
+            for (let reach = 40; reach < 160 && !side; reach += 8) {
+                for (const [name, [dx, dy]] of Object.entries(DIRS)) {
+                    const fx = ship.x + dx * reach, fy = ship.y + dy * reach;
+                    if (!side && gs.world.isWalkable(fx, fy) && !gs.world.isSailable(fx, fy)) { side = name; x = fx; y = fy - 23; }
+                }
+            }
             me.setPosition(x, y);
             me.body.reset(x, y);
             await wait(150);
-            const shore = gs.world.isWalkable(x, y + 23);
-            await hold('down', 800);
+            const shore = !!side && gs.world.isWalkable(x, y + 23);
+            const toShip = AWAY[side];
+            await hold(toShip, 800);
             const boarded = gs.localPlayer.sailing && !me.visible;
-            await hold('down', 2500);
+            await hold(toShip, 2500);
             const atSea = gs.localPlayer.sailing && !gs.world.isWalkable(me.x, me.y + 23);
             // Let go: she keeps sailing on for a moment before she slows
-            const before = me.y;
+            const [ox, oy] = DIRS[toShip], before = me.x * ox + me.y * oy;
             await wait(400);
-            const coasts = me.y - before > 10;
-            // Come about and sail back north until she runs ashore
-            keys.up = true;
+            const coasts = me.x * ox + me.y * oy - before > 10;
+            // Come about and sail back to the beach until she runs ashore
+            keys[side] = true;
             for (let t = 0; t < 250 && gs.localPlayer.sailing; t++) await wait(100);
-            keys.up = false;
+            keys[side] = false;
             await wait(150);
             return { shore, boarded, atSea, coasts, ashore: !gs.localPlayer.sailing && gs.world.isWalkable(me.x, me.y + 23),
                      heroBack: me.visible, shipAtAnchor: gs.mooredShip.sprite.visible };
@@ -418,7 +427,7 @@ test.describe('Living world', () => {
         expect(result).toEqual({ inView: true, near: true, walkToCave: false });
     });
 
-    test('every place on the mainland can be walked to, and the boat waits by the port', async ({ page }) => {
+    test('every place on the mainland can be walked to, and your ship waits by Castle Dunmere', async ({ page }) => {
         await enterWorld(page);
         const result = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -442,11 +451,11 @@ test.describe('Living world', () => {
             const onFoot = flood(start, j => !blocked[j]);
             const mainland = flood(start, j => !sail[j]);          // all the land joined to the start, rock and all
             const stranded = WORLD.places.filter(p => mainland[tile(p)] && !onFoot[tile(p)]).map(p => p.name);
-            const port = WORLD.places.find(p => p.name === 'Saltmere');
-            const boatFromPort = Math.round(Math.hypot(WORLD.boat.x - port.x, WORLD.boat.y - port.y) / 32);
-            return { stranded, boatByThePort: boatFromPort <= 6 };
+            const castle = WORLD.places.find(p => p.name === 'Castle Dunmere');
+            const boatFromCastle = Math.round(Math.hypot(WORLD.boat.x - castle.x, WORLD.boat.y - castle.y) / 32);
+            return { stranded, boatByDunmere: boatFromCastle <= 8 };
         });
-        expect(result).toEqual({ stranded: [], boatByThePort: true });
+        expect(result).toEqual({ stranded: [], boatByDunmere: true });
     });
 
     test('a moored ship rides at anchor: she bobs, but stays where she was left', async ({ page }) => {

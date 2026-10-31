@@ -20,6 +20,14 @@ async function enterWorld(page) {
     }, null, { timeout: 60000 });
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
+    // Alone in the world: the other tests' heroes, playing at the same time on the same server, would be held here
+    // too, coming and going as they please (only the strangers a test brings in itself are let in)
+    await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        const add = gs.addPlayer.bind(gs);
+        gs.addPlayer = (data, ...rest) => (String(data?.id).startsWith('stranger-') ? add(data, ...rest) : undefined);
+        for (const [id, player] of [...gs.players]) if (player !== gs.localPlayer) gs.removePlayer(id);
+    });
     // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
@@ -30,6 +38,14 @@ async function enterWorld(page) {
         gs.cameras.main.centerOn(6320, 11120);
     });
 }
+
+/** Keep the hero standing among foes on the world (as field.spec.js does): felled, you come to by Castle Dunmere, among
+ * the demons and the Vanar, and everything there stays held where the test thinks you've walked away. */
+const keepUp = (page) => page.evaluate(() => {
+    const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
+    if (stats && !(stats.hp?.max >= 100000)) Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 100000 }, configurable: true, writable: true });
+    ui.hp.max = Math.max(ui.hp.max, 100000); ui.hp.now = ui.hp.max;
+});
 
 /** Pictures held, decoded (MB), and painted portraits and voice clips held. */
 const held = (page) => page.evaluate(() => {
@@ -48,13 +64,18 @@ const held = (page) => page.evaluate(() => {
     return { mb: bytes / 2 ** 20, portraits: portraitsHeld() };
 });
 
-/** What's held once it stops changing (your own oversized frames are cut a moment after your sheet comes). */
+/** What's held once it stops changing and nothing's still coming (your own oversized frames are cut a moment after your
+ * sheet comes; the boats and ships by where you stand load as you arrive, and on a busy machine may take a while). */
 async function settled(page) {
+    const idle = () => page.evaluate(() => {
+        const load = window.__PHASER_GAME.scene.getScene('GameScene').load;
+        return !load.isLoading() && load.list.size === 0 && load.inflight.size === 0;
+    });
     let last = await held(page);
     for (;;) {
         await page.waitForTimeout(1000);
         const now = await held(page);
-        if (Math.abs(now.mb - last.mb) < 0.01) return now;
+        if (Math.abs(now.mb - last.mb) < 0.01 && await idle()) return now;
         last = now;
     }
 }
@@ -238,6 +259,7 @@ test.describe('Memory', () => {
     test("the demons and orcs on the coast: their packs on three sheets (with their weapons) and five Wesnoth ones, under budget, and let go when you leave the coast", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
+        await keepUp(page);
         const base = await settled(page);
         const go = (x, y) => page.evaluate(([x, y]) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
@@ -267,6 +289,7 @@ test.describe('Memory', () => {
     test("Duelyst's Vanar north of Dunmere: thirty on the grotto's six sheets, under budget, and let go when you leave their road", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
+        await keepUp(page);
         const go = (x, y) => page.evaluate(([x, y]) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
             me.setPosition(x, y);
@@ -318,6 +341,33 @@ test.describe('Memory', () => {
         expect(own).toBeLessThan(1);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('river-boats'))).toBe(false);
+    });
+
+    test("the ships at sea: their picture comes as you near the coast and goes when you head inland", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        const ships = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').seaShips.loaded);
+        await go(6320, 11120);             // the road below Riverhold, far from the sea
+        await expect.poll(ships).toBe(false);
+        const base = await settled(page);
+        await go(10928, 10224);            // Castle Dunmere's drawbridge, by the sea
+        await expect.poll(ships, { timeout: 15000 }).toBe(true);
+        const own = await page.evaluate(() => {
+            const s = window.__PHASER_GAME.textures.get('sea-ships').source[0];
+            return s.width * s.height * 4 / 2 ** 20;
+        });
+        await go(6320, 11120);
+        await expect.poll(ships).toBe(false);
+        const after = await settled(page);
+        console.log('the ships at sea', +own.toFixed(2), 'MB');
+        expect(own).toBeLessThan(1);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('sea-ships'))).toBe(false);
     });
 
     test("other players' sheets come with them and go when they leave", async ({ page }) => {

@@ -169,6 +169,13 @@ rowboat, by the Wesnoth artists, grown and turned the way they go.
   License: GNU GPL version 2 or later
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/scenery
 
+Your ship and the ships at sea are The Battle for Wesnoth's Merchant
+Carrack, Coastal Raider, Iron Raider and Pirate Carrack, by the Wesnoth
+artists, their team colour painted in LPC cloth, grown, mirrored and
+leaning the way they sail.
+  License: GNU GPL version 2 or later
+  https://github.com/wesnoth/wesnoth/tree/master/data/core/images/units/transport
+
 
 ======================================================================
 RIVERHOLD (THE TOWN)
@@ -787,7 +794,7 @@ WORLD MAP TILES
 
 The overworld (assets/world/) is assembled by tools/worldgen.py from
 these LPC tiles (the source sheets and their full credit files are in
-tools/worldgen-sources/). Its mountains, place icons, bridges and ship are
+tools/worldgen-sources/). Its mountains, place icons and bridges are
 drawn for Alkema in tools/worldart.py, in colours sampled from the LPC art.
 
 LPC Base Assets (grass, water, river banks, trees)

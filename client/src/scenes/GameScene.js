@@ -16,6 +16,7 @@ import { ActionBattle, loadDemons } from '../battle/ActionBattle.js';
 import { Encounters } from '../battle/Encounters.js';
 import { FieldDemons } from '../battle/FieldDemons.js';
 import { RiverBoats } from '../world/RiverBoats.js';
+import { SeaShips } from '../world/SeaShips.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
@@ -104,13 +105,16 @@ export class GameScene extends Scene {
         this.fieldDemons = new FieldDemons(this);
         // Boats going up and down the rivers round Riverhold (scenery)
         this.riverBoats = new RiverBoats(this);
+        // Ships going by off the coasts (scenery)
+        this.seaShips = new SeaShips(this);
         this.events.once('shutdown', () => {
             this.encounters.destroy();
             this.fieldDemons.destroy();
             this.riverBoats.destroy();
+            this.seaShips.destroy();
         });
-        // Your ship, at anchor off the port of Saltmere, bow out to sea
-        this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
+        // Your ship, at anchor off Castle Dunmere, bow out to sea
+        this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, WORLD.boat.heading ?? Math.PI / 2);
         // Ships follow their captains after the physics step, so they never lag a frame
         this.events.on('postupdate', (time, delta) => {
             const dt = delta / 1000;
@@ -151,6 +155,7 @@ export class GameScene extends Scene {
         this.updateEncounters(feet);
         this.fieldDemons.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         this.riverBoats.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
+        this.seaShips.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
         // Walked into someone: story mode
         if (this.town?.bumped) {
             this.scene.get('UIScene')?.talkTo(this.town.bumped);
@@ -260,7 +265,6 @@ export class GameScene extends Scene {
             const ship = player.ship;
             this.mooredShip.heading = this.mooredShip.targetHeading = ship.heading;
             this.mooredShip.setPosition(ship.x, ship.y).setVisible(true);
-            this.mooredShip.sprite.setRotation(ship.heading);
             me.setPosition(shore.x, shore.y - FEET);
             me.body.setSize(18, 10, false).setOffset(-9, 18);
             player.setSailing(false);
