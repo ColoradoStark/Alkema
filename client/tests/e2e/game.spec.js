@@ -369,7 +369,8 @@ test.describe('Multiplayer', () => {
 
 test.describe('Test characters page', () => {
     test('test-characters page loads and generates characters', async ({ page }) => {
-        await page.goto('http://localhost:8000/test-characters');
+        // (on a preview, tools/preview/test.sh's BASE_URL, the API is behind /api as in production)
+        await page.goto(process.env.BASE_URL ? '/api/test-characters' : 'http://localhost:8000/test-characters');
         await expect(page.locator('body')).toContainText('Character', { timeout: 10000 });
     });
 });
