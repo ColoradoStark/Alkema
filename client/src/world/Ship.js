@@ -19,7 +19,7 @@ const WAKE_EVERY = 7;       // px travelled per set of wake puffs
 const TWO_PI = Math.PI * 2;
 const wrapAngle = a => ((a + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
 
-function foamTexture(scene) {
+export function foamTexture(scene) {
     if (scene.textures.exists('fx-foam')) return;
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(0xffffff, 1).fillRect(1, 0, 1, 3).fillRect(0, 1, 3, 1);

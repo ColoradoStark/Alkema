@@ -15,6 +15,7 @@ import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js
 import { ActionBattle, loadDemons } from '../battle/ActionBattle.js';
 import { Encounters } from '../battle/Encounters.js';
 import { FieldDemons } from '../battle/FieldDemons.js';
+import { RiverBoats } from '../world/RiverBoats.js';
 import { OVER_TREES, forgetFoe } from '../battle/Foe.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
@@ -101,9 +102,12 @@ export class GameScene extends Scene {
         this.companions = [...PARTY];      // who fights beside you (Battle.js PARTY: the user's cleric, mage and ranger)
         // Demons on the coast, fought where they stand (the user's prototype: the real-time fight on the world itself)
         this.fieldDemons = new FieldDemons(this);
+        // Boats going up and down the rivers round Riverhold (scenery)
+        this.riverBoats = new RiverBoats(this);
         this.events.once('shutdown', () => {
             this.encounters.destroy();
             this.fieldDemons.destroy();
+            this.riverBoats.destroy();
         });
         // Your ship, at anchor off the port of Saltmere, bow out to sea
         this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, Math.PI / 2);
@@ -146,6 +150,7 @@ export class GameScene extends Scene {
         this.updatePortraits(time, feet);
         this.updateEncounters(feet);
         this.fieldDemons.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
+        this.riverBoats.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
         // Walked into someone: story mode
         if (this.town?.bumped) {
             this.scene.get('UIScene')?.talkTo(this.town.bumped);

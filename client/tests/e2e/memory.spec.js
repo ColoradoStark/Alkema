@@ -292,6 +292,34 @@ test.describe('Memory', () => {
             .filter(k => window.__PHASER_GAME.textures.exists(k === 'spell-fx' ? k : `foe-${k}`)))).toEqual([]);
     });
 
+    test("the river boats round Riverhold: their picture comes as you near the river and goes when you leave it", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        const boats = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.loaded);
+        await go(10928, 10224);            // Castle Dunmere's drawbridge, far from any river
+        await expect.poll(boats).toBe(false);
+        const base = await settled(page);
+        await go(6320, 11120);             // the road below Riverhold, by the river
+        await expect.poll(boats, { timeout: 15000 }).toBe(true);
+        // (Dunmere's stretch holds more than the riverside's, so it's the boats' own picture that's weighed)
+        const own = await page.evaluate(() => {
+            const s = window.__PHASER_GAME.textures.get('river-boats').source[0];
+            return s.width * s.height * 4 / 2 ** 20;
+        });
+        await go(10928, 10224);
+        await expect.poll(boats).toBe(false);
+        const after = await settled(page);
+        console.log('the river boats', +own.toFixed(2), 'MB');
+        expect(own).toBeLessThan(1);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('river-boats'))).toBe(false);
+    });
+
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);
