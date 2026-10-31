@@ -95,7 +95,11 @@ const FALL_MS = 1600;
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
-const ROUTE_CELL = 16, ROUTE_REACH = 12 * TILE, ROUTE_MS = 5000;      // stuck, it looks for a way round this far about, and follows it this long
+const ROUTE_CELL = 16, ROUTE_REACH = 16 * TILE;       // with rock between, it finds a way round on a grid this fine, this far about
+const CLEAR_MS = 300, ROUTE_EVERY = 1000;       // it looks whether the way's straight this often, and finds a new way round at most this often
+const GIVE_UP_MS = 8000;        // after you this long getting no nearer and no blow at you, it gives up and goes home
+const HOME_STUCK_MS = 4000;     // going home this long getting no nearer, it's put back at its post (never seen stuck)
+const MENU_GRACE_MS = 1200;     // back from a menu, you've this long before anything strikes you
 const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // ways along a wall, tried in turn
 
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
@@ -292,6 +296,24 @@ export class FieldDemons {
             for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
             return;
         }
+        // A menu open (Upgrade, Equip, Items, a shop), the fight holds (the user's: upgrading, they were struck);
+        // back from it, a moment before anything strikes you
+        const menu = !!this.scene.scene.get('UIScene')?.gear?.visible;
+        if (menu !== !!this._held) {
+            this._held = menu;
+            for (const f of this.foes) {
+                if (f.hp <= 0) continue;
+                if (menu && f.state === 'windup') {
+                    f.state = 'recover';
+                    f.t = 300;
+                    f.foe.tint(null);
+                }
+                if (menu) f.foe.halt();
+                else f.cd = Math.max(f.cd, MENU_GRACE_MS);
+            }
+            if (!menu) this.you.guard = Math.max(this.you.guard, MENU_GRACE_MS);
+        }
+        if (menu) return;
         const dt = Math.min(delta, 50) / 1000;
         this.you.guard = Math.max(0, this.you.guard - delta);
         const me = this.scene.localPlayer;
@@ -533,6 +555,8 @@ export class FieldDemons {
         f.state = 'chase';
         f.lookT = LOOK_MS[1];
         f.lost = false;
+        f.clearT = 0;
+        f.idle = null;
     }
 
     _slay(f) {
@@ -628,10 +652,10 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
-            if (d <= AGGRO) {
+            if (d <= AGGRO && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
                 this._rouse(f.pack);
-            } else return this._home(f, dt, fromPost);
+            } else return this._home(f, dt, fromPost, delta);
         }
         // Now and then, chasing, it looks how far off you've got
         if ((f.lookT = (f.lookT ?? 0) - delta) <= 0) {
@@ -642,7 +666,10 @@ export class FieldDemons {
             f.lost = false;
             if (f.state === 'windup') foe.tint(null);
             f.state = 'home';
-            return this._home(f, dt, fromPost);
+            f.idle = null;
+            f.route = null;
+            f.clearT = 0;
+            return this._home(f, dt, fromPost, delta);
         }
         const dx = you.x - foe.x, dy = you.y - foe.y, u = d || 1;
         if (f.state === 'windup') {
@@ -657,11 +684,22 @@ export class FieldDemons {
             if (f.t <= 0) f.state = 'chase';
             return this._step(f, 0, 0, dt);
         }
-        if (this._routing(f, you, d, dt, delta)) return;
+        // Rock or water between it and you: round by the map (no way at all, or getting nowhere a long while: home)
+        const way = this._way(f, you, delta, dt);
+        if (way === 'none' || this._idle(f, d, delta)) {
+            f.lookT = LOOK_MS[1];      // (not looked at again, and found near enough, before it's turned for home)
+            f.lost = true;
+            f.calm = GIVE_UP_MS / 2;        // (and isn't roused again at once, there being no way to you)
+            return;
+        }
+        if (way) return;
+        // (walking into rock on its way round to a side or a place of its role's: straight at you a while)
+        if (this._stuck(f, delta)) this._corner(f);
+        if (f.cornered > 0 && !f.spec.side) f.cornered -= delta;
         if (f.spec.ranged) {
             // A warlock keeps its distance, backing off facing you (turning to walk away and back to you
             // every frame, it flickered on the spot), and throws fire when it's ready, whoever else is at you
-            if (d < f.spec.keep - 30) this._step(f, -dx / u, -dy / u, dt, 0.8, you);
+            if (d < f.spec.keep - 30 && !(f.cornered > 0)) this._step(f, -dx / u, -dy / u, dt, 0.8, you);
             else if (d > f.spec.keep + 40) this._step(f, dx / u, dy / u, dt);
             else {
                 this._step(f, 0, 0, dt);
@@ -672,7 +710,7 @@ export class FieldDemons {
         }
         const free = this.foes.filter(o => o.state === 'windup' && !o.spec.ranged).length < ATTACKERS;
         // Coming at you its own way (its role), till it's close
-        const goal = this._goal(f, you, d, free, delta);
+        const goal = f.cornered > 0 ? null : this._goal(f, you, d, free, delta);
         if (goal) {
             const gx = goal.x - foe.x, gy = goal.y - foe.y, g = Math.hypot(gx, gy);
             if (g > 6) return this._step(f, gx / g, gy / g, dt, goal.pace || 1, goal.face ? you : null);
@@ -680,7 +718,7 @@ export class FieldDemons {
             return foe.face(you.x, you.y);
         }
         if (f.spec.side && !(f.cornered > 0)) return this._flank(f, you, d, free, dt, delta);
-        if (f.cornered > 0) f.cornered -= delta;
+        if (f.cornered > 0 && f.spec.side) f.cornered -= delta;
         if (d <= f.spec.reach) {
             this._step(f, 0, 0, dt);
             foe.face(you.x, you.y);
@@ -793,45 +831,70 @@ export class FieldDemons {
     }
 
     /**
-     * Walking and getting nowhere (rock between, the way round not straight: the user's foe stood on a ledge above
-     * them), it finds a way round to you on the world's map and follows it a while; with no way to you at all, it
-     * gives up and goes home. True while it's following one.
+     * Rock, water or a wall between it and `to` (feet; looked at every CLEAR_MS), it goes round by the world's
+     * map, a way found and kept while it still leads there (the user's, again and again: one stood stuck on a
+     * ledge above them, the great bear by Castle Dunmere's moat). True while it's going round; 'none' if
+     * there's no way at all; false if the way's straight (its own mind takes it from there).
      */
-    _routing(f, you, d, dt, delta) {
+    _way(f, to, delta, dt, pace = 1) {
         const { foe } = f;
-        if (f.route) {
-            f.routeT -= delta;
-            while (f.route.length && Math.hypot(f.route[0].x - foe.x, f.route[0].y - foe.y) < 10) f.route.shift();
-            if (!f.route.length || f.routeT <= 0 || d < (f.spec.reach || 40) + 20) f.route = null;
-            else {
-                const to = f.route[0], gx = to.x - foe.x, gy = to.y - foe.y, g = Math.hypot(gx, gy);
-                this._step(f, gx / g, gy / g, dt);
-                return true;
+        // (in rock, pushed there: straight on, walking out; or where it's going isn't ground, a ship's deck: straight on, as near as it can)
+        if (!this._open(foe.x, foe.y) || !this._open(to.x, to.y)) return false;
+        if ((f.clearT = (f.clearT || 0) - delta) <= 0) {
+            f.clearT = CLEAR_MS;
+            f.clear = this._straight(foe, to);
+            f.routeAge = (f.routeAge || 0) + CLEAR_MS;
+            if (f.clear) f.route = null;
+            else if (!f.route || (f.routeAge >= ROUTE_EVERY && Math.hypot(f.routeTo.x - to.x, f.routeTo.y - to.y) > 2 * TILE)) {
+                f.route = this._route(foe, to);
+                f.routeTo = { x: to.x, y: to.y };
+                f.routeAge = 0;
+                if (!f.route) return 'none';
             }
         }
-        // (stuck: trying to walk, it's gone less than a step in STALL_MS)
-        if (!foe.walking || d < (f.spec.keep || f.spec.reach || 40) + 30) {
-            f.stuckT = 0;
-            f.stuckAt = null;
+        if (f.clear || !f.route) return false;
+        while (f.route.length && Math.hypot(f.route[0].x - foe.x, f.route[0].y - foe.y) < 6) f.route.shift();
+        if (!f.route.length) {
+            f.route = null;
+            f.clearT = 0;
             return false;
         }
-        if (!f.stuckAt || Math.hypot(foe.x - f.stuckAt.x, foe.y - f.stuckAt.y) > 16) {
+        const p = f.route[0], gx = p.x - foe.x, gy = p.y - foe.y, g = Math.hypot(gx, gy);
+        this._step(f, gx / g, gy / g, dt, pace);
+        return true;
+    }
+
+    /** Can feet walk straight from `a` to `b`? */
+    _straight(a, b) {
+        const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8);
+        for (let i = 1; i <= n; i++) if (!this._open(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n)) return false;
+        return true;
+    }
+
+    /** Trying to walk, it's gone less than half a tile in STALL_MS. */
+    _stuck(f, delta) {
+        const { foe } = f;
+        if (!foe.walking || !f.stuckAt || Math.hypot(foe.x - f.stuckAt.x, foe.y - f.stuckAt.y) > 16) {
             f.stuckAt = { x: foe.x, y: foe.y };
             f.stuckT = 0;
             return false;
         }
         if ((f.stuckT += delta) < STALL_MS) return false;
-        f.stuckT = 0;
         f.stuckAt = null;
-        const route = this._route(foe, you);
-        if (!route) {
-            f.lost = true;          // (no way to you: home)
-            f.lookT = 0;
+        return true;
+    }
+
+    /**
+     * After you GIVE_UP_MS getting no nearer (by a tile) and never beside you nor winding up: true, it gives up.
+     * (Close by with the way clear, waiting its turn or keeping its distance, it's still in the fight.)
+     */
+    _idle(f, d, delta) {
+        const near = f.clear && d < Math.max(f.spec.keep || 0, f.spec.reach || REACH) + 100;
+        if (!f.idle || near || d < f.idle.best - TILE) {
+            f.idle = { best: d, t: 0 };
             return false;
         }
-        f.route = route;
-        f.routeT = ROUTE_MS;
-        return false;
+        return (f.idle.t += delta) > GIVE_UP_MS;
     }
 
     /**
@@ -851,7 +914,7 @@ export class FieldDemons {
             if (Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1) {
                 const path = [];
                 for (let i = at(x, y); i >= 0; i = from[i]) path.push({ x: (i % w + x0) * G, y: (Math.floor(i / w) + y0) * G });
-                return path.reverse().filter((_, j, all) => j % 3 === 2 || j === all.length - 1);
+                return path.reverse().slice(1);
             }
             for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
                 if (!ok(x + dx, y + dy)) continue;
@@ -869,16 +932,37 @@ export class FieldDemons {
         f.stallAt = null;
     }
 
-    _home(f, dt, fromPost) {
+    /** Home to its post, round by the map; getting nowhere (or no way there), it's put back there. */
+    _home(f, dt, fromPost, delta = dt * 1000) {
         if (fromPost < 4) {
             if (f.state === 'home') {
                 f.state = 'post';
                 f.hp = Math.max(f.hp, f.maxHp);     // home again, mended
+                f.idle = null;
                 f.foe.rest();
             }
             return this._step(f, 0, 0, dt);
         }
+        if (!f.idle || fromPost < f.idle.best - TILE) f.idle = { best: fromPost, t: 0 };
+        const way = (f.idle.t += delta) > HOME_STUCK_MS ? 'none' : this._way(f, f.post, delta, dt, 0.7);
+        if (way === 'none') return this._putBack(f);
+        if (way) return;
         this._step(f, (f.post.x - f.foe.x) / fromPost, (f.post.y - f.foe.y) / fromPost, dt, 0.7);
+    }
+
+    /** Back at its post at once, mended (it fades out where it is and in there). */
+    _putBack(f) {
+        const s = f.foe.sprite;
+        f.idle = null;
+        f.route = null;
+        f.state = 'post';
+        f.hp = Math.max(f.hp, f.maxHp);
+        f.foe.halt();
+        s.setPosition(f.post.x, f.post.y - FEET);
+        f.foe.place?.();
+        s.setAlpha?.(0);
+        this.scene.tweens.add({ targets: s, alpha: 1, duration: 400 });
+        f.foe.rest();
     }
 
     /** It walks (dx, dy) a step's worth, facing its way or, given `facing` (feet), that. */
@@ -887,8 +971,11 @@ export class FieldDemons {
         foe.walking = !!(dx || dy);
         const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
         const x0 = s.x, y0 = s.y, x = s.x + dx * v, y = s.y + dy * v;
-        if (this._open(x, s.y + FEET)) s.x = x;
-        if (this._open(s.x, y + FEET)) s.y = y;
+        if (!this._open(s.x, s.y + FEET)) s.setPosition(x, y);         // (pushed into rock: it walks out)
+        else {
+            if (this._open(x, s.y + FEET)) s.x = x;
+            if (this._open(s.x, y + FEET)) s.y = y;
+        }
         if (v && (dx || dy) && s.x === x0 && s.y === y0) {
             // Walked square into rock (a cliff's diagonal stopped both ways at once): along it instead
             for (const a of SLIDE) {
@@ -962,7 +1049,7 @@ export class FieldDemons {
      */
     _hurt(m, damage, from) {
         const ui = this.scene.scene.get('UIScene'), me = this.scene.localPlayer, s = me?.sprite;
-        if (!ui?.hp || !s || m.guard > 0 || this.fallen) return;
+        if (!ui?.hp || !s || m.guard > 0 || this.fallen || this._held) return;
         if (m.blocks > 0) {             // Protect
             m.blocks--;
             m.guard = GUARD_MS / 2;

@@ -1174,6 +1174,100 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
     });
 });
 
+test.describe('Never stuck', () => {
+    test("wherever you are on the road north and round Castle Dunmere, a foe gets to you or gives up and gets home: none stands stuck at rock, a wall or the moat (the user's, five times: the great bear stood stuck by the castle)", async ({ page }) => {
+        test.setTimeout(300000);
+        await enterWorld(page);
+        await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
+        // (the game held, each foe's mind run by hand, 50 ms a turn: from about you, toward you; then home, to its own post)
+        const stuck = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            gs.scene.pause();
+            let r = 7;
+            const rnd = () => ((r = (r * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+            const out = [];
+            for (const kind of ['greatbear', 'kindredhunter']) {
+                const f = fd.foes.find(o => o.kind === kind && o.family === 'vanar'), post = { ...f.post };
+                for (const o of fd.foes) if (o !== f) { o.stun = 1e12; o.foe.sprite.setPosition(0, 0); }
+                for (let py = 8240; py < 10600; py += 96) for (let px = 10300; px < 11700; px += 96) {
+                    if (!fd._open(px, py)) continue;
+                    let sx, sy, tries = 0;
+                    do {
+                        const a = rnd() * 6.283, d = (3 + rnd() * 6) * 32;
+                        sx = px + Math.cos(a) * d; sy = py + Math.sin(a) * d;
+                    } while (!fd._open(sx, sy) && ++tries < 30);
+                    if (tries >= 30) continue;
+                    f.foe.sprite.setPosition(sx, sy - fd.FEET);
+                    me.setPosition(px, py - fd.FEET);
+                    Object.assign(f, { state: 'chase', cd: 0, stun: 0, calm: 0, cornered: 0, flank: 0, lost: false, lookT: 1e9, route: null, clearT: 0, idle: null, t: 0, hp: f.maxHp });
+                    let got = false;
+                    for (let t = 0; t < 30000 && !got; t += 50) {
+                        fd._think(f, 50, 0.05, { x: px, y: py }, false);
+                        got = f.state === 'windup' || f.state === 'recover' || f.state === 'home';     // (or, no way to you, it gave up)
+                    }
+                    // and from there (you got away), home
+                    if (f.state === 'windup') f.foe.tint(null);
+                    Object.assign(f, { calm: 0, lost: false, lookT: 1e9 });
+                    Object.assign(f, { state: 'home', route: null, clearT: 0 });
+                    let home = false;
+                    for (let t = 0; t < 60000 && !home; t += 50) {
+                        fd._think(f, 50, 0.05, { x: 0, y: 0 }, false);
+                        home = f.state === 'post';
+                    }
+                    if (!got || !home) out.push({ kind, you: [px, py], from: [Math.round(sx), Math.round(sy)], got, home, at: [Math.round(f.foe.x), Math.round(f.foe.y)] });
+                    f.post = post;
+                }
+                f.foe.sprite.setPosition(post.x, post.y - fd.FEET);
+                f.state = 'post';
+            }
+            for (const o of fd.foes) o.stun = 0;
+            gs.scene.resume();
+            return out;
+        });
+        expect(stuck).toEqual([]);
+    });
+});
+
+test.describe('A menu open, the fight holds', () => {
+    test("on the Upgrade page no foe strikes you (the user's: upgrading, they were attacked), and back on the map you have a moment before they do", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await keepUp(page);
+        await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
+        const watch = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
+            if (!fd._seen) {
+                fd._seen = { windups: 0, hurt: 0 };
+                const w = fd._windup.bind(fd);
+                fd._windup = (o) => { fd._seen.windups++; w(o); };
+            }
+            fd._seen.windups = 0;
+            fd._hpAt = ui.hp.now;
+        });
+        const seen = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
+            return { windups: fd._seen.windups, lost: fd._hpAt - ui.hp.now };
+        });
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            const f = fd.foes.find(o => o.family === 'vanar' && o.kind === 'snowchaser' && o.foe.ready);
+            me.setPosition(f.post.x + 50, f.post.y - fd.FEET);
+            me.body.reset(me.x, me.y);
+            fd._rouse(f.pack);
+            gs.scene.get('UIScene').gear.openUpgrades();
+        });
+        await watch();
+        await page.waitForTimeout(5000);
+        expect(await seen()).toEqual({ windups: 0, lost: 0 });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.close());
+        await watch();
+        await page.waitForTimeout(900);
+        expect(await seen()).toEqual({ windups: 0, lost: 0 });
+        // (then the fight goes on)
+        await expect.poll(async () => (await seen()).windups, { timeout: 10000 }).toBeGreaterThan(0);
+    });
+});
+
 test.describe('Demons on the road, armed', () => {
     test('a demon walks and strikes with its weapon in hand (the oversized frames it is drawn in)', async ({ page }) => {
         test.setTimeout(120000);
