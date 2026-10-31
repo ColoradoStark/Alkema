@@ -47,7 +47,9 @@ const wrapAngle = a => ((a + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
 export const BOATS = [
     { route: 0, phase: 0 }, { route: 0, phase: 0.25 }, { route: 0, phase: 0.5 }, { route: 0, phase: 0.75 },
     { route: 1, phase: 0.125 }, { route: 1, phase: 0.375 }, { route: 1, phase: 0.625 }, { route: 1, phase: 0.875 },
+    { route: 2, phase: 0 },           // the ferry across from Tumbledown to Ravenford (worldgen FERRIES, the user's)
 ];
+const FERRY = 28;             // px/s the ferry crosses at, either way (still water)
 
 /** A route: its points (x, y and the room either side, by threes), and how far along it each is. */
 function course(flat) {
@@ -85,7 +87,9 @@ export class RiverBoats {
         this.routes = (data?.routes || []).map(course);
         // (each river's boats as fast as makes its round as long as the longer's, so the two never drift into step)
         const longest = Math.max(...this.routes.map(r => r.length));
-        for (const r of this.routes) r.pace = r.length / longest;
+        for (const r of this.routes) Object.assign(r, { out: DOWN * r.length / longest, back: UP * r.length / longest });
+        // ...and the ferries straight across the water, as fast either way
+        for (const r of (data?.ferries || []).map(course)) this.routes.push(Object.assign(r, { out: FERRY, back: FERRY, ferry: true }));
         this.boats = this.routes.length ? BOATS.filter(b => this.routes[b.route]).map(b => ({
             ...b, s: 0, way: 1, waiting: false, side: null, heading: null,
             t: Math.random() * 10, stroke: Math.random(), trail: 0, ripple: 0, sprite: null, last: null,
@@ -150,11 +154,11 @@ export class RiverBoats {
     _sail(b, dt, time) {
         const r = this.routes[b.route];
         b.t += dt;
-        const where = voyage(r.length, DOWN * r.pace, UP * r.pace, b.phase, time, WAIT, EASE);
+        const where = voyage(r.length, r.out, r.back, b.phase, time, WAIT, EASE);
         b.way = where.way;
         b.waiting = where.waiting;
-        const way = Math.min(1, where.speed / (DOWN * r.pace));
-        b.underWay = !b.waiting && where.speed >= 0.9 * (b.way > 0 ? DOWN : UP) * r.pace;      // (not easing in or out)
+        const way = Math.min(1, where.speed / r.out);
+        b.underWay = !b.waiting && where.speed >= 0.9 * (b.way > 0 ? r.out : r.back);      // (not easing in or out)
         // Each stroke surges her on a little ahead of her steady way, and she glides back to it
         let stroked = false;
         if (!b.waiting) {

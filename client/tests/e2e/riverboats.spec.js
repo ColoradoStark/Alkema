@@ -33,6 +33,34 @@ const boats = (page) => page.evaluate(() => {
 });
 
 test.describe('River boats', () => {
+    test('a ferry goes back and forth across the water between Tumbledown and Ravenford', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        // (by her landing below Tumbledown, so the boats come)
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), r = gs.riverBoats.routes.find(r => r.ferry), me = gs.localPlayer.sprite;
+            me.setPosition(r.pts[0].x, r.pts[0].y - 96); me.body.reset(me.x, me.y);
+        });
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.loaded, null, { timeout: 15000 });
+        const found = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), rb = gs.riverBoats;
+            const { WORLD } = await import('/src/world/places.js');
+            const at = name => { const p = WORLD.places.find(p => p.name === name); return { x: p.x, y: p.y }; };
+            const r = rb.routes.find(r => r.ferry), ends = [r.pts[0], r.pts[r.pts.length - 1]];
+            const near = (p, q) => Math.round(Math.hypot(p.x - q.x, p.y - q.y) / 32);
+            const ferry = rb.boats.find(b => rb.routes[b.route] === r);
+            const t0 = Date.now() / 1000, seen = new Set();
+            for (let t = 0; t < 1200; t += 2) { rb._sail(ferry, 0.1, t0 + t); seen.add(ferry.way); }
+            return { ferries: rb.boats.filter(b => rb.routes[b.route].ferry).length,
+                tumbledown: Math.min(...ends.map(e => near(e, at('Tumbledown')))), ravenford: Math.min(...ends.map(e => near(e, at('Ravenford')))),
+                bothWays: seen.size };
+        });
+        expect(found.ferries).toBe(1);
+        expect(found.tumbledown).toBeLessThan(16);      // (tiles from its middle: across the town to its shore, and 3 tiles out)
+        expect(found.ravenford).toBeLessThan(16);
+        expect(found.bothWays).toBe(2);
+    });
+
     test('they sail the rivers on the water, facing the way they go, with a wake', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
@@ -41,7 +69,7 @@ test.describe('River boats', () => {
         const before = await boats(page);
         await page.waitForTimeout(2000);
         const after = await boats(page);
-        expect(before.length).toBe(8);
+        expect(before.length).toBe(9);         // (eight on the rivers, and the ferry across from Tumbledown)
         // both ways on each river
         const ways = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.boats.map(b => [b.route, b.waiting ? -b.way : b.way]));
         for (const route of [0, 1]) expect(new Set(ways.filter(([r]) => r === route).map(([, w]) => w)).size, `route ${route}`).toBe(2);
@@ -127,11 +155,11 @@ test.describe('River boats', () => {
             return { picture: gs.textures.exists('river-boats'), drawn: gs.riverBoats.boats.filter(b => b.sprite).length, wake: !!gs.riverBoats.foam };
         });
         await go(page, RIVERSIDE);
-        await expect.poll(state, { timeout: 15000 }).toEqual({ picture: true, drawn: 8, wake: true });
+        await expect.poll(state, { timeout: 15000 }).toEqual({ picture: true, drawn: 9, wake: true });
         await go(page, FAR_OFF);
         await expect.poll(state, { timeout: 5000 }).toEqual({ picture: false, drawn: 0, wake: false });
         await go(page, RIVERSIDE);
-        await expect.poll(state, { timeout: 15000 }).toEqual({ picture: true, drawn: 8, wake: true });
+        await expect.poll(state, { timeout: 15000 }).toEqual({ picture: true, drawn: 9, wake: true });
         await page.evaluate(async () => {
             const { WORLD } = await import('/src/world/places.js');
             await window.__PHASER_GAME.scene.getScene('GameScene').enterPlace(WORLD.places.find(p => p.name === 'Riverhold'));
