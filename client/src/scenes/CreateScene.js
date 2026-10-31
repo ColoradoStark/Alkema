@@ -168,6 +168,7 @@ export class CreateScene extends Scene {
                 if (!previous) this.mapPos = { ...MAP_SPOT };
             }
             this.showcase.setFigure(figure, character, { restart: identityChanged });
+            worldLoaded(this.game);     // the hero's in: the world can have the line now
         };
         this.figure = figure;
         if (figure.sprite) reveal(); // texture was prefetched

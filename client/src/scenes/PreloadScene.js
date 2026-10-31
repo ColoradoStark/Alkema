@@ -5,8 +5,8 @@ import { preloadOverworld } from '../world/Overworld.js';
 
 /**
  * Loads what the character creator needs, then opens it at once; the world
- * (its map and tile sheets, about 9 MB) loads behind it while you make your
- * hero, and `worldLoaded(game)` resolves once it's in, for Play to wait on.
+ * (its map and tile sheets, about 9 MB) loads behind it once its first hero
+ * is shown, and `worldLoaded(game)` resolves once it's in, for Play to wait on.
  * The bar counts only the first part, so it fills once and never goes back.
  */
 export class PreloadScene extends Scene {
@@ -89,7 +89,8 @@ export class PreloadScene extends Scene {
         // Every session starts in character creation; it enters the world on Play.
         refit(this.game);
         this.cameras.main.setVisible(false);
-        this.game.registry.set('worldLoaded', new Promise(resolve => {
+        let loading = null;
+        this.game.registry.set('loadWorld', () => loading ||= new Promise(resolve => {
             // The overworld: tiles, collision, water and the minimap
             preloadOverworld(this.load);
             this.load.once('complete', () => { resolve(); this.scene.stop(); });
@@ -99,7 +100,12 @@ export class PreloadScene extends Scene {
     }
 }
 
-/** Resolves once the world PreloadScene loads behind the creator is in. */
+/**
+ * Starts loading the world behind the creator, if it hasn't started, and
+ * resolves once it's in. Not before the creator has its hero: the world's
+ * sheets shared the line with the creator's own art and the hero's sheet,
+ * and held them all back till the end.
+ */
 export function worldLoaded(game) {
-    return game.registry.get('worldLoaded') || Promise.resolve();
+    return game.registry.get('loadWorld')?.() || Promise.resolve();
 }

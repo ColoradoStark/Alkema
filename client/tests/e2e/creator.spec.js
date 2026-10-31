@@ -318,6 +318,23 @@ test.describe('Character creator', () => {
         expect(await page.evaluate(() => window.__chests)).toBe(0);
     });
 
+    test("the creator opens before the world loads, and the world waits for its hero (the user's: loading had drifted slower)", async ({ page }) => {
+        // The world's sheets (9 MB) shared the line with the creator's art and the hero's sheet and held them all back
+        const asked = [];
+        page.on('request', r => { if (/\/world\/|\/sprites\/p\d+_/.test(r.url())) asked.push(new URL(r.url()).pathname); });
+        await page.goto('/');
+        await page.waitForFunction(() => window.__PHASER_GAME?.scene.getScene('CreateScene')?.scene.isActive(), null, { timeout: 30000 });
+        await waitForPreview(page);
+        const firstWorld = asked.findIndex(p => p.startsWith('/world/'));
+        const firstHero = asked.findIndex(p => p.startsWith('/sprites/'));
+        expect(firstHero).toBeGreaterThanOrEqual(0);
+        expect(firstWorld === -1 || firstWorld > firstHero, asked.join(' ')).toBe(true);
+        // ...and Play waits for it
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer, null, { timeout: 30000 });
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('world-ground-0'))).toBe(true);
+    });
+
     test('after playing a hero, coming back shows that hero; the dice still rolls a new one', async ({ page }) => {
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });
