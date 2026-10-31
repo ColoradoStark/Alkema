@@ -497,6 +497,34 @@ test.describe('Gear', () => {
         await expect(list).toBeVisible();
     });
 
+    test('the attack button shows the weapon you carry, changing as you change it (and with none, the sword)', async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const shows = () => page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene'), map = ui.cache.json.get('weapon-icons');
+            const w = (window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.characterData.selections || []).find(s => s.type === 'weapon');
+            const want = w ? map.items[`${w.item}:${w.variant}`] ?? map.items[w.item] ?? map.kinds[w.item.split('_').slice(0, 2).join('_')] : map.unarmed;
+            return { frame: ui.bottomControls.attackButton.getData('icon').frame.name, want, item: w?.item || null };
+        });
+        // The weapon you start with: its own picture
+        await expect.poll(() => shows().then(s => s.frame === s.want && s.item !== null), { timeout: 10000 }).toBe(true);
+        const frames = new Set();
+        await page.evaluate(() => {
+            const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory;
+            inv.bag = ['war-axe', 'hunting-bow', 'dagger'];
+            inv._save();
+        });
+        for (const [id, item] of [['war-axe', 'weapon_blunt_waraxe'], ['hunting-bow', 'weapon_ranged_bow_normal'], ['dagger', 'weapon_sword_dagger']]) {
+            await page.evaluate((id) => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip(id), id);
+            await expect.poll(() => shows().then(s => s.item === item && s.frame === s.want), { timeout: 30000 }).toBe(true);
+            frames.add((await shows()).frame);
+        }
+        expect(frames.size).toBe(3);        // three weapons, three pictures
+        // Empty-handed: the sword it always had
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.unequip('weapon'));
+        await expect.poll(() => shows().then(s => s.item === null && s.frame === s.want), { timeout: 30000 }).toBe(true);
+    });
+
     test('tap a slot on Equip and what you could wear there is right before you, no scrolling, no other page', async ({ page }) => {
         test.setTimeout(120000);
         await page.setViewportSize({ width: 390, height: 640 });

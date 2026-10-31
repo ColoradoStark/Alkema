@@ -348,6 +348,13 @@ export class UIScene extends Scene {
     }
 
     update(time, delta) {
+        // The attack button shows the weapon you carry, changing as you change it
+        const weapon = (this.scene.get('GameScene')?.localPlayer?.characterData?.selections || []).find(s => s.type === 'weapon') || null;
+        const carried = weapon ? `${weapon.item}:${weapon.variant}` : '';
+        if (this.bottomControls && carried !== this._carried) {
+            this._carried = carried;
+            this.bottomControls.showWeapon(weapon);
+        }
         // Hit points and magic in the top bar; magic comes back out of a fight
         const inFight = !!this.scene.get('GameScene')?.battle || !!this.scene.get('GameScene')?.fieldDemons?.engaged;
         // Second Wind (an upgrade): magic comes back faster

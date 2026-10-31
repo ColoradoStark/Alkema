@@ -246,10 +246,10 @@ export class BottomControls {
         bg.strokeCircle(0, 0, size / 2);
 
         let icon;
-        const textureKey = iconType === 'sword' ? 'icon-sword' : 'icon-scroll';
+        const textureKey = iconType === 'sword' ? 'weapon-icons' : 'icon-scroll';
 
         if (s.textures.exists(textureKey)) {
-            icon = s.add.image(0, 0, textureKey);
+            icon = s.add.image(0, 0, textureKey, iconType === 'sword' ? s.cache.json.get('weapon-icons')?.unarmed ?? 0 : undefined);
             icon.setScale(iconType === 'sword' ? 0.8 : 0.7);
         } else {
             const label = iconType === 'sword' ? '⚔' : '📜';
@@ -267,6 +267,20 @@ export class BottomControls {
         hitArea.on('pointerout', () => buttonContainer.setScale(1));
         buttonContainer.setData('icon', icon);
         return buttonContainer;
+    }
+
+    /**
+     * The attack button shows the weapon you carry (the user's: it was always a sword): `weapon` is
+     * your weapon's selection ({ item, variant }, the LPC item), or null for none. Which picture each
+     * weapon has is weapons.json (tools/weapon_icons.py): the weapon's own, else its kind's.
+     */
+    showWeapon(weapon) {
+        const icon = this.attackButton?.getData('icon'), map = this.scene.cache.json.get('weapon-icons');
+        if (!icon?.setFrame || !map) return;
+        const kind = weapon?.item?.split('_').slice(0, 2).join('_');
+        const frame = weapon ? map.items[`${weapon.item}:${weapon.variant}`] ?? map.items[weapon.item] ?? map.kinds[kind] ?? map.unarmed : map.unarmed;
+        icon.setFrame(frame);
+        this.weaponFrame = frame;
     }
 
     /** Greys the attack button out when there's no one to strike (still pressable: it says why). */

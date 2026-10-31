@@ -60,7 +60,9 @@ export class PreloadScene extends Scene {
 
     loadAssets() {
         // Icon images
-        this.load.image('icon-sword', '/ui/long_sword_1_old.png');
+        // The attack button shows the weapon you carry (Dungeon Crawl's CC0 tiles, tools/weapon_icons.py)
+        this.load.spritesheet('weapon-icons', '/ui/weapons.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.json('weapon-icons', '/ui/weapons.json');
         this.load.image('icon-scroll', '/ui/scroll_old.png');
 
         // Leather tile for the HUD panels (same as the character creator's)
