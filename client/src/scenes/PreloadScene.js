@@ -3,6 +3,12 @@ import { refit } from '../screenShape.js';
 import { audio } from '../audio/audio.js';
 import { preloadOverworld } from '../world/Overworld.js';
 
+/**
+ * Loads what the character creator needs, then opens it at once; the world
+ * (its map and tile sheets, about 9 MB) loads behind it while you make your
+ * hero, and `worldLoaded(game)` resolves once it's in, for Play to wait on.
+ * The bar counts only the first part, so it fills once and never goes back.
+ */
 export class PreloadScene extends Scene {
     constructor() {
         super({ key: 'PreloadScene' });
@@ -36,52 +42,32 @@ export class PreloadScene extends Scene {
             progressBar.fillStyle(0xd27d2c, 1);
             progressBar.fillRect(width/2 - 140, height/2 - 15, 280 * value, 30);
         });
-        
+
         this.load.on('filefailed', (file) => {
             console.error('Failed to load file:', file.key, file.src);
         });
 
-        this.load.on('complete', () => {
+        this.load.once('complete', () => {
+            this.load.off('progress');
             progressBar.destroy();
             progressBox.destroy();
             loadingText.destroy();
             percentText.destroy();
-            
-            // Debug: Check if icons loaded
-            console.log('Icon textures loaded:');
-            console.log('icon-sword:', this.textures.exists('icon-sword'));
-            console.log('icon-scroll:', this.textures.exists('icon-scroll'));
         });
 
         this.loadAssets();
     }
 
     loadAssets() {
-        // Load UI as spritesheet for easy access
-        this.load.spritesheet('ui-arrows', '/ui/ui_big_pieces.png', {
-            frameWidth: 24,
-            frameHeight: 24,
-            startFrame: 0,
-            endFrame: 1000
-        });
-        
-        // Load UI atlas with JSON configuration
-        this.load.atlas('ui-atlas', '/ui/ui_big_pieces.png', '/ui/ui_big_pieces.json');
-        
-        // Also load as image for nine-slice panels
-        this.load.image('ui-sheet', '/ui/ui_big_pieces.png');
-        
-        // Load icon images
+        // Icon images
         this.load.image('icon-sword', '/ui/long_sword_1_old.png');
         this.load.image('icon-scroll', '/ui/scroll_old.png');
 
         // Leather tile for the HUD panels (same as the character creator's)
         this.load.image('ui-leather', '/ui/creator/art/leather.png');
-        // The LPC base set's treasure chests (two kinds: shut, ajar, open) for the creator's starter kit
+        // The LPC base set's treasure chests (two kinds: shut, ajar, open), for loot
         this.load.spritesheet('cc-chests', '/ui/chests.png', { frameWidth: 32, frameHeight: 32 });
-        
-        // The overworld: tiles, collision, water and the minimap
-        preloadOverworld(this.load);
+
         // The battle maps and foes (their pictures load as you meet them)
         this.load.json('battle', '/battle/battle.json');
 
@@ -102,6 +88,18 @@ export class PreloadScene extends Scene {
         audio.sfxLoaded();
         // Every session starts in character creation; it enters the world on Play.
         refit(this.game);
-        this.scene.start('CreateScene');
+        this.cameras.main.setVisible(false);
+        this.game.registry.set('worldLoaded', new Promise(resolve => {
+            // The overworld: tiles, collision, water and the minimap
+            preloadOverworld(this.load);
+            this.load.once('complete', () => { resolve(); this.scene.stop(); });
+            this.load.start();
+        }));
+        this.scene.launch('CreateScene');
     }
+}
+
+/** Resolves once the world PreloadScene loads behind the creator is in. */
+export function worldLoaded(game) {
+    return game.registry.get('worldLoaded') || Promise.resolve();
 }

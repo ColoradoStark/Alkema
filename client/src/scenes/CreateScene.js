@@ -10,6 +10,7 @@ import { Scene } from 'phaser';
 import { refit } from '../screenShape.js';
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { loadCharacterSpritesheet } from '../sprites/SpritesheetLoader.js';
+import { worldLoaded } from './PreloadScene.js';
 import { CreatorState } from '../creator/CreatorState.js';
 import { CreatorPanel } from '../creator/CreatorPanel.js';
 import { Showcase } from '../creator/Showcase.js';
@@ -407,6 +408,8 @@ export class CreateScene extends Scene {
             summary: this.state.summary(),
         }).catch(() => undefined);
         if (saved === null) this.accountMenu.toast('All 10 hero slots are full. Free one in My heroes to save this hero.');
+        // The world loads behind the creator: usually in by now, else Entering… waits for it
+        await worldLoaded(this.game);
         this._enterWorld();
     }
 
