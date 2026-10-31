@@ -1,5 +1,4 @@
-// Your ship, Wesnoth's Merchant Carrack (ship.png; the user's, October 2026, in
-// place of a galleon drawn from above, at its size, turning as it did). Moored, it rides at anchor; under sail it carries its captain
+// A galleon. Moored, it rides at anchor; under sail it carries its captain
 // (hidden aboard) and moves like a ship, not a walker: it turns toward the
 // way you steer (more sharply once under way), gathers speed slowly, coasts
 // when you let go, and never runs ruler-straight: the swell swings its bow a
@@ -20,41 +19,10 @@ const WAKE_EVERY = 7;       // px travelled per set of wake puffs
 const TWO_PI = Math.PI * 2;
 const wrapAngle = a => ((a + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
 
-// Wesnoth draws a ship side-on, bow to the right and DRAWN_BOW below east. Tall
-// masts don't turn like a rowboat: a ship is mirrored to go west, and leans
-// toward its heading no more than TILT either way (a ship going north tilts
-// its bow up, not lies on its side).
+// Wesnoth draws its ships side-on, bow to the right and DRAWN_BOW below east
+// (SeaShips.js). Yours is the galleon drawn from above, which sails every way:
+// the user tried Wesnoth's carrack for it, and a side-on ship can't.
 export const DRAWN_BOW = 0.35;
-export const TILT = 0.5;
-
-/**
- * Set a side-on ship's sprite for a heading (radians, 0 east), with the swell's yaw and pitch;
- * `state.flipped` is kept between frames. Returns the way her hull points as drawn (bow first),
- * for her foam to come off it.
- */
-export function faceShip(sprite, heading, yaw, pitch, state) {
-    const c = Math.cos(heading);
-    if (c < -0.26) state.flipped = true;           // (a little either way of north or south, she stays as she was)
-    else if (c > 0.26) state.flipped = false;
-    // how far off east (or, mirrored, west) she's heading: rotating either way by as much (clockwise lifts a mirrored bow)
-    const off = wrapAngle(state.flipped ? heading - Math.PI : heading);
-    const lean = Math.max(-TILT, Math.min(TILT, off));
-    sprite.setFlipX(state.flipped).setRotation(lean + yaw).setScale(1 + pitch, 1 - pitch * 0.5);
-    return (state.flipped ? Math.PI - DRAWN_BOW : DRAWN_BOW) + lean + yaw;
-}
-
-/**
- * Your own ship turns right round to the way she sails, as the galleon drawn from above did (the
- * user's: an art swap only, the tilting carrack felt wrong to steer): her bow on her heading,
- * mirrored going west so she's never upside down. `state.flipped` is kept between frames.
- */
-function turnShip(sprite, heading, yaw, pitch, state) {
-    const c = Math.cos(heading);
-    if (c < -0.1) state.flipped = true;            // (a little either way of north or south, she stays as she was)
-    else if (c > 0.1) state.flipped = false;
-    const drawn = state.flipped ? Math.PI - DRAWN_BOW : DRAWN_BOW;
-    sprite.setFlipX(state.flipped).setRotation(heading - drawn + yaw).setScale(1 + pitch, 1 - pitch * 0.5);
-}
 
 export function foamTexture(scene) {
     if (scene.textures.exists('fx-foam')) return;
@@ -78,9 +46,7 @@ export class Ship {
     constructor(scene, x, y, depth, heading = 0) {
         this.scene = scene;
         foamTexture(scene);
-        this.sprite = scene.add.image(x, y, 'ship').setDepth(depth);
-        this._face = { flipped: Math.cos(heading) < 0 };
-        turnShip(this.sprite, heading, 0, 0, this._face);
+        this.sprite = scene.add.image(x, y, 'ship').setDepth(depth).setRotation(heading);
         this._emitAngle = 0;
         this.wake = scene.add.particles(0, 0, 'fx-foam', {
             lifespan: { min: 900, max: 1700 },
@@ -155,6 +121,15 @@ export class Ship {
         this.vy *= 0.3;
     }
 
+    /** Run into a ship at sea (SeaShips.shove; n: from her to you): lose the way you had into her, and a little more. */
+    shoved(nx, ny) {
+        const into = this.vx * nx + this.vy * ny;
+        if (into >= 0) return;
+        this.vx -= nx * into * 1.3;
+        this.vy -= ny * into * 1.3;
+        this.speed *= 0.85;
+    }
+
     /** Stop dead (dropping anchor, or stepping ashore). */
     stop() {
         this.speed = this.vx = this.vy = 0;
@@ -177,8 +152,9 @@ export class Ship {
         const yaw = this._swell() * (0.4 + 0.6 * way) + Math.sin(this._time * 2.3) * 0.02;
         const pitch = Math.sin(this._time * 2.1) * (0.025 + 0.02 * way);
         this._at = { x, y };
-        this.sprite.setPosition(x, y + Math.sin(this._time * 1.7) * 0.8);
-        turnShip(this.sprite, this.heading, yaw, pitch, this._face);
+        this.sprite.setPosition(x, y + Math.sin(this._time * 1.7) * 0.8)
+            .setRotation(this.heading + yaw)
+            .setScale(1 + pitch, 1 - pitch * 0.5);
 
         this._last = { x, y };
         if (moved > 40) return;    // wrapped around the world, or teleported: no wake across the gap

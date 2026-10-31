@@ -1,18 +1,26 @@
 // Ships at sea, going by in sight of the coast: scenery (the user's, October
 // 2026; maybe to fight one day). Wesnoth's Merchant Carracks, Coastal and Iron
-// Raiders and the black Pirate Carrack (ships.png, the user's picks) sail the
-// lanes tools/worldgen.py lays between the coastal towns and castles a few tiles
-// out (SEA_LANES), there and back, keeping to their right of the lane so ships
-// pass apart, easing in and out at each end and swinging round. Where each is
-// goes by the clock (`at`), so every player sees the same ship in the same place
-// and nothing need be sailed while you're away. They move as your ship does
-// (Ship.js: the swell, mirrored and leaning, never lying on their side), push a
-// bow wave and leave a wake (Foam.js), and the raiders row.
+// Raiders and the black Pirate Carrack (ships.png, the user's picks).
+//
+// Wesnoth draws a ship side-on, and it looks right only one of two ways (the
+// user's): sailing east, its bow lifted toward the north-east no more than
+// RISE, or sailing west, mirrored, its bow dipped toward the south-west as
+// much; straight up or down, or angled more, it looks horrible. So each sails a
+// straight lane tools/worldgen.py lays rising to the east no steeper than that
+// (SEA_RISE), there and back, its picture turned only by the lane's own slope
+// and mirrored for the way back, the turn at each end a paper turn (squeezed
+// thin and flipped). One ship to a lane, lanes kept apart, so no two ever
+// overlap (the user saw them sail over each other). Where each is goes by the
+// clock (`at`), so every player sees the same ship in the same place.
+//
+// Your ship runs into them rather than over them (the user's: they push each
+// other back): `shove` parts the two hulls, your ship losing its way into hers
+// and hers knocked aside (`push`), easing back onto her lane.
 //
 // The picture loads as you come within NEAR of a lane and goes beyond FAR or in a
 // place; only the ships within SIGHT of you are drawn.
 import { Foam } from './Foam.js';
-import { faceShip } from './Ship.js';
+import { DRAWN_BOW } from './Ship.js';
 import { DEPTH, SIZE, wrapDelta } from './Overworld.js';
 import { voyage } from './voyage.js';
 
@@ -21,59 +29,51 @@ const NEAR = 22 * 32;         // px from a lane: the ships come
 const FAR = 30 * 32;          // ...and go
 const SIGHT = 26 * 32;        // a ship this far from you is drawn (a phone shows 11 x 14 tiles)
 const LOOK_MS = 500;          // how often to look how near the lanes you are
-export const LANE = 48;       // px right of a lane's middle a ship keeps to
+export const RISE = 35 * Math.PI / 180;    // the most a ship's picture is turned (worldgen SEA_RISE)
 const WAIT = 12;              // s at each end of a lane
 const EASE = 8;               // s getting under way, and coming to
+const TURN_S = 0.8;           // s for the paper turn at a lane's end
 const STROKE = 1.5;           // s for a stroke of a raider's oars
 const WAKE_EVERY = 9;         // px made per set of wake puffs
+const PUSH_BACK = 2.5;        // s for a ship knocked aside to ease most of the way back to her lane
+const PUSH_MAX = 64;          // px she can be knocked off it (lanes keep 3 tiles off the shore)
+const YOURS = { half: 22, radius: 10 };    // your ship's hull, a capsule: half its length, its half-width (Ship.js)
 const TWO_PI = Math.PI * 2;
-const wrapAngle = a => ((a + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
 
-// Who sails which lane (SEA_LANES in worldgen.py: 0 Saltmere-Dunmere, 1 Dunmere-Gull's Rest,
-// 2 Saltmere-Seacombe, 3 Seacombe-Ashby, 4 Gull's Rest-Morvath), how far into its round they
-// start (0-1), and how fast (px/s). Merchants trade; raiders row the coasts; the pirates lurk
-// by Wreckers' Cave and off cursed Morvath.
-export const SHIPS = [
-    { lane: 0, kind: 'merchant', phase: 0.05, speed: 46 },
-    { lane: 0, kind: 'merchant', phase: 0.55, speed: 44 },
-    { lane: 0, kind: 'raider', phase: 0.30, speed: 62 },
-    { lane: 1, kind: 'merchant', phase: 0.15, speed: 46 },
-    { lane: 1, kind: 'merchant', phase: 0.65, speed: 42 },
-    { lane: 1, kind: 'ironraider', phase: 0.40, speed: 60 },
-    { lane: 2, kind: 'merchant', phase: 0.25, speed: 44 },
-    { lane: 2, kind: 'raider', phase: 0.75, speed: 62 },
-    { lane: 2, kind: 'pirate', phase: 0.50, speed: 54 },
-    { lane: 3, kind: 'merchant', phase: 0.35, speed: 44 },
-    { lane: 4, kind: 'merchant', phase: 0.10, speed: 46 },
-    { lane: 4, kind: 'pirate', phase: 0.60, speed: 54 },
-    { lane: 4, kind: 'ironraider', phase: 0.85, speed: 60 },
-];
+const SPEED = { merchant: 44, raider: 62, ironraider: 60, pirate: 54 };
+const TRADE = ['merchant', 'raider', 'merchant', 'ironraider'];
+const LURKS = new Set(["Wreckers' Cave", 'Morvath']);       // a pirate lurks by each
 const OARED = new Set(['raider', 'ironraider']);
 
-function course(flat) {
-    const pts = [];
-    for (let i = 0; i < flat.length; i += 2) pts.push({ x: flat[i], y: flat[i + 1] });
-    const along = [0];
-    for (let i = 1; i < pts.length; i++) along.push(along[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-    return { pts, along, length: along[along.length - 1] };
+/** Who sails lane i: a pirate by Wreckers' Cave and Morvath, merchants and raiders elsewhere; how fast, how far into her round at time 0. */
+export function shipFor(lane, i) {
+    const kind = LURKS.has(lane.by) ? 'pirate' : TRADE[i % TRADE.length];
+    return { lane: i, kind, speed: SPEED[kind], phase: (i * 0.381) % 1 };
 }
 
-function pointAt(r, s) {
-    s = Math.max(0, Math.min(r.length, s));
-    let lo = 0, hi = r.pts.length - 1;
-    while (hi - lo > 1) {
-        const mid = (lo + hi) >> 1;
-        if (r.along[mid] < s) lo = mid; else hi = mid;
-    }
-    const a = r.pts[lo], b = r.pts[hi];
-    const seg = r.along[hi] - r.along[lo] || 1;
-    const t = (s - r.along[lo]) / seg;
-    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, dx: (b.x - a.x) / seg, dy: (b.y - a.y) / seg };
+function course({ line, by }) {
+    const [x0, y0, x1, y1] = line;
+    const length = Math.hypot(x1 - x0, y1 - y0);
+    return { x0, y0, x1, y1, by, length, ux: (x1 - x0) / length, uy: (y1 - y0) / length, slope: Math.atan2(y1 - y0, x1 - x0) };
 }
 
-/** Where a ship is on its lane at `time` (s): how far along, which way, how fast, whether waiting at an end. */
+/** Where a ship is on its lane at `time` (s): how far along, which way (+1 east), how fast, whether waiting at an end. */
 export function at(r, ship, time) {
     return voyage(r.length, ship.speed, ship.speed, ship.phase, time, WAIT, EASE);
+}
+
+/** The nearest points of two segments, sampled: [distance, point on the first, point on the second]. */
+function closest(a0, a1, b0, b1) {
+    let best = [Infinity];
+    for (let i = 0; i <= 8; i++) {
+        const p = { x: a0.x + (a1.x - a0.x) * i / 8, y: a0.y + (a1.y - a0.y) * i / 8 };
+        const vx = b1.x - b0.x, vy = b1.y - b0.y;
+        const t = Math.max(0, Math.min(1, ((p.x - b0.x) * vx + (p.y - b0.y) * vy) / (vx * vx + vy * vy || 1)));
+        const q = { x: b0.x + vx * t, y: b0.y + vy * t };
+        const d = Math.hypot(p.x - q.x, p.y - q.y);
+        if (d < best[0]) best = [d, p, q];
+    }
+    return best;
 }
 
 export class SeaShips {
@@ -84,10 +84,10 @@ export class SeaShips {
         this.frame = data?.frame;
         this.kinds = Object.fromEntries((data?.kinds || []).map((k, i) => [k.name, { ...k, frame: i }]));
         this.lanes = (data?.lanes || []).map(course);
-        this.ships = this.lanes.length ? SHIPS.filter(s => this.lanes[s.lane] && this.kinds[s.kind]).map(s => ({
-            ...s, heading: null, face: { flipped: false }, t: Math.random() * 10, stroke: Math.random(), trail: 0, ripple: 0,
-            sprite: null, last: null, x: 0, y: 0,
-        })) : [];
+        this.ships = this.lanes.map(shipFor).filter(s => this.kinds[s.kind]).map(s => ({
+            ...s, flipped: false, turning: 0, t: Math.random() * 10, stroke: Math.random(), trail: 0, ripple: 0,
+            push: { x: 0, y: 0 }, sprite: null, last: null, x: 0, y: 0, hull: 0,
+        }));
         this.up = false;
         this.loaded = false;
         this._looked = -Infinity;
@@ -105,8 +105,11 @@ export class SeaShips {
         if (now - this._looked > LOOK_MS) {
             this._looked = now;
             const reach = this.up ? FAR : NEAR;
-            this._near = this.lanes.some(r => r.pts.some(p => Math.abs(wrapDelta(feet.x, p.x)) < reach
-                && Math.abs(wrapDelta(feet.y, p.y)) < reach && Math.hypot(wrapDelta(feet.x, p.x), wrapDelta(feet.y, p.y)) < reach));
+            this._near = this.lanes.some(r => {
+                const dx = wrapDelta(feet.x, r.x0), dy = wrapDelta(feet.y, r.y0);       // (from you to its west end, then along it)
+                const t = Math.max(0, Math.min(r.length, -(dx * r.ux + dy * r.uy)));
+                return Math.hypot(dx + r.ux * t, dy + r.uy * t) < reach;
+            });
         }
         if (!this._near) return this.release();
         if (!this.up) this._summon();
@@ -127,7 +130,6 @@ export class SeaShips {
             for (const ship of this.ships) {
                 ship.sprite = scene.add.image(0, 0, KEY, this.kinds[ship.kind].frame).setDepth(DEPTH.ground + 2).setVisible(false);
                 ship.last = null;
-                ship.heading = null;
             }
             this.loaded = true;
         };
@@ -163,36 +165,88 @@ export class SeaShips {
         return this.ships.filter(s => s.sprite?.visible);
     }
 
+    /** Her hull, a capsule (its two ends and half-width), as she's drawn now. */
+    hullOf(ship) {
+        const k = this.kinds[ship.kind], c = Math.cos(ship.hull), s = Math.sin(ship.hull);
+        return {
+            a: { x: ship.x - c * k.stern * 0.8, y: ship.y - s * k.stern * 0.8 },
+            b: { x: ship.x + c * k.bow * 0.8, y: ship.y + s * k.bow * 0.8 },
+            radius: Math.min(k.beam, 14),
+        };
+    }
+
+    /**
+     * Your ship (centre x, y; heading; Ship.js) against every ship in sight: where the hulls
+     * overlap, they push each other apart. Returns how far to move your ship ({x, y}, or null),
+     * and the way pushed (unit, from her to you), for your ship to lose its way into hers.
+     */
+    shove(x, y, heading, canGo = () => true) {
+        const c = Math.cos(heading), s = Math.sin(heading);
+        const a0 = { x: x - c * YOURS.half, y: y - s * YOURS.half }, a1 = { x: x + c * YOURS.half, y: y + s * YOURS.half };
+        let move = null;
+        for (const ship of this.inSight) {
+            const h = this.hullOf(ship);
+            const [d, p, q] = closest(a0, a1, h.a, h.b);
+            const overlap = YOURS.radius + h.radius - d;
+            if (overlap <= 0) continue;
+            let nx = (p.x - q.x) / (d || 1), ny = (p.y - q.y) / (d || 1);
+            if (!d) { nx = x - ship.x; ny = y - ship.y; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l; }
+            // Half each: she's knocked aside (as far as PUSH_MAX), you're pushed back the rest
+            const was = { ...ship.push };
+            ship.push.x -= nx * overlap * 0.5;
+            ship.push.y -= ny * overlap * 0.5;
+            const l = Math.hypot(ship.push.x, ship.push.y);
+            if (l > PUSH_MAX) { ship.push.x *= PUSH_MAX / l; ship.push.y *= PUSH_MAX / l; }
+            const hers = Math.hypot(ship.push.x - was.x, ship.push.y - was.y);
+            const yours = overlap - hers;
+            ship.x += ship.push.x - was.x;
+            ship.y += ship.push.y - was.y;
+            if (canGo(x + nx * yours, y + ny * yours)) move = { x: (move?.x || 0) + nx * yours, y: (move?.y || 0) + ny * yours, nx, ny };
+            else move = move || { x: 0, y: 0, nx, ny };
+        }
+        return move;
+    }
+
     _sail(ship, dt, time, feet) {
         const r = this.lanes[ship.lane];
         const where = at(r, ship, time);
-        // Her side of the lane: right of the way she's going (waiting, the way she'll go next)
-        const going = where.waiting ? -where.way : where.way;
-        const p = pointAt(r, where.s);
-        let x = p.x - p.dy * LANE * going, y = p.y + p.dx * LANE * going;
+        // Knocked aside by your ship, easing back onto her lane
+        const ease = Math.exp(-dt / PUSH_BACK);
+        ship.push.x *= ease;
+        ship.push.y *= ease;
+        let x = r.x0 + r.ux * where.s + ship.push.x, y = r.y0 + r.uy * where.s + ship.push.y;
         // ...drawn on whichever side of the world's seam you are
         x = feet.x + wrapDelta(feet.x, ((x % SIZE) + SIZE) % SIZE);
         y = feet.y + wrapDelta(feet.y, ((y % SIZE) + SIZE) % SIZE);
+        ship.x = x;
+        ship.y = y;
         const seen = Math.hypot(x - feet.x, y - feet.y) < SIGHT;
         ship.sprite.setVisible(seen);
         if (!seen) {
             ship.last = null;
-            ship.heading = null;
+            ship.flipped = where.waiting && where.waited < 0.5 ? where.way > 0 : where.way < 0;
+            ship.turning = 0;
             return;
         }
         ship.t += dt;
-        // Heading the way she goes; waiting, swinging slowly round to face back
-        const ahead = pointAt(r, where.s + 60 * going);
-        const want = Math.atan2((ahead.y + ahead.dx * LANE * going) - (p.y + p.dx * LANE * going),
-            (ahead.x - ahead.dy * LANE * going) - (p.x - p.dy * LANE * going));
-        if (ship.heading === null) ship.heading = want;
-        ship.heading = wrapAngle(ship.heading + wrapAngle(want - ship.heading) * Math.min(1, (where.waiting ? 0.25 : 1.5) * dt));
+        // East, as drawn; west, mirrored (waiting at an end, the way she came, then halfway through it the way
+        // she'll go next): a paper turn between
+        const west = where.waiting && where.waited < 0.5 ? where.way > 0 : where.way < 0;
+        if (west !== ship.flipped || ship.turning) {
+            ship.turning += dt / TURN_S;
+            if (ship.turning >= 0.5 && west !== ship.flipped) ship.flipped = west;
+            if (ship.turning >= 1) ship.turning = 0;
+        }
+        const squeeze = ship.turning ? Math.max(0.06, Math.abs(1 - 2 * ship.turning)) : 1;
         const way = Math.min(1, where.speed / ship.speed);
-        const swell = 0.06 * Math.sin(ship.t * 0.6) + 0.03 * Math.sin(ship.t * 1.6 + 1.3);
-        const yaw = swell * (0.4 + 0.6 * way) + Math.sin(ship.t * 2) * 0.015;
+        const swell = 0.04 * Math.sin(ship.t * 0.6) + 0.02 * Math.sin(ship.t * 1.6 + 1.3);
+        const yaw = swell * (0.4 + 0.6 * way) + Math.sin(ship.t * 2) * 0.01;
         const pitch = Math.sin(ship.t * 1.8) * (0.02 + 0.015 * way);
-        ship.sprite.setPosition(x, y + Math.sin(ship.t * 1.4) * 1);
-        ship.hull = faceShip(ship.sprite, ship.heading, yaw, pitch, ship.face);
+        // Turned only by her lane's slope (never more than RISE, bow up going east, down going west), and the swell
+        const lean = Math.max(-RISE, Math.min(0, r.slope));
+        ship.sprite.setPosition(x, y + Math.sin(ship.t * 1.4) * 1)
+            .setFlipX(ship.flipped).setRotation(lean + yaw).setScale((1 + pitch) * squeeze, 1 - pitch * 0.5);
+        ship.hull = (ship.flipped ? Math.PI - DRAWN_BOW : DRAWN_BOW) + lean + yaw;
         this._foam(ship, x, y, dt, way);
     }
 

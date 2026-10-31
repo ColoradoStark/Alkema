@@ -21,7 +21,7 @@ export function legTime(L, v, ease) {
  * Where on a course of `length` px a boat is at `time` (s): out at `out` px/s, `wait` s at the
  * far end, back at `back` px/s, `wait` s at the start, and round again; `phase` (0-1) is how far
  * into that round it is at time 0. Returns how far along (s), which way (+1 out, -1 back), its
- * speed, and whether it's waiting at an end.
+ * speed, and whether it's waiting at an end (and how far through the wait, 0-1).
  */
 export function voyage(length, out, back, phase, time, wait, ease) {
     const tOut = legTime(length, out, ease), tBack = legTime(length, back, ease);
@@ -31,11 +31,11 @@ export function voyage(length, out, back, phase, time, wait, ease) {
         const d = leg(t, L, v, ease);
         return { s: dir > 0 ? d : L - d, way: dir, waiting: false, speed: (leg(t + 0.05, L, v, ease) - d) / 0.05 };
     };
-    if (u < wait) return { s: 0, way: 1, waiting: true, speed: 0 };
+    if (u < wait) return { s: 0, way: 1, waiting: true, speed: 0, waited: u / wait };
     u -= wait;
     if (u < tOut) return moving(length, out, u, 1);
     u -= tOut;
-    if (u < wait) return { s: length, way: -1, waiting: true, speed: 0 };
+    if (u < wait) return { s: length, way: -1, waiting: true, speed: 0, waited: u / wait };
     u -= wait;
     return moving(length, back, u, -1);
 }

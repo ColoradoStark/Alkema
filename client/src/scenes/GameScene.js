@@ -156,6 +156,16 @@ export class GameScene extends Scene {
         this.fieldDemons.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         this.riverBoats.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
         this.seaShips.update(delta, this.world === this.overworld && !this.battle && !this._changingRoom ? feet : null);
+        // Your ship runs into the ships at sea rather than over them: the two push each other apart
+        if (this.localPlayer?.sailing && this.seaShips.loaded) {
+            const me = this.localPlayer.sprite, ship = this.localPlayer.ship;
+            const push = this.seaShips.shove(me.x, me.y + FEET, ship.heading, (x, y) => this.world.isSailable(x, y));
+            if (push) {
+                me.setPosition(me.x + push.x, me.y + push.y);
+                me.body.reset(me.x, me.y);
+                ship.shoved(push.nx, push.ny);
+            }
+        }
         // Walked into someone: story mode
         if (this.town?.bumped) {
             this.scene.get('UIScene')?.talkTo(this.town.bumped);

@@ -473,10 +473,10 @@ test.describe('Living world', () => {
         expect(drift).toBeLessThan(3);
     });
 
-    test('your ship turns right round to the way she sails, never upside down, the old galleon\'s size', async ({ page }) => {
+    test('your ship is the galleon drawn from above: she turns right round to the way she sails', async ({ page }) => {
         await enterWorld(page);
         const found = await page.evaluate(async () => {
-            const { Ship, DRAWN_BOW } = await import('/src/world/Ship.js');
+            const { Ship } = await import('/src/world/Ship.js');
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const ship = new Ship(gs, 0, 0, 0, 0), wrong = [];
             for (let i = 0; i < 16; i++) {
@@ -484,22 +484,14 @@ test.describe('Living world', () => {
                 ship._time = 0;
                 ship.heading = ship.targetHeading = h;
                 ship.follow(0, 0, 0);
-                const s = ship.sprite, drawn = s.flipX ? Math.PI - DRAWN_BOW : DRAWN_BOW;
-                const bow = s.rotation + drawn, off = Math.atan2(Math.sin(bow - h), Math.cos(bow - h));
-                if (Math.abs(off) > 0.12) wrong.push(`heading ${h.toFixed(2)}: bow ${bow.toFixed(2)}`);
-                if (Math.cos(h) < -0.2 && !s.flipX || Math.cos(h) > 0.2 && s.flipX) wrong.push(`heading ${h.toFixed(2)} upside down`);
+                const off = Math.atan2(Math.sin(ship.sprite.rotation - h), Math.cos(ship.sprite.rotation - h));
+                if (Math.abs(off) > 0.12 || ship.sprite.flipX) wrong.push(`heading ${h.toFixed(2)}: drawn ${ship.sprite.rotation.toFixed(2)}`);
             }
-            const tex = gs.textures.get('ship').getSourceImage();
-            const c = document.createElement('canvas'); c.width = tex.width; c.height = tex.height;
-            const g = c.getContext('2d'); g.drawImage(tex, 0, 0);
-            const px = g.getImageData(0, 0, c.width, c.height).data;
-            let x0 = 1e9, x1 = -1;
-            for (let i = 3; i < px.length; i += 4) if (px[i] > 200) { const x = (i >> 2) % c.width; x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+            const src = gs.textures.get('ship').getSourceImage();
             ship.destroy();
-            return { wrong, length: x1 - x0 + 1 };
+            return { wrong, size: [src.width, src.height] };
         });
-        expect(found.wrong).toEqual([]);
-        expect(found.length).toBeLessThan(72);       // the galleon was 62 px long; the sea's carracks are 105
+        expect(found).toEqual({ wrong: [], size: [64, 32] });
     });
 
     test('the ability has a cooldown', async ({ page }) => {
