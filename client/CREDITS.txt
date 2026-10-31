@@ -1468,6 +1468,7 @@ fx/flames.png (the flames in the hearths): "[LPC] Flames" by Lanea Zimmerman
 
 ui/weapons.png (the attack button's weapons: the one you carry): Dungeon Crawl
 Stone Soup's tiles by the DCSS artists, from the Crawl tiles project's 2010
-release (https://github.com/crawl/tiles, releases/Ancient/Oct-5-2010;
+release (https://github.com/crawl/tiles, releases/Ancient/Oct-5-2010, and the
+bow from releases/Nov-2015;
 artists: https://github.com/crawl/tiles/blob/master/ARTISTS.md).
   License: CC0
