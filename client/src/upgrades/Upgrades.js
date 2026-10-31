@@ -17,12 +17,19 @@ const SPELL_BOOST = 0.05;                    // a spell's power, each level past
 export const BUY = [1, 10, 25, 'max'];
 export const SLOTS = 3;                      // upgrades shown before the goddesses (the user's)
 
-/** The stat upgrades, cheapest first; `needs` another track at a level before it opens. */
+/**
+ * The stat upgrades, cheapest first; `needs` another track at a level before it opens. Strength of Arm,
+ * Vigour and Focus each make you `times` as strong a level, each level `grow` times dearer (the user's,
+ * October 2026: a few buys a pack up the climb, each one felt, not fifty of +1; Clicker Heroes' small
+ * steps took 10 to 75 buys a pack).
+ */
+const BIG = { times: 1.85, grow: 2.5 };
+const x = (n) => `×${n < 100 ? Math.round(n * 100) / 100 : short(n)}`;
 export const STAT_TRACKS = [
-    { id: 'might', name: 'Strength of Arm', glyph: '⚔', base: 10, per: 1, stat: 'attack', text: (n) => `+${n} attack` },
-    { id: 'vigour', name: 'Vigour', glyph: '♥', base: 20, per: 4, stat: 'hp', text: (n) => `+${n} hit points` },
-    { id: 'guard', name: 'Guard', glyph: '⛨', base: 50, per: 1, stat: 'defence', needs: ['might', 5], text: (n) => `+${n} defence` },
-    { id: 'focus', name: 'Focus', glyph: '✦', base: 90, per: 1, stat: 'spell', needs: ['vigour', 5], text: (n, magic) => `+${n} spell power${magic ? `, +${n} magic` : ''}` },
+    { id: 'might', name: 'Strength of Arm', glyph: '⚔', base: 40, ...BIG, stat: 'attack', text: (n) => `${x(n)} attack` },
+    { id: 'vigour', name: 'Vigour', glyph: '♥', base: 40, ...BIG, stat: 'hp', text: (n) => `${x(n)} hit points` },
+    { id: 'guard', name: 'Guard', glyph: '⛨', base: 50, per: 1, stat: 'defence', needs: ['might', 3], text: (n) => `+${n} defence` },
+    { id: 'focus', name: 'Focus', glyph: '✦', base: 60, ...BIG, stat: 'spell', needs: ['vigour', 2], text: (n, magic, level) => `${x(n)} spell power${magic ? `, +${level} magic` : ''}` },
     { id: 'fortune', name: 'Fortune', glyph: '◉', base: 160, per: 3, stat: 'gold', needs: ['guard', 10], text: (n) => `+${n}% gold found` },
     { id: 'breath', name: 'Second Wind', glyph: '↻', base: 300, per: 4, stat: 'regen', needs: ['focus', 10], text: (n) => `magic back ${n}% faster` },
 ];
@@ -152,10 +159,10 @@ export function nextMilestone(level) {
     return (Math.floor(level / 100) + 1) * 100;
 }
 
-/** What `n` more levels of a track cost from `level` (each GROW times the last). */
-export function costOf(base, level, n = 1) {
+/** What `n` more levels of a track cost from `level` (each `grow`, GROW unless it says, times the last). */
+export function costOf(base, level, n = 1, grow = GROW) {
     let sum = 0;
-    for (let i = 0; i < n; i++) sum += Math.ceil(base * GROW ** (level + i));
+    for (let i = 0; i < n; i++) sum += Math.ceil(base * grow ** (level + i));
     return sum;
 }
 
@@ -177,6 +184,13 @@ export class Upgrades {
         const saved = account.current?.data?.upgrades || {};
         this.levels = {};
         for (const [id, n] of Object.entries(saved)) if (Number.isFinite(n) && n > 0) this.levels[id] = Math.floor(n);
+        // (a hero from before Strength of Arm, Vigour and Focus went from +1 a level to times: about as strong as they were)
+        if (account.current && account.current.data?.upgradesTimes !== true) {
+            for (const [id, per, had] of [['might', 1, 6], ['vigour', 4, 20], ['focus', 1, 5]]) {
+                if (this.levels[id]) this.levels[id] = Math.max(1, Math.round(Math.log(1 + per * this.levels[id] / had) / Math.log(BIG.times)));
+            }
+            account.updateProgress({ upgrades: { ...this.levels }, upgradesTimes: true });
+        }
         this.version = 0;
         this._listeners = new Set();
         // Your spells, in your class's order: the ones you know already start at their first level
@@ -256,7 +270,7 @@ export class Upgrades {
         let k = 0, sum = 0;
         const gold = this.inventory.essence;      // (what upgrades are bought with: essence, the user's; gold is for town)
         while (k < 1000) {
-            const next = costOf(t.base, this.level(t.id) + k);
+            const next = costOf(t.base, this.level(t.id) + k, 1, t.grow);
             if (sum + next > gold) break;
             sum += next;
             k++;
@@ -265,7 +279,7 @@ export class Upgrades {
     }
 
     cost(t, n = 1) {
-        return costOf(t.base, this.level(t.id), this.howMany(t, n));
+        return costOf(t.base, this.level(t.id), this.howMany(t, n), t.grow);
     }
 
     /** Buy `n` levels: { ok, levels, learned (a spell's new rank), milestone } or { ok: false, error }. */
@@ -273,22 +287,23 @@ export class Upgrades {
         const t = this.track(id);
         if (!t) return { ok: false, error: 'no-such-upgrade' };
         if (!this.open(t)) return { ok: false, error: 'locked' };
-        const k = this.howMany(t, n), price = costOf(t.base, this.level(id), k);
+        const k = this.howMany(t, n), price = costOf(t.base, this.level(id), k, t.grow);
         if (this.inventory.essence < price) return { ok: false, error: 'poor' };
         const was = this.level(id);
         this.inventory.essence -= price;
         this.levels[id] = was + k;
         const res = { ok: true, levels: k, price };
         if (t.spell && rankAt(was + k) > rankAt(was)) res.learned = rankAt(was + k);
-        if (milestonesAt(was + k) > milestonesAt(was)) res.milestone = true;
+        if (!t.times && milestonesAt(was + k) > milestonesAt(was)) res.milestone = true;
         this._teach();
         this._save();
         this.inventory._save();       // (the gold spent; tells its listeners)
         return res;
     }
 
-    /** What a track gives at its level now: its `per` a level, doubled at each milestone. */
+    /** What a track gives at its level now: its `per` a level, doubled at each milestone; or (`times`) so many times what you had. */
     amount(t, level = this.level(t.id)) {
+        if (t.times) return t.times ** level;
         return t.per * level * 2 ** milestonesAt(level);
     }
 
@@ -329,17 +344,17 @@ export class Upgrades {
     /** The hero's stats with their upgrades: what the server reckoned from their race, class and gear, and these. */
     apply(base) {
         if (!base) return base;
-        const add = (id) => this.amount(STAT_TRACKS.find(t => t.id === id));
+        const add = (id) => this.amount(STAT_TRACKS.find(t => t.id === id));      // (Strength of Arm, Vigour, Focus: times)
         const all = this.legendary * (1 + this.blessing('all') / 100);
-        const hp = Math.round((base.hp.max + add('vigour') + this.blessing('hp')) * all);
-        const mp = base.mp.max ? base.mp.max + add('focus') + this.blessing('mp') : 0;
+        const hp = Math.round((base.hp.max * add('vigour') + this.blessing('hp')) * all);
+        const mp = base.mp.max ? base.mp.max + this.level('focus') + this.blessing('mp') : 0;
         return {
             ...base,
             hp: { now: hp, max: hp },
             mp: { now: mp, max: mp },
-            attack: Math.round((base.attack + add('might') + this.blessing('attack')) * all),
+            attack: Math.round((base.attack * add('might') + this.blessing('attack')) * all),
             defence: base.defence + add('guard') + this.blessing('defence'),
-            spell: Math.round((base.spell + add('focus') + this.blessing('spell')) * all),
+            spell: Math.round((base.spell * add('focus') + this.blessing('spell')) * all),
             base,
         };
     }

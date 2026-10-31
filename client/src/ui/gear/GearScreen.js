@@ -695,7 +695,7 @@ export class GearScreen {
             if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
             words.prepend(name);
             words.append(el('div', 'gear-up-gives', { text: this._gives(up, t, level, open) }));
-            if (open && level) {
+            if (open && level && !t.times) {        // (a track that times you has no milestones)
                 // How far to its next milestone (a spell's next rank first)
                 const rankNext = t.spell && RANKS.find(r => r > level);
                 const goal = rankNext || nextMilestone(level);
@@ -738,6 +738,7 @@ export class GearScreen {
         }
         const now = up.amount(t, level), next = up.amount(t, level + 1);
         if (t.goddess) return level ? `${givesText(t.gives, now, up.magic)} (next ${givesText(t.gives, next - now, up.magic)})` : `Each level: ${givesText(t.gives, 1, up.magic)}`;
+        if (t.times) return level ? `${t.text(now, up.magic, level)} (next ×${t.times})` : `Each level: ${t.text(t.times, up.magic, 1)}`;
         return level ? `${t.text(now, up.magic)} (next +${next - now})` : t.text(t.per, up.magic);
     }
 

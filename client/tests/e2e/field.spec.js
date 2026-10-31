@@ -544,7 +544,7 @@ test.describe('The zone, not your hero, says how hard its foes are', () => {
 });
 
 test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
-    test("each pack up it 2.5 times the health of the one before, its blow twice; what each pays buys, on the Upgrade page, the strength the next asks, for every class; a new hero can't skip a pack's upgrades for long", async ({ page }) => {
+    test("each pack up it 2.5 times the health of the one before, its blow twice; what each pays buys, on the Upgrade page, the strength the next asks, for every class, in three buys at most; a new hero can't skip a pack's upgrades for long", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
@@ -555,31 +555,37 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
             const ratio = numbers('greatbear', 1, z, 3).hp / hp;
             // A hero buying the most strength (attack x hit points) for its gold, as the Upgrade page sells it
             const tracks = Object.fromEntries([STAT_TRACKS[0], STAT_TRACKS[1], ...GODDESSES.slice(0, 3)].map(t => [t.id, t]));
-            const amount = (t, l) => t.per * l * 2 ** milestonesAt(l);
-            const of = (t, stat) => t.gives ? t.gives[stat] || 0 : t.stat === stat ? 1 : 0;
-            const strength = (h, L) => Object.values(tracks).reduce(([a, p], t) => [a + of(t, 'attack') * amount(t, L[t.id]), p + of(t, 'hp') * amount(t, L[t.id])], [h.attack, h.hp]).reduce((a, p) => a * p);
-            const short = [];
+            const amount = (t, l) => t.times ? t.times ** l : t.per * l * 2 ** milestonesAt(l);
+            const of = (t, stat) => t.gives ? t.gives[stat] || 0 : 0;
+            const T = tracks;
+            const strength = (h, L) => Object.values(T).reduce(([a, p], t) => [a + of(t, 'attack') * amount(t, L[t.id]), p + of(t, 'hp') * amount(t, L[t.id])],
+                [h.attack * amount(T.might, L.might), h.hp * amount(T.vigour, L.vigour)]).reduce((a, p) => a * p);
+            const short = [], most = [];
             for (const h of [{ attack: 4, hp: 16 }, { attack: 5, hp: 19 }, { attack: 7, hp: 20 }, { attack: 9, hp: 19 }, { attack: 9, hp: 31 }]) {
                 const L = Object.fromEntries(Object.keys(tracks).map(id => [id, 0]));
                 let gold = 0;
                 for (const step of steps.slice(1)) {
                     gold += packEssence('vanar', step - 1);
+                    let n = 0;
                     while (strength(h, L) < strengthFor('vanar', step)) {
                         const buys = Object.entries(tracks).filter(([, t]) => !t.needs || L[t.needs[0]] >= t.needs[1])
-                            .map(([id, t]) => { const c = costOf(t.base, L[id]); const L2 = { ...L, [id]: L[id] + 1 }; return { id, c, gain: (strength(h, L2) - strength(h, L)) / c }; })
+                            .map(([id, t]) => { const c = costOf(t.base, L[id], 1, t.grow); const L2 = { ...L, [id]: L[id] + 1 }; return { id, c, gain: (strength(h, L2) - strength(h, L)) / c }; })
                             .sort((a, b) => b.gain - a.gain);
                         if (buys[0].c > gold) { short.push(`${h.attack}/${h.hp} short for pack ${step}`); break; }
                         gold -= buys[0].c;
                         L[buys[0].id]++;
+                        n++;
                     }
+                    most.push(n);
                 }
             }
             const fresh = [[4, 16], [9, 31]].map(([a, h]) => a * h);
-            return { steps, ratio, short, fresh, two: strengthFor('vanar', 2), first: packEssence('vanar', 0), places: PLACES.filter(p => p.family === 'vanar').every(p => p.step === PACKS[p.pack].step) };
+            return { steps, ratio, short, most: Math.max(...most), fresh, two: strengthFor('vanar', 2), first: packEssence('vanar', 0), places: PLACES.filter(p => p.family === 'vanar').every(p => p.step === PACKS[p.pack].step) };
         });
         expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6]);
         expect(r.ratio / 2.5 ** 3).toBeCloseTo(1, 1);
         expect(r.short).toEqual([]);
+        expect(r.most).toBeLessThanOrEqual(3);         // (a few buys a pack, each felt: the user clicked fifty times)
         for (const f of r.fresh) expect(f).toBeLessThan(r.two);      // (no new hero skips two packs' upgrades)
         expect(r.places).toBe(true);
     });

@@ -33,45 +33,47 @@ test.describe('Upgrades', () => {
     test('the Upgrade tab: a long list, cheapest first, each dearer as you buy it, and what it gives on your stats', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
-        await asMage(page, 1000);
+        await asMage(page, 1e6);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
         await expect(page.locator('.gear-tab[data-tab="upgrades"]')).toHaveClass(/is-current/);
-        const rows = page.locator('.gear-up');
-        await expect(rows.first()).toHaveAttribute('data-up', 'might');
+        // Cheapest first (a mage's next Fireball, 25, before Strength of Arm's 40)
+        const prices = await page.locator('.gear-up:not(.is-goddess) .gear-coins').allTextContents();
+        expect(prices.map(Number)).toEqual(prices.map(Number).sort((a, b) => a - b));
+        await expect(page.locator('.gear-up[data-up="might"]')).toBeVisible();
         // Three upgrades, then the goddesses (the user's)
         await expect(page.locator('.gear-up:not(.is-goddess)')).toHaveCount(3);
         await expect(page.locator('.gear-upgrades > :nth-child(4)')).toHaveClass(/gear-up-heading/);
         const before = await ui(page, (ui) => ({ attack: ui.inventory.stats.attack, base: ui.inventory.stats.base.attack }));
         const price = Number(await page.locator('.gear-up-buy[data-buy="might"] .gear-coins').textContent());
-        expect(price).toBe(10);
+        expect(price).toBe(40);
         await page.locator('.gear-up-buy[data-buy="might"]').click();
         await expect(page.locator('.gear-up[data-up="might"] .gear-up-level')).toHaveText('Lv 1');
         expect(Number(await page.locator('.gear-up-buy[data-buy="might"] .gear-coins').textContent())).toBeGreaterThan(price);
-        expect(await ui(page, (ui) => ui.inventory.essence)).toBe(990);
+        expect(await ui(page, (ui) => ui.inventory.essence)).toBe(1e6 - 40);
         // Ten at a time
         await page.locator('.gear-buy-n[data-n="10"]').click();
         await page.locator('.gear-up-buy[data-buy="might"]').click();
         await expect(page.locator('.gear-up[data-up="might"] .gear-up-level')).toHaveText('Lv 11');
         const after = await ui(page, (ui) => ({ attack: ui.inventory.stats.attack, base: ui.inventory.stats.base.attack }));
         expect(after.base).toBe(before.base);
-        expect(after.attack).toBe(before.attack + 11);
+        expect(after.attack).toBe(Math.round(before.base * 1.85 ** 11));       // (each level 1.85 times: a few buys a pack, each felt, the user's)
         // ...and on the Stats tab
         await page.locator('.gear-tab[data-tab="stats"]').click();
         await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-value')).toHaveText(String(after.attack));
-        await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-more')).toHaveText('+11 upgrades');
+        await expect(page.locator('.gear-power-tile[data-power="attack"] .gear-power-more')).toHaveText(`+${after.attack - after.base} upgrades`);
         await page.locator('.gear-tab[data-tab="upgrades"]').click();
         // Vigour: more hit points, there now
         const hp = await ui(page, (ui) => ui.hp.max);
         await page.locator('.gear-buy-n[data-n="1"]').click();
         await page.locator('.gear-up-buy[data-buy="vigour"]').click();
-        await expect.poll(() => ui(page, (ui) => [ui.hp.max, ui.hp.now])).toEqual([hp + 4, hp + 4]);
+        await expect.poll(() => ui(page, (ui) => [ui.hp.max, ui.hp.now])).toEqual([Math.round(hp * 1.85), Math.round(hp * 1.85)]);
         // Kept with the hero
         expect(await page.evaluate(async () => (await import('/src/account/account.js')).account.current.data.upgrades)).toMatchObject({ might: 11, vigour: 1 });
-        // Too dear: says so, and nothing's spent
+        // Too dear: says so, and nothing's spent (Strength of Arm, dear now, has left the three for cheaper)
         await ui(page, (ui) => { ui.inventory.essence = 3; ui.inventory._save(); });
-        await page.locator('.gear-up-buy[data-buy="might"]').click();
+        await page.locator('.gear-up-buy[data-buy="vigour"]').click();
         await expect(page.locator('.gear-notice')).toContainText('costs');
-        await expect(page.locator('.gear-up[data-up="might"] .gear-up-level')).toHaveText('Lv 11');
+        await expect(page.locator('.gear-up[data-up="vigour"] .gear-up-level')).toHaveText('Lv 1');
     });
 
     test('milestones double what an upgrade gives, Fortune finds more gold, and there is always another further down', async ({ page }) => {
@@ -79,13 +81,13 @@ test.describe('Upgrades', () => {
         await enterWorld(page);
         await asMage(page, 1e9);
         const r = await ui(page, (ui) => {
-            const u = ui.upgrades, base = ui.inventory.stats.base.attack;
-            u.buy('might', 24);
-            const at24 = ui.inventory.stats.attack - base;
-            u.buy('might', 1);
-            const at25 = ui.inventory.stats.attack - base;
+            const u = ui.upgrades, base = ui.inventory.stats.base.defence;
+            u.buy('might', 3);
+            u.buy('guard', 24);
+            const at24 = ui.inventory.stats.defence - base;
+            u.buy('guard', 1);
+            const at25 = ui.inventory.stats.defence - base;
             const found = ui.inventory.found(100);
-            u.buy('guard', 10);
             u.buy('fortune', 1);
             const lucky = ui.inventory.found(100);
             const list = () => u.tracks().map(t => t.id);
@@ -118,7 +120,8 @@ test.describe('Upgrades', () => {
         const top = await page.locator('.gear-upgrades').evaluate(l => l.scrollTop);
         await page.locator('.gear-buy-n[data-n="max"]').click();
         await page.locator('.gear-buy-n[data-n="1"]').click();
-        for (let i = 0; i < 9; i++) await page.locator('.gear-up-buy[data-buy="fireball"]').click();
+        // (tapped as a finger does: Playwright's click scrolls a half-hidden button into view itself, and Fireball, cheapest, is the top row)
+        for (let i = 0; i < 9; i++) await page.locator('.gear-up-buy[data-buy="fireball"]').evaluate(b => b.click());
         expect(await page.locator('.gear-upgrades').evaluate(l => l.scrollTop)).toBe(top);
         await expect(page.locator('.gear-notice')).toContainText('Fireball is rank II');
         await expect(page.locator('.gear-notice')).toContainText('Frost Lance is open');
@@ -131,6 +134,7 @@ test.describe('Upgrades', () => {
         // With the cheap ones bought up, Frost Lance is among the three next time: learn it
         await ui(page, (ui) => {
             const u = ui.upgrades;
+            ui.inventory.essence = 1e30;        // (forty of a big one, 2.5 times dearer a level, is past 10^16)
             for (let i = 0; i < 3; i++) for (const t of u.tracks()) if (u.open(t) && !['fireball', 'frost-lance'].includes(t.id)) u.buy(t.id, 40);
         });
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
@@ -147,7 +151,7 @@ test.describe('Upgrades', () => {
     test('the goddesses, straight on below the upgrades: every one shown, a shadow till the one before opens her, each adding to your stats', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
-        await asMage(page, 100000);
+        await asMage(page, 1e7);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
         const rows = page.locator('.gear-up.is-goddess');
         // Two tabs, and the goddesses in the upgrades' own list, after them all
