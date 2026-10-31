@@ -157,6 +157,14 @@ export function bounty(kind, tier, price, combo = 1) {
 }
 
 const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down'));
+const TURN_HOLD = 1.5;          // it keeps facing its way till another is this much more its way (near a diagonal it flickered)
+/** The way to face going (dx, dy), from facing `was`: kept while it's still nearly as much that way. */
+const steadyDir = (was, dx, dy) => {
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    if (was === (dx < 0 ? 'left' : 'right') && ax * TURN_HOLD >= ay) return was;
+    if (was === (dy < 0 ? 'up' : 'down') && ay * TURN_HOLD >= ax) return was;
+    return dirOf(dx, dy);
+};
 
 export class FieldDemons {
     constructor(scene) {
@@ -577,7 +585,7 @@ export class FieldDemons {
         const goal = this._goal(f, you, d, free, delta);
         if (goal) {
             const gx = goal.x - foe.x, gy = goal.y - foe.y, g = Math.hypot(gx, gy);
-            if (g > 6) return this._step(f, gx / g, gy / g, dt, goal.pace || 1);
+            if (g > 6) return this._step(f, gx / g, gy / g, dt, goal.pace || 1, goal.face ? you : null);
             this._step(f, 0, 0, dt);
             return foe.face(you.x, you.y);
         }
@@ -591,8 +599,9 @@ export class FieldDemons {
         }
         if (!free && d < f.spec.reach + 70) {         // others are at you: it circles, waiting its turn
             const side = f.side ??= Math.random() < 0.5 ? 1 : -1;
-            const away = d < f.spec.reach + 30 ? -0.6 : 0.3;
-            return this._step(f, (-dy / u) * side + (dx / u) * away, (dx / u) * side + (dy / u) * away, dt, 0.6);
+            // (in or out by how far it is from its ring, not all one way or the other at a line: it jittered on it)
+            const away = Math.max(-0.6, Math.min(0.3, (d - f.spec.reach - 40) / 50));
+            return this._step(f, (-dy / u) * side + (dx / u) * away, (dx / u) * side + (dy / u) * away, dt, 0.6, you);
         }
         this._step(f, dx / u, dy / u, dt);
     }
@@ -619,13 +628,19 @@ export class FieldDemons {
             const flankers = this.foes.filter(o => o.pack === f.pack && o.role === 'flanker' && o.hp > 0);
             const a = Math.atan2(you.y - my, you.x - mx) + (flankers.length > 1 ? (flankers.indexOf(f) % 2 ? 0.9 : -0.9) : 0);    // (two go either side)
             const now = Math.atan2(foe.y - you.y, foe.x - you.x), gap = Math.atan2(Math.sin(a - now), Math.cos(a - now));
-            if (Math.abs(gap) < 0.5) return null;       // round: in it goes
-            // going round you, not through you: round the ring, out of reach, while it's near
+            if (Math.abs(gap) < 0.5) {      // round: in it goes
+                f.round = 0;
+                return null;
+            }
+            // going round you, not through you: round the ring, out of reach, while it's near, keeping to the
+            // way round it chose (straight across from where it wanted to be, it went one way and the other)
             const ring = Math.max(RING, close + 20);
             if (d < ring * 1.8) {
-                const step = now + Math.sign(gap) * Math.min(Math.abs(gap), 0.8);
-                return { x: you.x + Math.cos(step) * ring, y: you.y + Math.sin(step) * ring };
+                if (!f.round || Math.abs(gap) < 2.6) f.round = Math.sign(gap) || 1;
+                const step = now + f.round * Math.min(Math.abs(gap), 0.8);
+                return { x: you.x + Math.cos(step) * ring, y: you.y + Math.sin(step) * ring, face: true };
             }
+            f.round = 0;
             return { x: you.x + Math.cos(a) * ring, y: you.y + Math.sin(a) * ring };
         }
         if (f.role === 'wanderer') {
@@ -728,7 +743,7 @@ export class FieldDemons {
         const went = Math.hypot(s.x - x0, s.y - y0);
         if (went) foe.travel?.(went, (s.x - x0) / went);        // (one that slides steps by how far it went)
         if (foe.striking) return;
-        if (dx || dy) foe.walkAnim(facing ? dirOf(facing.x - foe.x, facing.y - foe.y) : dirOf(dx, dy));
+        if (dx || dy) foe.walkAnim(f.dir = facing ? steadyDir(f.dir, facing.x - foe.x, facing.y - foe.y) : steadyDir(f.dir, dx, dy));
         else foe.halt();
     }
 

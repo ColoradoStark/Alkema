@@ -398,6 +398,55 @@ test.describe('Demons on the road, a fight you can lose', () => {
     });
 });
 
+test.describe('Demons that close in keep their heads', () => {
+    test("roused about you, no demon jams on the spot turning back and forth (the user's: bumping into each other, a couple of pixels one way and the other, flashing, getting nowhere)", async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        const { PLACES } = await places(page);
+        const packs = [...new Set(PLACES.filter(p => p.family === 'demons').map(p => p.pack))].slice(2, 6);
+        const flips = await page.evaluate(async (packs) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
+            const { PLACES } = await import('/src/battle/FieldDemons.js');
+            const frame = () => new Promise(r => requestAnimationFrame(r));
+            const out = [];
+            for (const pack of packs) {
+                const p = PLACES.find(q => q.pack === pack);
+                me.setPosition(p.x, p.y - 23 + 200); me.body.reset(me.x, me.y);
+                const t0 = performance.now();
+                while (!(gs.fieldDemons?.foes.filter(f => f.pack === pack).every(f => f.foe.ready)) && performance.now() - t0 < 20000) await frame();
+                const fd = gs.fieldDemons;
+                for (const [ox, oy] of [[0, 60], [60, 0], [-60, 0], [0, -60]]) {
+                    if (!fd._open(p.x + ox, p.y + oy)) continue;
+                    me.setPosition(p.x + ox, p.y + oy - 23); me.body.reset(me.x, me.y);
+                    for (const f of fd.foes) f.stun = f.pack === pack ? 0 : 1e9;
+                    const them = fd.foes.filter(f => f.pack === pack && f.hp > 0 && !f.spec.ranged);
+                    const turns = them.map(() => 0);
+                    them.forEach((f) => {
+                        f.foe.sprite.setPosition(f.post.x, f.post.y - 23);
+                        f.state = 'chase';
+                    });
+                    const was = them.map(f => f.foe.who.sprite.currentDirection);
+                    const t1 = performance.now();
+                    while (performance.now() - t1 < 4000) {
+                        ui.hp.max = 1e6; ui.hp.now = 1e6;
+                        await frame();
+                        them.forEach((f, k) => {
+                            const d = f.foe.who.sprite.currentDirection;
+                            if (d !== was[k] && f.state === 'chase') turns[k]++;
+                            was[k] = d;
+                        });
+                    }
+                    them.forEach((f, k) => out.push({ at: `${pack} ${ox},${oy} ${f.kind} ${f.role}`, turns: turns[k] }));
+                }
+                for (const f of fd.foes) f.stun = 0;
+            }
+            return out;
+        }, packs);
+        expect(flips.length).toBeGreaterThan(10);
+        for (const f of flips) expect(f.turns, f.at).toBeLessThanOrEqual(16);
+    });
+});
+
 test.describe('Orcs on the coast west of the start', () => {
     test("Wesnoth's orcs on foot, the demons' mix: packs west along the shore, every one with a caster, a warlord halfway; rouse one and its pack comes, an archer shoots arrows, a warrior isn't staggered, and they fall in gold", async ({ page }) => {
         test.setTimeout(150000);
