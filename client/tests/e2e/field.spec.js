@@ -117,7 +117,7 @@ test.describe('Demons on the coast', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length)).toBe(0);
     });
 
-    test('outrun one, a long way, and it gives up, back to its post', async ({ page }) => {
+    test('get away from one and, looking now and then, it gives up, back to its post', async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const { PLACES } = await places(page);
@@ -127,18 +127,26 @@ test.describe('Demons on the coast', () => {
         await page.evaluate(() => {          // it's after you...
             window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0).state = 'chase';
         });
-        // ...and keeps after you eighteen tiles off (the user's: it gave up at twelve, too easily; run for a town)...
+        // ...and keeps after you three tiles off...
         const off = (tiles) => page.evaluate((tiles) => {
-            const f = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0);
-            return { x: f.foe.x, y: f.foe.y + tiles * 32 };
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === 0);
+            for (let a = Math.PI / 2; a < Math.PI * 2.5; a += 0.1) {        // (open ground that far off it: not the sea)
+                const x = f.foe.x + Math.cos(a) * tiles * 32, y = f.foe.y + Math.sin(a) * tiles * 32;
+                if (fd._open(x, y)) return { x, y };
+            }
+            return null;
         }, tiles);
-        const far = await off(18);
-        await standAt(page, far.x, far.y);
-        await page.waitForTimeout(1500);
-        expect(await field(page).then(f => f.states[0])).toBe('chase');
-        // ...but more than its leash, twenty-four, from it? It goes home
-        const away = await off(30);
+        const near = await off(3);
+        await keepUp(page);
+        await standAt(page, near.x, near.y);
+        await page.waitForTimeout(2500);
+        expect(await field(page).then(f => f.states[0])).not.toMatch(/home|post/);
+        // ...but got more than five from it (the user's, to try), it sees so within a second or two, and goes home
+        const away = await off(15);
+        await keepUp(page);
+        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.tweens.killTweensOf(gs.localPlayer.sprite); });     // (a knock back from its last blow, still going, would carry you back to it)
         await standAt(page, away.x, away.y);
+        await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 2600 }).toBe('home');
         await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 30000 }).toBe('post');
     });
 
@@ -434,8 +442,8 @@ test.describe('A fight on the world sounds like one', () => {
     });
 });
 
-test.describe("A foe that's given up goes home", () => {
-    test("chased past its leash with you still beside it, it goes home and doesn't turn on you again till it's there: never back and forth between the two, growling (the user's: the great bear and another, by Dunmere, colliding nonstop as it made that sound)", async ({ page }) => {
+test.describe("A foe after you doesn't let go while you're near", () => {
+    test("however far from home it's come, it keeps after you till you've got well away from it: no line it won't cross to stand behind and shoot it from (the user's: the great bear stopped at a point by Dunmere, going back and forth, easy to cheese); followed far from every post, it's still there", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PLACES } = await places(page);
@@ -445,32 +453,44 @@ test.describe("A foe that's given up goes home", () => {
         const r = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
             const { audio } = await import('/src/audio/audio.js');
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
             let growls = 0;
             const play = audio.play.bind(audio);
             audio.play = (name, o) => { if (name === 'foe_orc') growls++; return play(name, o); };
             const f = fd.foes.find(o => o.kind === 'fury');
             for (const o of fd.foes) if (o !== f) o.stun = 1e9;
-            // 25 tiles from its post along open ground, you a step from it
-            let at = null;
-            for (let a = 0; a < Math.PI * 2 && !at; a += 0.1) {
-                const x = f.post.x + Math.cos(a) * 25 * 32, y = f.post.y + Math.sin(a) * 25 * 32;
-                if (fd._open(x, y) && fd._open(x + 50, y)) at = { x, y };
-            }
-            f.foe.sprite.setPosition(at.x, at.y - 23);
-            me.setPosition(at.x + 50, at.y - 23); me.body.reset(me.x, me.y);
-            f.state = 'chase';
-            const states = [];
-            const t0 = performance.now();
-            while (performance.now() - t0 < 3000) {
-                ui.hp.max = 1e6; ui.hp.now = 1e6;
-                me.setPosition(f.foe.x + 50, f.foe.y - 23);       // you keep beside it
-                if (states[states.length - 1] !== f.state) states.push(f.state);
-                await new Promise(r => requestAnimationFrame(r));
-            }
+            const spot = (tiles, apart) => {
+                for (let a = 0; a < Math.PI * 2; a += 0.05) {
+                    const x = f.post.x + Math.cos(a) * tiles * 32, y = f.post.y + Math.sin(a) * tiles * 32;
+                    if (!fd._open(x, y) || !fd._open(x + 50, y)) continue;
+                    if (apart && PACKS.some(p => p.family === f.family && Math.hypot(p.at[0] - x, p.at[1] - y) < apart)) continue;
+                    return { x, y };
+                }
+                return null;
+            };
+            const watch = async (at, ms) => {
+                f.foe.sprite.setPosition(at.x, at.y - 23);
+                me.setPosition(at.x + 50, at.y - 23); me.body.reset(me.x, me.y);
+                f.state = 'chase';
+                const states = new Set();
+                const t0 = performance.now();
+                while (performance.now() - t0 < ms) {
+                    ui.hp.max = 1e6; ui.hp.now = 1e6;
+                    if (fd.foes.includes(f)) me.setPosition(f.foe.x + 50, f.foe.y - 23);     // you keep beside it
+                    states.add(fd.foes.includes(f) ? f.state : 'gone');
+                    await new Promise(r => requestAnimationFrame(r));
+                }
+                return [...states];
+            };
+            const past = await watch(spot(26), 3000);
+            const far = spot(60, 42 * 32);
+            const away = far ? await watch(far, 2000) : null;
             for (const o of fd.foes) o.stun = 0;
-            return { states, growls };
+            return { past, away, growls };
         });
-        expect(r.states.slice(1), r.states.join(' ')).toEqual(['home']);
+        for (const st of r.past) expect(['chase', 'windup', 'recover'], r.past.join(' ')).toContain(st);
+        expect(r.away).not.toBe(null);
+        for (const st of r.away) expect(['chase', 'windup', 'recover'], r.away.join(' ')).toContain(st);
         expect(r.growls).toBeLessThanOrEqual(1);
     });
 });

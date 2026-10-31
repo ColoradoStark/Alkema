@@ -69,7 +69,8 @@ const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter mo
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
-const LEASH = 24 * TILE;        // and gives up this far from its post, or this far from you (the user's: at twelve it gave up too easily; run for a town)
+const LEASH = 5 * TILE;         // and gives up once you're this far from it, however far from home it's come (the user's, to try: a leash on its post was a line to stand behind and shoot it from)
+const LOOK_MS = [1000, 2000];   // which it sees only now and then, as it chases (the user's: once a second or two is enough)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
 const FAR = 40 * TILE;          // and go when you're this far from them all
 const REACH = 40, LUNGE = 26, SHOT_REACH = 220;
@@ -234,6 +235,8 @@ export class FieldDemons {
         // Each band comes as you near its stretch of coast, and goes as you leave it
         this._near = new Set(Object.keys(FAMILIES).filter(fam => PACKS.some(({ at: [x, y], family }) =>
             family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? FAR : NEAR))));
+        // (and stays while one of it is after you, however far from its posts it's followed you)
+        for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT) this._near.add(f.family);
         if (!this._near.size) return this.release();
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
@@ -453,7 +456,7 @@ export class FieldDemons {
         const { foe } = f, fx = this.scene.effects;
         if (f.mark > 0) damage = Math.round(damage * (1 + f.markMore));      // Hunter's Mark
         f.hp = Math.max(0, f.hp - damage);
-        if (f.state === 'post' || f.state === 'home') f.state = 'chase';
+        if (f.state === 'post' || f.state === 'home') this._roused(f);
         audio.play('hit_blade', { volume: 0.8 });
         fx.impact('metal', foe.x, foe.y - 22, foe.y);
         fx.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
@@ -481,7 +484,14 @@ export class FieldDemons {
 
     /** One of a pack is after you: they all are. */
     _rouse(pack) {
-        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && o.state === 'post') o.state = 'chase';
+        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && (o.state === 'post' || o.state === 'home')) this._roused(o);
+    }
+
+    /** After you: it comes on a while before it first looks how far off you are (struck from further off, it gave up there and then, and was mended). */
+    _roused(f) {
+        f.state = 'chase';
+        f.lookT = LOOK_MS[1];
+        f.lost = false;
     }
 
     _slay(f) {
@@ -543,16 +553,20 @@ export class FieldDemons {
         }
         const fromPost = Math.hypot(foe.x - f.post.x, foe.y - f.post.y);
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
-        // At its post, it waits for you to come within five tiles; too far from home or from you, it goes back
-        // (one that's given up goes all the way home before it turns on you again: past its leash with you
-        // beside it, it went home and came back every frame, growling, the user's great bear by Dunmere)
+        // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
-            if (d <= AGGRO && f.state === 'post') {
+            if (d <= AGGRO) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
                 this._rouse(f.pack);
             } else return this._home(f, dt, fromPost);
         }
-        if (!you || fromPost > LEASH || d > LEASH) {
+        // Now and then, chasing, it looks how far off you've got
+        if ((f.lookT = (f.lookT ?? 0) - delta) <= 0) {
+            f.lookT = LOOK_MS[0] + Math.random() * (LOOK_MS[1] - LOOK_MS[0]);
+            f.lost = d > Math.max(LEASH, (f.spec.keep || 0) + 80);     // (a caster's own distance kept is no getting away)
+        }
+        if (!you || f.lost) {
+            f.lost = false;
             if (f.state === 'windup') foe.tint(null);
             f.state = 'home';
             return this._home(f, dt, fromPost);
