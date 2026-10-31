@@ -19,6 +19,30 @@ const TALK_REACH = 64;         // stand this close to someone and they speak
 const COUNTER_REACH = 104;     // ...indoors, across a shop counter
 const WANDER_SPEED = 46;
 const SCHEDULE_MS = 500;       // how often townsfolk look at the time
+const THIN_SPAN = 80;          // a free run shorter than this (px) is too thin to get round a wanderer in
+
+/**
+ * The thin ground of a map (1 a cell): free cells whose free run across or
+ * along is shorter than `span` px, a passage you couldn't get round someone
+ * in. Found once as a map loads (a pass along every row and down every
+ * column), so wanderers can keep off it with nothing watching where you are.
+ */
+export function thinGround(blocked, cols, rows, cell, span = THIN_SPAN) {
+    const thin = new Uint8Array(cols * rows);
+    const short = Math.ceil(span / cell);
+    const runs = (count, at) => {
+        for (let start = 0; start < count;) {
+            if (blocked[at(start)]) { start++; continue; }
+            let end = start;
+            while (end < count && !blocked[at(end)]) end++;
+            if (end - start < short) for (let i = start; i < end; i++) thin[at(i)] = 1;
+            start = end;
+        }
+    };
+    for (let y = 0; y < rows; y++) runs(cols, x => y * cols + x);
+    for (let x = 0; x < cols; x++) runs(rows, y => y * cols + x);
+    return thin;
+}
 
 /**
  * Whether it's night for someone: each townsperson goes in at their own
@@ -181,6 +205,8 @@ export class Town {
         // a chest shut and open, a drained hall's floor and its water's walls), what you work, its foes
         if (data.water && this.water) this.water.setTint(parseInt(data.water.slice(1), 16));
         this.baseBlocked = this.blocked.slice();
+        // Where wanderers don't go: passages too thin to get round them in (by the map as built)
+        this.thin = thinGround(this.baseBlocked, this.cols, this.blocked.length / this.cols, this.cell);
         this.gated = (data.gated || []).map(g => ({ ...g, image: g.frame == null ? null
             : scene.add.image(g.left, g.top, `town-${key}-things`, String(g.frame)).setOrigin(0, 0)
                 .setDepth(g.floor ? DEPTH.ground + 0.1 : sortDepth(scene, g.foot)) }));
@@ -403,12 +429,27 @@ export class Town {
         }
     }
 
+    /** A free spot in their part of town, on open ground if there's any (feet, px). */
     _randomSpot([x0, y0, x1, y1]) {
+        let free = null;
         for (let i = 0; i < 40; i++) {
             const x = x0 + Math.random() * (x1 - x0), y = y0 + Math.random() * (y1 - y0);
-            if (!this.boxBlocked(x - 9, y - 5, 18, 10)) return [x, y];
+            if (this.boxBlocked(x - 9, y - 5, 18, 10)) continue;
+            if (!this.boxThin(x - 9, y - 5, 18, 10)) return [x, y];
+            free ||= [x, y];
         }
-        return [(x0 + x1) / 2, (y0 + y1) / 2];
+        return free || [(x0 + x1) / 2, (y0 + y1) / 2];
+    }
+
+    /** Does this box (world px) touch thin ground? */
+    boxThin(x, y, w, h) {
+        const c = this.cell;
+        for (let cy = Math.floor(y / c); cy <= Math.floor((y + h - 0.01) / c); cy++) {
+            for (let cx = Math.floor(x / c); cx <= Math.floor((x + w - 0.01) / c); cx++) {
+                if (this.thin[cy * this.cols + cx]) return true;
+            }
+        }
+        return false;
     }
 
     isBlocked(x, y) {
@@ -477,7 +518,8 @@ export class Town {
             if (!body.enable) return;
             const { position: pos, prev, width: w, height: h } = body;
             const already = this.folkAt(prev.x, prev.y, w, h);   // someone walked into you: don't get stuck in them
-            const into = (x, y) => this.folkAt(x, y, w, h, already);
+            // (a wanderer on thin ground lets you through: it's never in your way in a passage)
+            const into = (x, y) => { const who = this.folkAt(x, y, w, h, already); return who?.onThin ? null : who; };
             const blocked = (x, y) => this.boxBlocked(x, y, w, h) || !!into(x, y);
             if (!blocked(pos.x, pos.y)) return;
             const who = into(pos.x, pos.y);
@@ -547,7 +589,7 @@ export class Town {
                 s.setDirection(f.plan.facing || 'down');
                 s.stopAnimation();
             }
-            f.talking = !!near;
+            f.talking = !!near && !f.onThin;     // (a wanderer in a passage walks on, out of your way)
         }
         if (!this.water) return;
         this._waterTime += delta;
@@ -585,9 +627,9 @@ export class Town {
                 f.wait += 4000 + Math.random() * 5000;
             }
         } else if (step === 'stuck') {
-            // Nowhere to go from here: stop and choose somewhere else
+            // Nowhere to go from here: stop and choose somewhere else (at once in a passage: never stand about in one)
             f.target = null;
-            f.wait = 800;
+            f.wait = f.onThin ? 0 : 800;
             s.stopAnimation();
         }
     }
@@ -600,17 +642,20 @@ export class Town {
         const stepLen = WANDER_SPEED * delta / 1000;
         if (d < stepLen + 1) {
             s.setPosition(f.target.x, f.target.y);
+            f.onThin = !!f.plan.wander && this.boxThin(s.x - 9, s.y + FEET - 5, 18, 10);
             return 'there';
         }
         // Walk one leg at a time, like townsfolk in the old games: the longer leg
         // first, turning only when it's done or something's in the way
         if (!f.axis || (f.axis === 'x' ? Math.abs(dx) : Math.abs(dy)) < stepLen) f.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
         let horizontal = f.axis === 'x';
+        // On thin ground a wanderer and you pass through each other (see collide)
+        f.onThin = !!f.plan.wander && this.boxThin(s.x - 9, s.y + FEET - 5, 18, 10);
         const blocked = (h) => {
             const bx = h ? s.x + Math.sign(dx) * stepLen - 9 : s.x - 9;
             const by = (h ? s.y : s.y + Math.sign(dy) * stepLen) + FEET - 5;
             return this.boxBlocked(bx, by, 18, 10)
-                || (feet && bx < feet.x + 9 && bx + 18 > feet.x - 9 && by < feet.y + 5 && by + 10 > feet.y - 5);
+                || (feet && !f.onThin && bx < feet.x + 9 && bx + 18 > feet.x - 9 && by < feet.y + 5 && by + 10 > feet.y - 5);
         };
         if (blocked(horizontal)) {
             const other = !horizontal;

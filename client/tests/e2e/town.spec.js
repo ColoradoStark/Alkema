@@ -956,6 +956,135 @@ test.describe('Leaving', () => {
     });
 });
 
+// Wanderers keep to open ground (the user's: a guard wandering by Dunmere's
+// chapel stood in the way out; it happens all over): each map's thin ground
+// (a free run under THIN_SPAN across, one way or the other) is found once as
+// it loads, and wanderers neither rest nor step there. Nothing watches you.
+test.describe('Wanderers keep off thin paths', () => {
+    test('thin ground is a free run too short to get round someone in, across or along', async ({ page }) => {
+        await page.goto('/');
+        const thin = await page.evaluate(async () => {
+            const { thinGround } = await import('/src/world/Town.js');
+            // 16 px cells: a plaza, a passage two cells (32 px) wide off it, and one six cells (96 px) wide
+            const rows = [
+                '####################',
+                '#......#..#........#',
+                '#......#..#........#',
+                '#..................#',
+                '#......#..#........#',
+                '#......#..#........#',
+                '####################',
+            ];
+            const cols = rows[0].length, blocked = new Uint8Array(cols * rows.length);
+            rows.forEach((r, y) => [...r].forEach((ch, x) => { blocked[y * cols + x] = ch === '#' ? 1 : 0; }));
+            const t = thinGround(blocked, cols, rows.length, 16);
+            return rows.map((r, y) => [...r].map((ch, x) => ch === '#' ? '#' : t[y * cols + x] ? 't' : '.').join(''));
+        });
+        expect(thin).toEqual([
+            '####################',
+            '#......#tt#........#',
+            '#......#tt#........#',
+            '#......t..t........#',     // (the gaps through the walls are doorways, a cell high)
+            '#......#tt#........#',
+            '#......#tt#........#',
+            '####################',
+        ]);
+    });
+
+    test('every wanderer in every town, castle, room and dungeon has open ground to keep to', async ({ page }) => {
+        const { readdirSync, readFileSync } = await import('node:fs');
+        const dir = new URL('../../assets/towns/', import.meta.url);
+        const maps = readdirSync(dir).filter(n => n.endsWith('.json')).map(n => JSON.parse(readFileSync(new URL(n, dir), 'utf8')))
+            .filter(d => d.collision && (d.folk || []).some(f => f.wander))
+            .map(d => ({ key: d.key || '', cell: d.cell, width: d.width, height: d.height, collision: d.collision, wander: d.folk.filter(f => f.wander).map(f => [f.id, f.wander]) }));
+        expect(maps.length).toBeGreaterThan(5);
+        await page.goto('/');
+        const none = await page.evaluate(async (maps) => {
+            const { thinGround } = await import('/src/world/Town.js');
+            const out = [];
+            for (const m of maps) {
+                const cols = m.width / m.cell, rows = m.height / m.cell;
+                const bytes = Uint8Array.from(atob(m.collision), c => c.charCodeAt(0));
+                const blocked = new Uint8Array(cols * rows).map((_, i) => (bytes[i >> 3] >> (7 - (i & 7))) & 1);
+                const thin = thinGround(blocked, cols, rows, m.cell);
+                for (const [id, [x0, y0, x1, y1]] of m.wander) {
+                    let open = 0;
+                    for (let cy = Math.floor(y0 / m.cell); cy <= Math.floor(y1 / m.cell); cy++) {
+                        for (let cx = Math.floor(x0 / m.cell); cx <= Math.floor(x1 / m.cell); cx++) open += !blocked[cy * cols + cx] && !thin[cy * cols + cx];
+                    }
+                    if (open < 4) out.push(`${m.key} ${id}`);
+                }
+            }
+            return out;
+        }, maps);
+        expect(none).toEqual([]);
+    });
+
+    test("in Dunmere's courtyard the guard by the chapel, and every other wanderer, never stops on thin ground, and there walks on and lets you through", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page);
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            await gs.enterPlace({ name: 'Castle Dunmere', x: 10928, y: 10220 });
+        });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key), { timeout: 20000 }).toBe('dunmere');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.filter(f => f.plan.wander).length),
+            { timeout: 60000, intervals: [500] }).toBeGreaterThan(3);
+        // Ten minutes of their wandering, by day, with no one about to stop and talk to
+        const onThin = await page.evaluate(() => {
+            const town = window.__PHASER_GAME.scene.getScene('GameScene').town;
+            const { thin, cols, cell } = town;
+            const thinUnder = (f) => {
+                const x = f.sprite.x - 9, y = f.sprite.y + 23 - 5;
+                for (let cy = Math.floor(y / cell); cy <= Math.floor((y + 9.99) / cell); cy++) {
+                    for (let cx = Math.floor(x / cell); cx <= Math.floor((x + 17.99) / cell); cx++) if (thin[cy * cols + cx]) return true;
+                }
+                return false;
+            };
+            const seen = new Set();
+            for (let t = 0; t < 12000; t++) {
+                town.update(50, null);
+                for (const f of town.folk) if (f.plan.wander && !f.coming && !f.going && !f.target && f.wait > 0 && thinUnder(f)) seen.add(f.plan.id);
+            }
+            return [...seen];
+        });
+        expect(onThin).toEqual([]);
+
+        // In a passage running east and west, a wanderer coming the other way doesn't stop for you, and you walk on through
+        const met = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), town = gs.town;
+            const { thin, cols, cell, blocked } = town;
+            const free = i => !blocked[i];
+            let at = -1;
+            for (let i = cols * 2; i < thin.length - cols * 2 && at < 0; i++) {
+                const row = [-4, -3, -2, -1, 0, 1, 2, 3, 4].every(k => free(i + k) && thin[i + k]);
+                if (row && !free(i - cols) && !free(i + cols)) at = i;     // a passage a cell high, nine long
+            }
+            if (at < 0) return 'no passage';
+            const x = (at % cols) * cell + cell / 2, y = Math.floor(at / cols) * cell + cell / 2;
+            const f = town.folk.find(w => w.plan.wander);
+            f.sprite.setPosition(x + 20, y - 23);
+            f.target = { x: x + 60, y: y - 23 };
+            f.wait = 0;
+            const me = gs.localPlayer.sprite;
+            const feetBelow = me.body.y + me.body.height - me.y;     // the hero's centre to the foot of their body
+            me.setPosition(x - 30, y - feetBelow + 4);
+            me.body.reset(x - 30, y - feetBelow + 4);
+            town.bumped = null;
+            const keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
+            const stoppedFor = [];
+            keys.right = true;
+            for (let t = 0; t < 30; t++) {
+                await new Promise(r => setTimeout(r, 40));
+                if (f.talking) stoppedFor.push(t);
+            }
+            keys.right = false;
+            return { passed: me.x > f.sprite.x, startX: x + 20, meX: Math.round(me.x), bumped: !!town.bumped, stoppedFor: stoppedFor.length };
+        });
+        expect(met).toMatchObject({ passed: true, bumped: false, stoppedFor: 0 });
+    });
+});
+
 test.describe('Memory', () => {
     // A phone's browser drops a tab that holds too much: after four villages, entering a fifth sent you back to the start
     test("leaving a town lets go of its pictures and its people's sprite sheets; coming back loads them again", async ({ page }) => {
