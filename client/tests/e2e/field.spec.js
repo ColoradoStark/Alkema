@@ -141,8 +141,8 @@ test.describe('Demons on the coast', () => {
         await standAt(page, near.x, near.y);
         await page.waitForTimeout(2500);
         expect(await field(page).then(f => f.states[0])).not.toMatch(/home|post/);
-        // ...but got more than five from it (the user's, to try), it sees so within a second or two, and goes home
-        const away = await off(15);
+        // ...but got more than ten from it (the user's: at five a corner lost the bear), it sees so within a second or two, and goes home
+        const away = await off(20);
         await keepUp(page);
         await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.tweens.killTweensOf(gs.localPlayer.sprite); });     // (a knock back from its last blow, still going, would carry you back to it)
         await standAt(page, away.x, away.y);
@@ -492,6 +492,29 @@ test.describe("A foe after you doesn't let go while you're near", () => {
         expect(r.away).not.toBe(null);
         for (const st of r.away) expect(['chase', 'windup', 'recover'], r.away.join(' ')).toContain(st);
         expect(r.growls).toBeLessThanOrEqual(1);
+    });
+});
+
+test.describe('Matched to the hero you are', () => {
+    test("the foes by Dunmere, made as you arrive, are matched to your hero's real strength, and to it again as it grows (the user's: their archer one-shot every Vanar north of Dunmere)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const matched = () => page.evaluate(async () => {
+            const { numbers } = await import('/src/battle/FieldDemons.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, hero = fd._hero();
+            const wrong = fd.foes.filter(f => f.state === 'post' && f.maxHp !== numbers(f.kind, f.tier, hero).hp);
+            return { foes: fd.foes.length, attack: hero.attack, wrong: wrong.slice(0, 3).map(f => `${f.kind} ${f.maxHp} for ${numbers(f.kind, f.tier, hero).hp}`) };
+        });
+        await expect.poll(() => matched().then(m => m.foes), { timeout: 30000 }).toBeGreaterThan(0);
+        expect((await matched()).wrong).toEqual([]);
+        // grown stronger (an upgrade bought), those still at their posts are matched again
+        await page.evaluate(() => {
+            const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
+            Object.defineProperty(stats, 'attack', { value: (stats.attack || 5) * 3, configurable: true, writable: true });
+        });
+        await page.waitForTimeout(300);
+        const m = await matched();
+        expect(m.wrong, `attack ${m.attack}`).toEqual([]);
     });
 });
 

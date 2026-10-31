@@ -69,7 +69,7 @@ const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter mo
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
-const LEASH = 5 * TILE;         // and gives up once you're this far from it, however far from home it's come (the user's, to try: a leash on its post was a line to stand behind and shoot it from)
+const LEASH = 10 * TILE;        // and gives up once you're this far from it, however far from home it's come (the user's: a leash on its post was a line to stand behind and shoot it from; at five a corner lost the bear)
 const LOOK_MS = [1000, 2000];   // which it sees only now and then, as it chases (the user's: once a second or two is enough)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
 const FAR = 40 * TILE;          // and go when you're this far from them all
@@ -241,6 +241,7 @@ export class FieldDemons {
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
         if (!this.foes.length) return;
+        this._rematch();
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             if (this._freeze <= 0) this.scene.anims.resumeAll();
@@ -358,6 +359,22 @@ export class FieldDemons {
     }
 
     /** Your hero as the demons are matched to: attack, most hit points, defence. */
+    /**
+     * Your hero grown (an upgrade bought, a save's upgrades counted once they're in): those still untouched at
+     * their posts are matched to it again (made for the hero as they first came, a grown archer one-shot every
+     * Vanar north of Dunmere, the user's).
+     */
+    _rematch() {
+        const hero = this._hero(), key = `${hero.attack} ${hero.hp} ${hero.defence}`;
+        if (key === this._matched) return;
+        this._matched = key;
+        for (const f of this.foes) {
+            if (f.state !== 'post' || f.hp !== f.maxHp) continue;
+            const { hp, damage } = numbers(f.kind, f.tier, hero);
+            Object.assign(f, { hp, maxHp: hp, damage });
+        }
+    }
+
     _hero() {
         const ui = this.scene.scene.get('UIScene'), stats = ui?.inventory?.stats;
         return { attack: stats?.attack ?? 5, hp: ui?.hp?.max ?? stats?.hp?.max ?? 30, defence: stats?.defence ?? 0 };
