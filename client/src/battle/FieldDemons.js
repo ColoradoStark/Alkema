@@ -98,7 +98,8 @@ const CORNERED_MS = 3000;       // ...comes straight on this long
 const ROUTE_CELL = 16, ROUTE_REACH = 16 * TILE;       // with rock between, it finds a way round on a grid this fine, this far about
 const CLEAR_MS = 300, ROUTE_EVERY = 1000;       // it looks whether the way's straight this often, and finds a new way round at most this often
 const GIVE_UP_MS = 8000;        // after you this long getting no nearer and no blow at you, it gives up and goes home
-const HOME_STUCK_MS = 4000;     // going home this long getting no nearer, it's put back at its post (never seen stuck)
+const HOME_STUCK_MS = 3000;     // going home this long getting no nearer, it finds its way afresh
+const HOME_REACH = 40 * TILE;   // and looks this far about for it (it walked there: there's a way back)
 const MENU_GRACE_MS = 1200;     // back from a menu, you've this long before anything strikes you
 const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // ways along a wall, tried in turn
 
@@ -836,7 +837,7 @@ export class FieldDemons {
      * ledge above them, the great bear by Castle Dunmere's moat). True while it's going round; 'none' if
      * there's no way at all; false if the way's straight (its own mind takes it from there).
      */
-    _way(f, to, delta, dt, pace = 1) {
+    _way(f, to, delta, dt, pace = 1, reach = ROUTE_REACH) {
         const { foe } = f;
         // (in rock, pushed there: straight on, walking out; or where it's going isn't ground, a ship's deck: straight on, as near as it can)
         if (!this._open(foe.x, foe.y) || !this._open(to.x, to.y)) return false;
@@ -846,14 +847,15 @@ export class FieldDemons {
             f.routeAge = (f.routeAge || 0) + CLEAR_MS;
             if (f.clear) f.route = null;
             else if (!f.route || (f.routeAge >= ROUTE_EVERY && Math.hypot(f.routeTo.x - to.x, f.routeTo.y - to.y) > 2 * TILE)) {
-                f.route = this._route(foe, to);
+                f.route = this._route(foe, to, reach);
                 f.routeTo = { x: to.x, y: to.y };
                 f.routeAge = 0;
                 if (!f.route) return 'none';
             }
         }
         if (f.clear || !f.route) return false;
-        while (f.route.length && Math.hypot(f.route[0].x - foe.x, f.route[0].y - foe.y) < 6) f.route.shift();
+        const near = Math.max(6, f.spec.speed * pace * dt + 1);       // (a step can't overshoot it)
+        while (f.route.length && Math.hypot(f.route[0].x - foe.x, f.route[0].y - foe.y) < near) f.route.shift();
         if (!f.route.length) {
             f.route = null;
             f.clearT = 0;
@@ -901,9 +903,9 @@ export class FieldDemons {
      * A way on foot from `a` to `b` (feet) over the world's map, as points to walk through, or null if there's none
      * near: a search on a grid of ROUTE_CELL squares, no further than ROUTE_REACH beyond the two.
      */
-    _route(a, b) {
+    _route(a, b, reach = ROUTE_REACH) {
         const G = ROUTE_CELL, cell = (p) => [Math.round(p.x / G), Math.round(p.y / G)];
-        const [sx, sy] = cell(a), [tx, ty] = cell(b), pad = Math.ceil(ROUTE_REACH / G);
+        const [sx, sy] = cell(a), [tx, ty] = cell(b), pad = Math.ceil(reach / G);
         const x0 = Math.min(sx, tx) - pad, y0 = Math.min(sy, ty) - pad, w = Math.abs(sx - tx) + 2 * pad + 1, h = Math.abs(sy - ty) + 2 * pad + 1;
         const from = new Int32Array(w * h).fill(-2), at = (x, y) => (y - y0) * w + (x - x0);
         const ok = (x, y) => x >= x0 && y >= y0 && x < x0 + w && y < y0 + h && from[at(x, y)] === -2 && this._open(x * G, y * G);
@@ -932,7 +934,7 @@ export class FieldDemons {
         f.stallAt = null;
     }
 
-    /** Home to its post, round by the map; getting nowhere (or no way there), it's put back there. */
+    /** Home to its post, walking, round by the map (never put back there: the user's, it could go wrong all sorts of ways). */
     _home(f, dt, fromPost, delta = dt * 1000) {
         if (fromPost < 4) {
             if (f.state === 'home') {
@@ -944,25 +946,13 @@ export class FieldDemons {
             return this._step(f, 0, 0, dt);
         }
         if (!f.idle || fromPost < f.idle.best - TILE) f.idle = { best: fromPost, t: 0 };
-        const way = (f.idle.t += delta) > HOME_STUCK_MS ? 'none' : this._way(f, f.post, delta, dt, 0.7);
-        if (way === 'none') return this._putBack(f);
-        if (way) return;
+        if ((f.idle.t += delta) > HOME_STUCK_MS) {          // getting nowhere: its way found afresh
+            f.idle.t = 0;
+            f.route = null;
+            f.clearT = 0;
+        }
+        if (this._way(f, f.post, delta, dt, 0.7, HOME_REACH) === true) return;
         this._step(f, (f.post.x - f.foe.x) / fromPost, (f.post.y - f.foe.y) / fromPost, dt, 0.7);
-    }
-
-    /** Back at its post at once, mended (it fades out where it is and in there). */
-    _putBack(f) {
-        const s = f.foe.sprite;
-        f.idle = null;
-        f.route = null;
-        f.state = 'post';
-        f.hp = Math.max(f.hp, f.maxHp);
-        f.foe.halt();
-        s.setPosition(f.post.x, f.post.y - FEET);
-        f.foe.place?.();
-        s.setAlpha?.(0);
-        this.scene.tweens.add({ targets: s, alpha: 1, duration: 400 });
-        f.foe.rest();
     }
 
     /** It walks (dx, dy) a step's worth, facing its way or, given `facing` (feet), that. */

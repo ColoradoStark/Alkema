@@ -1175,7 +1175,7 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
 });
 
 test.describe('Never stuck', () => {
-    test("wherever you are on the road north and round Castle Dunmere, a foe gets to you or gives up and gets home: none stands stuck at rock, a wall or the moat (the user's, five times: the great bear stood stuck by the castle)", async ({ page }) => {
+    test("wherever you are on the road north and round Castle Dunmere, a foe gets to you or gives up and walks home (never put back there: the user's): none stands stuck at rock, a wall or the moat (the user's, five times: the great bear stood stuck by the castle)", async ({ page }) => {
         test.setTimeout(300000);
         await enterWorld(page);
         await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
@@ -1209,12 +1209,14 @@ test.describe('Never stuck', () => {
                     if (f.state === 'windup') f.foe.tint(null);
                     Object.assign(f, { calm: 0, lost: false, lookT: 1e9 });
                     Object.assign(f, { state: 'home', route: null, clearT: 0 });
-                    let home = false;
+                    let home = false, jump = 0;
                     for (let t = 0; t < 60000 && !home; t += 50) {
+                        const was = { x: f.foe.x, y: f.foe.y };
                         fd._think(f, 50, 0.05, { x: 0, y: 0 }, false);
+                        jump = Math.max(jump, Math.hypot(f.foe.x - was.x, f.foe.y - was.y));
                         home = f.state === 'post';
                     }
-                    if (!got || !home) out.push({ kind, you: [px, py], from: [Math.round(sx), Math.round(sy)], got, home, at: [Math.round(f.foe.x), Math.round(f.foe.y)] });
+                    if (!got || !home || jump > 20) out.push({ kind, you: [px, py], from: [Math.round(sx), Math.round(sy)], got, home, jump, at: [Math.round(f.foe.x), Math.round(f.foe.y)] });
                     f.post = post;
                 }
                 f.foe.sprite.setPosition(post.x, post.y - fd.FEET);
@@ -1265,6 +1267,30 @@ test.describe('A menu open, the fight holds', () => {
         expect(await seen()).toEqual({ windups: 0, lost: 0 });
         // (then the fight goes on)
         await expect.poll(async () => (await seen()).windups, { timeout: 10000 }).toBeGreaterThan(0);
+    });
+});
+
+test.describe('Shadowstrike on the map', () => {
+    test("a thief's Shadowstrike: gone in shadow and there again behind the foe, seen (the user's: they were left invisible, their light walking about with no one in it)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await keepUp(page);
+        await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
+        const alpha = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
+            ui.spellbook = new ui.spellbook.constructor({ spells: ui.inventory.catalogue.spells, heroClass: 'thief', saved: false });
+            ui.spellbook.equip('shadowstrike');
+            ui.mp.max = ui.mp.now = 50;
+            const f = fd.foes.find(o => o.family === 'vanar' && o.kind === 'snowchaser' && o.foe.ready);
+            me.setPosition(f.foe.x + 60, f.foe.y - 23);
+            me.body.reset(me.x, me.y);
+            fd._rouse(f.pack);
+            await new Promise(r => setTimeout(r, 300));
+            fd.castEquipped();
+            await new Promise(r => setTimeout(r, 2000));
+            return me.alpha;
+        });
+        expect(alpha).toBe(1);
     });
 });
 

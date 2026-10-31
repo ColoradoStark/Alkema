@@ -786,8 +786,10 @@ export class Battle {
      */
     _swell(m, colour) {
         const s = m.who.sprite;
-        this.scene.tweens.killTweensOf(s, ['scaleX', 'scaleY']);
-        this.scene.tweens.add({ targets: s, scaleX: SPELL_SWELL, scaleY: SPELL_SWELL, duration: 90, ease: 'Back.easeOut',
+        // (only its own last swell stopped: Phaser's killTweensOf stops every tween on them, and Shadowstrike's
+        // fade back in went with it, the user left invisible)
+        m.swelling?.stop();
+        m.swelling = this.scene.tweens.add({ targets: s, scaleX: SPELL_SWELL, scaleY: SPELL_SWELL, duration: 90, ease: 'Back.easeOut',
             yoyo: true, hold: 300, onComplete: () => s.setScale(1) });
         const [fx, fy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[s.currentDirection || 'up'], face = Math.atan2(fy, fx);
         for (let i = 0; i <= 6; i++) {
