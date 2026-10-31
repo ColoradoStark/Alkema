@@ -31,6 +31,10 @@ export default defineConfig({
       '/spritesheets/': { target: legacyGen }
     }
   },
+  // Unit tests (npm test): the game's own maths, without a browser, in milliseconds; what's drawn is Playwright's (tests/e2e)
+  test: {
+    include: ['tests/unit/**/*.test.js'],
+  },
   build: {
     assetsInlineLimit: 4096,
     rollupOptions: {

@@ -1,6 +1,6 @@
 // The Upgrade page (the user's, after Clicker Heroes): where Stats was, two tabs, the upgrades and
 // your stats. Strength of Arm, then the fifty goddesses, one at a time: ten levels each, maxed (and sealed so)
-// before the next is unlocked; each level dearer than the last and each one felt; spells taught as they're maxed.
+// before the next is unlocked. (Its maths, the whole road, spells and old saves, are tests/unit/upgrades.test.js's.)
 import { test, expect } from '@playwright/test';
 
 async function enterWorld(page) {
@@ -85,55 +85,6 @@ test.describe('Upgrades', () => {
         await brigid.locator('.gear-up-buy').click();
         await expect(page.locator('.gear-notice')).toContainText('costs');
         await expect(brigid.locator('.gear-up-level')).toHaveText('1/10');
-    });
-
-    test("the road: Strength of Arm, then the fifty goddesses in turn, each maxed before the next; only the one you're on can be bought; each level 1.65 times the last; spells come slowly (the user's: half of them in the first wave was far too fast), the last far down the goddesses", async ({ page }) => {
-        test.setTimeout(90000);
-        await enterWorld(page);
-        await asMage(page, 1e300);
-        const r = await ui(page, async (ui) => {
-            const { HEROES } = await import('/src/upgrades/Upgrades.js');
-            const u = ui.upgrades, book = ui.spellbook;
-            const wrong = u.buy('goddess-freya');
-            const order = [], prices = [], taught = {};
-            while (u.current) {
-                const h = u.current, price = u.price();
-                const res = u.buy(h.id);
-                if (prices.length < 40) prices.push(res.price === price && price);
-                if (res.maxed) {
-                    order.push(h.id);
-                    if (res.learned) taught[u.done] = `${res.learned.spell.id} ${book.rankOf(res.learned.spell.id)}`;
-                }
-            }
-            return { wrong: wrong.error, order, heroes: HEROES.map(h => h.id), prices, taught, rewards: u.rewards.length, known: book.list.map(s => book.rankOf(s.id)) };
-        });
-        expect(r.wrong).toBe('locked');
-        expect(r.order).toEqual(r.heroes);
-        expect(r.order).toHaveLength(51);
-        r.prices.forEach((p, i) => expect(p).toBe(Math.ceil(30 * 1.65 ** i)));
-        // Strength of Arm maxed teaches the first; then one every third goddess maxed
-        expect(Object.keys(r.taught).map(Number).slice(0, 4)).toEqual([1, 4, 7, 10]);
-        expect(r.taught[1]).toBe('fireball 2');
-        expect(r.taught[4]).toBe('frost-lance 1');
-        expect(Math.max(...Object.keys(r.taught).map(Number))).toBeGreaterThanOrEqual(40);
-        expect(Object.keys(r.taught)).toHaveLength(r.rewards);
-        expect(r.known).toEqual([3, 3, 3, 3, 3, 3]);
-    });
-
-    test("a hero from before the goddesses were one at a time starts them afresh, keeping the spells they know", async ({ page }) => {
-        test.setTimeout(90000);
-        await enterWorld(page);
-        const r = await page.evaluate(async () => {
-            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            const { Upgrades } = await import('/src/upgrades/Upgrades.js');
-            const { account } = await import('/src/account/account.js');
-            account.updateProgress({ upgrades: { might: 30, 'might+': 1, 'goddess-brigid': 22, 'goddess-freya': 5, 'some-spell': 10 }, upgradesMaxed: false });
-            const u = new Upgrades({ inventory: ui.inventory, spellbook: null });
-            return { levels: u.levels, saved: account.current.data.upgrades, flag: account.current.data.upgradesMaxed };
-        });
-        expect(r.levels).toEqual({ 'some-spell': 10 });
-        expect(r.saved).toEqual({ 'some-spell': 10 });
-        expect(r.flag).toBe(true);
     });
 
     test('the goddesses: every one shown, her picture there to be shown, Gaia last', async ({ page }) => {

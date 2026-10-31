@@ -44,6 +44,8 @@ import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { short } from '../upgrades/Upgrades.js';
+import { ZONES, packEssence, strengthFor } from './zones.js';
+export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
 // How each fights out here: twice its battle-map pace (the world's hero walks faster, 128, and still outruns them all)
@@ -122,22 +124,6 @@ export const PACKS = [
     .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })))
     .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })));
 
-/**
- * How hard each band is is its zone's, not matched to you (the user's, October 2026, a crude first try): each is
- * made for a hero this strong. North of Dunmere, where heroes start, a new one (attack 4-9, hit points 16-31); the
- * orcs west, one about four times as strong; the demons south, one forty times: no invisible wall, but no going
- * that way yet. Grow, and a band gets easier.
- */
-export const ZONES = {
-    // North of Dunmere, the climb (the user's, after Clicker Heroes): each pack 2.5 times the health of the one
-    // before and its blow twice (at 1.6 and 1.5, Clicker Heroes' own, an archer still beat the next unupgraded: the
-    // user wants it a wall), paying `essence` times `more` a pack along it: the first falls fast to a new hero, and
-    // each after needs what the last paid spent on the Upgrade page, or you die
-    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 220, more: 4 } },
-    orcs: { attack: 28, hp: 90, defence: 14 },
-    demons: { attack: 300, hp: 900, defence: 60 },
-};
-
 /** Each band's bodies: their sheets loaded and let go, and one made (feet at x, y). */
 const FAMILIES = {
     demons: {
@@ -182,25 +168,10 @@ export function numbers(kind, tier, hero, step = 0) {
     };
 }
 
-/** On a climb, what the `step`th pack up it pays between them (a share each, by how long each takes to fell). */
-export function packEssence(fam, step) {
-    const c = ZONES[fam].climb;
-    return c.essence * c.more ** step;
-}
-
 /** A climb's foe's share of its pack's gold, `combo` kills in a row. */
 export function climbBounty(kind, place, combo = 1) {
     const band = PACKS[place.pack].band, all = band.reduce((n, k) => n + HITS[k], 0);
     return Math.max(1, Math.round(packEssence(place.family, place.step) * HITS[kind] / all * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
-}
-
-/**
- * How strong (attack times hit points) a hero must be for the `step`th pack up a climb: what its zone's hero is
- * made for, grown as the pack is. Below it, it's too strong for you.
- */
-export function strengthFor(fam, step) {
-    const z = ZONES[fam], c = z.climb;
-    return z.attack * c.hp ** step * z.hp * c.hurt ** step;
 }
 
 /** The gold a `kind` is worth `tier` along the road, the cheapest next upgrade costing `price`, `combo` kills in a row. */
