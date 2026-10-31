@@ -481,7 +481,7 @@ export class FieldDemons {
 
     /** One of a pack is after you: they all are. */
     _rouse(pack) {
-        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && (o.state === 'post' || o.state === 'home')) o.state = 'chase';
+        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && o.state === 'post') o.state = 'chase';
     }
 
     _slay(f) {
@@ -544,8 +544,10 @@ export class FieldDemons {
         const fromPost = Math.hypot(foe.x - f.post.x, foe.y - f.post.y);
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; too far from home or from you, it goes back
+        // (one that's given up goes all the way home before it turns on you again: past its leash with you
+        // beside it, it went home and came back every frame, growling, the user's great bear by Dunmere)
         if (f.state === 'post' || f.state === 'home') {
-            if (d <= AGGRO) {
+            if (d <= AGGRO && f.state === 'post') {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
                 this._rouse(f.pack);
             } else return this._home(f, dt, fromPost);
@@ -658,7 +660,7 @@ export class FieldDemons {
                 f.wander = { dx: Math.cos(a) * r, dy: Math.sin(a) * r };
                 f.wanderT = 900 + Math.random() * 1200;
             }
-            return { x: you.x + f.wander.dx, y: you.y + f.wander.dy, pace: 0.8 };
+            return { x: you.x + f.wander.dx, y: you.y + f.wander.dy, pace: 0.8, face: true };
         }
         return null;
     }

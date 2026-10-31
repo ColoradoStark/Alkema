@@ -511,7 +511,8 @@ export class ActionBattle extends Battle {
         let sprite;
         if (kind === 'arrow' && this.scene.textures.exists('arrow-projectile')) {
             sprite = this.scene.add.sprite(from.x, from.y, 'arrow-projectile', 3 * 13 + 5).setRotation(a);
-            audio.play('bow', { volume: 0.5 });
+            // (a foe's twang; yours played as you drew, and twice a shot grated, the user's)
+            if (side !== 'party') audio.play('bow', { volume: 0.5 });
         } else {
             const anim = kind === 'fire-missile' ? 'spell-fx-fire-missile' : 'spell-fx-fireball';
             sprite = this.scene.add.sprite(from.x, from.y, 'spell-fx').play(anim).setRotation(a + Math.PI / 2).setScale(scale);

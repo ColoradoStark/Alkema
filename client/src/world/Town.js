@@ -518,8 +518,7 @@ export class Town {
             if (!body.enable) return;
             const { position: pos, prev, width: w, height: h } = body;
             const already = this.folkAt(prev.x, prev.y, w, h);   // someone walked into you: don't get stuck in them
-            // (a wanderer on thin ground lets you through: it's never in your way in a passage)
-            const into = (x, y) => { const who = this.folkAt(x, y, w, h, already); return who?.onThin ? null : who; };
+            const into = (x, y) => this.folkAt(x, y, w, h, already);
             const blocked = (x, y) => this.boxBlocked(x, y, w, h) || !!into(x, y);
             if (!blocked(pos.x, pos.y)) return;
             const who = into(pos.x, pos.y);
@@ -618,7 +617,10 @@ export class Town {
             f.stuck = 0;
         }
         const step = this._step(f, delta, feet);
-        if (step === 'there') {
+        if (step === 'there' && f.onThin) {
+            f.target = null;        // come to a stop in a passage: on to somewhere else, never standing about in it
+            f.wait = 0;
+        } else if (step === 'there') {
             f.target = null;
             f.wait = 1500 + Math.random() * 4000;
             s.stopAnimation();
@@ -627,10 +629,19 @@ export class Town {
                 f.wait += 4000 + Math.random() * 5000;
             }
         } else if (step === 'stuck') {
-            // Nowhere to go from here: stop and choose somewhere else (at once in a passage: never stand about in one)
+            // Nowhere to go from here: stop and choose somewhere else
             f.target = null;
-            f.wait = f.onThin ? 0 : 800;
+            f.wait = 800;
             s.stopAnimation();
+            // ...at once in a passage, never standing about in one: away from you, if you're what's in the way
+            if (f.onThin) {
+                f.wait = 0;
+                const from = feet && Math.hypot(feet.x - s.x, feet.y - s.y - FEET);
+                for (let i = 0; i < 8 && from != null; i++) {
+                    const [x, y] = this._randomSpot(f.plan.wander);
+                    if (Math.hypot(feet.x - x, feet.y - y) > from + 32) { f.target = { x, y: y - FEET }; f.stuck = 0; break; }
+                }
+            }
         }
     }
 
@@ -649,13 +660,13 @@ export class Town {
         // first, turning only when it's done or something's in the way
         if (!f.axis || (f.axis === 'x' ? Math.abs(dx) : Math.abs(dy)) < stepLen) f.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
         let horizontal = f.axis === 'x';
-        // On thin ground a wanderer and you pass through each other (see collide)
+        // On thin ground a wanderer never stands about: you in its way, it turns round at once (_wander)
         f.onThin = !!f.plan.wander && this.boxThin(s.x - 9, s.y + FEET - 5, 18, 10);
         const blocked = (h) => {
             const bx = h ? s.x + Math.sign(dx) * stepLen - 9 : s.x - 9;
             const by = (h ? s.y : s.y + Math.sign(dy) * stepLen) + FEET - 5;
             return this.boxBlocked(bx, by, 18, 10)
-                || (feet && !f.onThin && bx < feet.x + 9 && bx + 18 > feet.x - 9 && by < feet.y + 5 && by + 10 > feet.y - 5);
+                || (feet && bx < feet.x + 9 && bx + 18 > feet.x - 9 && by < feet.y + 5 && by + 10 > feet.y - 5);
         };
         if (blocked(horizontal)) {
             const other = !horizontal;

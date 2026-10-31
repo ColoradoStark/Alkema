@@ -160,7 +160,7 @@ export const ACTION_SPELLS = {
                 m.who.playAttack();
                 m.who.shotRange = undefined;
             } else m.who.playCast();
-            audio.play('bow');
+            if (!m.ranged) audio.play('bow');       // (a bow twangs as it's drawn)
             this.scene.time.delayedCall(200, () => {
                 if (this.over || m.out || f.hp <= 0) return;
                 audio.play('zap', { volume: 0.4 });
@@ -390,7 +390,7 @@ export const ACTION_SPELLS = {
                 m.who.playAttack();
                 m.who.shotRange = undefined;
             } else m.who.playCast();
-            audio.play(look.missile === 'arrow' ? 'bow' : 'cast', { volume: 0.7 });
+            if (!(look.missile === 'arrow' && m.ranged)) audio.play(look.missile === 'arrow' ? 'bow' : 'cast', { volume: 0.7 });
             const foes = byNearness(this, this._feet(m)).slice(0, Math.max(1, at.count));
             for (let i = 0; i < at.count; i++) {
                 this.scene.time.delayedCall(150 + i * 90, () => {

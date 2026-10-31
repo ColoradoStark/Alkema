@@ -1050,7 +1050,8 @@ test.describe('Wanderers keep off thin paths', () => {
         });
         expect(onThin).toEqual([]);
 
-        // In a passage running east and west, a wanderer coming the other way doesn't stop for you, and you walk on through
+        // In a passage running east and west, a wanderer coming your way doesn't stop for you: it turns round and goes
+        // (you don't pass through it: the user found that confusing)
         const met = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), town = gs.town;
             const { thin, cols, cell, blocked } = town;
@@ -1063,25 +1064,27 @@ test.describe('Wanderers keep off thin paths', () => {
             if (at < 0) return 'no passage';
             const x = (at % cols) * cell + cell / 2, y = Math.floor(at / cols) * cell + cell / 2;
             const f = town.folk.find(w => w.plan.wander);
+            // Its own part of town is this passage, so it has nowhere else to be
+            f.plan = { ...f.plan, wander: [x - 64, y - 4, x + 64, y + 4] };
             f.sprite.setPosition(x + 20, y - 23);
-            f.target = { x: x + 60, y: y - 23 };
+            f.target = { x: x - 60, y: y - 23 };     // coming your way
             f.wait = 0;
+            f.stuck = 0;
             const me = gs.localPlayer.sprite;
             const feetBelow = me.body.y + me.body.height - me.y;     // the hero's centre to the foot of their body
-            me.setPosition(x - 30, y - feetBelow + 4);
-            me.body.reset(x - 30, y - feetBelow + 4);
-            town.bumped = null;
-            const keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
-            const stoppedFor = [];
-            keys.right = true;
-            for (let t = 0; t < 30; t++) {
+            me.setPosition(x - 10, y - feetBelow + 4);
+            me.body.reset(x - 10, y - feetBelow + 4);
+            let stood = 0, talked = 0, away = 0;
+            for (let t = 0; t < 60; t++) {
                 await new Promise(r => setTimeout(r, 40));
-                if (f.talking) stoppedFor.push(t);
+                if (!f.target && f.wait > 0) stood++;
+                if (f.talking) talked++;
+                away = Math.max(away, Math.round(f.sprite.x - (x + 20)));
             }
-            keys.right = false;
-            return { passed: me.x > f.sprite.x, startX: x + 20, meX: Math.round(me.x), bumped: !!town.bumped, stoppedFor: stoppedFor.length };
+            return { away, stood, talked };
         });
-        expect(met).toMatchObject({ passed: true, bumped: false, stoppedFor: 0 });
+        expect(met).toMatchObject({ stood: 0, talked: 0 });
+        expect(met.away).toBeGreaterThan(16);
     });
 });
 

@@ -168,7 +168,9 @@ export class GameScene extends Scene {
         // back on the level: in town coordinates, so it's the dungeon's place on the map that says)
         const fight = this._battleFrom, inside = this.town || (this.battle && fight?.spot.town);
         const at = inside ? this._townPlace : this.battle ? fight : this.world ? feet : null;
-        if (this.battle && !this.battle.victorious) mood = 'battle';
+        // (or foes on the world itself after you, the user's)
+        const field = !this.battle && !this.town && this.fieldDemons?.engaged;
+        if ((this.battle && !this.battle.victorious) || field) mood = 'battle';
         else if (this.localPlayer?.sailing) mood = 'sea';
         else if (lost > (this._mood === 'forest' ? 0.2 : 0.6)) mood = 'forest';
         else if (at && this.overworld.isSnowy(at.x, at.y)) mood = 'north';
@@ -178,9 +180,11 @@ export class GameScene extends Scene {
         }
         this._moodFor += delta;
         // A fight's music starts with the fight, and stops with it
-        const now = mood === 'battle' || this._mood === 'battle';
+        // (one on the world lets go as any other place does: chased off and on again, it doesn't flap)
+        const now = mood === 'battle' || (this._mood === 'battle' && !this._fieldFight);
         if (mood !== this._mood && (now || this._moodFor >= MOOD_SETTLE_MS)) {
             this._mood = mood;
+            this._fieldFight = field;
             audio.playMusic(mood);
         }
     }

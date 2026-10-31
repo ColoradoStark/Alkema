@@ -81,7 +81,9 @@ export class Player {
         const ranged = getRangedAnimation(this.characterData);
         if (ranged && getWeaponType(this.characterData) === 'slingshot') return this.playSound('rock');
         const name = attackSound(anim, this.characterData?.character_class);
-        if (name) this.playSound(name);
+        // (a bow's one recording, shot after shot, grated (the user's): softer, and pitched further each time)
+        if (name === 'bow') this.playSound(name, { volume: 0.6, drift: 150 });
+        else if (name) this.playSound(name);
     }
 
     playAttack(onAttackFired) {

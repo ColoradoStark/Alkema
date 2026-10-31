@@ -1012,8 +1012,8 @@ const SPELLS = {
                 m.who.shotRange = undefined;
             } else {
                 m.who.playCast();
+                audio.play('bow');      // (a bow twangs as it's drawn)
             }
-            audio.play('bow');
             await this._wait(SHOT_DELAY_MS);
             await this._bolt('fire-missile', { x: me.x, y: me.y - 4 }, f);
             this._fx('fire-burst', f.foe.x, f.foe.y - f.foe.tall / 2);

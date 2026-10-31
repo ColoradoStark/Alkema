@@ -291,7 +291,13 @@ test.describe('Demons on the coast', () => {
         expect(aimed).not.toBe(null);
         expect(aimed.hp).toBe(aimed.max);
         expect(pack.map(p => p.i)).toContain(aimed.i);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').handleAttack());
+        await page.evaluate(async () => {
+            const { audio } = await import('/src/audio/audio.js');
+            window.__bows = 0;
+            const play = audio.play.bind(audio);
+            audio.play = (name, o) => { if (name === 'bow') window.__bows++; return play(name, o); };
+            window.__PHASER_GAME.scene.getScene('UIScene').handleAttack();
+        });
         const hit = await page.waitForFunction((i) => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             return fd.shots.length && { shots: fd.shots.map(s => s.kind), hp: fd.foes.find(f => f.i === i).hp };
@@ -299,6 +305,8 @@ test.describe('Demons on the coast', () => {
         expect(hit.shots).toEqual(['arrow']);
         expect(hit.hp).toBe(aimed.max);
         await expect.poll(() => field(page).then(f => f.hp[aimed.i]), { timeout: 5000 }).toBeLessThan(aimed.max);
+        // one twang a shot (the user's: firing a lot it grated; it was played twice, as you drew and as it flew)
+        expect(await page.evaluate(() => window.__bows)).toBe(1);
         const packHp = (f) => pack.reduce((n, p) => n + f.hp[p.i], 0);
         const afterArrow = packHp(await field(page));
         await keepUp(page);
@@ -395,6 +403,75 @@ test.describe('Demons on the road, a fight you can lose', () => {
             return them.map((f, k) => `${f.kind} ${turns[k]}`);
         }, pack);
         for (const t of turns) expect(Number(t.split(' ')[1]), t).toBeLessThanOrEqual(8);
+    });
+});
+
+test.describe('A fight on the world sounds like one', () => {
+    test("roused foes after you, the battle music plays; once they're beaten or have given up, the world's music comes back (the user's)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const { PLACES } = await places(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        const mood = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene')._mood);
+        await expect.poll(mood, { timeout: 10000 }).not.toBe('battle');
+        const pack = PLACES.find(p => p.family === 'demons').pack;
+        await page.evaluate((pack) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            const p = fd.foes.find(f => f.pack === pack).post;
+            me.setPosition(p.x, p.y + 100 - 23); me.body.reset(me.x, me.y);
+            fd._rouse(pack);
+        }, pack);
+        await keepUp(page);
+        await expect.poll(mood, { timeout: 2000 }).toBe('battle');
+        // beaten: the world's again
+        await page.evaluate((pack) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const f of fd.foes.filter(f => f.pack === pack)) { f.hp = 0; fd._slay(f); }
+        }, pack);
+        await expect.poll(mood, { timeout: 10000 }).not.toBe('battle');
+    });
+});
+
+test.describe("A foe that's given up goes home", () => {
+    test("chased past its leash with you still beside it, it goes home and doesn't turn on you again till it's there: never back and forth between the two, growling (the user's: the great bear and another, by Dunmere, colliding nonstop as it made that sound)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const { PLACES } = await places(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        const r = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
+            const { audio } = await import('/src/audio/audio.js');
+            let growls = 0;
+            const play = audio.play.bind(audio);
+            audio.play = (name, o) => { if (name === 'foe_orc') growls++; return play(name, o); };
+            const f = fd.foes.find(o => o.kind === 'fury');
+            for (const o of fd.foes) if (o !== f) o.stun = 1e9;
+            // 25 tiles from its post along open ground, you a step from it
+            let at = null;
+            for (let a = 0; a < Math.PI * 2 && !at; a += 0.1) {
+                const x = f.post.x + Math.cos(a) * 25 * 32, y = f.post.y + Math.sin(a) * 25 * 32;
+                if (fd._open(x, y) && fd._open(x + 50, y)) at = { x, y };
+            }
+            f.foe.sprite.setPosition(at.x, at.y - 23);
+            me.setPosition(at.x + 50, at.y - 23); me.body.reset(me.x, me.y);
+            f.state = 'chase';
+            const states = [];
+            const t0 = performance.now();
+            while (performance.now() - t0 < 3000) {
+                ui.hp.max = 1e6; ui.hp.now = 1e6;
+                me.setPosition(f.foe.x + 50, f.foe.y - 23);       // you keep beside it
+                if (states[states.length - 1] !== f.state) states.push(f.state);
+                await new Promise(r => requestAnimationFrame(r));
+            }
+            for (const o of fd.foes) o.stun = 0;
+            return { states, growls };
+        });
+        expect(r.states.slice(1), r.states.join(' ')).toEqual(['home']);
+        expect(r.growls).toBeLessThanOrEqual(1);
     });
 });
 
