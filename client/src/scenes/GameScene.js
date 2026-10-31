@@ -351,18 +351,20 @@ export class GameScene extends Scene {
             return;
         }
         if (exit.door) audio.play('door');      // at once: the room takes a moment to load (the user wasn't sure a door had taken them)
-        this.changeMap(exit.to, exit.at, exit.dir === 'up' ? 'up' : 'down');
+        const via = exit.stair || exit.ladder;
+        if (via) this._climb(via);              // ...and stairs as surely (the user couldn't tell they'd gone up or down)
+        this.changeMap(exit.to, exit.at, exit.dir === 'up' ? 'up' : 'down', { via });
     }
 
     /**
      * Go to a town map or a room (`key`), feet at `feet` [x, y]: a room of its own
      * on the server, so you see only who's there with you.
      */
-    async changeMap(key, feet, facing, { faded = false } = {}) {
+    async changeMap(key, feet, facing, { faded = false, via = null } = {}) {
         this._changingRoom = true;
         try {
             const at = { x: feet[0], y: feet[1] - FEET };
-            if (!faded) this._card(key, this._townPlace?.name);
+            if (!faded) this._card(key, this._townPlace?.name, via);
             // Fading out as the map loads and the server answers, not after: you see at once that you're on your way
             const [, res] = await Promise.all([this._loadTown(key), this._room({ town: key, ...at }), faded ? null : this._fadeOut()]);
             this._dropTown();
@@ -603,9 +605,16 @@ export class GameScene extends Scene {
         say(sw.says);
     }
 
-    /** The card on the black for going to map `key` (in the place called `placeName`), its loading on the bar. */
-    _card(key, placeName) {
-        this.scene.get('UIScene')?.arriving(mapTitle(key, placeName), this.load);
+    /** The card on the black for going to map `key` (in the place called `placeName`; `via` stairs 'up' or 'down'), its loading on the bar. */
+    _card(key, placeName, via = null) {
+        this.scene.get('UIScene')?.arriving({ ...mapTitle(key, placeName), via }, this.load);
+    }
+
+    /** Footsteps up (or down) a flight as you take it: four quick steps, climbing in pitch going up, falling going down. */
+    _climb(way) {
+        for (let i = 0; i < 4; i++) {
+            this.time.delayedCall(i * 95, () => audio.play('step', { volume: 0.9, drift: 0, rate: way === 'up' ? 1 + i * 0.07 : 1.15 - i * 0.07 }));
+        }
     }
 
     /** Settled in a map, the maps behind its doors are fetched ahead, so going through one waits on no download. */

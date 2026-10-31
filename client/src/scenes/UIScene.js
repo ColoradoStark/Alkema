@@ -193,12 +193,14 @@ export class UIScene extends Scene {
      * @param {{ place: string, room?: string, leaving?: boolean }} where
      * @param {Phaser.Loader.LoaderPlugin} [loader]  the map's loading, if any, for the bar
      */
-    arriving({ place, room = '', leaving = false }, loader = null) {
+    arriving({ place, room = '', leaving = false, via = null }, loader = null) {
         this.arrived(true);
         if (!place) return;
         const W = this.scale.width, Y = 32 + 448 / 2;
+        // By stairs, which way you went (the user couldn't tell they'd gone up or down)
+        const going = leaving ? 'Leaving' : via === 'up' ? 'Going up' : via === 'down' ? 'Going down' : 'Entering';
         const bits = [
-            this.add.text(W / 2, Y - 34, leaving ? 'Leaving' : 'Entering', { fontFamily: 'Romulus', fontSize: '14px', color: '#c7b08b' }).setOrigin(0.5),
+            this.add.text(W / 2, Y - 34, going, { fontFamily: 'Romulus', fontSize: '14px', color: '#c7b08b' }).setOrigin(0.5),
             this.add.text(W / 2, Y - 8, place, { fontFamily: 'Alagard', fontSize: '24px', color: '#fff6e0', align: 'center', wordWrap: { width: W - 48 } }).setOrigin(0.5),
         ];
         if (room && !leaving) bits.push(this.add.text(W / 2, Y + 20, room, { fontFamily: 'Alagard', fontSize: '16px', color: '#dab040' }).setOrigin(0.5));

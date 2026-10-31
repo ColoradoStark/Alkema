@@ -440,6 +440,44 @@ test.describe('Castle Dunmere', () => {
         await expect.poll(card, { timeout: 2000 }).toBe(null);
     });
 
+    test("stairs read as stairs: a gold arrow over each, where it goes as you come near, footsteps and 'Going up' as you take it", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await goTo(page, 'dunmere-keep');
+        const marks = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.stairs.map(s => ({
+            to: s.exit.to, arrow: s.arrow.visible, label: s.label.text, shown: s.label.visible })));
+        expect(marks).toEqual([
+            { to: 'dunmere-chambers', arrow: true, label: 'Stairs up\nThe Chambers', shown: false },
+            { to: 'dunmere-cells', arrow: true, label: 'Stairs down\nThe Cells', shown: false },
+        ]);
+        // Come up to the stair behind the throne: it says where it goes; walk up into it
+        const card = () => page.evaluate(() => {
+            const c = window.__PHASER_GAME.scene.getScene('UIScene')._card;
+            return c ? c.list.filter(b => b.text !== undefined).map(b => b.text) : null;
+        });
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            const { audio } = await import('/src/audio/audio.js');
+            window.__played = [];
+            const play = audio.play.bind(audio);
+            audio.play = (name, opts) => { window.__played.push([name, opts?.rate]); return play(name, opts); };
+            me.setPosition(576, 205 - 23);
+            me.body.reset(576, 205 - 23);
+        });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.stairs[0].label.visible)).toBe(true);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = true; });
+        await expect.poll(card, { timeout: 4000, intervals: [20] }).toEqual(['Going up', 'Castle Dunmere', 'The Chambers']);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = false; });
+        await expect.poll(() => where(page), { timeout: 15000 }).toBe('dunmere-chambers');
+        // Four footsteps, climbing
+        const steps = await page.evaluate(() => window.__played.filter(([n]) => n === 'step').map(([, r]) => r));
+        expect(steps).toHaveLength(4);
+        expect(steps[3]).toBeGreaterThan(steps[0]);
+        // ...and the way back down is marked too
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.stairs.map(s => s.label.text)))
+            .toEqual(['Stairs down\nThe Keep']);
+    });
+
     test("places are seen closer, at the creator's scale, and the world and dungeons as they were (the user's standard); the night light stays on you", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);

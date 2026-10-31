@@ -19,7 +19,8 @@ const TALK_REACH = 64;         // stand this close to someone and they speak
 const COUNTER_REACH = 104;     // ...indoors, across a shop counter
 const WANDER_SPEED = 46;
 const SCHEDULE_MS = 500;       // how often townsfolk look at the time
-const THIN_SPAN = 80;          // a free run shorter than this (px) is too thin to get round a wanderer in
+const STAIR_NEAR = 96;         // this close to a stair (px) and it says where it goes
+const THIN_SPAN = 80;         // a free run shorter than this (px) is too thin to get round a wanderer in
 
 /**
  * The thin ground of a map (1 a cell): free cells whose free run across or
@@ -211,6 +212,7 @@ export class Town {
             : scene.add.image(g.left, g.top, `town-${key}-things`, String(g.frame)).setOrigin(0, 0)
                 .setDepth(g.floor ? DEPTH.ground + 0.1 : sortDepth(scene, g.foot)) }));
         this.switches = data.switches || [];
+        this.stairs = this._markStairs();
         // Barrels, crates and pots a swing breaks (tools/towngen.py `breaks`): back whole when you come again
         this.breaks = (data.breaks || []).map(b => ({ ...b, image: this.things[b.thing], broken: false }));
         this.rand = Math.random;      // what a barrel holds is rolled with this (tests fix it)
@@ -325,6 +327,33 @@ export class Town {
         }
         const name = item && ui?.inventory?.item(item)?.name;
         s.time.delayedCall(220, () => s.effects?.floatText(x, y - 18, gold ? `+${gold} gold` : name || item, gold ? '#fbf236' : '#fff6e0', 16));
+    }
+
+    /**
+     * Every stair and ladder between floors (`stair`/`ladder` on its exit, up or down) marked so you can't miss it
+     * (the user couldn't tell the stairs were stairs): a gold arrow bobbing over it, pointing the way it goes, and
+     * near it, where it goes ("Stairs up", the room or level). Drawn over the night (as the names are).
+     */
+    _markStairs() {
+        const place = this.scene._townPlace?.name;
+        return (this.data.exits || []).filter(e => e.stair || e.ladder).map(e => {
+            const way = e.stair || e.ladder;
+            const [x, y, w] = e.rect;
+            const cx = x + w / 2, top = y - 10;
+            const arrow = this.scene.add.graphics({ x: cx, y: top }).setDepth(DEPTH.labels);
+            const tip = way === 'up' ? -7 : 7;
+            arrow.fillStyle(0x222034, 0.9).fillTriangle(-9, -tip - 1, 9, -tip - 1, 0, tip + 2);
+            arrow.fillStyle(0xfbf236, 1).fillTriangle(-6, -tip, 6, -tip, 0, tip);
+            const bob = this.scene.tweens.add({ targets: arrow, y: top + (way === 'up' ? -4 : 4), duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+            const where = e.to ? mapTitle(e.to, place) : null;
+            const name = where ? where.room || where.place : 'Outside';
+            // (on the steps, under the arrow: above it, a stair by the back wall put it under the quest box)
+            const label = this.scene.add.text(cx, top + 14, `${e.stair ? 'Stairs' : 'Ladder'} ${way}\n${name}`, {
+                fontFamily: 'Alagard', fontSize: '12px', color: '#fbf236', align: 'center',
+                backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
+            }).setOrigin(0.5, 0).setDepth(DEPTH.labels).setVisible(false);
+            return { exit: e, x: cx, y: y + e.rect[3] / 2, arrow, bob, label };
+        });
     }
 
     /** A gate, chest, lock or font you've walked up to (once: step away and back to work it again). */
@@ -549,6 +578,7 @@ export class Town {
         if (feet) {
             if (this.switches.length) this._touchSwitch(feet);
             if (this.foes.length) this._watchFoes(feet);
+            for (const s of this.stairs) s.label.setVisible(Math.hypot(feet.x - s.x, feet.y - s.y) < STAIR_NEAR);
         }
         // A fire sorts like what it stands on (a hearth's flames just in front of the hearth)
         for (const lamp of this.lamps) {
@@ -741,6 +771,7 @@ export class Town {
         this.ground.destroy();
         this.things.forEach(t => t.destroy());
         this.glints.forEach(g => g.destroy());
+        this.stairs.forEach(s => { s.bob.remove(); s.arrow.destroy(); s.label.destroy(); });
         this.scene.dayNight?.remove(this.lamps);
         this.lamps = [];
         // ...and let go of their pictures: a phone's browser drops a tab that holds every town it's been to
