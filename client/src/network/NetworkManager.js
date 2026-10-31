@@ -27,6 +27,7 @@ export class NetworkManager {
 
             this.socket.on('connect', () => {
                 this.connected = true;
+                for (const error of this._unsent?.splice(0) || []) this.socket.emit('client-error', error);
                 this.emit('connected');
                 resolve();
             });
@@ -92,6 +93,12 @@ export class NetworkManager {
         if (callbacks) {
             callbacks.forEach(callback => callback(data));
         }
+    }
+
+    /** An error in this browser, for the server's log (src/errorReport.js); kept till connected. */
+    report(error) {
+        if (this.socket?.connected) this.socket.emit('client-error', error);
+        else (this._unsent ||= []).push(error);
     }
 
     /** Send an event and resolve with the server's ack payload. */

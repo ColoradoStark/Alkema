@@ -355,6 +355,29 @@ test.describe('Character creator', () => {
         }
     });
 
+    test("Play never leaves you on a frozen screen (the user's: the creator faded and nothing came): an error going in is reported to the server, and you're brought back to try again", async ({ page }) => {
+        test.setTimeout(120000);
+        const sent = [];
+        page.on('websocket', ws => ws.on('framesent', f => { if (String(f.payload).includes('client-error')) sent.push(String(f.payload)); }));
+        await page.goto('/');
+        const hero = await waitForPreview(page);
+        // The world breaks as it starts, once (the frame loop stops on an error, leaving the creator's fade on screen)
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const create = gs.create;
+            gs.create = function () { gs.create = create; throw new Error('boom going in'); };
+        });
+        await page.locator('#cc-play').click();
+        await expect.poll(() => sent.some(s => s.includes('boom going in')), { timeout: 15000 }).toBe(true);
+        // Back in the creator with the same hero, told to try again
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight && s.panel;
+        }, null, { timeout: 30000 });
+        await expect(page.locator('.cc-toast')).toContainText('Press Play', { timeout: 10000 });
+        expect((await creatorState(page)).name).toBe(hero.name);
+    });
+
     test('after playing a hero, coming back shows that hero; the dice still rolls a new one', async ({ page }) => {
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });

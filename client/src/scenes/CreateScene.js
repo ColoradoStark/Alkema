@@ -27,7 +27,9 @@ const STAGE_HEIGHT = 296;
 // A cobblestone plaza just south of the park fountain (map pixels).
 const MAP_SPOT = { x: 3440, y: 2835 };
 const WALK_SPEED = 35;   // map px / second while the preview walks
-const MAX_PREFETCH_AGE = 3; // previews the server may have evicted after this many newer ones
+const ENTER_WAIT_MS = 8000;  // after Play, the world up within this, or back to the creator to try again
+const ENTER_FAILED = 'alkema-enter-failed';   // (sessionStorage: why we're back, for the toast)
+const MAX_PREFETCH_AGE = 3;// previews the server may have evicted after this many newer ones
 
 const STEP = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
 
@@ -244,6 +246,7 @@ export class CreateScene extends Scene {
         this.panel.render();
         if (account.loginResult === 'ok' && account.user) this.panel.toast(`Welcome, ${account.user.name}! Your heroes are saved to your account.`);
         else if (account.loginResult === 'failed') this.panel.toast("That sign-in didn't work. Try again, or keep playing as a guest.");
+        else if (this._enterFailed()) this.panel.toast('Something went wrong on the way in. Press Play to try again.', 5000);
         else if (last?.data?.hero) this.panel.toast(`Welcome back, ${this.state.name}.`);
         account.loginResult = null;
 
@@ -418,6 +421,14 @@ export class CreateScene extends Scene {
     }
 
     _enterWorld() {
+        // Never left on the creator's fade (the user was: an error going in stops Phaser's loop, its last frame
+        // frozen): the world not up in a while, back into the creator to try again (a browser timer, not Phaser's)
+        const game = this.game;
+        setTimeout(() => {
+            if (game.scene.isActive('GameScene')) return;
+            try { sessionStorage.setItem(ENTER_FAILED, '1'); } catch { /* no storage: still reload */ }
+            location.reload();
+        }, ENTER_WAIT_MS);
         this.showcase.stop();
         // In the world, switching hero reloads into the creator with that hero
         this.accountMenu.setMode('game', {
@@ -437,6 +448,17 @@ export class CreateScene extends Scene {
             this.scene.start('UIScene');
             if (this.network?.connected) this.network.emit('connected', {});
         });
+    }
+
+    /** Whether we're back here because the world didn't come up after Play (_enterWorld); asked once. */
+    _enterFailed() {
+        try {
+            const failed = sessionStorage.getItem(ENTER_FAILED) === '1';
+            sessionStorage.removeItem(ENTER_FAILED);
+            return failed;
+        } catch {
+            return false;
+        }
     }
 
     /** The account chip in the corner; it stays for the whole session. */
