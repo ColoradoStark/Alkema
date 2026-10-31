@@ -214,14 +214,19 @@ export class ActionBattle extends Battle {
         this.FEET = FEET;
         this._mpT = 0;
         for (const m of this.party.slice(1)) m.spellCd = 2500 + Math.random() * 2500;
-        // The blue button shows the spell you equipped
-        const ui = scene.scene.get('UIScene'), book = ui?.spellbook;
-        const row = scene.cache.json.get('spell-icons-index')?.rows?.[book?.equipped];
-        if (row !== undefined) ui.bottomControls.showSpell?.('spell-icons', row);
+        this._showSpell();
         this.say(`${this.foes.length} demons! Move, and attack whenever you like.`, 3200);
     }
 
     // ------------------------------------------------ spells
+
+    /** The blue button shows the spell you equipped (and again if you equip another mid-fight, `update`). */
+    _showSpell() {
+        const ui = this.scene.scene.get('UIScene'), book = ui?.spellbook;
+        const row = this.scene.cache.json.get('spell-icons-index')?.rows?.[book?.equipped];
+        if (row !== undefined) ui.bottomControls.showSpell?.('spell-icons', row);
+        this._shown = book?.equipped;
+    }
 
     /**
      * The blue button: cast the spell you equipped (Equip's Magic tab), at the rank you know it, if it
@@ -344,6 +349,7 @@ export class ActionBattle extends Battle {
 
     update(delta) {
         const dt = Math.min(delta, 50) / 1000;
+        if (this._shown !== this.scene.scene.get('UIScene')?.spellbook?.equipped) this._showSpell();
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             if (this._freeze <= 0) this.scene.anims.resumeAll();

@@ -57,6 +57,23 @@ const keepUp = (page) => page.evaluate(() => {
 });
 
 test.describe('Demons on the coast', () => {
+    test('a spell equipped with the demons near shows on the blue button at once, not only after a cast', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.bars, null, { timeout: 30000 });
+        const shown = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls._spellIcon?.frame.name);
+        const other = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), book = gs.scene.get('UIScene').spellbook;
+            const rows = gs.cache.json.get('spell-icons-index').rows;
+            const id = book.list.map(s => s.id).find(id => id !== book.equipped && rows[id] !== undefined);
+            book._equipped = id;            // (as Equip's Magic tab does, the fight held meanwhile)
+            return rows[id];
+        });
+        await expect.poll(shown, { timeout: 3000 }).toBe(other);
+    });
+
     test('packs of three to five (the champion\'s six), the three kinds mixed, come as you near the coast; rouse one and its pack comes; they fall to your blows in gold; far off, they go', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

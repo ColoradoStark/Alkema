@@ -288,6 +288,8 @@ export class FieldDemons {
         // (and stays while one of it is after you, however far from its posts it's followed you)
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT) this._near.add(f.family);
         if (!this._near.size) return this.release();
+        // A spell equipped meanwhile (Equip's Magic tab, the fight held): the blue button shows it at once
+        if (this.bars && this._shown !== this.scene.scene.get('UIScene')?.spellbook?.equipped) this._showSpell();
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
