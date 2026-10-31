@@ -133,7 +133,7 @@ export const ZONES = {
     // before and its blow twice (at 1.6 and 1.5, Clicker Heroes' own, an archer still beat the next unupgraded: the
     // user wants it a wall), paying `essence` times `more` a pack along it: the first falls fast to a new hero, and
     // each after needs what the last paid spent on the Upgrade page, or you die
-    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 220, more: 4 } },
+    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 150, more: 2.7 } },
     orcs: { attack: 28, hp: 90, defence: 14 },
     demons: { attack: 300, hp: 900, defence: 60 },
 };

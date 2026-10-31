@@ -561,47 +561,48 @@ test.describe('The zone, not your hero, says how hard its foes are', () => {
 });
 
 test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
-    test("each pack up it 2.5 times the health of the one before, its blow twice; what each pays buys, along the Upgrade page's path, the strength the next asks, for every class, in two or three buys, and spent to the last it doesn't put you a pack ahead (the user's: ten buys after a couple of foes, far too strong); a new hero can't skip a pack's upgrades for long", async ({ page }) => {
+    test("each pack up it 2.5 times the health of the one before, its blow twice; what each pays, spent as Clicker Heroes' players spend (the best buy for its price, till it's gone), buys the strength the next asks, for every class, and not a pack ahead (the user's: far too strong after a couple of foes); a new hero can't skip a pack's upgrades for long", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
             const { numbers, packEssence, strengthFor, ZONES, PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
-            const { PATH_BASE, PATH_GROW, STAT_TRACKS } = await import('/src/upgrades/Upgrades.js');
+            const { Upgrades } = await import('/src/upgrades/Upgrades.js');
+            const { account } = await import('/src/account/account.js');
             const steps = PACKS.filter(p => p.family === 'vanar').map(p => p.step);
             const z = ZONES.vanar, hp = numbers('greatbear', 1, z, 0).hp;
             const ratio = numbers('greatbear', 1, z, 3).hp / hp;
-            // A hero buying along the path at the page's prices: each buy a level of Strength of Arm or Vigour, either
-            // way its attack times hit points that many times more
-            const times = STAT_TRACKS[0].times, price = (n) => Math.ceil(PATH_BASE * PATH_GROW ** n);
-            const short = [], buys = [], ahead = [];
-            for (const h of [{ attack: 4, hp: 16 }, { attack: 5, hp: 19 }, { attack: 7, hp: 20 }, { attack: 9, hp: 19 }, { attack: 9, hp: 31 }]) {
-                let n = 0, gold = 0;
+            const short = [], ahead = [], levels = [];
+            for (const [a, h] of [[4, 16], [5, 19], [7, 20], [9, 19], [9, 31]]) {
+                account.updateProgress({ upgrades: {}, upgradesHeroes: true });
+                const base = { attack: a, spell: a, defence: 0, hp: { now: h, max: h }, mp: { now: 0, max: 0 } };
+                const inv = { essence: 0, stats: { base }, _save() {} };
+                const u = new Upgrades({ inventory: inv });
+                const strength = () => { const s = u.apply(base); return s.attack * s.hp.max; };
+                let bought = 0;
                 for (const step of steps.slice(1)) {
-                    gold += packEssence('vanar', step - 1);
-                    let k = 0;
-                    while (h.attack * h.hp * times ** n < strengthFor('vanar', step)) {
-                        if (price(n) > gold) { short.push(`${h.attack}/${h.hp} short for pack ${step}`); break; }
-                        gold -= price(n++);
-                        k++;
+                    inv.essence += packEssence('vanar', step - 1);
+                    let n = 0;
+                    for (let b = u.best(true); b; b = u.best(true)) {
+                        if (b.kind === 'level') u.buy(b.h.id, 1); else u.boost(b.h.id);
+                        n++;
                     }
-                    buys.push(k);
-                    // ...or everything it has spent (the weakest hero: how far past the pack it could be)
-                    if (h.attack === 4) {
-                        let m = n, g = gold;
-                        while (price(m) <= g) g -= price(m++);
-                        ahead.push(h.attack * h.hp * times ** m / strengthFor('vanar', step));
-                    }
+                    const k = strength() / strengthFor('vanar', step);
+                    if (k < 1) short.push(`${a}/${h} short for pack ${step}`);
+                    ahead.push(k);
+                    levels.push(n);
+                    bought += n;
                 }
             }
+            account.updateProgress({ upgrades: {} });
             const fresh = [[4, 16], [9, 31]].map(([a, h]) => a * h);
-            return { steps, ratio, short, most: Math.max(...buys), least: Math.min(...buys), ahead: Math.max(...ahead), packs: z.climb.hp * z.climb.hurt,
+            return { steps, ratio, short, ahead: Math.max(...ahead), levels, packs: z.climb.hp * z.climb.hurt,
                 fresh, two: strengthFor('vanar', 2), places: PLACES.filter(p => p.family === 'vanar').every(p => p.step === PACKS[p.pack].step) };
         });
         expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6]);
         expect(r.ratio / 2.5 ** 3).toBeCloseTo(1, 1);
         expect(r.short).toEqual([]);
-        expect(r.most).toBeLessThanOrEqual(3);         // (two or three buys a pack, each felt: the user clicked fifty times)
-        expect(r.ahead).toBeLessThan(r.packs);         // (all spent, not a whole pack ahead)
+        expect(r.ahead).toBeLessThan(r.packs);          // (all spent, not a whole pack ahead)
+        expect(Math.min(...r.levels)).toBeGreaterThanOrEqual(3);      // (a handful of buys a pack, as a Clicker Heroes zone)
         for (const f of r.fresh) expect(f).toBeLessThan(r.two);      // (no new hero skips two packs' upgrades)
         expect(r.places).toBe(true);
     });

@@ -138,12 +138,12 @@ Every class has six spells (a fighter's and a thief's are battle skills), three 
 
 ## Upgrades
 
-Where Stats was, the **Upgrade** page, after Clicker Heroes: upgrades bought with the essence felled foes leave you (spent on yourself, no shop needed: gold is for town), one at a time:
+Where Stats was, the **Upgrade** page, built on Clicker Heroes' heroes: upgrades bought with the essence felled foes leave you (spent on yourself, no shop needed: gold is for town):
 
-- The page shows the one upgrade you're on and exactly what a level does to your own numbers (Attack 12 → 22). Each has three levels; finish it and the next takes its place: Strength of Arm I, Vigour I, Strength of Arm II, and on
-- Each level makes your attack (and a caster's spell power) or your hit points 1.85 times what it was, and each costs more than the last, so what a pack on the road north leaves you buys two or three, enough for the next pack
-- Finishing an upgrade teaches you a spell, or your next rank of one, in turn
-- Below it, the page runs straight on into the **Goddesses**: fifty legendary heroes to buy, after Clicker Heroes' heroes, from Greek, Roman, Norse, Celtic, Egyptian, Mesopotamian, Slavic, Baltic and Finnish myth: Brigid of the Forge first, through Freya, Athena, the Morrígan, Bastet, Persephone, Hel, Tiamat and many more, to Gaia, Mother of All. Each is five times dearer than the last and gives far more (attack, hit points, defence, spell power, magic, gold found, faster recovery, and some a share of everything). Every one is in the list from the start, a dark shadow until the goddess before her reaches her 10th level (Brigid opens at Strength of Arm's 10th). Each is levelled up again and again, doubling at her 25th level, her 50th, her 100th and every 100th after, and drawn with the character creator's art
+- **Strength of Arm** makes your own blows stronger, and below it are the **Goddesses**: fifty legendary heroes to hire, from Greek, Roman, Norse, Celtic, Egyptian, Mesopotamian, Slavic, Baltic and Finnish myth: Brigid of the Forge first, through Freya, Athena, the Morrígan, Bastet, Persephone, Hel, Tiamat and many more, to Gaia, Mother of All, each drawn with the character creator's art
+- Each goddess is hired once the one before her is, five times dearer and four times stronger, adding attack, spell power and hit points. Every level costs a little more than the last and adds the same again, so the newest goddess soon becomes the best one to level
+- At a goddess's 10th, 25th, 50th and 75th levels a boost doubles her, and every third goddess's first boost teaches you a spell or your next rank of one, so your spells come slowly over the whole game
+- Buy one level, ten, twenty-five, or as many as your essence will run to; the best buy for your essence glows. Goddesses you can't hire yet are dark shadows
 - The Stats tab beside it shows your level, hit points, magic and attributes, and how much of your attack, defence and spell your upgrades add. Upgrades are saved with your hero
 
 ## Multiplayer

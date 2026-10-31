@@ -15,7 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
-import { GODDESSES, GODDESS_FRAME, MASTERY, RANKS, STEP, givesText, lastMilestone, nextMilestone, short } from '../../upgrades/Upgrades.js';
+import { BUY, GODDESSES, GODDESS_FRAME, HEROES, MASTERY, MIGHT, RANKS, short } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -90,6 +90,7 @@ export class GearScreen {
         this.spellbook = spellbook;
         this.upgrades = upgrades;
         this.equipTab = 'gear';
+        this.buyHowMany = 1;
         this.upgradeTab = 'upgrades';
         this.hero = hero;
         this.request = request;
@@ -644,9 +645,9 @@ export class GearScreen {
     }
 
     /**
-     * The upgrade you're on (the user's, after Clicker Heroes: one at a time till it's done, then the next):
-     * what it does to your numbers, what finishing it teaches you, its price, and what comes after it; then
-     * straight on down to the goddesses, every one there from the start, those not open yet a shadow.
+     * The heroes, as Clicker Heroes lists them (the user's): Strength of Arm, each goddess you've hired, and the
+     * next to hire, each with her level, what she gives you, her price for as many levels as the toggle says, and
+     * her boost once she's reached it; the best buy for its price aglow; the goddesses still to come, shadows.
      */
     _renderUpgrades(panel) {
         const up = this.upgrades?.();
@@ -655,107 +656,106 @@ export class GearScreen {
             return;
         }
         const inv = this.inventory;
-        const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
-        const step = up.step, t = step.track, price = up.price();
-        const row = el('div', 'gear-up gear-step', { 'data-up': t.id });
-        row.append(el('span', `gear-icon gear-up-glyph gear-up-glyph--${t.stat}`, { text: t.glyph }));
-        const words = el('div', 'gear-up-words');
-        const name = el('div', 'gear-up-name', { text: step.name });
-        name.append(el('span', 'gear-up-level', { text: `${Math.max(0, up.level(t.id) - (step.to - STEP))}/${STEP}` }));
-        words.append(name, el('div', 'gear-up-about', { text: t.about }));
-        // What a level does, in your own numbers
-        const now = inv.stats, then = up.after(t.id);
-        const lines = t.stat === 'hp' ? [['Hit points', now?.hp.max, then?.hp.max]]
-            : [['Attack', now?.attack, then?.attack], ...(up.magic ? [['Spell power', now?.spell, then?.spell]] : [])];
-        for (const [what, a, b] of lines) if (a != null) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
-        if (step.reward) {
-            const r = step.reward;
-            words.append(el('div', 'gear-up-reward', { text: `Finish it: ${r.rank === 1 ? `learn ${r.spell.name}` : `${r.spell.name} rank ${RANK_NAMES[r.rank]}`}` }));
+        const how = el('div', 'gear-buy-how');
+        how.append(el('span', 'gear-buy-how-label', { text: 'Buy' }));
+        for (const n of BUY) {
+            const b = el('button', `gear-buy-n${this.buyHowMany === n ? ' is-current' : ''}`, { type: 'button', text: n === 'max' ? 'Max' : `×${n}`, 'data-n': String(n) });
+            b.addEventListener('click', () => {
+                audio.play('page', { volume: 0.5 });
+                this.buyHowMany = n;
+                this.render();
+            });
+            how.append(b);
         }
-        row.append(words);
-        const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': t.id });
-        buy.append(essence(price));
-        buy.classList.toggle('is-dear', price > inv.essence);
-        buy.addEventListener('click', () => this._buyUpgrade(t, price));
-        if (this.tutor) {       // (the tutorial's, the first time: an arrow on the button to tap)
-            row.classList.add('is-tutor');
-            row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
-        }
-        row.append(buy);
-        list.append(row);
-        const next = up.stepAt(step.i + 1);
-        list.append(el('div', 'gear-up-next', { text: `Then: ${next.track.glyph} ${next.name}` }));
+        panel.append(how);
 
-        list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
-        for (const g of GODDESSES) {
-            const level = up.level(g.id), open = up.open(g);
-            const row = el('div', `gear-up is-goddess${open ? '' : ' is-locked'}`, { 'data-up': g.id });
-            const face = el('span', `gear-goddess${open ? '' : ' is-shadow'}`);
-            face.style.backgroundPosition = `${-g.frame * GODDESS_FRAME * 2 - 12}px -40px`;       // (her figure, in its frame's lower middle)
-            face.style.backgroundSize = `${GODDESSES.length * GODDESS_FRAME * 2}px ${GODDESS_FRAME * 2}px`;
-            row.append(face);
+        const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
+        const best = up.best(true) || up.best();       // (what your essence buys best; or, short of everything, what to save for)
+        const shown = new Set(up.heroes().map(h => h.id));
+        for (const h of HEROES) {
+            const open = shown.has(h.id), level = up.level(h.id);
+            if (!open && h === MIGHT) continue;
+            const row = el('div', `gear-up${h.goddess ? ' is-goddess' : ''}${open ? '' : ' is-locked'}`, { 'data-up': h.id });
+            row.append(h.goddess ? this._goddessFace(h, open) : el('span', 'gear-icon gear-up-glyph gear-up-glyph--attack', { text: h.glyph }));
             const words = el('div', 'gear-up-words');
-            const name = el('div', 'gear-up-name', { text: g.name });
+            const name = el('div', 'gear-up-name', { text: h.name });
             if (level) name.append(el('span', 'gear-up-level', { text: `Lv ${level}` }));
-            words.append(name, el('div', 'gear-up-title', { text: g.title }), el('div', 'gear-up-gives', { text: this._gives(up, g, level, open) }));
-            if (open && level) {
-                // How far to her next milestone
-                const goal = nextMilestone(level), from = lastMilestone(level);
-                const bar = el('div', 'gear-up-bar');
-                const fill = el('span', 'gear-up-fill');
-                fill.style.width = `${Math.round(100 * (level - from) / Math.max(1, goal - from))}%`;
-                bar.append(fill, el('span', 'gear-up-goal', { text: `×2 at ${goal}` }));
-                words.append(bar);
-            }
+            words.append(name, el('div', 'gear-up-title', { text: h.title }));
+            if (open) {
+                const g = up.gives(h);
+                words.append(el('div', 'gear-up-gives', { text: level ? this._givesText(g, up.magic) : `Each level: ${this._givesText({ attack: h.power, hp: h.power * h.hp }, up.magic)}` }));
+                const b = up.nextBoost(h);
+                if (b?.ready) {
+                    const boost = el('button', `gear-up-boost${b.price > inv.essence ? ' is-dear' : ''}${best?.h.id === h.id && best.kind === 'boost' ? ' is-best' : ''}`, { type: 'button', 'data-boost': h.id });
+                    boost.append(el('span', 'gear-up-boost-what', { text: `×${b.times}${b.teaches ? ` · ${this._taught(b.teaches)}` : ''}` }), essence(b.price));
+                    boost.addEventListener('click', () => this._boost(h, b.price));
+                    words.append(boost);
+                } else if (b) words.append(el('div', 'gear-up-next-boost', { text: `×${b.times} at Lv ${b.at}${b.teaches ? `, and ${this._taught(b.teaches)}` : ''}` }));
+            } else words.append(el('div', 'gear-up-gives', { text: `🔒 Hire ${HEROES[HEROES.indexOf(h) - 1].name} first` }));
             row.append(words);
             if (open) {
-                const price = up.cost(g);
-                const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': g.id });
-                buy.append(essence(price));
+                const n = up.howMany(h, this.buyHowMany), price = up.cost(h, this.buyHowMany);
+                const buy = el('button', `gear-up-buy${best?.h.id === h.id && best.kind === 'level' ? ' is-best' : ''}`, { type: 'button', 'data-buy': h.id });
+                buy.append(el('span', 'gear-up-n', { text: level ? `+${n}` : 'Hire' }), essence(price));
                 buy.classList.toggle('is-dear', price > inv.essence);
-                buy.addEventListener('click', () => this._buyUpgrade(g, price));
+                buy.addEventListener('click', () => this._buyUpgrade(h, price));
+                if (this.tutor && h.id === (best?.h || MIGHT).id) {     // (the tutorial's, the first time: an arrow on the button to tap)
+                    row.classList.add('is-tutor');
+                    row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
+                }
                 row.append(buy);
             }
-            list.append(row);
+            if (h === MIGHT) {
+                list.append(row);
+                list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
+            } else list.append(row);
         }
         panel.append(list);
     }
 
-    /** What a goddess gives now, or what she will, or what opens her. */
-    _gives(up, t, level, open) {
-        if (!open) {
-            const [id, n] = t.needs;
-            return `🔒 Opens at ${up.track(id)?.name || id} Lv ${n}`;
-        }
-        const now = up.amount(t, level), next = up.amount(t, level + 1);
-        return level ? `${givesText(t.gives, now, up.magic)} (next ${givesText(t.gives, next - now, up.magic)})` : `Each level: ${givesText(t.gives, 1, up.magic)}`;
+    /** A goddess's picture: her figure in its frame's lower middle; a shadow till she can be hired. */
+    _goddessFace(g, lit) {
+        const face = el('span', `gear-goddess${lit ? '' : ' is-shadow'}`);
+        face.style.backgroundPosition = `${-g.frame * GODDESS_FRAME * 2 - 12}px -40px`;
+        face.style.backgroundSize = `${GODDESSES.length * GODDESS_FRAME * 2}px ${GODDESS_FRAME * 2}px`;
+        return face;
     }
 
-    _buyUpgrade(t, price) {
+    /** +12 attack (and spell power), +36 HP. */
+    _givesText(g, magic) {
+        return [`+${short(g.attack)} ${magic ? 'attack and spell' : 'attack'}`, ...(g.hp ? [`+${short(g.hp)} HP`] : [])].join(', ');
+    }
+
+    /** What a boost teaches: "learn Frost Lance", "Fireball rank II". */
+    _taught(r) {
+        return r.rank === 1 ? `learn ${r.spell.name}` : `${r.spell.name} rank ${RANK_NAMES[r.rank]}`;
+    }
+
+    _buyUpgrade(h, price) {
         const up = this.upgrades?.();
-        const res = up.buy(t.id);
+        const res = up.buy(h.id, this.buyHowMany);
         if (!res.ok) {
             audio.play('error', { volume: 0.5 });
-            this.notice = res.error === 'poor' ? `${t.name} costs ${goldText(price)} essence.` : SAY[res.error] || '';
+            this.notice = res.error === 'poor' ? `${h.name} costs ${goldText(price)} essence.` : SAY[res.error] || '';
             return this.render();
         }
-        const level = up.level(t.id), r = res.learned;
-        if (r) {
-            audio.play('reveal', { volume: 0.8, drift: 0 });
-            this.notice = `${res.step.name} done! ${r.rank === 1 ? `You've learned ${r.spell.name}! Equip it on Equip's Magic tab.` : `${r.spell.name} is rank ${RANK_NAMES[r.rank]} now.`}`;
-        } else if (res.done) {
-            audio.play('reveal', { volume: 0.8, drift: 0 });
-            this.notice = `${res.step.name} done!`;
-        } else if (res.milestone) {
-            audio.play('ting', { volume: 0.8 });
-            this.notice = `${t.name} Lv ${level}: twice as strong!`;
-        } else {
-            audio.play('coins', { volume: 0.6 });
-            this.notice = res.step ? `${res.step.name}: ${level - (res.step.to - STEP)}/${STEP}.` : `${t.name} Lv ${level}.`;
+        audio.play(res.hired && h.goddess ? 'reveal' : 'coins', { volume: 0.6, drift: 0 });
+        this.notice = res.hired && h.goddess ? `${h.name} answers your call!` : `${h.name} Lv ${up.level(h.id)}.`;
+        this.render();
+    }
+
+    _boost(h, price) {
+        const up = this.upgrades?.();
+        const res = up.boost(h.id);
+        if (!res.ok) {
+            audio.play('error', { volume: 0.5 });
+            this.notice = res.error === 'poor' ? `${h.name}'s boost costs ${goldText(price)} essence.` : SAY[res.error] || '';
+            return this.render();
         }
-        // What it opened
-        const opened = GODDESSES.filter(o => o.needs[0] === t.id && level === o.needs[1]);
-        if (opened.length) this.notice += ` ${opened.map(o => o.name).join(' and ')} ${opened.length > 1 ? 'are' : 'is'} open to you.`;
+        audio.play('reveal', { volume: 0.8, drift: 0 });
+        this.notice = `${h.name} is ${res.times} times as strong!`;
+        const r = res.learned;
+        if (r) this.notice += r.rank === 1 ? ` You've learned ${r.spell.name}! Equip it on Equip's Magic tab.` : ` ${r.spell.name} is rank ${RANK_NAMES[r.rank]} now.`;
         this.render();
     }
 
