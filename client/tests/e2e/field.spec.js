@@ -506,18 +506,18 @@ test.describe("A foe after you doesn't let go while you're near", () => {
 });
 
 test.describe('The zone, not your hero, says how hard its foes are', () => {
-    test("north of Dunmere they're a fair fight for a new hero; the demons south are far beyond one, a blow felling them, a fury standing a hundred arrows; the same whoever you are, and a stronger hero finds them easier (the user's: no invisible wall, but no going that way yet)", async ({ page }) => {
+    test("north of Dunmere the first pack is a fair fight for a new hero; the demons south are far beyond one, a blow felling them, a fury standing a hundred arrows; the same whoever you are, and a stronger hero finds them easier (the user's: no invisible wall, but no going that way yet)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const fresh = { attack: 7, hp: 20, defence: 4 };       // (a new hero: attack 4-9, hit points 16-31)
         // a blow's share of a new hero's hit points (less half their defence, as _hurt takes), and the blows a foe takes
         const look = () => page.evaluate(async (fresh) => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            const of = (fam) => fd.foes.filter(f => f.family === fam && f.state === 'post' && !f.spec.label)
+            const of = (fam) => fd.foes.filter(f => f.family === fam && f.state === 'post' && !f.spec.label && (fam !== 'vanar' || !f.step))     // (north, the first pack up the climb)
                 .map(f => ({ blows: f.maxHp / fresh.attack, hurt: (f.damage - Math.floor(fresh.defence / 2)) / fresh.hp }));
             return { vanar: of('vanar'), demons: of('demons'), all: Object.fromEntries(fd.foes.map(f => [f.i, [f.maxHp, f.damage]])) };
         }, fresh);
-        await expect.poll(() => look().then(r => r.vanar.length), { timeout: 30000 }).toBeGreaterThan(5);
+        await expect.poll(() => look().then(r => r.vanar.length), { timeout: 30000 }).toBeGreaterThanOrEqual(3);
         const north = await look();
         for (const v of north.vanar) {
             expect(v.blows).toBeLessThan(25);
@@ -539,6 +539,108 @@ test.describe('The zone, not your hero, says how hard its foes are', () => {
             expect(d.hurt).toBeGreaterThanOrEqual(1);
             expect(d.blows).toBeGreaterThanOrEqual(80);
         }
+    });
+});
+
+test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
+    test("each pack up it 1.6 times the health of the one before, its blow 1.5 times; what each pays buys, on the Upgrade page, the strength the next asks, for every class; a new hero can't skip a pack's upgrades for long", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const r = await page.evaluate(async () => {
+            const { numbers, packGold, strengthFor, ZONES, PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
+            const { costOf, milestonesAt, STAT_TRACKS, GODDESSES } = await import('/src/upgrades/Upgrades.js');
+            const steps = PACKS.filter(p => p.family === 'vanar').map(p => p.step);
+            const z = ZONES.vanar, hp = numbers('greatbear', 1, z, 0).hp;
+            const ratio = numbers('greatbear', 1, z, 3).hp / hp;
+            // A hero buying the most strength (attack x hit points) for its gold, as the Upgrade page sells it
+            const tracks = { might: STAT_TRACKS[0], vigour: STAT_TRACKS[1], brigid: GODDESSES[0] };
+            const amount = (t, l) => t.per * l * 2 ** milestonesAt(l);
+            const strength = (h, L) => (h.attack + amount(tracks.might, L.might) + (tracks.brigid.gives.attack / tracks.brigid.per) * amount(tracks.brigid, L.brigid)) * (h.hp + amount(tracks.vigour, L.vigour));
+            const short = [];
+            for (const h of [{ attack: 4, hp: 16 }, { attack: 5, hp: 19 }, { attack: 7, hp: 20 }, { attack: 9, hp: 19 }, { attack: 9, hp: 31 }]) {
+                const L = { might: 0, vigour: 0, brigid: 0 };
+                let gold = 0;
+                for (const step of steps.slice(1)) {
+                    gold += packGold('vanar', step - 1);
+                    while (strength(h, L) < strengthFor('vanar', step)) {
+                        const buys = Object.entries(tracks).filter(([id]) => id !== 'brigid' || L.might >= 10)
+                            .map(([id, t]) => { const c = costOf(t.base, L[id]); const L2 = { ...L, [id]: L[id] + 1 }; return { id, c, gain: (strength(h, L2) - strength(h, L)) / c }; })
+                            .sort((a, b) => b.gain - a.gain);
+                        if (buys[0].c > gold) { short.push(`${h.attack}/${h.hp} short for pack ${step}`); break; }
+                        gold -= buys[0].c;
+                        L[buys[0].id]++;
+                    }
+                }
+            }
+            const fresh = [[4, 16], [9, 31]].map(([a, h]) => a * h);
+            return { steps, ratio, short, fresh, two: strengthFor('vanar', 2), first: packGold('vanar', 0), places: PLACES.filter(p => p.family === 'vanar').every(p => p.step === PACKS[p.pack].step) };
+        });
+        expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6]);
+        expect(r.ratio).toBeCloseTo(1.6 ** 3, 1);
+        expect(r.short).toEqual([]);
+        for (const f of r.fresh) expect(f).toBeLessThan(r.two);      // (no new hero skips two packs' upgrades)
+        expect(r.places).toBe(true);
+    });
+
+    test("the first time one ahead is too strong for you, you're told so and shown how: an arrow on Upgrade, one on a buy button; bought, it's done and never shown again (the user's: teach the system)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await page.evaluate(() => {
+            const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
+            Object.defineProperty(stats, 'attack', { value: 5, configurable: true, writable: true });      // (a new hero, the weakest sort)
+        });
+        const { PACKS } = await places(page);
+        const second = PACKS.find(p => p.family === 'vanar' && p.step === 1);
+        // eight tiles short of the second pack up the road, on open ground
+        const spot = await page.evaluate(([x, y]) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (let a = 0; a < Math.PI * 2; a += 0.1) {
+                const px = x + Math.cos(a) * 7 * 32, py = y + Math.sin(a) * 7 * 32;
+                if (fd._open(px, py)) return { x: px, y: py };
+            }
+            return null;
+        }, second.at);
+        expect(spot).not.toBe(null);
+        await standAt(page, spot.x, spot.y);
+        const pointing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.pointing);
+        await expect.poll(pointing, { timeout: 15000 }).toBe('stats');
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text)).toMatch(/too strong/i);
+        // The Upgrade page: an arrow on a buy button; gold enough, and it's bought
+        await page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            ui.inventory.gold += 500;
+            ui.bottomControls.switchTab('stats');
+        });
+        const buy = page.locator('.gear-up.is-tutor .gear-up-buy');
+        await expect(buy).toHaveCount(1);
+        await expect(page.locator('.gear-tutor-arrow')).toHaveCount(1);
+        await buy.click();
+        await expect(page.locator('.gear-tutor-arrow')).toHaveCount(0);
+        expect(await pointing()).toBe(null);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').flags['tut-upgrade'])).toBe(true);
+        // never again
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').tutorUpgrade());
+        expect(await pointing()).toBe(null);
+    });
+
+    test('the first pack falls fast to a new hero and pays its gold, and beaten it says to upgrade for what comes next', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await keepUp(page);
+        const { PLACES } = await places(page);
+        const first = PLACES.filter(p => p.family === 'vanar' && p.step === 0);
+        await expect.poll(() => field(page).then(f => first.every(p => f.states[p.i] === 'post')), { timeout: 30000 }).toBe(true);
+        const r = await page.evaluate(async (ids) => {
+            const { packGold } = await import('/src/battle/FieldDemons.js');
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
+            const gold = ui.inventory.gold, them = fd.foes.filter(f => ids.includes(f.i));
+            const blows = them.map(f => f.maxHp / 7);          // (a middling new hero's blows)
+            for (const f of them) { f.hp = 0; fd._slay(f); fd._lastKill = -1e9; }     // (no combo)
+            return { blows, got: ui.inventory.gold - gold, pays: packGold('vanar', 0), pointing: ui.bottomControls.pointing };
+        }, first.map(p => p.i));
+        for (const b of r.blows) expect(b).toBeLessThanOrEqual(3);
+        expect(Math.abs(r.got - r.pays)).toBeLessThanOrEqual(first.length);     // (each share rounded)
+        expect(r.pointing).toBe('stats');
     });
 });
 

@@ -151,6 +151,31 @@ export class UIScene extends Scene {
         if (me) this.scene.get('GameScene').effects?.floatText(me.x, me.y - 30, 'Healed', '#7ee07e', 18);
     }
 
+    /**
+     * The first time the climb north of Dunmere wants upgrading for (its first pack beaten, or one ahead too strong
+     * for you), you're shown how (the user's: teach the system, a big arrow on the button): an arrow on the
+     * Upgrade tab, and on the Upgrade page one on a buy button; your first upgrade bought, it's done for good.
+     * True if it began.
+     */
+    tutorUpgrade(text = 'Spend your gold on upgrades to beat them.') {
+        const gs = this.scene.get('GameScene');
+        if (gs?.flags?.['tut-upgrade'] || this._tutoring || !this.upgrades) return false;
+        this._tutoring = this.upgrades.onChange(() => {
+            this._tutoring?.();
+            this._tutoring = null;
+            gs?.setFlag?.('tut-upgrade');
+            this.bottomControls.point(null);
+            this.gear.tutor = false;
+            if (this.gear.mode === 'stats') this.gear.render();
+            this.notice('Stronger! Back to the road north.', 3600);
+        });
+        this.notice(text, 6000);
+        this.bottomControls.point('stats');
+        this.gear.tutor = true;
+        if (this.gear.mode === 'stats') this.gear.render();
+        return true;
+    }
+
     /** A line across the top of the screen for a moment: what just happened (a gate opens, a level's name). */
     notice(text, ms = 3600) {
         this._notice?.destroy();

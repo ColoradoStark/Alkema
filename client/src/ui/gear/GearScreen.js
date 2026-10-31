@@ -669,6 +669,9 @@ export class GearScreen {
         const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
         // Three upgrades (the user's), picked as the page opens and kept as you buy: a row doesn't go from under your finger
         this.slots ??= up.list().map(t => t.id);
+        // (the tutorial's, the first time: an arrow on the buy button to tap, the first you can afford)
+        const shown = this.slots.map(id => up.track(id)).filter(t => up.open(t));
+        const tutor = this.tutor && (shown.find(t => up.cost(t, this.buyHowMany) <= inv.gold) || shown[0])?.id;
         for (const t of [...this.slots.map(id => up.track(id)), ...GODDESSES]) {
             if (t === GODDESSES[0]) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
             const level = up.level(t.id), open = up.open(t);
@@ -703,6 +706,10 @@ export class GearScreen {
                 if (n > 1) buy.append(el('span', 'gear-up-n', { text: `+${n}` }));
                 buy.append(coins(price));
                 buy.classList.toggle('is-dear', price > inv.gold);
+                if (t.id === tutor) {
+                    row.classList.add('is-tutor');
+                    row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
+                }
                 buy.addEventListener('click', () => this._buyUpgrade(t, price));
                 row.append(buy);
             }

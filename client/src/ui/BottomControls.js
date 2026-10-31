@@ -343,6 +343,29 @@ export class BottomControls {
         this._updateTabHighlight();
     }
 
+    /** A big arrow bobbing over a tab, and the tab glowing: "tap this" (the tutorial's); null takes it away. */
+    point(tabKey) {
+        this._pointer?.destroy();
+        this._pointer = null;
+        const tab = tabKey && this.tabButtons[tabKey];
+        if (!tab) return;
+        const s = this.scene, { x, y } = tab.container;
+        const g = s.add.graphics();
+        g.fillStyle(0xfbf236, 1).lineStyle(3, 0x222034, 1);
+        const arrow = [[-9, -34], [9, -34], [9, -18], [18, -18], [0, 0], [-18, -18], [-9, -18]].map(([px, py]) => ({ x: px, y: py }));
+        g.fillPoints(arrow, true).strokePoints(arrow, true);
+        const glow = s.add.graphics().lineStyle(3, 0xfbf236, 1).strokeRoundedRect(-tab.width / 2 - 3, -tab.height / 2 - 3, tab.width + 6, tab.height + 6, 6);
+        g.setPosition(0, -tab.height / 2 - 4);
+        const box = this._pointer = s.add.container(x, y, [glow, g]);
+        this.container.add(box);
+        s.tweens.add({ targets: g, y: g.y - 10, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        s.tweens.add({ targets: glow, alpha: 0.25, duration: 420, yoyo: true, repeat: -1 });
+    }
+
+    get pointing() {
+        return this._pointer ? Object.keys(this.tabButtons).find(k => this.tabButtons[k].container.x === this._pointer.x) : null;
+    }
+
     switchTab(tabKey) {
         this.activeTab = tabKey;
         this._updateTabHighlight();

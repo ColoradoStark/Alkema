@@ -90,6 +90,7 @@ const RING = 64;                // a flanker makes for this far off you, on the 
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
+const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
 const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // ways along a wall, tried in turn
@@ -110,7 +111,7 @@ export const PACKS = [
     { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
 ].map((p, k, all) => ({ ...p, family: 'demons', tier: 1 + (TIER_END - 1) * k / (all.length - 1) }))
     .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })))
-    .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })));
+    .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })));
 
 /**
  * How hard each band is is its zone's, not matched to you (the user's, October 2026, a crude first try): each is
@@ -119,7 +120,10 @@ export const PACKS = [
  * that way yet. Grow, and a band gets easier.
  */
 export const ZONES = {
-    vanar: { attack: 7, hp: 22, defence: 4 },
+    // North of Dunmere, the climb (the user's, after Clicker Heroes): each pack 1.6 times the health of the one
+    // before (Clicker Heroes' zones) and its blow 1.5 times, paying `gold` times `more` a pack along it: the first
+    // falls fast to a new hero, and each after needs what the last paid spent on the Upgrade page, or you die
+    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 1.6, hurt: 1.5, gold: 110, more: 1.8 } },
     orcs: { attack: 28, hp: 90, defence: 14 },
     demons: { attack: 300, hp: 900, defence: 60 },
 };
@@ -149,19 +153,44 @@ const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];  
 
 /** Each demon (and orc) on the coast, a place for each: { x, y (feet, before they're stood clear of rock), kind, family, pack, tier, i }. */
 export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
-    x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, family: p.family, pack, tier: p.tier,
+    x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, family: p.family, pack, tier: p.tier, step: p.step ?? 0,
     role: KINDS[kind].ranged ? 'caster' : ROLES[p.band.slice(0, k).filter(o => !KINDS[o].ranged).length % ROLES.length],
 }))).map((p, i) => ({ ...p, i }));
 
-/** A foe made for a hero ({attack, hp: max hit points, defence}: its zone's, `ZONES`) `tier` along the road: its hit points and blow. */
-export function numbers(kind, tier, hero) {
-    const attack = Math.max(1, hero.attack || 5), hp = Math.max(10, hero.hp || 30);
+/**
+ * A foe made for a hero ({attack, hp: max hit points, defence}: its zone's, `ZONES`) `tier` along the road (or, on a
+ * climb, `step` packs up it): its hit points and blow.
+ */
+export function numbers(kind, tier, hero, step = 0) {
+    const attack = Math.max(1, hero.attack || 5), hp = Math.max(10, hero.hp || 30), c = hero.climb;
+    const more = c ? c.hp ** step : tier, harder = c ? c.hurt ** step : Math.sqrt(tier);
     return {
-        hp: Math.max(4, Math.round(HITS[kind] * attack * tier)),
+        hp: Math.max(4, Math.round(HITS[kind] * attack * more)),
         // (your defence takes half of itself off a blow, `_hurt`: given back here, as it's made for that hero's; a
         // quarter given back rounded a weak hero's fury down to a fortieth of their hit points)
-        damage: Math.max(1, Math.round(HURTS[kind] * SOFTER * hp * Math.sqrt(tier))) + Math.floor((hero.defence || 0) / 2),
+        damage: Math.max(1, Math.round(HURTS[kind] * SOFTER * hp * harder)) + Math.floor((hero.defence || 0) / 2),
     };
+}
+
+/** On a climb, what the `step`th pack up it pays between them (a share each, by how long each takes to fell). */
+export function packGold(fam, step) {
+    const c = ZONES[fam].climb;
+    return c.gold * c.more ** step;
+}
+
+/** A climb's foe's share of its pack's gold, `combo` kills in a row. */
+export function climbBounty(kind, place, combo = 1) {
+    const band = PACKS[place.pack].band, all = band.reduce((n, k) => n + HITS[k], 0);
+    return Math.max(1, Math.round(packGold(place.family, place.step) * HITS[kind] / all * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
+}
+
+/**
+ * How strong (attack times hit points) a hero must be for the `step`th pack up a climb: what its zone's hero is
+ * made for, grown as the pack is. Below it, it's too strong for you.
+ */
+export function strengthFor(fam, step) {
+    const z = ZONES[fam], c = z.climb;
+    return z.attack * c.hp ** step * z.hp * c.hurt ** step;
 }
 
 /** The gold a `kind` is worth `tier` along the road, the cheapest next upgrade costing `price`, `combo` kills in a row. */
@@ -272,6 +301,7 @@ export class FieldDemons {
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
         }
+        this._warn(feet);
         this._fly(dt);
         this._statuses(delta);
         this._apart();
@@ -319,8 +349,8 @@ export class FieldDemons {
                 if (spec.scale) foe.grow(spec.scale);
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
-                const { hp, damage } = numbers(p.kind, p.tier, ZONES[fam]);
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
+                const { hp, damage } = numbers(p.kind, p.tier, ZONES[fam], p.step);
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
@@ -379,6 +409,7 @@ export class FieldDemons {
 
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
+        this._warned?.clear();
         for (const fam of [...this._up]) this._dismiss(fam);
         if (!this.bars) return;
         this.scene.anims.resumeAll();
@@ -506,6 +537,33 @@ export class FieldDemons {
         this.slain.add(f.i);
         f.foe.die();
         this._reward(f);
+        // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
+        if (ZONES[f.family].climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
+            this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend your gold on upgrades.');
+    }
+
+    /** How strong you are (attack times hit points), as a climb weighs it. */
+    _strength() {
+        const ui = this.scene.scene.get('UIScene');
+        return (ui?.inventory?.stats?.attack ?? 5) * (ui?.hp?.max ?? 1);
+    }
+
+    /**
+     * Nearing a pack up a climb that's too strong for you, you're told so, once a visit (and the first time, shown
+     * the Upgrade page): the user's, "upgrade to beat this".
+     */
+    _warn(feet) {
+        this._warned ??= new Set();
+        for (const [pack, p] of PACKS.entries()) {
+            if (!ZONES[p.family].climb || !p.step || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;
+            if (PLACES.every(q => q.pack !== pack || this.slain.has(q.i))) continue;
+            this._warned.add(pack);
+            if (this._strength() >= strengthFor(p.family, p.step)) continue;
+            const ui = this.scene.scene.get('UIScene');
+            const words = 'These foes are too strong for you. Upgrade first!';
+            audio.play('error', { volume: 0.5 });
+            if (!ui?.tutorUpgrade?.(`${words} Spend your gold on the Upgrade page.`)) ui?.notice?.(words, 4000);
+        }
     }
 
     /**
@@ -517,7 +575,7 @@ export class FieldDemons {
         const now = this.scene.time.now;
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
-        const { x, y } = f.foe, worth = bounty(f.kind, f.tier, this._price(ui), this.combo);
+        const { x, y } = f.foe, worth = ZONES[f.family].climb ? climbBounty(f.kind, PLACES[f.i], this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
         if (f.spec.chest) {     // (the champion, the warlord)
             this.scene.encounters?.drop(x, y, { gold: worth, item: rollLoot(4).item });
             return;
