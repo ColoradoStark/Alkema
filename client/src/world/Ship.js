@@ -1,5 +1,5 @@
 // Your ship, Wesnoth's Merchant Carrack (ship.png; the user's, October 2026, in
-// place of a galleon drawn from above). Moored, it rides at anchor; under sail it carries its captain
+// place of a galleon drawn from above, at its size, turning as it did). Moored, it rides at anchor; under sail it carries its captain
 // (hidden aboard) and moves like a ship, not a walker: it turns toward the
 // way you steer (more sharply once under way), gathers speed slowly, coasts
 // when you let go, and never runs ruler-straight: the swell swings its bow a
@@ -13,8 +13,8 @@ const TURN_AT_REST = 0.5;   // ...and with no way on
 const DRAG_STEERING = 0.22; // fraction of speed lost per second while sailing
 const DRAG_COASTING = 0.45; // ...and with the sails slack
 const SLIDE = 2;            // how quickly momentum follows the bow (per second)
-const STERN = 44;           // px from the centre back to the stern
-const BOW = 46;             // ...and forward to the bow
+const STERN = 24;           // px from the centre back to the stern
+const BOW = 28;             // ...and forward to the bow
 const WAKE_EVERY = 7;       // px travelled per set of wake puffs
 
 const TWO_PI = Math.PI * 2;
@@ -43,6 +43,19 @@ export function faceShip(sprite, heading, yaw, pitch, state) {
     return (state.flipped ? Math.PI - DRAWN_BOW : DRAWN_BOW) + lean + yaw;
 }
 
+/**
+ * Your own ship turns right round to the way she sails, as the galleon drawn from above did (the
+ * user's: an art swap only, the tilting carrack felt wrong to steer): her bow on her heading,
+ * mirrored going west so she's never upside down. `state.flipped` is kept between frames.
+ */
+function turnShip(sprite, heading, yaw, pitch, state) {
+    const c = Math.cos(heading);
+    if (c < -0.1) state.flipped = true;            // (a little either way of north or south, she stays as she was)
+    else if (c > 0.1) state.flipped = false;
+    const drawn = state.flipped ? Math.PI - DRAWN_BOW : DRAWN_BOW;
+    sprite.setFlipX(state.flipped).setRotation(heading - drawn + yaw).setScale(1 + pitch, 1 - pitch * 0.5);
+}
+
 export function foamTexture(scene) {
     if (scene.textures.exists('fx-foam')) return;
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
@@ -67,7 +80,7 @@ export class Ship {
         foamTexture(scene);
         this.sprite = scene.add.image(x, y, 'ship').setDepth(depth);
         this._face = { flipped: Math.cos(heading) < 0 };
-        faceShip(this.sprite, heading, 0, 0, this._face);
+        turnShip(this.sprite, heading, 0, 0, this._face);
         this._emitAngle = 0;
         this.wake = scene.add.particles(0, 0, 'fx-foam', {
             lifespan: { min: 900, max: 1700 },
@@ -165,12 +178,12 @@ export class Ship {
         const pitch = Math.sin(this._time * 2.1) * (0.025 + 0.02 * way);
         this._at = { x, y };
         this.sprite.setPosition(x, y + Math.sin(this._time * 1.7) * 0.8);
-        const hull = faceShip(this.sprite, this.heading, yaw, pitch, this._face);
+        turnShip(this.sprite, this.heading, yaw, pitch, this._face);
 
         this._last = { x, y };
         if (moved > 40) return;    // wrapped around the world, or teleported: no wake across the gap
-        const cos = Math.cos(hull), sin = Math.sin(hull);      // (off her hull as it's drawn)
-        const back = hull + Math.PI;
+        const cos = Math.cos(this.heading), sin = Math.sin(this.heading);
+        const back = this.heading + Math.PI;
         this._trail += moved;
         while (this._trail >= WAKE_EVERY) {
             this._trail -= WAKE_EVERY;
@@ -181,7 +194,7 @@ export class Ship {
             this._emit(x - cos * (STERN + 2), y - sin * (STERN + 2), back);
             if (way > 0.55) {
                 const side = Math.random() < 0.5 ? -1 : 1;
-                this._emit(x + cos * BOW - sin * side * 3, y + sin * BOW + cos * side * 3, hull + side * 1.3);   // bow spray
+                this._emit(x + cos * BOW - sin * side * 3, y + sin * BOW + cos * side * 3, this.heading + side * 1.3);   // bow spray
             }
         }
         // At rest, slow rings of ripple lap at the hull
