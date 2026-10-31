@@ -14,7 +14,7 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.upgrades, null, { timeout: 30000 });
 }
 
-/** A mage, with nothing bought yet and `gold` to spend. */
+/** A mage, with nothing bought yet and `gold` of essence to spend (upgrades cost essence: gold is for town). */
 const asMage = (page, gold) => page.evaluate(async (gold) => {
     const ui = window.__PHASER_GAME.scene.getScene('UIScene');
     const { Upgrades } = await import('/src/upgrades/Upgrades.js');
@@ -23,7 +23,7 @@ const asMage = (page, gold) => page.evaluate(async (gold) => {
     ui.spellbook = new ui.spellbook.constructor({ spells: ui.inventory.catalogue.spells, heroClass: 'mage', saved: false });
     ui.upgrades = new Upgrades({ inventory: ui.inventory, spellbook: ui.spellbook });
     ui.inventory.upgrades = ui.upgrades;
-    ui.inventory.gold = gold;
+    ui.inventory.essence = gold;
     ui.inventory._save();
 }, gold);
 
@@ -47,7 +47,7 @@ test.describe('Upgrades', () => {
         await page.locator('.gear-up-buy[data-buy="might"]').click();
         await expect(page.locator('.gear-up[data-up="might"] .gear-up-level')).toHaveText('Lv 1');
         expect(Number(await page.locator('.gear-up-buy[data-buy="might"] .gear-coins').textContent())).toBeGreaterThan(price);
-        expect(await ui(page, (ui) => ui.inventory.gold)).toBe(990);
+        expect(await ui(page, (ui) => ui.inventory.essence)).toBe(990);
         // Ten at a time
         await page.locator('.gear-buy-n[data-n="10"]').click();
         await page.locator('.gear-up-buy[data-buy="might"]').click();
@@ -68,7 +68,7 @@ test.describe('Upgrades', () => {
         // Kept with the hero
         expect(await page.evaluate(async () => (await import('/src/account/account.js')).account.current.data.upgrades)).toMatchObject({ might: 11, vigour: 1 });
         // Too dear: says so, and nothing's spent
-        await ui(page, (ui) => { ui.inventory.gold = 3; ui.inventory._save(); });
+        await ui(page, (ui) => { ui.inventory.essence = 3; ui.inventory._save(); });
         await page.locator('.gear-up-buy[data-buy="might"]').click();
         await expect(page.locator('.gear-notice')).toContainText('costs');
         await expect(page.locator('.gear-up[data-up="might"] .gear-up-level')).toHaveText('Lv 11');

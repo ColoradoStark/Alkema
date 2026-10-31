@@ -157,7 +157,7 @@ export class UIScene extends Scene {
      * Upgrade tab, and on the Upgrade page one on a buy button; your first upgrade bought, it's done for good.
      * True if it began.
      */
-    tutorUpgrade(text = 'Spend your gold on upgrades to beat them.') {
+    tutorUpgrade(text = 'Spend your essence on upgrades to beat them.') {
         const gs = this.scene.get('GameScene');
         if (gs?.flags?.['tut-upgrade'] || this._tutoring || !this.upgrades) return false;
         this._tutoring = this.upgrades.onChange(() => {

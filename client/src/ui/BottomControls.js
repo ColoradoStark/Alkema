@@ -343,7 +343,10 @@ export class BottomControls {
         this._updateTabHighlight();
     }
 
-    /** A big arrow bobbing over a tab, and the tab glowing: "tap this" (the tutorial's); null takes it away. */
+    /**
+     * A huge arrow over a tab, bouncing and pulsing, the tab ringed in light rippling out: "tap this", not to be
+     * missed (the tutorial's; the user's, a small one went unseen till they looked down); null takes it away.
+     */
     point(tabKey) {
         this._pointer?.destroy();
         this._pointer = null;
@@ -351,15 +354,18 @@ export class BottomControls {
         if (!tab) return;
         const s = this.scene, { x, y } = tab.container;
         const g = s.add.graphics();
-        g.fillStyle(0xfbf236, 1).lineStyle(3, 0x222034, 1);
-        const arrow = [[-9, -34], [9, -34], [9, -18], [18, -18], [0, 0], [-18, -18], [-9, -18]].map(([px, py]) => ({ x: px, y: py }));
+        g.fillStyle(0xfbf236, 1).lineStyle(4, 0x222034, 1);
+        const arrow = [[-20, -84], [20, -84], [20, -44], [42, -44], [0, 0], [-42, -44], [-20, -44]].map(([px, py]) => ({ x: px, y: py }));
         g.fillPoints(arrow, true).strokePoints(arrow, true);
-        const glow = s.add.graphics().lineStyle(3, 0xfbf236, 1).strokeRoundedRect(-tab.width / 2 - 3, -tab.height / 2 - 3, tab.width + 6, tab.height + 6, 6);
-        g.setPosition(0, -tab.height / 2 - 4);
-        const box = this._pointer = s.add.container(x, y, [glow, g]);
+        g.setPosition(0, -tab.height / 2 - 6);
+        const glow = s.add.graphics().lineStyle(4, 0xfbf236, 1).strokeRoundedRect(-tab.width / 2 - 3, -tab.height / 2 - 3, tab.width + 6, tab.height + 6, 6);
+        const ring = s.add.graphics().lineStyle(3, 0xfbf236, 1).strokeRoundedRect(-tab.width / 2, -tab.height / 2, tab.width, tab.height, 6);
+        const box = this._pointer = s.add.container(x, y, [ring, glow, g]);
         this.container.add(box);
-        s.tweens.add({ targets: g, y: g.y - 10, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        s.tweens.add({ targets: glow, alpha: 0.25, duration: 420, yoyo: true, repeat: -1 });
+        s.tweens.add({ targets: g, y: g.y - 26, duration: 380, yoyo: true, repeat: -1, ease: 'Quad.easeOut' });
+        s.tweens.add({ targets: g, scaleX: 1.2, scaleY: 1.2, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        s.tweens.add({ targets: glow, alpha: 0.2, duration: 380, yoyo: true, repeat: -1 });
+        s.tweens.add({ targets: ring, scaleX: 1.6, scaleY: 2.2, alpha: 0, duration: 900, repeat: -1, ease: 'Quad.easeOut' });
     }
 
     get pointing() {

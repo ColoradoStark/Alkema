@@ -34,6 +34,8 @@ export class Inventory {
         const fresh = !Array.isArray(saved?.bag);
         // A hero who's never shopped gets a purse to start with
         this.gold = (saved?.gold || 0) + (fresh ? catalogue.startingGold || 0 : 0);
+        // Essence (the user's, October 2026): what felled foes leave you, spent on yourself on the Upgrade page; gold is for town
+        this.essence = saved?.essence || 0;
         this.bag = fresh ? [] : saved.bag.filter(id => this.item(id));
         this.equipped = { ...(equipped || this.kit.equipped) };
         // What they had on that the server didn't put on them (it wouldn't go together) is in their bag
@@ -111,6 +113,12 @@ export class Inventory {
     /** What `gold` found comes to with Fortune (an upgrade): every find goes through this before it's shown and looted. */
     found(gold) {
         return gold ? Math.round(gold * (this.upgrades?.fortune ?? 1)) : 0;
+    }
+
+    /** Essence gathered from a felled foe. */
+    gather(essence) {
+        this.essence += essence;
+        this._save();
     }
 
     /** Found: gold, and an item (if any) into the bag. */
@@ -199,7 +207,7 @@ export class Inventory {
 
     _save() {
         // gearVersion 3: all starting clothes are gear (a slot left empty was emptied on purpose)
-        account.updateProgress({ gold: this.gold, bag: [...this.bag], equipped: { ...this.equipped }, gearVersion: 3 });
+        account.updateProgress({ gold: this.gold, essence: this.essence, bag: [...this.bag], equipped: { ...this.equipped }, gearVersion: 3 });
         this._emit();
     }
 

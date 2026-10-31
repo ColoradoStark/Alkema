@@ -43,6 +43,7 @@ import { getRangedAnimation } from '../sprites/weaponTypes.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
+import { short } from '../upgrades/Upgrades.js';
 
 const FEET = Ship.BELOW_HERO;
 // How each fights out here: twice its battle-map pace (the world's hero walks faster, 128, and still outruns them all)
@@ -64,6 +65,7 @@ const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HUR
 const SOFTER = 0.7;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder)
 // What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
 const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY, ...VANAR_PAY };      // (a pack near the start buys about one)
+const GOLD_SHARE = 0.25;        // a felled foe's gold, a share of its essence (what pays a healer)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
 const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
@@ -93,6 +95,7 @@ const FALL_MS = 1600;
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
+const ROUTE_CELL = 16, ROUTE_REACH = 12 * TILE, ROUTE_MS = 5000;      // stuck, it looks for a way round this far about, and follows it this long
 const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // ways along a wall, tried in turn
 
 // The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
@@ -120,10 +123,11 @@ export const PACKS = [
  * that way yet. Grow, and a band gets easier.
  */
 export const ZONES = {
-    // North of Dunmere, the climb (the user's, after Clicker Heroes): each pack 1.6 times the health of the one
-    // before (Clicker Heroes' zones) and its blow 1.5 times, paying `gold` times `more` a pack along it: the first
-    // falls fast to a new hero, and each after needs what the last paid spent on the Upgrade page, or you die
-    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 1.6, hurt: 1.5, gold: 110, more: 1.8 } },
+    // North of Dunmere, the climb (the user's, after Clicker Heroes): each pack 2.5 times the health of the one
+    // before and its blow twice (at 1.6 and 1.5, Clicker Heroes' own, an archer still beat the next unupgraded: the
+    // user wants it a wall), paying `essence` times `more` a pack along it: the first falls fast to a new hero, and
+    // each after needs what the last paid spent on the Upgrade page, or you die
+    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 220, more: 4 } },
     orcs: { attack: 28, hp: 90, defence: 14 },
     demons: { attack: 300, hp: 900, defence: 60 },
 };
@@ -173,15 +177,15 @@ export function numbers(kind, tier, hero, step = 0) {
 }
 
 /** On a climb, what the `step`th pack up it pays between them (a share each, by how long each takes to fell). */
-export function packGold(fam, step) {
+export function packEssence(fam, step) {
     const c = ZONES[fam].climb;
-    return c.gold * c.more ** step;
+    return c.essence * c.more ** step;
 }
 
 /** A climb's foe's share of its pack's gold, `combo` kills in a row. */
 export function climbBounty(kind, place, combo = 1) {
     const band = PACKS[place.pack].band, all = band.reduce((n, k) => n + HITS[k], 0);
-    return Math.max(1, Math.round(packGold(place.family, place.step) * HITS[kind] / all * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
+    return Math.max(1, Math.round(packEssence(place.family, place.step) * HITS[kind] / all * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
 }
 
 /**
@@ -539,7 +543,7 @@ export class FieldDemons {
         this._reward(f);
         // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
         if (ZONES[f.family].climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
-            this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend your gold on upgrades.');
+            this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
     }
 
     /** How strong you are (attack times hit points), as a climb weighs it. */
@@ -562,7 +566,7 @@ export class FieldDemons {
             const ui = this.scene.scene.get('UIScene');
             const words = 'These foes are too strong for you. Upgrade first!';
             audio.play('error', { volume: 0.5 });
-            if (!ui?.tutorUpgrade?.(`${words} Spend your gold on the Upgrade page.`)) ui?.notice?.(words, 4000);
+            if (!ui?.tutorUpgrade?.(`${words} Spend your essence on the Upgrade page.`)) ui?.notice?.(words, 4000);
         }
     }
 
@@ -576,16 +580,21 @@ export class FieldDemons {
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
         const { x, y } = f.foe, worth = ZONES[f.family].climb ? climbBounty(f.kind, PLACES[f.i], this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
+        // Its essence, all it's worth, for the Upgrade page (the user's: gold is for town), and a little gold
+        inv?.gather(worth);
+        this._sparkle(x, y - f.foe.tall / 2, 0xb884ff, 14);
+        fx?.floatText(x, y - f.foe.tall + 4, `+${short(worth)} essence`, '#d7b8ff', 18);
+        if (this.combo > 1) this.scene.time.delayedCall(220, () => fx?.floatText(x, y - f.foe.tall - 16, `Combo ×${this.combo}`, '#ffb347', 16));
+        const coin = Math.ceil(worth * GOLD_SHARE);
         if (f.spec.chest) {     // (the champion, the warlord)
-            this.scene.encounters?.drop(x, y, { gold: worth, item: rollLoot(4).item });
+            this.scene.encounters?.drop(x, y, { gold: coin, item: rollLoot(4).item });
             return;
         }
-        const gold = inv?.found(worth) ?? worth;
+        const gold = inv?.found(coin) ?? coin;
         inv?.loot(gold);
         audio.play('coins');
         fx?.coinBurst(x, y - 14, y + 6);
-        fx?.floatText(x, y - f.foe.tall + 4, `+${gold} gold`, '#fbf236', 18);
-        if (this.combo > 1) this.scene.time.delayedCall(220, () => fx?.floatText(x, y - f.foe.tall - 16, `Combo ×${this.combo}`, '#ffb347', 16));
+        this.scene.time.delayedCall(380, () => fx?.floatText(x + 14, y - f.foe.tall + 10, `+${gold} gold`, '#fbf236', 14));
     }
 
     /** What the cheapest upgrade you could buy next costs (what the demons' gold is reckoned in). */
@@ -648,6 +657,7 @@ export class FieldDemons {
             if (f.t <= 0) f.state = 'chase';
             return this._step(f, 0, 0, dt);
         }
+        if (this._routing(f, you, d, dt, delta)) return;
         if (f.spec.ranged) {
             // A warlock keeps its distance, backing off facing you (turning to walk away and back to you
             // every frame, it flickered on the spot), and throws fire when it's ready, whoever else is at you
@@ -780,6 +790,76 @@ export class FieldDemons {
             return foe.face(you.x, foe.y);
         }
         this._step(f, dx / to, dy / to, dt, free ? 1 : 0.6);
+    }
+
+    /**
+     * Walking and getting nowhere (rock between, the way round not straight: the user's foe stood on a ledge above
+     * them), it finds a way round to you on the world's map and follows it a while; with no way to you at all, it
+     * gives up and goes home. True while it's following one.
+     */
+    _routing(f, you, d, dt, delta) {
+        const { foe } = f;
+        if (f.route) {
+            f.routeT -= delta;
+            while (f.route.length && Math.hypot(f.route[0].x - foe.x, f.route[0].y - foe.y) < 10) f.route.shift();
+            if (!f.route.length || f.routeT <= 0 || d < (f.spec.reach || 40) + 20) f.route = null;
+            else {
+                const to = f.route[0], gx = to.x - foe.x, gy = to.y - foe.y, g = Math.hypot(gx, gy);
+                this._step(f, gx / g, gy / g, dt);
+                return true;
+            }
+        }
+        // (stuck: trying to walk, it's gone less than a step in STALL_MS)
+        if (!foe.walking || d < (f.spec.keep || f.spec.reach || 40) + 30) {
+            f.stuckT = 0;
+            f.stuckAt = null;
+            return false;
+        }
+        if (!f.stuckAt || Math.hypot(foe.x - f.stuckAt.x, foe.y - f.stuckAt.y) > 16) {
+            f.stuckAt = { x: foe.x, y: foe.y };
+            f.stuckT = 0;
+            return false;
+        }
+        if ((f.stuckT += delta) < STALL_MS) return false;
+        f.stuckT = 0;
+        f.stuckAt = null;
+        const route = this._route(foe, you);
+        if (!route) {
+            f.lost = true;          // (no way to you: home)
+            f.lookT = 0;
+            return false;
+        }
+        f.route = route;
+        f.routeT = ROUTE_MS;
+        return false;
+    }
+
+    /**
+     * A way on foot from `a` to `b` (feet) over the world's map, as points to walk through, or null if there's none
+     * near: a search on a grid of ROUTE_CELL squares, no further than ROUTE_REACH beyond the two.
+     */
+    _route(a, b) {
+        const G = ROUTE_CELL, cell = (p) => [Math.round(p.x / G), Math.round(p.y / G)];
+        const [sx, sy] = cell(a), [tx, ty] = cell(b), pad = Math.ceil(ROUTE_REACH / G);
+        const x0 = Math.min(sx, tx) - pad, y0 = Math.min(sy, ty) - pad, w = Math.abs(sx - tx) + 2 * pad + 1, h = Math.abs(sy - ty) + 2 * pad + 1;
+        const from = new Int32Array(w * h).fill(-2), at = (x, y) => (y - y0) * w + (x - x0);
+        const ok = (x, y) => x >= x0 && y >= y0 && x < x0 + w && y < y0 + h && from[at(x, y)] === -2 && this._open(x * G, y * G);
+        const q = [[sx, sy]];
+        from[at(sx, sy)] = -1;
+        for (let k = 0; k < q.length; k++) {
+            const [x, y] = q[k];
+            if (Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1) {
+                const path = [];
+                for (let i = at(x, y); i >= 0; i = from[i]) path.push({ x: (i % w + x0) * G, y: (Math.floor(i / w) + y0) * G });
+                return path.reverse().filter((_, j, all) => j % 3 === 2 || j === all.length - 1);
+            }
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                if (!ok(x + dx, y + dy)) continue;
+                from[at(x + dx, y + dy)] = at(x, y);
+                q.push([x + dx, y + dy]);
+            }
+        }
+        return null;
     }
 
     /** A side-on foe that can't get to your side comes straight on, and swings at you from wherever it is, for a while. */

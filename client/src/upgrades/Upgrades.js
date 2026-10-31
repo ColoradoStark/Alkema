@@ -250,11 +250,11 @@ export class Upgrades {
         return shown.filter(t => kept.has(t));
     }
 
-    /** What the next `n` levels of a track cost; 'max' is as many as your gold buys (at least one). */
+    /** What the next `n` levels of a track cost; 'max' is as many as your essence buys (at least one). */
     howMany(t, n) {
         if (n !== 'max') return n;
         let k = 0, sum = 0;
-        const gold = this.inventory.gold;
+        const gold = this.inventory.essence;      // (what upgrades are bought with: essence, the user's; gold is for town)
         while (k < 1000) {
             const next = costOf(t.base, this.level(t.id) + k);
             if (sum + next > gold) break;
@@ -274,9 +274,9 @@ export class Upgrades {
         if (!t) return { ok: false, error: 'no-such-upgrade' };
         if (!this.open(t)) return { ok: false, error: 'locked' };
         const k = this.howMany(t, n), price = costOf(t.base, this.level(id), k);
-        if (this.inventory.gold < price) return { ok: false, error: 'poor' };
+        if (this.inventory.essence < price) return { ok: false, error: 'poor' };
         const was = this.level(id);
-        this.inventory.gold -= price;
+        this.inventory.essence -= price;
         this.levels[id] = was + k;
         const res = { ok: true, levels: k, price };
         if (t.spell && rankAt(was + k) > rankAt(was)) res.learned = rankAt(was + k);

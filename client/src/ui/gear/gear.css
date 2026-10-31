@@ -126,6 +126,16 @@
     box-shadow: 0 0 0 1px #8f563b;
 }
 .gear-coins.is-dear { color: #d95763; }
+/* Essence: a glowing violet orb (what upgrades cost) */
+.gear-essence { color: #d7b8ff; }
+.gear-orb {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ffffff, #cfa8ff 35%, #8a4fe0 70%, #4a2580);
+    box-shadow: 0 0 5px #b884ff, 0 0 0 1px #3a1d66;
+}
 
 /* ---------- Buy / Sell ---------- */
 
@@ -597,15 +607,15 @@
 .gear-up-title { font-family: 'Romulus', monospace; font-size: 10px; color: #cbb6e0; margin-top: -2px; }
 
 /* The tutorial's arrow on a buy button (UIScene.tutorUpgrade): the first time, "tap this" */
-.gear-up.is-tutor { position: relative; box-shadow: 0 0 0 2px #fbf236, 0 0 14px #fbf23699; animation: gear-tutor-glow 0.84s ease-in-out infinite; }
+.gear-up.is-tutor { position: relative; box-shadow: 0 0 0 3px #fbf236, 0 0 18px #fbf236; animation: gear-tutor-glow 0.76s ease-in-out infinite; }
 .gear-tutor-arrow {
-    position: relative; flex: none; margin-right: 8px; padding: 2px 6px; pointer-events: none;
-    font: 13px Alagard, serif; color: #222034; background: #fbf236; border: 2px solid #222034; border-radius: 4px;
-    animation: gear-tutor-bob 0.84s ease-in-out infinite;
+    position: relative; flex: none; margin-right: 14px; padding: 4px 10px; pointer-events: none;
+    font: 20px Alagard, serif; color: #222034; background: #fbf236; border: 3px solid #222034; border-radius: 5px;
+    animation: gear-tutor-bob 0.76s ease-in-out infinite;
 }
 .gear-tutor-arrow::after {
-    content: ''; position: absolute; right: -10px; top: 50%; margin-top: -8px;
-    border: 8px solid transparent; border-left-color: #222034; border-right: 0;
+    content: ''; position: absolute; right: -16px; top: 50%; margin-top: -12px;
+    border: 12px solid transparent; border-left-color: #222034; border-right: 0;
 }
-@keyframes gear-tutor-bob { 50% { transform: translateX(-5px); } }
-@keyframes gear-tutor-glow { 50% { box-shadow: 0 0 0 2px #fbf23666, 0 0 4px #fbf23633; } }
+@keyframes gear-tutor-bob { 50% { transform: translateX(-10px) scale(1.12); } }
+@keyframes gear-tutor-glow { 50% { box-shadow: 0 0 0 3px #fbf23666, 0 0 4px #fbf23633; } }

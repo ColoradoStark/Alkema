@@ -67,6 +67,13 @@ function coins(n) {
     return span;
 }
 
+/** Essence as it reads, with its glowing orb (what upgrades cost: the user's, gold being for town). */
+function essence(n) {
+    const span = el('span', 'gear-coins gear-essence');
+    span.append(el('i', 'gear-orb'), document.createTextNode(goldText(n)));
+    return span;
+}
+
 export class GearScreen {
     /**
      * @param {object} opts
@@ -187,7 +194,7 @@ export class GearScreen {
             head.append(el('div', 'gear-title gear-title--big', { text: titles[this.mode] }));
         }
         const purse = el('div', 'gear-purse');
-        purse.append(coins(inv.gold));
+        purse.append(this.mode === 'stats' ? essence(inv.essence) : coins(inv.gold));
         const shut = el('button', 'gear-close', { type: 'button', 'aria-label': 'Close', text: '✕' });
         shut.addEventListener('click', () => this.close());
         head.append(purse, shut);
@@ -671,7 +678,7 @@ export class GearScreen {
         this.slots ??= up.list().map(t => t.id);
         // (the tutorial's, the first time: an arrow on the buy button to tap, the first you can afford)
         const shown = this.slots.map(id => up.track(id)).filter(t => up.open(t));
-        const tutor = this.tutor && (shown.find(t => up.cost(t, this.buyHowMany) <= inv.gold) || shown[0])?.id;
+        const tutor = this.tutor && (shown.find(t => up.cost(t, this.buyHowMany) <= inv.essence) || shown[0])?.id;
         for (const t of [...this.slots.map(id => up.track(id)), ...GODDESSES]) {
             if (t === GODDESSES[0]) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
             const level = up.level(t.id), open = up.open(t);
@@ -704,8 +711,8 @@ export class GearScreen {
                 const n = up.howMany(t, this.buyHowMany), price = up.cost(t, this.buyHowMany);
                 const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': t.id });
                 if (n > 1) buy.append(el('span', 'gear-up-n', { text: `+${n}` }));
-                buy.append(coins(price));
-                buy.classList.toggle('is-dear', price > inv.gold);
+                buy.append(essence(price));
+                buy.classList.toggle('is-dear', price > inv.essence);
                 if (t.id === tutor) {
                     row.classList.add('is-tutor');
                     row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
@@ -739,7 +746,7 @@ export class GearScreen {
         const res = up.buy(t.id, this.buyHowMany);
         if (!res.ok) {
             audio.play('error', { volume: 0.5 });
-            this.notice = res.error === 'poor' ? `${t.name} costs ${goldText(price)} gold.` : SAY[res.error] || '';
+            this.notice = res.error === 'poor' ? `${t.name} costs ${goldText(price)} essence.` : SAY[res.error] || '';
             return this.render();
         }
         const level = up.level(t.id);

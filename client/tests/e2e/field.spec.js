@@ -252,8 +252,8 @@ test.describe('Demons on the coast', () => {
         const paid = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, inv = gs.scene.get('UIScene').inventory;
             const furies = fd.foes.filter(f => f.kind === 'fury' && f.hp > 0 && f.tier === fd.foes.find(o => o.kind === 'fury' && o.hp > 0).tier).slice(0, 2);
-            const gold = [inv.gold];
-            for (const f of furies) { fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 }); gold.push(inv.gold); }
+            const gold = [inv.essence];      // (essence: what a kill is worth)
+            for (const f of furies) { fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 }); gold.push(inv.essence); }
             const chests = gs.encounters.chests.length;
             const champ = fd.foes.find(f => f.kind === 'champion');
             fd._strikeFoe(champ, champ.hp, { x: champ.foe.x, y: champ.foe.y + 30 });
@@ -543,27 +543,28 @@ test.describe('The zone, not your hero, says how hard its foes are', () => {
 });
 
 test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
-    test("each pack up it 1.6 times the health of the one before, its blow 1.5 times; what each pays buys, on the Upgrade page, the strength the next asks, for every class; a new hero can't skip a pack's upgrades for long", async ({ page }) => {
+    test("each pack up it 2.5 times the health of the one before, its blow twice; what each pays buys, on the Upgrade page, the strength the next asks, for every class; a new hero can't skip a pack's upgrades for long", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
-            const { numbers, packGold, strengthFor, ZONES, PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
+            const { numbers, packEssence, strengthFor, ZONES, PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
             const { costOf, milestonesAt, STAT_TRACKS, GODDESSES } = await import('/src/upgrades/Upgrades.js');
             const steps = PACKS.filter(p => p.family === 'vanar').map(p => p.step);
             const z = ZONES.vanar, hp = numbers('greatbear', 1, z, 0).hp;
             const ratio = numbers('greatbear', 1, z, 3).hp / hp;
             // A hero buying the most strength (attack x hit points) for its gold, as the Upgrade page sells it
-            const tracks = { might: STAT_TRACKS[0], vigour: STAT_TRACKS[1], brigid: GODDESSES[0] };
+            const tracks = Object.fromEntries([STAT_TRACKS[0], STAT_TRACKS[1], ...GODDESSES.slice(0, 3)].map(t => [t.id, t]));
             const amount = (t, l) => t.per * l * 2 ** milestonesAt(l);
-            const strength = (h, L) => (h.attack + amount(tracks.might, L.might) + (tracks.brigid.gives.attack / tracks.brigid.per) * amount(tracks.brigid, L.brigid)) * (h.hp + amount(tracks.vigour, L.vigour));
+            const of = (t, stat) => t.gives ? t.gives[stat] || 0 : t.stat === stat ? 1 : 0;
+            const strength = (h, L) => Object.values(tracks).reduce(([a, p], t) => [a + of(t, 'attack') * amount(t, L[t.id]), p + of(t, 'hp') * amount(t, L[t.id])], [h.attack, h.hp]).reduce((a, p) => a * p);
             const short = [];
             for (const h of [{ attack: 4, hp: 16 }, { attack: 5, hp: 19 }, { attack: 7, hp: 20 }, { attack: 9, hp: 19 }, { attack: 9, hp: 31 }]) {
-                const L = { might: 0, vigour: 0, brigid: 0 };
+                const L = Object.fromEntries(Object.keys(tracks).map(id => [id, 0]));
                 let gold = 0;
                 for (const step of steps.slice(1)) {
-                    gold += packGold('vanar', step - 1);
+                    gold += packEssence('vanar', step - 1);
                     while (strength(h, L) < strengthFor('vanar', step)) {
-                        const buys = Object.entries(tracks).filter(([id]) => id !== 'brigid' || L.might >= 10)
+                        const buys = Object.entries(tracks).filter(([, t]) => !t.needs || L[t.needs[0]] >= t.needs[1])
                             .map(([id, t]) => { const c = costOf(t.base, L[id]); const L2 = { ...L, [id]: L[id] + 1 }; return { id, c, gain: (strength(h, L2) - strength(h, L)) / c }; })
                             .sort((a, b) => b.gain - a.gain);
                         if (buys[0].c > gold) { short.push(`${h.attack}/${h.hp} short for pack ${step}`); break; }
@@ -573,10 +574,10 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
                 }
             }
             const fresh = [[4, 16], [9, 31]].map(([a, h]) => a * h);
-            return { steps, ratio, short, fresh, two: strengthFor('vanar', 2), first: packGold('vanar', 0), places: PLACES.filter(p => p.family === 'vanar').every(p => p.step === PACKS[p.pack].step) };
+            return { steps, ratio, short, fresh, two: strengthFor('vanar', 2), first: packEssence('vanar', 0), places: PLACES.filter(p => p.family === 'vanar').every(p => p.step === PACKS[p.pack].step) };
         });
         expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6]);
-        expect(r.ratio).toBeCloseTo(1.6 ** 3, 1);
+        expect(r.ratio / 2.5 ** 3).toBeCloseTo(1, 1);
         expect(r.short).toEqual([]);
         for (const f of r.fresh) expect(f).toBeLessThan(r.two);      // (no new hero skips two packs' upgrades)
         expect(r.places).toBe(true);
@@ -608,7 +609,7 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
         // The Upgrade page: an arrow on a buy button; gold enough, and it's bought
         await page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            ui.inventory.gold += 500;
+            ui.inventory.essence += 500;
             ui.bottomControls.switchTab('stats');
         });
         const buy = page.locator('.gear-up.is-tutor .gear-up-buy');
@@ -623,7 +624,7 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
         expect(await pointing()).toBe(null);
     });
 
-    test('the first pack falls fast to a new hero and pays its gold, and beaten it says to upgrade for what comes next', async ({ page }) => {
+    test('the first pack falls fast to a new hero and leaves its essence (and a little gold), and beaten it says to upgrade for what comes next', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await keepUp(page);
@@ -631,15 +632,16 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
         const first = PLACES.filter(p => p.family === 'vanar' && p.step === 0);
         await expect.poll(() => field(page).then(f => first.every(p => f.states[p.i] === 'post')), { timeout: 30000 }).toBe(true);
         const r = await page.evaluate(async (ids) => {
-            const { packGold } = await import('/src/battle/FieldDemons.js');
+            const { packEssence } = await import('/src/battle/FieldDemons.js');
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
-            const gold = ui.inventory.gold, them = fd.foes.filter(f => ids.includes(f.i));
+            const essence = ui.inventory.essence, gold = ui.inventory.gold, them = fd.foes.filter(f => ids.includes(f.i));
             const blows = them.map(f => f.maxHp / 7);          // (a middling new hero's blows)
             for (const f of them) { f.hp = 0; fd._slay(f); fd._lastKill = -1e9; }     // (no combo)
-            return { blows, got: ui.inventory.gold - gold, pays: packGold('vanar', 0), pointing: ui.bottomControls.pointing };
+            return { blows, got: ui.inventory.essence - essence, gold: ui.inventory.gold - gold, pays: packEssence('vanar', 0), pointing: ui.bottomControls.pointing };
         }, first.map(p => p.i));
         for (const b of r.blows) expect(b).toBeLessThanOrEqual(3);
         expect(Math.abs(r.got - r.pays)).toBeLessThanOrEqual(first.length);     // (each share rounded)
+        expect(r.gold).toBeGreaterThan(0);          // (and a little gold, for town: the user's)
         expect(r.pointing).toBe('stats');
     });
 });
@@ -1114,6 +1116,37 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
         }, [you, bear]);
         expect(r.walled).toBe(true);
         expect(r.wound).toBeGreaterThan(0);
+    });
+
+    test("with rock between it and you and the way round not straight, it finds the way round to you (the user's: one stood stuck on a ledge above them)", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        await keepUp(page);
+        await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
+        // (spots found where the straight way is rock and a foe walking at you stood stuck: foe, you)
+        const spots = [[11435, 8891, 11280, 8817], [11310, 9264, 11304, 9063], [11268, 9121, 11377, 9292]];
+        const reached = await page.evaluate(async (spots) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
+            const f = fd.foes.find(o => o.kind === 'kindredhunter');
+            for (const o of fd.foes) if (o !== f) o.stun = 1e9;
+            const out = [];
+            for (const [px, py, qx, qy] of spots) {
+                f.foe.sprite.setPosition(px, py - 23);
+                Object.assign(f, { state: 'chase', cornered: 0, flank: 0, lost: false, lookT: 1e9, route: null, stuckAt: null });
+                let ok = false;
+                const t0 = performance.now();
+                while (performance.now() - t0 < 8000 && !ok) {
+                    ui.hp.now = ui.hp.max;
+                    me.setPosition(qx, qy - 23); me.body.reset(me.x, me.y);
+                    ok = Math.hypot(f.foe.x - qx, f.foe.y - qy) < 70 || f.state === 'windup';
+                    await new Promise(r => requestAnimationFrame(r));
+                }
+                out.push(ok);
+            }
+            for (const o of fd.foes) o.stun = 0;
+            return out;
+        }, spots);
+        expect(reached).toEqual([true, true, true]);
     });
 
     test('a water elemental hangs back and throws water at you', async ({ page }) => {
