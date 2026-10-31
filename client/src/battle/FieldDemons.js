@@ -82,6 +82,7 @@ const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you f
 const ATTACKERS = 2;            // at most this many wind up a blow at you at once; the rest circle (a warlock's fire doesn't wait its turn)
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
+const STEADY_MS = 1500;         // staggered by a blow, it isn't again for this long: its next blow comes through (the user's: they kept hitting one faster than it could strike back)
 const BODY = 22;
 const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 // How each in a pack comes at you (the user's, after Pac-Man's ghosts: one pursues, one cuts you off, one
@@ -379,7 +380,7 @@ export class FieldDemons {
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
                 const { hp, damage } = numbers(p.kind, p.tier, ZONES[fam], p.step);
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0 };
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
@@ -530,7 +531,7 @@ export class FieldDemons {
         this._rouse(f.pack);
         foe.tint(0xffffff, true);
         this.scene.time.delayedCall(80, () => foe.tint(f.state === 'windup' ? 0xff5050 : null));
-        this._knock(foe, from, f.spec.poise ? KNOCK / 3 : KNOCK);
+        this._knock(foe, from, f.spec.poise || f.steady > 0 ? KNOCK / 3 : KNOCK);
         // (a Wesnoth or Duelyst body plays its own defend, the ground shaking a little, and holds a moment longer)
         if (foe.flinch && f.hp > 0) {
             foe.flinch();
@@ -539,13 +540,14 @@ export class FieldDemons {
         this._hitStop(foe.weight);
         if (f.hp <= 0) return this._slay(f);
         audio.play('foe_orc', { volume: 0.5, rate: 1.2 });
-        if (f.spec.poise) return;           // a brute isn't staggered: its swing comes on regardless
+        if (f.spec.poise || f.steady > 0) return;           // a brute isn't staggered (its swing comes on regardless), nor one staggered a moment ago
         if (f.state === 'windup') {
             f.state = 'recover';
             f.t = 350;
             foe.tint(null);
         }
         f.stun = Math.max(f.stun, 160);
+        f.steady = STEADY_MS;
     }
 
     /** One of a pack is after you: they all are. */
@@ -635,6 +637,7 @@ export class FieldDemons {
     _think(f, delta, dt, you, out) {
         const { foe } = f;
         f.cd -= delta;
+        f.steady -= delta;
         if (f.stun > 0) {
             f.stun -= delta;
             return;

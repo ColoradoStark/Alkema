@@ -95,15 +95,13 @@ test.describe('Spells in the real-time fight', () => {
         // Four tiers each, each its own painting from the class's sheet
         for (let i = 0; i < 6; i++) await expect(page.locator('.gear-spell').nth(i).locator('.gear-rank')).toHaveCount(4);
         await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="4"] .gear-tier-icon')).toHaveCSS('background-image', /tiers-cleric\.png/);
-        await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="4"]')).toContainText('Lv 50');
-        // Known now: lit; still to learn: the level of its upgrade each tier comes at
+        // Known now: lit; still to learn: dim
         await expect(page.locator('.gear-spell[data-spell="smite"] .gear-rank.is-known')).toHaveCount(1);
         await expect(page.locator('.gear-spell[data-spell="sanctuary"] .gear-rank.is-known')).toHaveCount(0);
-        await expect(page.locator('.gear-spell[data-spell="sanctuary"]')).toContainText('Lv 25');
         await expect(page.locator('.gear-spell[data-spell="heal"]')).toHaveClass(/is-equipped/);
         // A tier tapped says what it does
         await page.locator('.gear-spell[data-spell="smite"] .gear-rank[data-tier="2"]').click();
-        await expect(page.locator('.gear-spell[data-spell="smite"] .gear-tier-says')).toContainText("II at its upgrade's level 10");
+        await expect(page.locator('.gear-spell[data-spell="smite"] .gear-tier-says')).toContainText('II: ');
         // One slot: the socket at the top holds the one equipped, and only its radio is filled
         await expect(page.locator('.gear-cast')).toHaveCount(1);
         await expect(page.locator('.gear-cast-name')).toHaveText('Heal');

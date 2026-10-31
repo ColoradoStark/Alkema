@@ -1,42 +1,43 @@
-// Upgrades (the user's, after Clicker Heroes): a long list of things to buy with gold, each bought
-// again and again, each level dearer than the last (GROW), each a little stronger; every one doubles
-// what it gives at its milestones (MILESTONES). Further down the list they cost far more, and there's
-// always another below (the legends go on for ever). Your spells are in the list too: buying a
-// spell's first level learns it (your class's first ones known from the start), its 10th and 25th its second and third ranks (RANKS), and each level
-// makes it stronger; a spell not learned yet opens when the spell before it reaches its 10th level,
-// so the two grow together. Kept in the hero's save as `upgrades` ({ track id: level }).
+// Upgrades (the user's, after Clicker Heroes): a path of upgrades bought with essence one at a time (`step`):
+// Strength of Arm, then Vigour, then Strength of Arm II..., each a few levels, each level dearer than the last
+// and each one felt; each step done teaches you a spell or a spell's next rank (`rewards`: your class's first
+// ones known from the start; a spell's rank is its track's level, RANKS). Below them, the goddesses, each
+// bought again and again, each level GROW dearer, doubling what she gives at her milestones. Kept in the
+// hero's save as `upgrades` ({ track id: level }).
 
 import { account } from '../account/account.js';
 
 export const GROW = 1.07;                    // each level costs this much more than the one before (Clicker Heroes')
 export const RANKS = [1, 10, 25];            // a spell's level at which each of its ranks is learned
 export const MASTERY = 50;                   // ...and its mastery, its fourth tier (its 50th-level milestone, doubling it again)
-const SPELL_COSTS = [120, 500, 2000, 8000, 30000];      // the first level of each spell you don't start with
-const STARTER_COSTS = [25, 40, 60];         // ...and the next level of those you do
 const SPELL_BOOST = 0.05;                    // a spell's power, each level past its first
-export const BUY = [1, 10, 25, 'max'];
-export const SLOTS = 3;                      // upgrades shown before the goddesses (the user's)
 
 /**
- * The stat upgrades, cheapest first; `needs` another track at a level before it opens. Strength of Arm,
- * Vigour and Focus each make you `times` as strong a level, each level `grow` times dearer (the user's,
- * October 2026: a few buys a pack up the climb, each one felt, not fifty of +1; Clicker Heroes' small
- * steps took 10 to 75 buys a pack).
+ * The path (the user's, October 2026, after Clicker Heroes as they played it: one upgrade at a time till it's
+ * done, then the next; three or four to choose between, each with numbers of its own, was confusing, and ten
+ * buys after a couple of foes made them far too strong): Strength of Arm and Vigour by turns, STEP levels a step,
+ * each level `times` (1.85) its stats; every buy along it PATH_GROW times dearer than the last, whichever it is,
+ * so what a pack up the climb pays buys the next two or three, and no more (field.spec.js).
  */
-const BIG = { times: 1.85, grow: 2.5 };
-const x = (n) => `×${n < 100 ? Math.round(n * 100) / 100 : short(n)}`;
+export const STEP = 3;
+export const PATH_BASE = 30, PATH_GROW = 1.65;
+const TIMES = 1.85;
+/**
+ * The stat upgrades: Strength of Arm and Vigour are the path's. The rest aren't sold now: heroes from before
+ * keep what they bought of them (Focus `times` spell power, Guard, Fortune and Second Wind `per` a level).
+ */
 export const STAT_TRACKS = [
-    { id: 'might', name: 'Strength of Arm', glyph: '⚔', base: 40, ...BIG, stat: 'attack', text: (n) => `${x(n)} attack` },
-    { id: 'vigour', name: 'Vigour', glyph: '♥', base: 40, ...BIG, stat: 'hp', text: (n) => `${x(n)} hit points` },
-    { id: 'guard', name: 'Guard', glyph: '⛨', base: 50, per: 1, stat: 'defence', needs: ['might', 3], text: (n) => `+${n} defence` },
-    { id: 'focus', name: 'Focus', glyph: '✦', base: 60, ...BIG, stat: 'spell', needs: ['vigour', 2], text: (n, magic, level) => `${x(n)} spell power${magic ? `, +${level} magic` : ''}` },
-    { id: 'fortune', name: 'Fortune', glyph: '◉', base: 160, per: 3, stat: 'gold', needs: ['guard', 10], text: (n) => `+${n}% gold found` },
-    { id: 'breath', name: 'Second Wind', glyph: '↻', base: 300, per: 4, stat: 'regen', needs: ['focus', 10], text: (n) => `magic back ${n}% faster` },
+    { id: 'might', name: 'Strength of Arm', glyph: '⚔', times: TIMES, stat: 'attack', about: 'Your blows land harder' },
+    { id: 'vigour', name: 'Vigour', glyph: '♥', times: TIMES, stat: 'hp', about: 'You can take more blows' },
+    { id: 'guard', name: 'Guard', per: 1 },
+    { id: 'focus', name: 'Focus', times: TIMES },
+    { id: 'fortune', name: 'Fortune', per: 3 },
+    { id: 'breath', name: 'Second Wind', per: 4 },
 ];
-
-/** The legends: each a sixth as dear again as the last, each adding to everything; there's always another. */
-const LEGENDS = ["Hero's Renown", "Giant's Blood", "Dragon's Heart", 'Storm Crown', 'Starfire', 'Worldsplitter', 'The Undying'];
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+
+/** The legends (not sold now: heroes from before keep theirs), each adding to everything. */
+const LEGENDS = ["Hero's Renown", "Giant's Blood", "Dragon's Heart", 'Storm Crown', 'Starfire', 'Worldsplitter', 'The Undying'];
 export function legend(k) {
     const name = k < LEGENDS.length ? LEGENDS[k] : `Legend ${ROMAN[k - LEGENDS.length + 2] || k - LEGENDS.length + 2}`;
     return {
@@ -187,7 +188,7 @@ export class Upgrades {
         // (a hero from before Strength of Arm, Vigour and Focus went from +1 a level to times: about as strong as they were)
         if (account.current && account.current.data?.upgradesTimes !== true) {
             for (const [id, per, had] of [['might', 1, 6], ['vigour', 4, 20], ['focus', 1, 5]]) {
-                if (this.levels[id]) this.levels[id] = Math.max(1, Math.round(Math.log(1 + per * this.levels[id] / had) / Math.log(BIG.times)));
+                if (this.levels[id]) this.levels[id] = Math.max(1, Math.round(Math.log(1 + per * this.levels[id] / had) / Math.log(TIMES)));
             }
             account.updateProgress({ upgrades: { ...this.levels }, upgradesTimes: true });
         }
@@ -195,20 +196,53 @@ export class Upgrades {
         this._listeners = new Set();
         // Your spells, in your class's order: the ones you know already start at their first level
         const list = spellbook?.list || [];
-        let starter = 0, later = 0, before = null;
         this.spellTracks = list.map((spell) => {
             const starts = spell.ranks[0].level <= 1;
-            const t = { id: spell.id, name: spell.name, spell, base: starts ? STARTER_COSTS[starter++] ?? 60 : SPELL_COSTS[later++] ?? 30000 * 4 ** (later - SPELL_COSTS.length) };
-            if (!starts) t.needs = [before || list[0].id, RANKS[1]];
-            if (!starts) before = spell.id;
+            const t = { id: spell.id, name: spell.name, spell };
             if (starts && !this.levels[spell.id]) this.levels[spell.id] = 1;
             // What they know already (ranks from before upgrades) counts
             const known = spellbook.rankOf(spell.id);
             if (known) this.levels[spell.id] = Math.max(this.levels[spell.id] || 0, RANKS[known - 1]);
             return t;
         });
+        // What each step along the path teaches, in turn: the spells you don't start with, each new one with
+        // the rank before it of the one before that (learn the second, rank the first up, learn the third...)
+        this.rewards = list.flatMap((spell, i) => [1, 2, 3].map(rank => ({ spell, rank, k: i + 2 * (rank - 1) })))
+            .filter(r => r.rank > 1 || r.spell.ranks[0].level > 1)
+            .sort((a, b) => a.k - b.k);
         if (spellbook) spellbook.boost = (id) => this.spellBoost(id);
         this._teach();
+    }
+
+    /** The `i`th step along the path: its track, its name (Strength of Arm II), the level it takes that track to, what it teaches. */
+    stepAt(i) {
+        const track = STAT_TRACKS[i % 2], round = Math.floor(i / 2) + 1;
+        return { i, track, name: `${track.name} ${ROMAN[round] || round}`, to: STEP * round, reward: this.rewards[i] };
+    }
+
+    /** The step you're on: the first not done. */
+    get step() {
+        for (let i = 0; ; i++) {
+            const s = this.stepAt(i);
+            if (this.level(s.track.id) < s.to) return s;
+        }
+    }
+
+    /** What the next buy along the path costs (every buy along it dearer than the last). */
+    price() {
+        return Math.ceil(PATH_BASE * PATH_GROW ** (this.level('might') + this.level('vigour')));
+    }
+
+    /** Your stats with one more level of `id`: what buying it does. */
+    after(id) {
+        const base = this.inventory.stats?.base;
+        if (!base) return null;
+        this.levels[id] = this.level(id) + 1;
+        try {
+            return this.apply(base);
+        } finally {
+            if (--this.levels[id] === 0) delete this.levels[id];
+        }
     }
 
     level(id) {
@@ -220,84 +254,44 @@ export class Upgrades {
             || (id.startsWith('legend-') ? legend(Number(id.slice(7)) - 1) : null);
     }
 
-    /** Is this track open to buy (what it needs reached)? */
+    /** Is this track open to buy (what it needs reached, or had already: a goddess you have stays yours)? */
     open(t) {
-        return !t.needs || this.level(t.needs[0]) >= t.needs[1];
+        return !t.needs || this.level(t.id) > 0 || this.level(t.needs[0]) >= t.needs[1];
     }
 
-    /**
-     * Everything that could be on the list, cheapest first: what's open or owned; what's not open yet
-     * but on its way (what opens it, you've begun), saying what opens it; and one more beyond, so
-     * there's always something further down to want. Legends are added as you reach them.
-     */
-    tracks() {
-        const all = [...STAT_TRACKS, ...this.spellTracks];
-        for (let k = 0; ; k++) {
-            const t = legend(k);
-            all.push(t);
-            if (!this.level(t.id)) break;
-        }
-        all.sort((a, b) => a.base - b.base);
-        const shown = [];
-        let beyond = 0;
-        for (const t of all) {
-            if (this.level(t.id) || this.open(t) || this.level(t.needs[0])) shown.push(t);
-            else if (!beyond++) shown.push(t);
-        }
-        return shown;
-    }
-
-    /**
-     * The list on the page, SLOTS long (the user's: three, then the goddesses): the cheapest next
-     * buys of what's open, made up if need be from what's on its way. Shown cheapest first by their
-     * first level. (The page picks them as it opens, and keeps them while you buy.)
-     */
-    /** What the cheapest upgrade you could buy next costs (what the field's gold and the healers' price are reckoned in). */
+    /** What the next upgrade costs (what the field's essence and the healers' price are reckoned in). */
     cheapest() {
-        const costs = this.list().filter(t => this.open(t)).map(t => this.cost(t)).filter(n => n > 0);
-        return costs.length ? Math.min(...costs) : 20;
+        return this.price();
     }
 
-    list() {
-        const shown = this.tracks();
-        const kept = new Set([...shown].sort((a, b) => (this.open(b) - this.open(a)) || this.cost(a) - this.cost(b)).slice(0, SLOTS));
-        return shown.filter(t => kept.has(t));
+    /** What the next level of a goddess costs. */
+    cost(t) {
+        return costOf(t.base, this.level(t.id), 1, t.grow);
     }
 
-    /** What the next `n` levels of a track cost; 'max' is as many as your essence buys (at least one). */
-    howMany(t, n) {
-        if (n !== 'max') return n;
-        let k = 0, sum = 0;
-        const gold = this.inventory.essence;      // (what upgrades are bought with: essence, the user's; gold is for town)
-        while (k < 1000) {
-            const next = costOf(t.base, this.level(t.id) + k, 1, t.grow);
-            if (sum + next > gold) break;
-            sum += next;
-            k++;
-        }
-        return Math.max(1, k);
-    }
-
-    cost(t, n = 1) {
-        return costOf(t.base, this.level(t.id), this.howMany(t, n), t.grow);
-    }
-
-    /** Buy `n` levels: { ok, levels, learned (a spell's new rank), milestone } or { ok: false, error }. */
-    buy(id, n = 1) {
+    /**
+     * Buy a level: of the step you're on (Strength of Arm or Vigour: { ok, step, done (it's finished), learned
+     * (what that taught) }), or of a goddess ({ ok, milestone }); or { ok: false, error }.
+     */
+    buy(id) {
         const t = this.track(id);
         if (!t) return { ok: false, error: 'no-such-upgrade' };
-        if (!this.open(t)) return { ok: false, error: 'locked' };
-        const k = this.howMany(t, n), price = costOf(t.base, this.level(id), k, t.grow);
-        if (this.inventory.essence < price) return { ok: false, error: 'poor' };
+        const step = t.about && this.step;
+        if (step ? step.track !== t : !t.goddess || !this.open(t)) return { ok: false, error: 'locked' };
+        const price = step ? this.price() : this.cost(t);
+        if (this.inventory.essence < price) return { ok: false, error: 'poor', price };
         const was = this.level(id);
         this.inventory.essence -= price;
-        this.levels[id] = was + k;
-        const res = { ok: true, levels: k, price };
-        if (t.spell && rankAt(was + k) > rankAt(was)) res.learned = rankAt(was + k);
-        if (!t.times && milestonesAt(was + k) > milestonesAt(was)) res.milestone = true;
+        this.levels[id] = was + 1;
+        const res = { ok: true, price };
+        if (step) {
+            res.step = step;
+            res.done = this.step.i > step.i;
+            if (res.done) res.learned = step.reward;
+        } else if (milestonesAt(was + 1) > milestonesAt(was)) res.milestone = true;
         this._teach();
         this._save();
-        this.inventory._save();       // (the gold spent; tells its listeners)
+        this.inventory._save();       // (the essence spent; tells its listeners)
         return res;
     }
 
@@ -354,13 +348,16 @@ export class Upgrades {
             mp: { now: mp, max: mp },
             attack: Math.round((base.attack * add('might') + this.blessing('attack')) * all),
             defence: base.defence + add('guard') + this.blessing('defence'),
-            spell: Math.round((base.spell * add('focus') + this.blessing('spell')) * all),
+            spell: Math.round((base.spell * add('might') * add('focus') + this.blessing('spell')) * all),     // (Strength of Arm a caster's spells too)
             base,
         };
     }
 
     /** The spellbook knows each spell at the rank its track's level has reached. */
     _teach() {
+        // What the steps done have taught
+        const done = this.step.i;
+        for (const r of this.rewards.slice(0, done)) this.levels[r.spell.id] = Math.max(this.level(r.spell.id), RANKS[r.rank - 1]);
         if (!this.book) return;
         let learned = false;
         for (const t of this.spellTracks) {
