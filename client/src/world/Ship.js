@@ -1,5 +1,5 @@
-// Your galleon, drawn from above in Wesnoth's manner (tools/shipart.py), as big as the ships at sea
-// and grander, so she's never taken for one of them (the user's). Moored, it rides at anchor; under sail it carries its captain
+// Your galleon, drawn from above in Wesnoth's manner (tools/shipart.py), red and gold, so she's never
+// taken for one of the ships at sea (the user's); 40% smaller than they are (the user's: too big). Moored, it rides at anchor; under sail it carries its captain
 // (hidden aboard) and moves like a ship, not a walker: it turns toward the
 // way you steer (more sharply once under way), gathers speed slowly, coasts
 // when you let go, and never runs ruler-straight: the swell swings its bow a
@@ -13,9 +13,9 @@ const TURN_AT_REST = 0.5;   // ...and with no way on
 const DRAG_STEERING = 0.22; // fraction of speed lost per second while sailing
 const DRAG_COASTING = 0.45; // ...and with the sails slack
 const SLIDE = 2;            // how quickly momentum follows the bow (per second)
-const STERN = 52;           // px from the centre back to the stern (the galleon drawn in Wesnoth's manner, as big as the ships at sea: tools/shipart.py)
-const BOW = 56;             // ...and forward to the bow
-export const HULL = { bow: 50, stern: 50, radius: 26 };    // her hull as a capsule, for meeting the ships at sea (SeaShips.shove)
+const STERN = 32;           // px from the centre back to the stern (the galleon drawn in Wesnoth's manner, tools/shipart.py; 40% smaller than the ships at sea, the user's)
+const BOW = 35;             // ...and forward to the bow
+export const HULL = { bow: 30, stern: 30, radius: 16 };    // her hull as a capsule, for meeting the ships at sea (SeaShips.shove)
 const WAKE_EVERY = 7;       // px travelled per set of wake puffs
 
 const TWO_PI = Math.PI * 2;
@@ -163,7 +163,7 @@ export class Ship {
             this._trail -= WAKE_EVERY;
             // A V of foam spreading out from the stern quarters, and a line along the keel
             for (const side of [-1, 1]) {
-                this._emit(x - cos * STERN - sin * side * 12, y - sin * STERN + cos * side * 12, back + side * 0.75);
+                this._emit(x - cos * STERN - sin * side * 7, y - sin * STERN + cos * side * 7, back + side * 0.75);
             }
             this._emit(x - cos * (STERN + 2), y - sin * (STERN + 2), back);
             if (way > 0.55) {
@@ -177,7 +177,7 @@ export class Ship {
             this._ripple = 0;
             for (let i = 0; i < 6; i++) {
                 const a = (i / 6) * TWO_PI + Math.random() * 0.5;
-                this._emit(x + Math.cos(a) * 50, y + Math.sin(a) * 22, a);
+                this._emit(x + Math.cos(a) * 30, y + Math.sin(a) * 14, a);
             }
         }
     }

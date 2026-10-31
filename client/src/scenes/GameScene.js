@@ -25,7 +25,7 @@ const WALK_SPEED = 128;        // px a second (the user's: a fifth slower than t
 const EASE_IN_MS = 250;         // from standing to full speed, easing in (the user's)
 const FEET = Ship.BELOW_HERO;   // from a hero's centre down to their feet
 const HULL_HALF = 13;           // half the ship's collision box (26 x 26)
-const BOARD_REACH = 176;        // walk towards the ship from this close to go aboard (she's moored clear of the sand, nearly four tiles long)
+const BOARD_REACH = 160;        // walk towards the ship from this close to go aboard (she's moored clear of the sand)
 const SETTLE_MS = 600;          // just aboard, she won't put you ashore again (land right past her, in a narrow river)
 const LOOKOUT_REACH = 80;       // stand this close to a lookout and the view pans to what it looks on
 const LOOK_MAX = { x: 140, y: 190 };   // how far the view may pan, keeping the hero on screen
@@ -255,7 +255,7 @@ export class GameScene extends Scene {
         // Dead ahead, or either side of the bow: on a slanting shore the hull
         // runs aground on land beside the bow while the water straight ahead is open
         // ...and a little further on, past a thin bank you couldn't stand on
-        for (const reach of [56, 72]) {      // (her bow, as big as the ships at sea now, and a little past)
+        for (const reach of [38, 54]) {      // (her bow, and a little past)
             for (const side of [0, -HULL_HALF, HULL_HALF]) {
                 const ahead = { x: me.x + ux * reach - uy * side, y: me.y + FEET + uy * reach + ux * side };
                 const footing = this.world.isSailable(ahead.x, ahead.y) ? null : this.world.footing(ahead.x, ahead.y);

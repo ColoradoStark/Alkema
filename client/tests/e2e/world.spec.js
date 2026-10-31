@@ -473,7 +473,7 @@ test.describe('Living world', () => {
         expect(drift).toBeLessThan(3);
     });
 
-    test('your ship is the galleon drawn from above in the manner of Wesnoth, as big as the ships at sea: she turns right round to the way she sails', async ({ page }) => {
+    test('your ship is the galleon drawn from above in the manner of Wesnoth, smaller than the ships at sea: she turns right round to the way she sails', async ({ page }) => {
         await enterWorld(page);
         const found = await page.evaluate(async () => {
             const { Ship } = await import('/src/world/Ship.js');
@@ -491,7 +491,7 @@ test.describe('Living world', () => {
             ship.destroy();
             return { wrong, size: [src.width, src.height] };
         });
-        expect(found).toEqual({ wrong: [], size: [152, 96] });     // (as big as the ships at sea: tools/shipart.py)
+        expect(found).toEqual({ wrong: [], size: [104, 64] });     // (tools/shipart.py: 40% smaller than the ships at sea)
     });
 
     test('the ability has a cooldown', async ({ page }) => {
