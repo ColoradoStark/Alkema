@@ -140,10 +140,10 @@ Every class has six spells (a fighter's and a thief's are battle skills), three 
 
 Where Stats was, the **Upgrade** page, after Clicker Heroes: upgrades bought with the essence felled foes leave you (spent on yourself, no shop needed: gold is for town), one at a time:
 
-- First **Strength of Arm**, then the **Goddesses**: fifty legendary heroes from Greek, Roman, Norse, Celtic, Egyptian, Mesopotamian, Slavic, Baltic and Finnish myth: Brigid of the Forge first, through Freya, Athena, the Morrígan, Bastet, Persephone, Hel, Tiamat and many more, to Gaia, Mother of All, each drawn with the character creator's art
-- Each has ten levels, and the next is unlocked only once the one before is maxed. The one you're on shows exactly what a level does to your own numbers (Attack 12 → 22); each costs more than the last, so what a pack on the road north leaves you buys two or three, enough for the next
-- Maxing one is a little celebration: a gold "Maxed" seal stamps down on it and the next goddess lights up, unlocked. Those still to come are dark shadows
-- Strength of Arm makes your blows (and spells) stronger; each goddess makes your attack, spells and hit points stronger together
+- First your own three, **Strength of Arm**, **Vigour** and **Focus**, then the **Goddesses**: fifty legendary heroes from Greek, Roman, Norse, Celtic, Egyptian, Mesopotamian, Slavic, Baltic and Finnish myth: Brigid of the Forge first, through Freya, Athena, the Morrígan, Bastet, Persephone, Hel, Tiamat and many more, to Gaia, Mother of All, each drawn with the character creator's art
+- Each has ten levels, and the next is unlocked only once the one before is maxed. The one you're on shows exactly what a level does to your own numbers (Attack 12 → 22); each costs three times the last, so what a pack on the road north leaves you buys one or two, enough for the next: about ten up the whole road
+- Maxing one is a little celebration: a gold "Maxed" seal stamps down on it and the next lights up, unlocked. Those still to come are dark shadows
+- Every level makes you stronger overall, each its own way: Strength of Arm mostly your blows (and spells), Vigour mostly your hit points, Focus your spells and some of both; each goddess your attack, spells and hit points together
 - Maxing them teaches your spells, slowly, over the whole game: the first when Strength of Arm is maxed, then one with every third goddess
 - The Stats tab beside it shows your level, hit points, magic and attributes, and how much of your attack, defence and spell your upgrades add. Upgrades are saved with your hero
 

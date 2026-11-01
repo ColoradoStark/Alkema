@@ -1,12 +1,13 @@
-// Upgrades (the user's, after Clicker Heroes): Strength of Arm, then the fifty goddesses, one at a time, each
-// levelled till she's maxed (MAX) before the next can be hired (the user's, October 2026, having played Clicker
-// Heroes' own rules here: its power felt about right, but sixty buys in the first couple of waves, five goddesses
-// open at once and nothing ever finished was too much; a maxed one shows it, and the next lights up). A level of
-// Strength of Arm makes your attack (and spell power) TIMES what it was; a level of a goddess all of attack, spell
-// power and hit points GODDESS_TIMES (so either way your strength, attack times hit points, TIMES); every level
-// PATH_GROW dearer than the last, so what a pack up the climb pays buys two or three. Your class's spells come as
-// they're maxed (`rewards`, REWARD_AT). Kept in the hero's save as `upgrades` ({ hero id: level, spell id: its
-// level }).
+// Upgrades (the user's, after Clicker Heroes): Strength of Arm, Vigour and Focus, then the fifty goddesses, one at
+// a time, each levelled till it's maxed (MAX) before the next can be had (the user's, October 2026, having played
+// Clicker Heroes' own rules here: its power felt about right, but sixty buys in the first couple of waves, five
+// goddesses open at once and nothing ever finished was too much; a maxed one shows it, and the next lights up; then
+// November 2026: the three of their own first, as they'd had them, and the goddesses not in the first waves). Every
+// level makes your strength (attack times hit points) TIMES what it was, each its own way (`GIVES`: Strength of Arm
+// your attack and spell power, Vigour your hit points, Focus your spell power and a little of both; a goddess all
+// three alike); every level PATH_GROW dearer than the last, so what a pack up the climb pays buys two or three.
+// Your class's spells come as they're maxed (`rewards`, REWARD_AT). Kept in the hero's save as `upgrades`
+// ({ hero id: level, spell id: its level }).
 
 import { account } from '../account/account.js';
 
@@ -14,12 +15,29 @@ export const RANKS = [1, 10, 25];            // a spell's level at which each of
 export const MASTERY = 50;                   // ...and its mastery, its fourth tier (not taught yet)
 const SPELL_BOOST = 0.05;                    // a spell's power, each level past its first
 export const MAX = 10;
-export const PATH_BASE = 30, PATH_GROW = 1.65;
-export const TIMES = 1.85;
-export const GODDESS_TIMES = Math.sqrt(TIMES);
+// (the user's, November 2026: about ten buys up the whole road north of Dunmere, seventeen being too many; a level
+// a big step, and each three times dearer, so a pack up the climb pays for one or two)
+export const PATH_BASE = 30, PATH_GROW = 3;
+export const TIMES = 3.4;
 
-/** Strength of Arm: your own blows. */
-export const MIGHT = { id: 'might', name: 'Strength of Arm', glyph: '⚔', title: 'Your own blows' };
+/** Your own three, before the goddesses: Strength of Arm (your blows), Vigour (your hit points), Focus (your spells). */
+export const MIGHT = { id: 'might', name: 'Strength of Arm', glyph: '⚔', title: 'Your own blows', stat: 'attack' };
+export const VIGOUR = { id: 'vigour', name: 'Vigour', glyph: '♥', title: 'Your hit points', stat: 'hp' };
+export const FOCUS = { id: 'focus', name: 'Focus', glyph: '✦', title: 'Your spells', stat: 'spell' };
+export const OWN = [MIGHT, VIGOUR, FOCUS];
+
+/**
+ * What a level of each gives: so many levels' worth of TIMES to each stat, attack and hit points between them one
+ * (strength TIMES in all). Each leans its own way but gives some of both: the climb's packs grow in health and blow
+ * alike (zones.js), and all in attack your hit points stood still while their blows doubled every pack, until one
+ * felled you (tests/unit/zones.test.js, "a fight stays a fight").
+ */
+const GIVES = {
+    might: { attack: 0.6, spell: 0.6, hp: 0.4 },
+    vigour: { attack: 0.4, spell: 0.4, hp: 0.6 },
+    focus: { attack: 0.5, spell: 1, hp: 0.5 },
+    goddess: { attack: 0.5, spell: 0.5, hp: 0.5 },
+};
 
 /** Guard, Fortune and Second Wind (not sold now: heroes from before keep what they bought, so much a level). */
 const KEPT = { guard: 1, fortune: 3, breath: 4 };
@@ -89,12 +107,12 @@ export const GODDESSES = [
 export const GODDESS_FRAME = 64;
 
 /** Everyone, in the order they're hired. */
-export const HEROES = [MIGHT, ...GODDESSES];
+export const HEROES = [...OWN, ...GODDESSES];
 
 /**
  * How many must be maxed for each spell or rank you're taught (the user's: half their spells in the first wave of
  * foes was far too fast; all of them should take a typical game's forty hours or so): the first once Strength of
- * Arm is maxed, then one every third goddess maxed, the last of them far down the goddesses.
+ * Arm is maxed, the next with Brigid, then one every third maxed, the last of them far down the goddesses.
  */
 export const REWARD_AT = (k) => (k ? 3 * k + 1 : 1);
 
@@ -134,13 +152,13 @@ export class Upgrades {
         const saved = account.current?.data?.upgrades || {};
         this.levels = {};
         for (const [id, n] of Object.entries(saved)) if (Number.isFinite(n) && n > 0) this.levels[id] = Math.floor(n);
-        // (a hero from before the goddesses were hired one at a time: what they bought was reckoned other ways, so
-        // it's let go and they start afresh; the spells they know they keep)
-        if (account.current && account.current.data?.upgradesMaxed !== true) {
+        // (a hero from before Vigour and Focus came before the goddesses: what they bought was reckoned other ways,
+        // so it's let go and they start afresh; the spells they know they keep)
+        if (account.current && account.current.data?.upgradesOwn !== true) {
             for (const id of Object.keys(this.levels)) {
                 if (['might', 'vigour', 'focus'].includes(id) || id.startsWith('goddess-') || id.endsWith('+')) delete this.levels[id];
             }
-            account.updateProgress({ upgrades: { ...this.levels }, upgradesTimes: true, upgradesHeroes: true, upgradesMaxed: true });
+            account.updateProgress({ upgrades: { ...this.levels }, upgradesTimes: true, upgradesHeroes: true, upgradesMaxed: true, upgradesOwn: true });
         }
         this.version = 0;
         this._listeners = new Set();
@@ -235,15 +253,11 @@ export class Upgrades {
         return res;
     }
 
-    /** How many times stronger the upgrades make your attack (and spell power), and your hit points. */
+    /** How many times stronger the upgrades make your `stat`: attack, spell (power) or hp. */
     times(stat) {
-        let k = 1;
-        for (const h of HEROES) {
-            const level = Math.min(MAX, this.level(h.id));
-            if (!level) continue;
-            if (h === MIGHT) { if (stat !== 'hp') k *= TIMES ** level; } else k *= GODDESS_TIMES ** level;
-        }
-        return k;
+        let levels = 0;
+        for (const h of HEROES) levels += Math.min(MAX, this.level(h.id)) * GIVES[h.goddess ? 'goddess' : h.id][stat];
+        return TIMES ** levels;
     }
 
     /** What a track from before gives at its level: so much a level, doubled at each milestone. */
@@ -285,7 +299,7 @@ export class Upgrades {
             mp: { ...base.mp },
             attack: Math.round(base.attack * this.times('attack') * all),
             defence: base.defence + this.amount(KEPT.guard, this.level('guard')),
-            spell: Math.round(base.spell * this.times('attack') * all),
+            spell: Math.round(base.spell * this.times('spell') * all),
             base,
         };
     }

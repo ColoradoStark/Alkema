@@ -1,7 +1,7 @@
 // The climb north of Dunmere (client/src/battle/zones.js) against the Upgrade page (client/src/upgrades/Upgrades.js),
 // without a browser: what each pack pays, spent one level at a time, buys the strength the next asks, for every
-// class, in two or three buys (the user's: sixty buys in a couple of waves was too many), and spent to the last
-// doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
+// class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
+// spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
 import { ZONES, packEssence, strengthFor } from '../../src/battle/zones.js';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
@@ -9,6 +9,16 @@ import { account } from '../../src/account/account.js';
 
 const PACKS = 7;        // up the climb (field.spec.js checks the road has them)
 const HEROES = [[4, 16], [5, 19], [7, 20], [9, 19], [9, 31]];      // new heroes' attack and hit points, weakest to strongest
+const BASE = (a, h) => ({ attack: a, spell: a, defence: 0, hp: { now: h, max: h }, mp: { now: 0, max: 0 } });
+
+/** A new hero of attack `a` and hit points `h`, no essence yet, and their strength (attack times hit points). */
+function fresh(a, h) {
+    account.saves = [{ id: 'unit', data: { upgradesOwn: true } }];
+    account.currentId = 'unit';
+    const inventory = { essence: 0, stats: { base: BASE(a, h) }, _save() {} };
+    const u = new Upgrades({ inventory });
+    return { u, inventory, strength: () => { const s = u.apply(BASE(a, h)); return s.attack * s.hp.max; } };
+}
 
 describe('The climb north of Dunmere', () => {
     test("each pack up it 2.5 times the health of the one before, its blow twice: a wall you upgrade past", () => {
@@ -17,34 +27,44 @@ describe('The climb north of Dunmere', () => {
         expect(packEssence('vanar', 1) / packEssence('vanar', 0)).toBe(z.climb.more);
     });
 
-    test('what each pack pays buys the next its strength, in two or three buys, for every new hero; all spent, the weakest not a pack ahead', () => {
-        const short = [], buys = [], ahead = [];
-        for (const [a, h] of HEROES) {
-            account.saves = [{ id: 'unit', data: { upgradesMaxed: true } }];
-            account.currentId = 'unit';
-            const base = { attack: a, spell: a, defence: 0, hp: { now: h, max: h }, mp: { now: 0, max: 0 } };
-            const inventory = { essence: 0, stats: { base }, _save() {} };
-            const u = new Upgrades({ inventory });
-            const strength = () => { const s = u.apply(base); return s.attack * s.hp.max; };
-            for (let step = 1; step < PACKS; step++) {
-                inventory.essence += packEssence('vanar', step - 1);
-                // as many as it needs...
+    test("the whole road, all seven packs, buys about ten upgrades (the user's: seventeen up it was too many), every new hero, with combos or without; never short for the next pack, and all spent the weakest not a pack ahead; no goddess on it", () => {
+        const short = [], ahead = [], counts = [], vigour = [];
+        for (const combo of [1, 1.6]) {       // (kills close together pay more: about this much over a pack)
+            for (const [a, h] of HEROES) {
+                const { u, inventory, strength } = fresh(a, h);
                 let n = 0;
-                while (strength() < strengthFor('vanar', step) && u.buy(u.current.id).ok) n++;
-                if (strength() < strengthFor('vanar', step)) short.push(`${a}/${h} short for pack ${step}`);
-                buys.push(n);
-                // ...or all it can (how far past the pack it could be: the weakest, as a strong one starts four times ahead)
-                const was = { ...u.levels }, had = inventory.essence;
-                while (u.buy(u.current.id).ok);
-                if (a === 4) ahead.push(strength() / strengthFor('vanar', step));
-                u.levels = was;
-                inventory.essence = had;
+                for (let step = 1; step <= PACKS; step++) {
+                    inventory.essence += packEssence('vanar', step - 1) * combo;
+                    while (u.buy(u.current.id).ok) n++;
+                    if (step === PACKS) break;
+                    if (strength() < strengthFor('vanar', step)) short.push(`${a}/${h} short for pack ${step + 1}`);
+                    if (a === 4 && combo === 1) ahead.push(strength() / strengthFor('vanar', step));
+                }
+                counts.push(n);
+                vigour.push(u.current.id);
             }
         }
         expect(short).toEqual([]);
-        expect(Math.max(...buys)).toBeLessThanOrEqual(3);
+        expect(Math.min(...counts)).toBeGreaterThanOrEqual(9);
+        expect(Math.max(...counts)).toBeLessThanOrEqual(11);
+        expect(vigour.every(id => !id.startsWith('goddess-'))).toBe(true);
         expect(Math.max(...ahead)).toBeLessThan(ZONES.vanar.climb.hp * ZONES.vanar.climb.hurt);
         // (no new hero skips two packs' upgrades)
         for (const [a, h] of HEROES) expect(a * h).toBeLessThan(strengthFor('vanar', 2));
+    });
+
+    test("a fight stays a fight all the way up: the blows to fell a foe and the blows it takes to fell you stay near the first pack's (each pack 2.5 times the health, its blow twice: not one blow kills either way)", () => {
+        const { u, inventory } = fresh(7, 20);
+        const z = ZONES.vanar.climb, start = u.apply(BASE(7, 20));
+        const toFell = [], toFall = [];
+        for (let step = 1; step < PACKS; step++) {
+            inventory.essence += packEssence('vanar', step - 1);
+            while (u.buy(u.current.id).ok);
+            const s = u.apply(BASE(7, 20));
+            toFell.push((z.hp ** step / s.attack) / (1 / start.attack));            // your blows to fell one, against the first pack's
+            toFall.push((s.hp.max / z.hurt ** step) / start.hp.max);                 // its blows to fell you, against the first pack's
+        }
+        for (const k of toFell) { expect(k).toBeGreaterThan(0.25); expect(k).toBeLessThan(2); }
+        for (const k of toFall) { expect(k).toBeGreaterThan(0.5); expect(k).toBeLessThan(4); }
     });
 });

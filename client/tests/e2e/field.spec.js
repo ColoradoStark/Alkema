@@ -582,17 +582,19 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
             const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
             Object.defineProperty(stats, 'attack', { value: 5, configurable: true, writable: true });      // (a new hero, the weakest sort)
         });
-        const { PACKS } = await places(page);
+        const { PACKS, PLACES } = await places(page);
         const second = PACKS.find(p => p.family === 'vanar' && p.step === 1);
-        // eight tiles short of the second pack up the road, on open ground
-        const spot = await page.evaluate(([x, y]) => {
+        const firsts = PLACES.filter(p => p.family === 'vanar' && p.step === 0).map(p => p.i);
+        // the first pack beaten; eight tiles short of the second pack up the road, on open ground
+        const spot = await page.evaluate(([x, y, firsts]) => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const i of firsts) fd.slain.add(i);
             for (let a = 0; a < Math.PI * 2; a += 0.1) {
                 const px = x + Math.cos(a) * 7 * 32, py = y + Math.sin(a) * 7 * 32;
                 if (fd._open(px, py)) return { x: px, y: py };
             }
             return null;
-        }, second.at);
+        }, [...second.at, firsts]);
         expect(spot).not.toBe(null);
         await standAt(page, spot.x, spot.y);
         const pointing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.pointing);
@@ -614,6 +616,46 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
         // never again
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').tutorUpgrade());
         expect(await pointing()).toBe(null);
+    });
+
+    test("fighting a pack you're strong enough for, you're not told the one beyond it is too strong (the user's: told so just after upgrading, the next pack but one being as near as eight tiles); beaten, then you are", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const { PACKS, PLACES } = await places(page);
+        const second = PACKS.find(p => p.family === 'vanar' && p.step === 1), third = PACKS.find(p => p.family === 'vanar' && p.step === 2);
+        const firstIds = PLACES.filter(p => p.family === 'vanar' && p.step === 0).map(p => p.i);
+        const secondIds = PLACES.filter(p => PACKS[p.pack] === second).map(p => p.i);
+        // Strong enough for the second pack, not the third
+        await page.evaluate(async () => {
+            const { strengthFor } = await import('/src/battle/zones.js');
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
+            Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 20 }, configurable: true, writable: true });
+            ui.hp.max = 20; ui.hp.now = 20;
+            Object.defineProperty(stats, 'attack', { value: Math.ceil(strengthFor('vanar', 1) * 1.2 / 20), configurable: true, writable: true });
+        });
+        // the first pack beaten; on the second's ground, nearer it than the third, within eight tiles of the third
+        const spot = await page.evaluate(([a, b, firsts]) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const i of firsts) fd.slain.add(i);
+            // (held still: the second's foes, roused, felled this weak hero on a busy machine, who came to far away)
+            fd.__still = () => { for (const o of fd.foes) o.stun = 1e9; };
+            fd.__still();
+            for (let t = 0.3; t < 0.5; t += 0.02) {
+                const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
+                if (fd._open(x, y) && Math.hypot(b[0] - x, b[1] - y) < 8 * 32) return { x, y };
+            }
+            return null;
+        }, [second.at, third.at, firstIds]);
+        expect(spot).not.toBe(null);
+        await standAt(page, spot.x, spot.y);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.__still());     // (any made since)
+        const notice = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text || '');
+        const frames = (n) => page.evaluate((n) => new Promise(done => { let k = 0; const tick = () => (++k >= n ? done() : requestAnimationFrame(tick)); tick(); }), n);
+        await frames(30);
+        expect(await notice()).not.toMatch(/too strong/i);
+        // the second beaten, and not upgraded: now the third is too strong, and you're told
+        await page.evaluate((ids) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) fd.slain.add(i); }, secondIds);
+        await expect.poll(notice, { timeout: 10000 }).toMatch(/too strong/i);
     });
 
     test('the first pack falls fast to a new hero and leaves its essence (and a little gold), and beaten it says to upgrade for what comes next', async ({ page }) => {

@@ -1,6 +1,6 @@
-// The Upgrade page's maths (client/src/upgrades/Upgrades.js), without a browser: Strength of Arm, then the fifty
-// goddesses, one at a time, ten levels each maxed before the next; every level dearer than the last; spells taught
-// as they're maxed; heroes from before starting afresh. (What it looks like is upgrades.spec.js's.)
+// The Upgrade page's maths (client/src/upgrades/Upgrades.js), without a browser: Strength of Arm, Vigour and Focus,
+// then the fifty goddesses, one at a time, ten levels each maxed before the next; every level dearer than the last;
+// spells taught as they're maxed; heroes from before starting afresh. (What it looks like is upgrades.spec.js's.)
 import { readFileSync } from 'node:fs';
 import { describe, test, expect, beforeEach } from 'vitest';
 import { Upgrades, HEROES, MAX } from '../../src/upgrades/Upgrades.js';
@@ -11,7 +11,7 @@ const SPELLS = JSON.parse(readFileSync(new URL('../../../server/src/spells.json'
 const BASE = { attack: 6, spell: 9, defence: 2, hp: { now: 20, max: 20 }, mp: { now: 10, max: 10 } };
 
 /** A hero of `heroClass` with `essence` to spend and the save `data` (none: a new hero). */
-function hero(heroClass = 'mage', essence = 1e300, data = { upgradesMaxed: true }) {
+function hero(heroClass = 'mage', essence = 1e300, data = { upgradesOwn: true }) {
     account.saves = [{ id: 'unit', data: { ...data } }];
     account.currentId = 'unit';
     const inventory = { essence, stats: { base: BASE }, _save() {} };
@@ -22,19 +22,22 @@ function hero(heroClass = 'mage', essence = 1e300, data = { upgradesMaxed: true 
 describe('Upgrades', () => {
     beforeEach(() => { account.saves = []; account.currentId = null; });
 
-    test("Strength of Arm first; each maxed (ten levels) before the next is unlocked; only the one you're on can be bought", () => {
+    test("Strength of Arm, Vigour, Focus, then Brigid (the user's: their own three first); each maxed (ten levels) before the next is unlocked; only the one you're on can be bought", () => {
         const { u } = hero();
         expect(u.current.id).toBe('might');
+        expect(u.buy('vigour')).toEqual({ ok: false, error: 'locked' });
         expect(u.buy('goddess-brigid')).toEqual({ ok: false, error: 'locked' });
-        for (let i = 1; i < MAX; i++) expect(u.buy('might')).toMatchObject({ ok: true, maxed: false });
-        const res = u.buy('might');
-        expect(res).toMatchObject({ ok: true, maxed: true });
-        expect(res.next.id).toBe('goddess-brigid');
-        expect(u.buy('might')).toEqual({ ok: false, error: 'locked' });
-        expect(u.current.id).toBe('goddess-brigid');
+        for (const [id, next] of [['might', 'vigour'], ['vigour', 'focus'], ['focus', 'goddess-brigid']]) {
+            for (let i = 1; i < MAX; i++) expect(u.buy(id)).toMatchObject({ ok: true, maxed: false });
+            const res = u.buy(id);
+            expect(res).toMatchObject({ ok: true, maxed: true });
+            expect(res.next.id).toBe(next);
+            expect(u.buy(id)).toEqual({ ok: false, error: 'locked' });
+            expect(u.current.id).toBe(next);
+        }
     });
 
-    test('the whole road, in order, every level 1.65 times dearer than the last whoever it is', () => {
+    test('the whole road, in order, every level 3 times dearer than the last whoever it is', () => {
         const { u } = hero();
         const order = [], prices = [];
         while (u.current) {
@@ -45,20 +48,32 @@ describe('Upgrades', () => {
         }
         expect(order).toEqual(HEROES.map(h => h.id));
         expect(prices).toHaveLength(HEROES.length * MAX);
-        prices.slice(0, 40).forEach((p, i) => expect(p).toBe(Math.ceil(30 * 1.65 ** i)));
+        prices.slice(0, 30).forEach((p, i) => expect(p).toBe(Math.ceil(30 * 3 ** i)));
     });
 
-    test('a level of Strength of Arm: attack and spell power 1.85 times; of a goddess: attack, spell power and hit points, 1.85 times strength in all', () => {
+    test('every level makes you 3.4 times as strong (attack times hit points), each its own way: Strength of Arm mostly attack, Vigour mostly hit points, Focus spell power, a goddess all alike', () => {
         const { u } = hero();
-        u.buy('might');
-        expect(u.apply(BASE)).toMatchObject({ attack: Math.round(6 * 1.85), spell: Math.round(9 * 1.85), hp: { max: 20 } });
+        const strength = (s) => s.attack * s.hp.max;
+        const step = (id) => {
+            const before = u.apply(BASE);
+            u.buy(id);
+            const after = u.apply(BASE);
+            expect(strength(after) / strength(before)).toBeCloseTo(3.4, 0);
+            return { attack: after.attack / before.attack, hp: after.hp.max / before.hp.max, spell: after.spell / before.spell };
+        };
+        const arm = step('might');
+        expect(arm.attack).toBeCloseTo(3.4 ** 0.6, 0);      // (a small attack, rounded)
+        expect(arm.hp).toBeCloseTo(3.4 ** 0.4, 0);
         u.levels.might = MAX;
-        const before = u.apply(BASE);
-        u.buy('goddess-brigid');
-        const after = u.apply(BASE);
-        expect(after.hp.max).toBe(Math.round(20 * Math.sqrt(1.85)));
-        expect(after.attack * after.hp.max / (before.attack * before.hp.max)).toBeCloseTo(1.85, 1);
-        expect(u.after('goddess-brigid').hp.max).toBe(Math.round(20 * 1.85));      // (what the next level does)
+        const vig = step('vigour');
+        expect(vig.hp).toBeGreaterThan(vig.attack);
+        u.levels.vigour = MAX;
+        const foc = step('focus');
+        expect(foc.spell).toBeCloseTo(3.4, 0);
+        u.levels.focus = MAX;
+        const her = step('goddess-brigid');
+        expect(her.attack).toBeCloseTo(her.hp, 1);
+        expect(u.after('goddess-brigid').hp.max).toBeGreaterThan(u.apply(BASE).hp.max);      // (what the next level does)
     });
 
     test("too dear: nothing's spent", () => {
@@ -86,12 +101,12 @@ describe('Upgrades', () => {
         expect(u.teaches.spell.id).toBe('fireball');        // (a mage knows Fireball and Orcbane from the start)
     });
 
-    test('a hero from before the goddesses were one at a time starts them afresh, keeping the spells they know', () => {
-        const { u } = hero('mage', 0, { upgrades: { might: 30, 'might+': 1, 'goddess-brigid': 22, 'frost-lance': 10 } });
+    test('a hero from before their own three came first starts them afresh, keeping the spells they know', () => {
+        const { u } = hero('mage', 0, { upgradesMaxed: true, upgrades: { might: 10, 'might+': 1, 'goddess-brigid': 3, 'frost-lance': 10 } });
         expect(u.level('might')).toBe(0);
         expect(u.level('goddess-brigid')).toBe(0);
         expect(u.level('frost-lance')).toBe(10);
-        expect(account.current.data.upgradesMaxed).toBe(true);
+        expect(account.current.data.upgradesOwn).toBe(true);
         expect(account.current.data.upgrades['goddess-brigid']).toBeUndefined();
     });
 });

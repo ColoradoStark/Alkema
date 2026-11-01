@@ -561,6 +561,11 @@ export class FieldDemons {
         for (const [pack, p] of PACKS.entries()) {
             if (!ZONES[p.family].climb || !p.step || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;
             if (PLACES.every(q => q.pack !== pack || this.slain.has(q.i))) continue;
+            // (a pack below it still standing and nearer you is the one you're at: the packs stand about eight tiles
+            // apart, and fighting one, the user was told the one beyond it was too strong, just after upgrading)
+            const far = Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y);
+            if (PACKS.some((o, k) => o.family === p.family && o.step < p.step && Math.hypot(o.at[0] - feet.x, o.at[1] - feet.y) < far
+                && PLACES.some(q => q.pack === k && !this.slain.has(q.i)))) continue;
             this._warned.add(pack);
             if (this._strength() >= strengthFor(p.family, p.step)) continue;
             const ui = this.scene.scene.get('UIScene');

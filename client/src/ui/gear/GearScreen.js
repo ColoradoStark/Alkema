@@ -15,7 +15,7 @@ import { getMeleeAnimation, getRangedAnimation } from '../../sprites/weaponTypes
 import { audio } from '../../audio/audio.js';
 import { account } from '../../account/account.js';
 import { ICONS } from '../../magic/Spellbook.js';
-import { GODDESSES, GODDESS_FRAME, HEROES, MASTERY, MAX, MIGHT, RANKS, short } from '../../upgrades/Upgrades.js';
+import { GODDESSES, GODDESS_FRAME, HEROES, MASTERY, MAX, OWN, RANKS, short } from '../../upgrades/Upgrades.js';
 
 const BASE_WIDTH = 352;
 const BASE_HEIGHT = 640;
@@ -644,7 +644,7 @@ export class GearScreen {
     }
 
     /**
-     * Strength of Arm and the goddesses, one at a time (the user's): the maxed ones sealed, done; the one you're
+     * Strength of Arm, Vigour and Focus, then the goddesses, one at a time (the user's): the maxed ones sealed, done; the one you're
      * on, what a level does in your own numbers, how far to maxing her, what that teaches, the one buy button;
      * the rest shadows till the one before is maxed. Maxing one breaks her seal out and lights the next up.
      */
@@ -662,7 +662,7 @@ export class GearScreen {
             const level = up.level(h.id), maxed = up.maxed(h), here = h === on || h.id === on?.id;
             const row = el('div', `gear-up${h.goddess ? ' is-goddess' : ''}${maxed ? ' is-maxed' : here ? ' is-current' : ' is-locked'}`
                 + `${this.justMaxed === h.id ? ' is-just-maxed' : ''}${this.justUnlocked === h.id ? ' is-unlocked' : ''}`, { 'data-up': h.id });
-            row.append(h.goddess ? this._goddessFace(h, maxed || here) : el('span', 'gear-icon gear-up-glyph gear-up-glyph--attack', { text: h.glyph }));
+            row.append(h.goddess ? this._goddessFace(h, maxed || here) : el('span', `gear-icon gear-up-glyph gear-up-glyph--${h.stat}`, { text: h.glyph }));
             const words = el('div', 'gear-up-words');
             const name = el('div', 'gear-up-name', { text: h.name });
             if (here) name.append(el('span', 'gear-up-level', { text: `${level}/${MAX}` }));
@@ -675,8 +675,8 @@ export class GearScreen {
                 words.append(bar);
                 const now = inv.stats, then = up.after(h.id);
                 const lines = [['Attack', now?.attack, then?.attack], ...(up.magic ? [['Spell power', now?.spell, then?.spell]] : []),
-                    ...(h.goddess ? [['Hit points', now?.hp.max, then?.hp.max]] : [])];
-                for (const [what, a, b] of lines) if (a != null && b != null) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
+                    ['Hit points', now?.hp.max, then?.hp.max]];
+                for (const [what, a, b] of lines) if (a != null && b != null && a !== b) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
                 const r = up.teaches;
                 if (r) words.append(el('div', 'gear-up-reward', { text: `Max ${h.goddess ? 'her' : 'it'}: ${this._taught(r)}` }));
             } else if (!maxed) {
@@ -700,7 +700,7 @@ export class GearScreen {
                 lit = row;
             }
             list.append(row);
-            if (h === MIGHT) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
+            if (h === OWN[OWN.length - 1]) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
         }
         panel.append(list);
         // (the one you're on in sight: newly unlocked, scrolled to)
