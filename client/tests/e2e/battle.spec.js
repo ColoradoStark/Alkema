@@ -551,8 +551,8 @@ test.describe('Battle', () => {
         const after = await state(page);
         expect(after.foe?.visible).toBe(true);
         expect(after.chests).toEqual([]);
-        // ...seen as the world is again (the fight is seen at 1, the world closer)
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').cameras.main.zoom)).toBe(2);
+        // ...seen as the world is again
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').cameras.main.zoom)).toBe(1);
         await page.waitForTimeout(1500);
         expect((await state(page)).room).toBe('world');      // standing where you met them, you aren't straight back in the fight
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('battle-grass'))).toBe(false);

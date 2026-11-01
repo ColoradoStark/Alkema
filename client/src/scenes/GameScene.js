@@ -36,11 +36,10 @@ const PORTRAIT_NEAR = 192;      // a townsperson's painted portrait is fetched o
 const PREFETCH_AFTER_MS = 1500; // settled in a map, the maps behind its doors are fetched ahead (into the browser's cache)
 const MOOD_SETTLE_MS = 3000;    // somewhere new must last this long before the music changes (no flapping at a forest's edge)
 const BACK_OFF = 40;            // back from a fight, you stand this far from where the foe stood
-// Places are seen closer than the world was, at the character creator's scale (the user's standard, from a trial in
-// Dunmere): every town, village, castle and room in them. A dungeon (underground, `dark`) at 1, till the user decides.
-// The world itself at the creator's scale too (the user's trial, November 2026); it was 1.
-export const WORLD_ZOOM = 2;
-const LOOKOUT_ZOOM = 1;         // at a lookout, to see across the water (`updateLookout`)
+// Places are seen closer than the world, at the character creator's scale (the user's standard, from a trial in
+// Dunmere): every town, village, castle and room in them. A dungeon (underground, `dark`) as the world, till the user
+// decides. The world itself at 2 was tried (November 2026): the user found it felt better as it is.
+export const WORLD_ZOOM = 1;
 const PLACE_ZOOM = 2;
 const DUNGEON_ZOOM = 1;
 const zoomFor = (town) => (town.data.dark ? DUNGEON_ZOOM : PLACE_ZOOM);
@@ -295,8 +294,7 @@ export class GameScene extends Scene {
 
     /**
      * At a lookout (the tip of the Watch, across the strait from Morvath) the
-     * view pans over the water to what it looks on, drawing back to the world's old scale to show it (the world
-     * seen closer, it wasn't in sight); walk away and it comes back.
+     * view pans over the water to what it looks on; walk away and it comes back.
      */
     updateLookout(delta) {
         const player = this.localPlayer;
@@ -311,12 +309,9 @@ export class GameScene extends Scene {
             ox = -lx * k;
             oy = -ly * k;
         }
-        const cam = this.cameras.main, offset = cam.followOffset;
+        const offset = this.cameras.main.followOffset;
         const ease = 1 - Math.exp(-delta / 500);
         offset.set(offset.x + (ox - offset.x) * ease, offset.y + (oy - offset.y) * ease);
-        if (this.town || this.battle || this._changingRoom) return;        // (their own zoom)
-        const zoom = vista ? LOOKOUT_ZOOM : WORLD_ZOOM;
-        cam.setZoom(Math.abs(zoom - cam.zoom) < 0.01 ? zoom : cam.zoom + (zoom - cam.zoom) * ease);
     }
 
     /** Walk up to a place's icon and you're asked whether to go in. */
