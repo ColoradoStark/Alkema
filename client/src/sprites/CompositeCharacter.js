@@ -8,6 +8,7 @@ import {
 } from './AnimationFactory.js';
 
 const cutting = new Map();      // look: its oversized frames being cut from its sheet
+const everyone = new Set();     // every character not yet destroyed: a sheet is let go only once none of them wears it
 
 export class CompositeCharacter extends Phaser.GameObjects.Container {
     constructor(scene, x, y, characterData) {
@@ -33,6 +34,7 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         scene.add.existing(this);
         scene.physics.add.existing(this);
         this.body.setSize(32, 48);
+        everyone.add(this);
 
         this.loadSpritesheet();
     }
@@ -218,8 +220,18 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
         this._forget(this.look);
     }
 
-    /** Drop the animations and textures of a sheet no longer worn. */
+    preDestroy() {
+        everyone.delete(this);
+        super.preDestroy?.();
+    }
+
+    /**
+     * Drop the animations and textures of a sheet no longer worn: not while anyone else still wears it (demons of a
+     * kind share one, a room's townsfolk their street copy's, your hero another tab's; freed under them, the next
+     * frame drawing them threw and stopped the game for good).
+     */
     _forget(look, scene = this.scene) {
+        for (const c of everyone) if (c !== this && c.look === look && c.scene === scene) return;
         for (const key of [...scene.anims.anims.keys()]) {
             if (key.startsWith(`anim_${look}_`)) scene.anims.remove(key);
         }

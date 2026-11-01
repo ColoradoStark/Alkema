@@ -1,6 +1,7 @@
 // Wires network events to GameScene operations. One instance per GameScene.
 
 import { audio } from '../audio/audio.js';
+import { WORLD_ZOOM } from './GameScene.js';
 
 export class GameNetworkBridge {
     constructor(gameScene) {
@@ -19,7 +20,7 @@ export class GameNetworkBridge {
 
                 if (gs.localPlayer && gs.localPlayer.sprite) {
                     gs.cameras.main.startFollow(gs.localPlayer.sprite, true, 0.1, 0.1);
-                    gs.cameras.main.setZoom(1);
+                    gs.cameras.main.setZoom(WORLD_ZOOM);
                 }
                 gs.updatePlayerCount();
                 gs.applyPendingSpriteMeta();

@@ -165,6 +165,6 @@ export class Forest {
         const cam = this.scene.cameras.main;
         this.gloom.setVisible(true).setAlpha(this._gloomAlpha)
             .setScale(this._gloomRadius / (GLOOM_TEX / 2 * GLOOM_CLEAR))
-            .setPosition(feet.x - cam.worldView.x, feet.y - 16 - cam.worldView.y);
+            .setPosition(feet.x - cam.scrollX, feet.y - 16 - cam.scrollY);     // (fixed to the screen, zoomed about its centre: from the scroll, not the zoomed view's corner)
     }
 }

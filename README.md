@@ -151,6 +151,7 @@ Where Stats was, the **Upgrade** page, after Clicker Heroes: upgrades bought wit
 
 Real-time multiplayer via Socket.io. Players share one overworld, built from LPC tiles, with The Battle for Wesnoth's painted grass, sand, snow, mountains and forests:
 
+- The world, its towns, villages and castles are seen up close, at the character creator's scale
 - A 512×512-tile map in the spirit of the classic Ultima games: a continent, one large island (a ragged coast of headlands and bays, its north under snow) and an arc of three small isles off the south-west coast (a long ridge, a crescent round a lagoon, a teardrop trailing an islet) in an animated ocean
 - A great range of snow-capped peaks (The Battle for Wesnoth's hand-painted mountains, brought into the LPC palette: single peaks at the edges of a range, long snowy ridges in its heart, sandy ones by the desert) walls off the north, crossed by a single pass; more ranges run along the west coast, the south-east and the big island
 - Beyond the range lies the far north, a broad cold country under Wesnoth's snow, its coast torn into sounds and fjords, snowbound fells west of a great bay cut deep into it, open to the northern ocean only by a winding strait; its woods are Wesnoth's snow-laden pines and bare winter trees, and it is all snow right up to the crest of the range, whose northern face is snowbound rock; a fishing village stands on the bay's frozen northern shore and a cave opens at the foot of the fells

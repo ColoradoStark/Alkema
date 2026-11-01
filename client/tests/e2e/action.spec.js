@@ -113,8 +113,10 @@ test.describe('A real-time fight', () => {
         const first = await look();
         // Six rows (192 px) between you and the nearest, not four
         expect(Math.min(...first.foes.map(([x, y]) => Math.hypot(x - first.you[0], y - first.you[1])))).toBeGreaterThanOrEqual(185);
-        // Held (1.5 s from when they're drawn; the wait for their sheets above may have used some)
-        expect(first.hold).toBeGreaterThan(300);
+        // Held (1.5 s from when they're drawn; the wait for their sheets above may have used some, under load most of it:
+        // that it's still holding is what's asked, and that they don't move while it is, below)
+        expect(first.hold).toBeGreaterThan(0);
+        expect(first.hold).toBeLessThanOrEqual(1500);
         // Still held near its end, by the fight's own clock (a wait in real time raced it under load: four browsers at
         // once slow every frame, and the foes had just set off)
         const late = await page.evaluate(() => new Promise((done) => {

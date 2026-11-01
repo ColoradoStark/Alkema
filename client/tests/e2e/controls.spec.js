@@ -101,15 +101,21 @@ test("pushing the stick off straight up by more than 15 degrees faces you sidewa
     const walked = await page.evaluate(async () => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
         const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
-        const clock = gs.time, x0 = me.x, t0 = clock.now;
+        // (timed by the steps the game took, which the walk is moved by: under load Phaser smooths a slow frame's
+        // step into the next ones, and the scene's clock fell behind the walk)
+        const x0 = me.x;
+        let t = 0;
+        const step = (_, delta) => { t += delta; };
+        gs.events.on('postupdate', step);
         keys.right = true;
         let early = null;
-        while (clock.now - t0 < 1000) {
+        while (t < 1000) {
             await new Promise(r => requestAnimationFrame(r));
-            if (early === null && clock.now - t0 >= 100) early = (me.x - x0) / ((clock.now - t0) / 1000);
+            if (early === null && t >= 100) early = (me.x - x0) / (t / 1000);
         }
-        const whole = (me.x - x0) / ((clock.now - t0) / 1000);
+        const whole = (me.x - x0) / (t / 1000);
         keys.right = false;
+        gs.events.off('postupdate', step);
         return { early, whole };
     });
     expect(walked.whole).toBeGreaterThan(100);

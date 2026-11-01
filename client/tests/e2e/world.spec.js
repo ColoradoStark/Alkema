@@ -365,7 +365,7 @@ test.describe('Living world', () => {
         expect(result).toEqual({ landings: true, stuck: [] });
     });
 
-    test('from the tip of the Watch the view pans across the strait to Morvath, out of reach on foot', async ({ page }) => {
+    test('from the tip of the Watch the view draws back and pans across the strait to Morvath, out of reach on foot', async ({ page }) => {
         await enterWorld(page);
         const result = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
@@ -374,11 +374,13 @@ test.describe('Living world', () => {
             const vista = (await import('/src/world/places.js')).WORLD.vistas.find(v => v.name === 'Morvath');
             const label = gs.world.labels.find(l => l.text === 'Morvath');
             const inView = () => cam.worldView.contains(label.x, label.y) && cam.worldView.contains(vista.look.x, vista.look.y + 90);
-            const stand = async (x, y) => { me.setPosition(x, y - 23); me.body.reset(x, y - 23); await wait(2500); };
+            // (the view eases there by the game's clock, which a busy machine runs slower than the wall's: till it's settled)
+            const settled = async () => { for (let t = 0, z = -1, o = -1; t < 40 && (Math.abs(cam.zoom - z) > 0.002 || Math.abs(cam.followOffset.y - o) > 0.5 || t < 10); t++) { z = cam.zoom; o = cam.followOffset.y; await wait(250); } };
+            const stand = async (x, y) => { me.setPosition(x, y - 23); me.body.reset(x, y - 23); await settled(); };
             await stand(vista.x, vista.y);
-            const atLookout = { morvath: inView(), hero: cam.worldView.contains(me.x, me.y) };
+            const atLookout = { morvath: inView(), hero: cam.worldView.contains(me.x, me.y), drawnBack: cam.zoom < 1.1 };     // (the world seen closer: drawn back to see it)
             await stand(vista.x, vista.y + 400);
-            const away = { recentred: Math.abs(cam.followOffset.y) < 8 };
+            const away = { recentred: Math.abs(cam.followOffset.y) < 8, closer: cam.zoom > 1.9 };
             // and no way across on foot: search every cell you can walk to from the lookout
             const { cn: n, blocked, k } = gs.world, T = 32 / k;
             const seen = new Uint8Array(n * n), start = Math.floor(vista.y / T) * n + Math.floor(vista.x / T);
@@ -394,7 +396,7 @@ test.describe('Living world', () => {
             const place = (await import('/src/world/places.js')).WORLD.places.find(p => p.name === 'Morvath');
             return { atLookout, away, walkToMorvath: !!seen[Math.floor(place.y / T) * n + Math.floor(place.x / T)] };
         });
-        expect(result).toEqual({ atLookout: { morvath: true, hero: true }, away: { recentred: true }, walkToMorvath: false });
+        expect(result).toEqual({ atLookout: { morvath: true, hero: true, drawnBack: true }, away: { recentred: true, closer: true }, walkToMorvath: false });
     });
 
     test("across the channel from the south-west beach, Wreckers' Cave is in view but out of reach on foot", async ({ page }) => {
@@ -409,7 +411,8 @@ test.describe('Living world', () => {
             const [x, y, w, h] = cave.rect;
             me.setPosition(vista.x, vista.y - 23);
             me.body.reset(vista.x, vista.y - 23);
-            await wait(2500);
+            // (the view eases there by the game's clock, which a busy machine runs slower than the wall's: till it's settled)
+            for (let t = 0, z = -1, o = -1; t < 40 && (Math.abs(cam.zoom - z) > 0.002 || Math.abs(cam.followOffset.y - o) > 0.5 || t < 10); t++) { z = cam.zoom; o = cam.followOffset.y; await wait(250); }
             const inView = cam.worldView.contains(x + w / 2, y + h) && cam.worldView.contains(me.x, me.y);
             const near = Math.hypot(x + w / 2 - vista.x, y + h - vista.y) < 9 * 32;   // (well within a phone screen)
             // and no way over on foot

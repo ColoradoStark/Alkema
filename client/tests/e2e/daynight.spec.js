@@ -97,7 +97,7 @@ test.describe('Day and night', () => {
         // The red of a patch of ground there, as drawn on the screen
         const red = () => page.evaluate(async (spot) => {
             const g = window.__PHASER_GAME, cam = g.scene.getScene('GameScene').cameras.main;
-            const x = Math.round(spot.x - cam.worldView.x + cam.x), y = Math.round(spot.y - cam.worldView.y + cam.y);
+            const x = Math.round((spot.x - cam.worldView.x) * cam.zoom + cam.x), y = Math.round((spot.y - cam.worldView.y) * cam.zoom + cam.y);
             const snap = await new Promise(r => g.renderer.snapshotArea(x - 3, y - 3, 6, 6, r));
             const c = document.createElement('canvas'); c.width = 6; c.height = 6;
             const ctx = c.getContext('2d'); ctx.drawImage(snap, 0, 0);
@@ -136,9 +136,10 @@ test.describe('Day and night', () => {
         });
         await page.waitForTimeout(300);
         const sample = () => page.evaluate(() => new Promise(resolve => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight, view = gs.cameras.main.worldView;
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight, cam = gs.cameras.main;
             const SCALE = 4, L = window.__lantern;
-            const at = (x, y) => [Math.round((x - view.x) / SCALE), Math.round((y - view.y) / SCALE)];
+            // (the map is laid over the screen and zoomed with the camera about its centre: a place is at its scroll's distance)
+            const at = (x, y) => [Math.round((x - cam.scrollX) / SCALE), Math.round((y - cam.scrollY) / SCALE)];
             const h = dn.hero, r = 150, q = 96;
             const points = {
                 middle: at(h.x, h.y),
@@ -177,8 +178,8 @@ test.describe('Day and night', () => {
         });
         await page.waitForTimeout(300);
         const r = await page.evaluate(() => new Promise(resolve => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight, view = gs.cameras.main.worldView, L = window.__lantern;
-            const at = (x, y) => [Math.round((x - view.x) / 4), Math.round((y - view.y) / 4)];
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), dn = gs.dayNight, cam = gs.cameras.main, L = window.__lantern;
+            const at = (x, y) => [Math.round((x - cam.scrollX) / 4), Math.round((y - cam.scrollY) / 4)];
             // Either side of the square's edge (150 from you), nearer the lantern inside it
             const pts = { inside: at(dn.hero.x + 144, L.y), outside: at(dn.hero.x + 156, L.y) };
             const out = {};

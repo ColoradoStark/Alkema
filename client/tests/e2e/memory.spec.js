@@ -401,6 +401,30 @@ test.describe('Memory', () => {
             .filter(k => ids.some(id => k.startsWith(`sprite_${id}`))), ids)).toEqual([]);
     });
 
+    test("another dressed in your own sheet (your hero in another tab) comes and goes: yours is kept, not let go under you", async ({ page }) => {
+        // (a full test run froze games this way, every browser's heroes on one server: an error drawing a sheet
+        // already let go stops the game for good)
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            gs.addPlayer({ id: 'stranger-twin', x: me.x + 40, y: me.y + 40, character: { ...me.characterData } });
+        });
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').players.get('stranger-twin')?.sprite?.sprite, null, { timeout: 60000 });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').removePlayer('stranger-twin'));
+        const frame = await page.evaluate(() => window.__PHASER_GAME.loop.frame);
+        await page.waitForTimeout(1000);
+        const after = await page.evaluate(() => {
+            const g = window.__PHASER_GAME, mine = g.scene.getScene('GameScene').localPlayer.sprite;
+            return { sheet: g.textures.exists(`sprite_${mine.look}`), frame: g.loop.frame };
+        });
+        expect(errors).toEqual([]);
+        expect(after.sheet).toBe(true);
+        expect(after.frame).toBeGreaterThan(frame + 10);       // still running
+    });
+
     test("the goddesses' pictures are held only while the Upgrade page is open", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

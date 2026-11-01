@@ -1171,8 +1171,9 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
             const swing = fd._foeSwing.bind(fd);
             let swings = 0;
             fd._foeSwing = (f) => { if (f === H) swings++; return swing(f); };
-            const t0 = performance.now();
-            while (performance.now() - t0 < 8000) {
+            // (eight seconds of the game's own clock: a busy machine runs it slower than the wall's)
+            const t0 = gs.time.now;
+            while (gs.time.now - t0 < 8000) {
                 ui.hp.now = ui.hp.max;
                 fd.attack();            // (as fast as the button goes: a press mid-swing is kept)
                 if (Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23) > 50) {       // (after it as it's knocked back)
