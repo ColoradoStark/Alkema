@@ -370,6 +370,26 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('sea-ships'))).toBe(false);
     });
 
+    test("Gloomhold's storm: its rain, splashes and sound are let go when the weather clears", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const sky = (w) => page.evaluate(w => { window.__PHASER_GAME.scene.getScene('GameScene').weatherOverride = w; }, w);
+        await sky({ kind: null, level: 'none' });
+        const base = await settled(page);
+        await sky({ kind: 'rain', level: 'storm' });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').weather.emitter?.getAliveParticleCount() ?? 0), { timeout: 15000 }).toBeGreaterThan(200);
+        const during = await settled(page);
+        await sky({ kind: null, level: 'none' });
+        await expect.poll(() => page.evaluate(() => {
+            const w = window.__PHASER_GAME.scene.getScene('GameScene').weather;
+            return !!(w.emitter || w._old.length || w.splashes || w.whiteout || w.sound.nodes) || ['fx-raindrop', 'fx-splash'].some(k => window.__PHASER_GAME.textures.exists(k));
+        }), { timeout: 60000 }).toBe(false);
+        const after = await settled(page);
+        console.log('the storm', +(during.mb - base.mb).toFixed(2), 'MB');
+        expect(during.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+    });
+
     test("other players' sheets come with them and go when they leave", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);

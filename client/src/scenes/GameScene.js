@@ -10,7 +10,8 @@ import { Ship, HULL } from '../world/Ship.js';
 import { Town, TOWNS, preloadTown, forgetFires, prefetchTown, mapTitle } from '../world/Town.js';
 import { loadPortraits, forgetPortraits } from '../ui/Dialogue.js';
 import { DayNight } from '../world/DayNight.js';
-import { Snowfall } from '../world/Snowfall.js';
+import { Weather } from '../world/Weather.js';
+import { weatherAt, inGloomhold, centreOf } from '../world/climate.js';
 import { Battle, battleCountry, loadBattleMap, PARTY } from '../battle/Battle.js';
 import { ActionBattle, loadDemons } from '../battle/ActionBattle.js';
 import { Encounters } from '../battle/Encounters.js';
@@ -93,10 +94,11 @@ export class GameScene extends Scene {
     }
 
     createWorld() {
-        // The light of the hour (everything in the world is drawn in it), and the snow up north
+        // The light of the hour (everything in the world is drawn in it), and the weather: snow up north, rain in Gloomhold
         this.dayNight = new DayNight(this);
-        this.snowfall = new Snowfall(this);
-        this.events.once('shutdown', () => this.snowfall.destroy());
+        this.weather = new Weather(this);
+        this.weatherOverride = null;     // tests: { kind, level } in place of the sky's
+        this.events.once('shutdown', () => this.weather.destroy());
         this.world = this.overworld = new Overworld(this);
         this.town = null;
         this.battle = null;
@@ -125,6 +127,24 @@ export class GameScene extends Scene {
         });
     }
 
+    /**
+     * The weather where you are (climate.js): snow in the far north (and its villages' streets), rain in
+     * Gloomhold's lands and in the streets of its town, none in a room or underground. A fight on the
+     * snowy battle map snows lightly.
+     */
+    skyHere(feet) {
+        if (this.weatherOverride) return this.weatherOverride;
+        if (this.battle) return { kind: this.battle.snowing ? 'snow' : null, level: 'light' };
+        if (this.town) {
+            if (this.town.indoors || this.town.data.dark) return { kind: null, level: 'none' };
+            const place = this._townPlace && centreOf(this._townPlace);
+            return weatherAt({ snowy: !!this.town.data.snow, gloom: !!place && inGloomhold(place.x, place.y, WORLD.places, WORLD.size) });
+        }
+        // (between a dungeon's fight and its level you're nowhere: your feet aren't on the world's map, whose top corner is the snowy north)
+        if (this.world !== this.overworld || !feet) return { kind: null, level: 'none' };
+        return weatherAt({ snowy: this.overworld.isSnowy(feet.x, feet.y), gloom: inGloomhold(feet.x, feet.y, WORLD.places, WORLD.size) });
+    }
+
     applyPendingSpriteMeta() {
         const metaMap = this.networkManager.spriteMetaMap;
         if (!metaMap) return;
@@ -143,12 +163,12 @@ export class GameScene extends Scene {
             this.dayNight.indoors = !!this.town?.indoors;
             this.dayNight.underground = !!this.town?.data.dark;
             this.dayNight.moonlit = !!this.battle;
+            this.dayNight.overcast = this.weather?.overcast ?? 0;
+            this.dayNight.flash = this.weather?.flash ?? 0;
             this.dayNight.update(delta, feet);
         }
-        // (between a dungeon's fight and its level you're nowhere: your feet aren't on the world's map, whose top corner is the snowy north)
-        const snowing = this.battle ? this.battle.snowing
-            : this.town ? !!this.town.data.snow : this.world === this.overworld && !!feet && this.overworld.isSnowy(feet.x, feet.y);
-        this.snowfall?.update(delta, snowing, this.dayNight?.ambient, this.battle ? 'battle' : this.town?.key ?? (this.world ? 'world' : 'between'));
+        const sky = this.skyHere(feet);
+        this.weather?.update(delta, sky.kind, sky.level, this.dayNight?.ambient, this.battle ? 'battle' : this.town?.key ?? (this.world ? 'world' : 'between'));
         this.updateMusic(delta, feet);
         this.updateSailing();
         this.updatePlaceVisit();

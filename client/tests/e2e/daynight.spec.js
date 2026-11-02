@@ -271,14 +271,14 @@ test.describe('Day and night', () => {
         const camp = await light(page);
         expect(camp.lamps.campfire).toHaveLength(1);
         expect(camp.lamps.campfire[0].art).toBe(true);
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').snowfall.emitter?.getAliveParticleCount() ?? 0)).toBeGreaterThan(50);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').weather.emitter?.getAliveParticleCount() ?? 0)).toBeGreaterThan(50);
 
         // Out at its gate, in the far north: still snowing
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
         await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return !gs.town && !gs._changingRoom; }, null, { timeout: 60000 });
         const north = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
-            return { snowy: gs.overworld.isSnowy(me.x, me.y + 23), falling: gs.snowfall.falling };
+            return { snowy: gs.overworld.isSnowy(me.x, me.y + 23), falling: gs.weather.falling };
         });
         expect(north).toEqual({ snowy: true, falling: true });
 
@@ -288,9 +288,9 @@ test.describe('Day and night', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             gs.localPlayer.sprite.setPosition(WORLD.spawn.x, WORLD.spawn.y);
         });
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').snowfall.falling)).toBe(false);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').weather.falling)).toBe(false);
         await expect.poll(() => page.evaluate(() => ({
-            emitter: !!window.__PHASER_GAME.scene.getScene('GameScene').snowfall.emitter,
+            emitter: !!window.__PHASER_GAME.scene.getScene('GameScene').weather.emitter,
             texture: window.__PHASER_GAME.textures.exists('fx-snowflake'),
         })), { timeout: 60000 }).toEqual({ emitter: false, texture: false });
     });

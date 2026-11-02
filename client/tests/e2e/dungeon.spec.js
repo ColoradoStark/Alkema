@@ -215,7 +215,7 @@ test.describe('Gloomwater Grotto', () => {
             audio.stinger = (name) => { window.__played.push(name); return stinger(name); };
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             window.__snow = 0;           // (on the way back the level is loading: you're nowhere, not in the snowy north)
-            gs.events.on('postupdate', () => { window.__snow = Math.max(window.__snow, gs.snowfall.emitter?.getAliveParticleCount() ?? 0); });
+            gs.events.on('postupdate', () => { window.__snow = Math.max(window.__snow, gs.weather.emitter?.getAliveParticleCount() ?? 0); });
             // ...and never you alone on the black while the level loads (the user saw it, a second or two after the stinger)
             window.__bare = 0;
             const cam = gs.cameras.main;

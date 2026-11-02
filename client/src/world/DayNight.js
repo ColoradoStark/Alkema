@@ -35,6 +35,8 @@ const SKY = [[0, 0x262e58], [4.5, 0x262e58], [6, 0x9c7c90], [7.5, 0xffffff], [17
 const MOONLIT = 0xa8b8e0;
 // Underground (a dungeon level's `dark`): no hour reaches it; only its own lamps, and your light
 const UNDERGROUND = 0x343c52;
+const OVERCAST = 0x6a7486;      // the sky under heavy cloud (Weather.js's `overcast`: rain, a snowstorm)
+const FLASH = 0xeef2ff;         // ...and lit by lightning
 const INDOORS = [[0, 0x4a4262], [5.5, 0x4a4262], [7.5, 0xd8d0c8], [18, 0xd8d0c8], [20.5, 0x4a4262], [24, 0x4a4262]];
 
 /**
@@ -189,6 +191,8 @@ export class DayNight {
         this.indoors = false;
         this.moonlit = false;         // in a battle: night no darker than moonlight
         this.underground = false;     // down a dungeon: dark whatever the hour
+        this.overcast = 0;            // out of doors: how grey the clouds make the sky, 0 to 1 (Weather.js)
+        this.flash = 0;               // ...and how bright lightning lights it
         this.lamps = [];
         this.dark = 0;
         this.ambient = 0xffffff;
@@ -276,6 +280,13 @@ export class DayNight {
             this.ambient = lift(16) | lift(8) | lift(0);
         }
         this.dark = darkness(blend(SKY, hour));
+        // Under cloud the sky greys (lamps lit and glowing through it), and lightning lights it all
+        if (!this.indoors && !this.underground && (this.overcast > 0.005 || this.flash > 0.005)) {
+            const mix = (c, to, k) => [16, 8, 0].reduce((v, s) => v | (Math.round(((c >> s) & 255) + ((((to >> s) & 255)) - ((c >> s) & 255)) * k) << s), 0);
+            const grey = [16, 8, 0].reduce((v, s) => v | (Math.round(((this.ambient >> s) & 255) * ((OVERCAST >> s) & 255) / 255) << s), 0);
+            this.ambient = mix(mix(this.ambient, grey, this.overcast), FLASH, this.flash * 0.8);
+            this.dark = Math.max(this.dark, this.overcast * 0.6) * (1 - this.flash);
+        }
         if (this.underground) {
             this.ambient = UNDERGROUND;
             this.dark = 0.9;
