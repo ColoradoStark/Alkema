@@ -365,7 +365,7 @@ test.describe('Demons on the coast', () => {
 });
 
 test.describe('Demons on the road, a fight you can lose', () => {
-    test('a blow hurts (a fury takes about a fourteenth of your hit points: the user\'s, 30% less than a tenth, once the pack came round them), the casters are many and throw fire while two others are at you, and the champion is quick and well escorted', async ({ page }) => {
+    test('a blow hurts (a fury takes about a seventh of your hit points: the user\'s, 30% less than a tenth once the pack came round them, then twice that, November 2026, as they didn\'t hurt enough), the casters are many and throw fire while two others are at you, and the champion is quick and well escorted', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
@@ -380,10 +380,10 @@ test.describe('Demons on the road, a fight you can lose', () => {
                 escort: champ.band.length - 1, escortCasters: champ.band.filter(k => k === 'warlock').length,
             };
         });
-        expect(r.fury).toBeGreaterThanOrEqual(0.065);
-        expect(r.fury).toBeLessThanOrEqual(0.08);
-        expect(r.brute).toBeGreaterThanOrEqual(0.13);
-        expect(r.brute).toBeLessThanOrEqual(0.16);
+        expect(r.fury).toBeGreaterThanOrEqual(0.13);
+        expect(r.fury).toBeLessThanOrEqual(0.16);
+        expect(r.brute).toBeGreaterThanOrEqual(0.26);
+        expect(r.brute).toBeLessThanOrEqual(0.31);
         expect(r.packsWithCaster).toBe(r.packs);
         expect(r.warlocks).toBeGreaterThanOrEqual(15);
         expect(r.escort).toBeGreaterThanOrEqual(5);
@@ -696,6 +696,7 @@ test.describe('Demons that close in keep their heads', () => {
                 const t0 = performance.now();
                 while (!(gs.fieldDemons?.foes.filter(f => f.pack === pack).every(f => f.foe.ready)) && performance.now() - t0 < 20000) await frame();
                 const fd = gs.fieldDemons;
+                out.push({ pack, made: fd?.foes.filter(f => f.pack === pack).length, ready: fd?.foes.filter(f => f.pack === pack && f.foe.ready).length, waited: Math.round(performance.now() - t0) });
                 for (const [ox, oy] of [[0, 60], [60, 0], [-60, 0], [0, -60]]) {
                     if (!fd._open(p.x + ox, p.y + oy)) continue;
                     me.setPosition(p.x + ox, p.y + oy - 23); me.body.reset(me.x, me.y);
@@ -723,8 +724,8 @@ test.describe('Demons that close in keep their heads', () => {
             }
             return out;
         }, packs);
-        expect(flips.length).toBeGreaterThan(10);
-        for (const f of flips) expect(f.turns, f.at).toBeLessThanOrEqual(16);
+        expect(flips.filter(f => f.at).length, JSON.stringify(flips.filter(f => f.pack !== undefined))).toBeGreaterThan(10);
+        for (const f of flips.filter(f => f.at)) expect(f.turns, f.at).toBeLessThanOrEqual(16);
     });
 });
 
@@ -1212,8 +1213,11 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
             let swings = 0;
             fd._foeSwing = (f) => { if (f === H) swings++; return swing(f); };
             // (eight seconds of the game's own clock: a busy machine runs it slower than the wall's)
-            const t0 = gs.time.now;
+            const t0 = gs.time.now, log = [];
+            let last = '';
             while (gs.time.now - t0 < 8000) {
+                const st = `${H.state}${H.stun > 0 ? ' stun' : ''}${H.steady > 0 ? ' steady' : ''} d${Math.round(Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23))} dy${Math.round(H.foe.y - me.y - 23)}`;
+                if (st.replace(/ d-?\d+ dy-?\d+/, '') !== last) { log.push(`${Math.round(gs.time.now - t0)} ${st}`); last = st.replace(/ d-?\d+ dy-?\d+/, ''); }
                 ui.hp.now = ui.hp.max;
                 fd.attack();            // (as fast as the button goes: a press mid-swing is kept)
                 if (Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23) > 50) {       // (after it as it's knocked back)
@@ -1222,10 +1226,10 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
                 }
                 await new Promise(r => setTimeout(r, 100));
             }
-            return { swings, struck: 1e6 - H.hp };
+            return { swings, struck: 1e6 - H.hp, log };
         }, h.i);
         expect(r.struck).toBeGreaterThan(0);
-        expect(r.swings).toBeGreaterThanOrEqual(2);
+        expect(r.swings, r.log.join(' | ')).toBeGreaterThanOrEqual(2);
     });
 
     test('a water elemental hangs back and throws water at you', async ({ page }) => {

@@ -64,7 +64,7 @@ const KINDS = {
 const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS, ...VANAR_HITS };
 // (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
 const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS, ...VANAR_HURTS };
-const SOFTER = 0.7;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder)
+const SOFTER = 1.4;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder), then twice that (the user's, November 2026: they didn't hurt enough)
 // What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
 const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY, ...VANAR_PAY };      // (a pack near the start buys about one)
 const GOLD_SHARE = 0.25;        // a felled foe's gold, a share of its essence (what pays a healer)

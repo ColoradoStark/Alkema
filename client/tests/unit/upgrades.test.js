@@ -37,7 +37,7 @@ describe('Upgrades', () => {
         }
     });
 
-    test('the whole road, in order, every level 3 times dearer than the last whoever it is', () => {
+    test('the whole road, in order, every level 1.4 times dearer than the last whoever it is', () => {
         const { u } = hero();
         const order = [], prices = [];
         while (u.current) {
@@ -48,7 +48,7 @@ describe('Upgrades', () => {
         }
         expect(order).toEqual(HEROES.map(h => h.id));
         expect(prices).toHaveLength(HEROES.length * MAX);
-        prices.slice(0, 30).forEach((p, i) => expect(p).toBe(Math.ceil(30 * 3 ** i)));
+        prices.slice(0, 30).forEach((p, i) => expect(p).toBe(Math.ceil(20 * 1.4 ** i)));
     });
 
     test('every level makes you 3.4 times as strong (attack times hit points), each its own way: Strength of Arm mostly attack, Vigour mostly hit points, Focus spell power, a goddess all alike', () => {
@@ -78,7 +78,7 @@ describe('Upgrades', () => {
 
     test("too dear: nothing's spent", () => {
         const { u, inventory } = hero('mage', 10);
-        expect(u.buy('might')).toEqual({ ok: false, error: 'poor', price: 30 });
+        expect(u.buy('might')).toEqual({ ok: false, error: 'poor', price: 20 });
         expect(inventory.essence).toBe(10);
         expect(u.level('might')).toBe(0);
     });

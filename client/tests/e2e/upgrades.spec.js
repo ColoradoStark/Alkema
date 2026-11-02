@@ -49,12 +49,12 @@ test.describe('Upgrades', () => {
         const before = await ui(page, (ui) => ({ attack: ui.inventory.stats.attack, base: ui.inventory.stats.base.attack }));
         await expect(might).toContainText(`Attack ${before.attack} → ${Math.round(before.base * 3.4 ** 0.6)}`);
         await expect(might.locator('.gear-up-reward')).toHaveText('Max it: Fireball rank II');      // (a mage knows Fireball and Orcbane from the start)
-        expect(Number(await might.locator('.gear-coins').textContent())).toBe(30);
+        expect(Number(await might.locator('.gear-coins').textContent())).toBe(20);
         await might.locator('.gear-up-buy').click();
         await expect(might.locator('.gear-up-level')).toHaveText('1/10');
-        expect(await ui(page, (ui) => ui.inventory.essence)).toBe(1e9 - 30);
+        expect(await ui(page, (ui) => ui.inventory.essence)).toBe(1e9 - 20);
         expect(await ui(page, (ui) => ui.inventory.stats.attack)).toBe(Math.round(before.base * 3.4 ** 0.6));
-        expect(Number(await might.locator('.gear-coins').textContent())).toBe(90);      // (30 x 3)
+        expect(Number(await might.locator('.gear-coins').textContent())).toBe(28);      // (20 x 1.4)
         for (let i = 2; i <= 9; i++) {
             await might.locator('.gear-up-buy').click();
             await expect(might.locator('.gear-up-level')).toHaveText(`${i}/10`);

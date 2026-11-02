@@ -16,8 +16,9 @@ export const MASTERY = 50;                   // ...and its mastery, its fourth t
 const SPELL_BOOST = 0.05;                    // a spell's power, each level past its first
 export const MAX = 10;
 // (the user's, November 2026: about ten buys up the whole road north of Dunmere, seventeen being too many; a level
-// a big step, and each three times dearer, so a pack up the climb pays for one or two)
-export const PATH_BASE = 30, PATH_GROW = 3;
+// a big step, and each 1.4 times dearer as what a pack pays grows 1.5 times: one or two a pack, the numbers in the
+// tens and hundreds up the road, not the millions, the user's, November 2026)
+export const PATH_BASE = 20, PATH_GROW = 1.4;
 export const TIMES = 3.4;
 
 /** Your own three, before the goddesses: Strength of Arm (your blows), Vigour (your hit points), Focus (your spells). */
