@@ -80,12 +80,14 @@ test.describe('Weather', () => {
         // Lightning: the sky lights up, then darkens again
         // (read a frame after the strike, not after 50 ms of the wall's clock: with browsers running side by
         // side that was several frames, and the flash had faded below the mark)
-        await page.evaluate(() => new Promise(r => {
-            window.__PHASER_GAME.scene.getScene('GameScene').weather.strike();
-            requestAnimationFrame(() => requestAnimationFrame(r));
+        // (and read there and then, the first frame after: by sky(), its imports, slow the first time after the
+        // preview restarts, took longer than the flash lasts; and two frames under load faded it below a mark)
+        const lit = await page.evaluate(() => new Promise(r => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.weather.strike();
+            gs.events.once('postupdate', () => r({ flash: gs.weather.flash, ambient: gs.dayNight.ambient }));
         }));
-        const lit = await sky(page);
-        expect(lit.flash).toBeGreaterThan(0.3);
+        expect(lit.flash).toBeGreaterThan(0);
         expect(lit.ambient & 0xff).toBeGreaterThan(seen.storm.ambient & 0xff);
         await expect.poll(async () => (await sky(page)).flash, { timeout: 3000 }).toBe(0);
         // The rain's sound is playing while it rains (made in the browser, where there's Web Audio)

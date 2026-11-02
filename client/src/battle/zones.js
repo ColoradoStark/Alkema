@@ -18,6 +18,15 @@ export const ZONES = {
     demons: { attack: 300, hp: 900, defence: 60 },
 };
 
+/**
+ * The world's zones (client/src/world/zonemap.js, the user's drawing, November 2026): each is like a level. The home
+ * zone, 30, holds Castle Dunmere where heroes start and the climb up the road north (`vanar`), the core loop to get
+ * working first (the user's). Its foes never leave it, nor any zone's theirs; and just over its every edge a warden
+ * stands, made `WALL` packs further up the climb than its last (it's not an invisible wall, but it stops you).
+ */
+export const HOME = 30;
+export const WALL = 12;
+
 /** On a climb, what the `step`th pack up it pays between them (a share each, by how long each takes to fell). */
 export function packEssence(fam, step) {
     const c = ZONES[fam].climb;

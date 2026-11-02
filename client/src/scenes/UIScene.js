@@ -18,6 +18,8 @@ import { account } from '../account/account.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
 
+const ZONE_CARD_MS = 2600;      // a zone's card stays this long
+
 export class UIScene extends Scene {
     constructor() {
         super({ key: 'UIScene' });
@@ -183,6 +185,26 @@ export class UIScene extends Scene {
         }).setOrigin(0.5, 0).setDepth(60).setAlpha(0);
         this.tweens.add({ targets: t, alpha: 1, duration: 200 });
         this.tweens.add({ targets: t, alpha: 0, delay: ms, duration: 500, onComplete: () => t.destroy() });
+    }
+
+    /**
+     * Into another zone of the world (GameScene.updateZone): a card over the map a moment, the kingdom small over the
+     * zone's name, and past the home zone a warning in red.
+     * @param {{ name: string, kingdom: string }} zone
+     * @param {boolean} [beyond]  its foes are far too strong for you yet
+     */
+    zoneCard(zone, beyond = false) {
+        this._zoneCard?.destroy();
+        const W = this.scale.width, Y = 92;
+        const bits = [
+            this.add.text(W / 2, Y - 22, `Kingdom of ${zone.kingdom}`, { fontFamily: 'Romulus', fontSize: '14px', color: '#c7b08b', stroke: '#1d131e', strokeThickness: 3 }).setOrigin(0.5),
+            this.add.text(W / 2, Y, zone.name, { fontFamily: 'Alagard', fontSize: '24px', color: '#fff6e0', stroke: '#1d131e', strokeThickness: 4, align: 'center', wordWrap: { width: W - 48 } }).setOrigin(0.5),
+        ];
+        if (beyond) bits.push(this.add.text(W / 2, Y + 24, 'Its foes are far too strong for you', { fontFamily: 'Romulus', fontSize: '14px', color: '#ff8a7a', stroke: '#1d131e', strokeThickness: 3 }).setOrigin(0.5));
+        const card = this._zoneCard = this.add.container(0, 0, bits).setDepth(58).setAlpha(0);
+        card.zone = zone.name;
+        this.tweens.add({ targets: card, alpha: 1, duration: 300 });
+        this.tweens.add({ targets: card, alpha: 0, delay: ZONE_CARD_MS, duration: 600, onComplete: () => card.destroy() });
     }
 
     /**

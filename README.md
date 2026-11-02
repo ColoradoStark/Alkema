@@ -105,6 +105,10 @@ You fight foes right where you meet them, out on the world map, in real time:
 - No more than two wind up at you at once; the rest circle, waiting their turn
 - Hits land with a moment's freeze, a flash and a knock back; struck, you can't be struck again for a moment
 
+### Kingdoms and zones
+
+The world is four kingdoms, Dunmere, Grimhold, Nightspire and Gloomhold, split into 36 zones, each like a level. Crossing into one, a card names it and its kingdom. Foes keep to their own zone and never follow you out of it. Heroes start in the zone round Castle Dunmere, where the road north is a climb: packs that fall fast at first, then too strong till you spend what they paid on upgrades. Every way out of it is guarded by a Warden, far too strong for you yet, and the card warns you as you cross.
+
 ## Spells
 
 Every class has six spells (a fighter's and a thief's are battle skills), three ranks each, with painted icons:

@@ -25,13 +25,16 @@ export const VANAR_KINDS = {
     waterbear: { ...DEMON_KINDS.brute, speed: 54, reach: 50, side: true },
     waterelemental: { ...DEMON_KINDS.warlock, speed: 50, keep: 150, windup: 750, recover: 1500, tint: WATER },
     greatbear: { ...DEMON_KINDS.brute, speed: 74, reach: 54, windup: 750, recover: 950, side: true, sheet: 'waterbear', scale: 1.2, label: 'Great Bear', chest: true },
+    // Over the home zone's every edge (zones.js `WALL`, tools/zonegen.py's wardens): a water bear grown, made far
+    // up the climb, as quick as the great bear
+    warden: { ...DEMON_KINDS.brute, speed: 74, reach: 54, windup: 700, recover: 900, side: true, sheet: 'waterbear', scale: 1.3, label: 'Warden' },
 };
 // (what a bane looks for: battle.json's races)
 const RACES = { waterelemental: 'elemental', kindredhunter: 'vanar' };
 for (const [kind, spec] of Object.entries(VANAR_KINDS)) Object.assign(spec, { anim: 'attack', race: RACES[kind] || 'beast' });
-export const VANAR_HITS = { snowchaser: 2.5, icehornet: 2, kindredhunter: 4, crystalbeetle: 6, waterbear: 7, waterelemental: 2.5, greatbear: 22 };
-export const VANAR_HURTS = { snowchaser: 0.09, icehornet: 0.08, kindredhunter: 0.14, crystalbeetle: 0.18, waterbear: 0.2, waterelemental: 0.09, greatbear: 0.22 };
-export const VANAR_PAY = { snowchaser: 0.25, icehornet: 0.25, kindredhunter: 0.45, crystalbeetle: 0.6, waterbear: 0.7, waterelemental: 0.35, greatbear: 4 };
+export const VANAR_HITS = { snowchaser: 2.5, icehornet: 2, kindredhunter: 4, crystalbeetle: 6, waterbear: 7, waterelemental: 2.5, greatbear: 22, warden: 8 };
+export const VANAR_HURTS = { snowchaser: 0.09, icehornet: 0.08, kindredhunter: 0.14, crystalbeetle: 0.18, waterbear: 0.2, waterelemental: 0.09, greatbear: 0.22, warden: 0.25 };
+export const VANAR_PAY = { snowchaser: 0.25, icehornet: 0.25, kindredhunter: 0.45, crystalbeetle: 0.6, waterbear: 0.7, waterelemental: 0.35, greatbear: 4, warden: 1 };
 
 // The packs, from Dunmere's drawbridge north: up between the castle and the sea, then out across the
 // sands west of Goldvale (worked out from the world map's walking layer; thirty in all, the user's)
@@ -51,4 +54,11 @@ export const loadVanar = (scene) => Promise.all(SHEETS.map(kind => loadFoe(scene
 
 export function forgetVanar(scene) {
     for (const kind of SHEETS) forgetFoe(scene, kind, 'north');
+}
+
+/** The wardens' sheet (the water bear's, held apart from the climb's). */
+export const loadWardens = (scene) => loadFoe(scene, 'waterbear', 'wardens');
+
+export function forgetWardens(scene) {
+    forgetFoe(scene, 'waterbear', 'wardens');
 }

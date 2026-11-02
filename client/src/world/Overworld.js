@@ -8,6 +8,7 @@
 // in [0, SIZE): when you step past an edge you're moved to the other side and
 // the camera moves with you, so nothing on screen jumps.
 
+import { zoneMap } from './zonemap.js';
 import { WORLD } from './places.js';
 import { Forest } from './Forest.js';
 
@@ -35,6 +36,7 @@ export function wrap(v) {
 /** Queue the world's files on a scene's loader. */
 export function preloadOverworld(load) {
     load.json('world', '/world/overworld.json');
+    load.json('zones', '/world/zones.json');
     // The ground and feature tiles come in several sheets (phones can't load one huge texture),
     // and the trees in frames of a size: the map gives both
     load.once('filecomplete-json-world', (key, type, data) => {
@@ -78,6 +80,7 @@ export class Overworld {
         this.cell = TILE / this.k;
         this.blocked = decodeBits(data.collision, this.cn * this.cn);
         this.sail = decodeBits(data.sail, n * n);
+        this.zones = scene.cache.json.exists('zones') ? zoneMap(scene.cache.json.get('zones')) : null;
         const groundCount = data.tilesets.ground.count;
 
         const map = scene.make.tilemap({ tileWidth: TILE, tileHeight: TILE, width: WINDOW, height: WINDOW });
@@ -233,6 +236,11 @@ export class Overworld {
     }
 
     /** The place whose icon (or a port's dock, part of the town: worldgen's PORTS) the point (a hero's feet) is touching, if any. */
+    /** The zone at (x, y) world px ({ id, name, kingdom }), or null at sea or with no zones loaded. */
+    zoneAt(x, y) {
+        return this.zones?.at(x, y) ?? null;
+    }
+
     placeAt(x, y, reach = 14) {
         const touching = ([rx, ry, rw, rh]) => {
             const dx = wrapDelta(rx + rw / 2, x), dy = wrapDelta(ry + rh / 2, y);

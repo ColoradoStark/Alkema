@@ -1,3 +1,4 @@
+import { HOME } from '../battle/zones.js';
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
@@ -170,6 +171,7 @@ export class GameScene extends Scene {
         this.updatePortraits(time, feet);
         if (!this.town && !this._changingRoom && !this.localPlayer?.sailing) this.chests.update(feet);
         this.fieldDemons.update(delta, this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
+        this.updateZone(this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         this.riverBoats.update(delta, this.world === this.overworld && !this._changingRoom ? feet : null);
         this.seaShips.update(delta, this.world === this.overworld && !this._changingRoom ? feet : null);
         // Your ship runs into the ships at sea rather than over them: the two push each other apart (at anchor,
@@ -357,6 +359,18 @@ export class GameScene extends Scene {
     }
 
     /** Walk out through an exit (a town's gate, any door) and you're in the map it leads to. */
+    /**
+     * Crossing into another of the world's zones (zones.js, the user's: each like a level), a card says which: its name
+     * and kingdom, and past the home zone that its foes are far beyond you yet. On foot only; the sea is no zone, so
+     * landing in the one you sailed from says nothing.
+     */
+    updateZone(feet) {
+        const zone = feet && this.overworld.zoneAt(feet.x, feet.y);
+        if (!zone || zone.id === this.zone?.id) return;
+        this.zone = zone;
+        this.scene.get('UIScene')?.zoneCard?.(zone, zone.id !== HOME);
+    }
+
     updateGate() {
         const me = this.localPlayer?.sprite;
         if (!this.town || !me || this._changingRoom) return;

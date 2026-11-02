@@ -38,7 +38,7 @@ const field = (page) => page.evaluate(() => {
 
 const KIND_LEADS = ['champion', 'warlord', 'greatbear'];     // (a leader's pack is six)
 const KIND_CASTERS = ['warlock', 'archer', 'waterelemental'];
-const onCoast = p => p.family !== 'vanar';      // (where heroes started: the demons' road and the orcs' coast, not Dunmere's north)
+const onCoast = p => p.family === 'demons' || p.family === 'orcs';      // (where heroes started: the demons' road and the orcs' coast, not Dunmere's north nor its wardens)
 
 const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES, PACKS: m.PACKS })));
 
@@ -78,7 +78,7 @@ test.describe('Demons on the coast', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PLACES, PACKS } = await places(page);
-        expect(PACKS.every(p => p.band.length >= 3 && p.band.length <= (p.band.some(k => KIND_LEADS.includes(k)) ? 6 : 5))).toBe(true);
+        expect(PACKS.filter(p => p.family !== 'wardens').every(p => p.band.length >= 3 && p.band.length <= (p.band.some(k => KIND_LEADS.includes(k)) ? 6 : 5))).toBe(true);     // (a warden stands alone)
         // Where new heroes start: the coast's demons are near, on three sheets (fury, brute, warlock: the champion is a brute)
         const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
         await standAt(page, spawn.x, spawn.y);
@@ -187,7 +187,7 @@ test.describe('Demons on the coast', () => {
         const r = await page.evaluate(async () => {
             const { numbers, bounty, PACKS, ZONES } = await import('/src/battle/FieldDemons.js');
             const hero = ZONES.demons;
-            const first = PACKS[0].tier, last = PACKS[PACKS.length - 1].tier;
+            const road = PACKS.filter(p => p.family === 'demons'), first = road[0].tier, last = road[road.length - 1].tier;
             return {
                 blows: numbers('fury', first, hero).hp / hero.attack,
                 tougher: numbers('brute', last, hero).hp > numbers('brute', first, hero).hp && numbers('brute', last, hero).damage > numbers('brute', first, hero).damage,
@@ -485,12 +485,14 @@ test.describe("A foe after you doesn't let go while you're near", () => {
             let growls = 0;
             const play = audio.play.bind(audio);
             audio.play = (name, o) => { if (name === 'foe_orc') growls++; return play(name, o); };
-            const f = fd.foes.find(o => o.kind === 'fury');
+            // (in its own zone, which it keeps to: an orc's in Fernwick's dales, roomy enough to be followed far from every post)
+            const f = fd.foes.find(o => o.family === 'orcs' && o.zone === 33 && !o.spec.ranged);
             for (const o of fd.foes) if (o !== f) o.stun = 1e9;
+            const mine = (x, y) => gs.overworld.zoneAt(x, y)?.id === f.zone;
             const spot = (tiles, apart) => {
-                for (let a = 0; a < Math.PI * 2; a += 0.05) {
-                    const x = f.post.x + Math.cos(a) * tiles * 32, y = f.post.y + Math.sin(a) * tiles * 32;
-                    if (!fd._open(x, y) || !fd._open(x + 50, y)) continue;
+                for (let r = tiles; r < tiles + 40; r += 2) for (let a = 0; a < Math.PI * 2; a += 0.05) {
+                    const x = f.post.x + Math.cos(a) * r * 32, y = f.post.y + Math.sin(a) * r * 32;
+                    if (!fd._open(x, y) || !fd._open(x + 50, y) || !mine(x, y) || !mine(x + 50, y)) continue;
                     if (apart && PACKS.some(p => p.family === f.family && Math.hypot(p.at[0] - x, p.at[1] - y) < apart)) continue;
                     return { x, y };
                 }
@@ -1178,12 +1180,15 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
                 f.foe.sprite.setPosition(px, py - 23);
                 Object.assign(f, { state: 'chase', cornered: 0, flank: 0, lost: false, lookT: 1e9, route: null, stuckAt: null });
                 let ok = false;
-                const t0 = performance.now();
-                while (performance.now() - t0 < 8000 && !ok) {
+                // (the first's way round, kept to its zone, is twice the one through the coast's next zone it took before;
+                // timed by the game's own clock, as far as a foe goes in a frame, not the wall's: under load it ran out)
+                let game = 0;
+                while (game < 15000 && !ok) {
                     ui.hp.now = ui.hp.max;
                     me.setPosition(qx, qy - 23); me.body.reset(me.x, me.y);
                     ok = Math.hypot(f.foe.x - qx, f.foe.y - qy) < 70 || f.state === 'windup';
                     await new Promise(r => requestAnimationFrame(r));
+                    game += Math.min(gs.game.loop.delta, 50);
                 }
                 out.push(ok);
             }
@@ -1258,7 +1263,7 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
 });
 
 test.describe('Never stuck', () => {
-    test("wherever you are on the road north and round Castle Dunmere, a foe gets to you or gives up and walks home (never put back there: the user's): none stands stuck at rock, a wall or the moat (the user's, five times: the great bear stood stuck by the castle)", async ({ page }) => {
+    test("wherever you are on the road north and round Castle Dunmere (in its zone), a foe gets to you or gives up and walks home (never put back there: the user's): none stands stuck at rock, a wall or the moat (the user's, five times: the great bear stood stuck by the castle)", async ({ page }) => {
         test.setTimeout(300000);
         await enterWorld(page);
         await expect.poll(() => field(page).then(f => f.vanar.length), { timeout: 30000 }).toBeGreaterThan(3);
@@ -1272,13 +1277,15 @@ test.describe('Never stuck', () => {
             for (const kind of ['greatbear', 'kindredhunter']) {
                 const f = fd.foes.find(o => o.kind === kind && o.family === 'vanar'), post = { ...f.post };
                 for (const o of fd.foes) if (o !== f) { o.stun = 1e12; o.foe.sprite.setPosition(0, 0); }
+                // (in its zone: it never leaves it, and out of it you're out of its reach)
+                const mine = (x, y) => fd._open(x, y) && gs.overworld.zoneAt(x, y)?.id === f.zone;
                 for (let py = 8240; py < 10600; py += 96) for (let px = 10300; px < 11700; px += 96) {
-                    if (!fd._open(px, py)) continue;
+                    if (!mine(px, py)) continue;
                     let sx, sy, tries = 0;
                     do {
                         const a = rnd() * 6.283, d = (3 + rnd() * 6) * 32;
                         sx = px + Math.cos(a) * d; sy = py + Math.sin(a) * d;
-                    } while (!fd._open(sx, sy) && ++tries < 30);
+                    } while (!mine(sx, sy) && ++tries < 30);
                     if (tries >= 30) continue;
                     f.foe.sprite.setPosition(sx, sy - fd.FEET);
                     me.setPosition(px, py - fd.FEET);
@@ -1419,5 +1426,60 @@ test.describe('Demons on the road, armed', () => {
         });
         expect(seen.walk).toMatch(/_os_walk_128_down$/);
         expect(seen.thrust).toMatch(/_os_thrust_oversize_down$/);
+    });
+});
+
+test.describe("The world's zones (the user's: each like a level)", () => {
+    test("crossing into another zone a card names it and its kingdom, and past the home zone says its foes are far too strong; a warden stands just over the edge, far beyond any hero, and doesn't follow you back over it", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await mighty(page);
+        // Started in the home zone: its card
+        const card = () => page.evaluate(() => {
+            const c = window.__PHASER_GAME.scene.getScene('UIScene')._zoneCard;
+            return c?.active ? { zone: c.zone, words: c.list.map(t => t.text) } : null;
+        });
+        const home = await page.evaluate(() => import('/src/battle/zones.js').then(m => m.HOME));
+        await expect.poll(() => card().then(c => c?.words), { timeout: 15000 }).toEqual(['Kingdom of Dunmere', 'The Dunmere Road']);
+        // A warden over the edge, and open ground in the home zone a few tiles from it
+        const spot = await page.evaluate(async (home) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld, fd = gs.fieldDemons;
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10);
+            for (const p of PACKS.filter(p => p.family === 'wardens')) {
+                const [wx, wy] = p.at;
+                for (let r = 96; r <= 192; r += 16) for (let a = 0; a < 16; a++) {
+                    const x = wx + Math.cos(a * Math.PI / 8) * r, y = wy + Math.sin(a * Math.PI / 8) * r;
+                    if (ow.zoneAt(x, y)?.id === home && open(x, y) && [16, 32, 48].every(k => ow.zoneAt(x + (x - wx) / r * k, y + (y - wy) / r * k)?.id === home))
+                        return { home: { x: x + (x - wx) / r * 48, y: y + (y - wy) / r * 48 }, warden: { x: wx, y: wy }, zone: ow.zoneAt(wx, wy) };
+                }
+            }
+            return null;
+        }, home);
+        expect(spot).not.toBeNull();
+        await standAt(page, spot.home.x, spot.home.y);
+        const warden = () => page.evaluate(({ x, y }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const f = gs.fieldDemons.foes.filter(f => f.family === 'wardens').sort((a, b) => Math.hypot(a.post.x - x, a.post.y - y) - Math.hypot(b.post.x - x, b.post.y - y))[0];
+            return f && { state: f.state, hp: f.maxHp, damage: f.damage, zone: f.zone, at: gs.overworld.zoneAt(f.foe.x, f.foe.y)?.id, label: f.foe.nameText?.text };
+        }, spot.warden);
+        await expect.poll(() => warden().then(w => w?.state), { timeout: 30000 }).toBe('post');
+        // Into its zone: its card, the warning, and it comes for you
+        await standAt(page, spot.warden.x + 40, spot.warden.y + 20);
+        await expect.poll(() => card().then(c => c?.words), { timeout: 10000 }).toEqual([`Kingdom of ${spot.zone.kingdom}`, spot.zone.name, 'Its foes are far too strong for you']);
+        await expect.poll(() => warden().then(w => w.state), { timeout: 10000 }).not.toBe('post');
+        const w = await warden();
+        expect(w.label).toBe('Warden');
+        expect(w.zone).toBe(spot.zone.id);
+        // (a new hero's first foe up the climb takes a few blows of theirs: a warden, millions)
+        expect(w.hp / 7).toBeGreaterThan(1e6);
+        // Back over the edge: it turns for home and never sets foot in the home zone
+        await standAt(page, spot.home.x, spot.home.y);
+        for (let k = 0; k < 15; k++) {
+            const now = await warden();
+            expect(now.at, 'never over its edge').not.toBe(home);
+            await page.waitForTimeout(200);
+        }
+        await expect.poll(() => warden().then(w => w.state), { timeout: 10000 }).toMatch(/home|post/);
     });
 });

@@ -30,7 +30,8 @@
 
 import { Demon, DEMONS, DEMON_KINDS, UNIT, loadDemons } from './Demons.js';
 import { Orc, ORC_KINDS, ORC_HITS, ORC_HURTS, ORC_PAY, ORC_PACKS, loadOrcs, forgetOrcs } from './FieldOrcs.js';
-import { VANAR_KINDS, VANAR_HITS, VANAR_HURTS, VANAR_PAY, VANAR_PACKS, loadVanar, forgetVanar } from './FieldVanar.js';
+import { VANAR_KINDS, VANAR_HITS, VANAR_HURTS, VANAR_PAY, VANAR_PACKS, loadVanar, forgetVanar, loadWardens, forgetWardens } from './FieldVanar.js';
+import WARDENS from './wardens.json';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -39,7 +40,7 @@ import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, packEssence, strengthFor, tooStrong } from './zones.js';
+import { ZONES, HOME, WALL, packEssence, strengthFor, tooStrong } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -122,7 +123,9 @@ export const PACKS = [
     { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
 ].map((p, k, all) => ({ ...p, family: 'demons', tier: 1 + (TIER_END - 1) * k / (all.length - 1) }))
     .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })))
-    .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })));
+    .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })))
+    // (a warden over the home zone's every edge, tools/zonegen.py: one each, made WALL packs up the climb past its last)
+    .concat(WARDENS.map(w => ({ at: w.at, band: ['warden'], family: 'wardens', tier: 1, step: VANAR_PACKS.length - 1 + WALL })));
 
 /** Each band's bodies: their sheets loaded and let go, and one made (feet at x, y). */
 const FAMILIES = {
@@ -143,6 +146,13 @@ const FAMILIES = {
         forget: (scene) => forgetVanar(scene),
         make: (scene, x, y, kind, spec) => new Orc(scene, x, y, spec.sheet || kind, spec.label),
         sheet: (kind) => KINDS[kind].sheet || kind,
+    },
+    wardens: {
+        load: (scene) => loadWardens(scene),
+        forget: (scene) => forgetWardens(scene),
+        make: (scene, x, y, kind, spec) => new Orc(scene, x, y, spec.sheet, spec.label),
+        sheet: () => 'waterbear',
+        climb: 'vanar',         // (made on the climb's scale)
     },
 };
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
@@ -171,7 +181,7 @@ export function numbers(kind, tier, hero, step = 0) {
 /** A climb's foe's share of its pack's gold, `combo` kills in a row. */
 export function climbBounty(kind, place, combo = 1) {
     const band = PACKS[place.pack].band, all = band.reduce((n, k) => n + HITS[k], 0);
-    return Math.max(1, Math.round(packEssence(place.family, place.step) * HITS[kind] / all * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
+    return Math.max(1, Math.round(packEssence(FAMILIES[place.family].climb || place.family, place.step) * HITS[kind] / all * Math.min(COMBO_MAX, 1 + COMBO_STEP * (combo - 1))));
 }
 
 /** The gold a `kind` is worth `tier` along the road, the cheapest next upgrade costing `price`, `combo` kills in a row. */
@@ -296,9 +306,12 @@ export class FieldDemons {
         const v = me?.sprite?.body?.velocity;
         if (v && (v.x || v.y)) this._heading = { x: v.x / Math.hypot(v.x, v.y), y: v.y / Math.hypot(v.x, v.y) };     // (the way you last went)
         if (!out) this._yours(delta);
+        // Out of a foe's zone, you're out of its reach: it doesn't follow you over (the user's)
+        const yours = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id ?? null;
         for (const f of this.foes) {
             if (f.hp <= 0) continue;
-            this._think(f, delta, dt, out || this.you.hidden > 0 ? null : feet, out);
+            const gone = yours !== null && f.zone !== null && yours !== f.zone;
+            this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
         }
@@ -350,8 +363,10 @@ export class FieldDemons {
                 if (spec.scale) foe.grow(spec.scale);
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
-                const { hp, damage } = numbers(p.kind, p.tier, ZONES[fam], p.step);
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+                const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
+                // (the zone it keeps to: none known, it goes where it likes)
+                const zone = this.scene.overworld?.zoneAt?.(at.x, at.y)?.id ?? null;
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
@@ -542,7 +557,7 @@ export class FieldDemons {
         f.foe.die();
         this._reward(f);
         // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
-        if (ZONES[f.family].climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
+        if (ZONES[f.family]?.climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
     }
 
@@ -559,7 +574,7 @@ export class FieldDemons {
     _warn(feet) {
         this._warned ??= new Set();
         for (const [pack, p] of PACKS.entries()) {
-            if (!ZONES[p.family].climb || !p.step || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;
+            if (!ZONES[p.family]?.climb || !p.step || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;
             if (PLACES.every(q => q.pack !== pack || this.slain.has(q.i))) continue;
             // (a pack below it still standing and nearer you is the one you're at: the packs stand about eight tiles
             // apart, and fighting one, the user was told the one beyond it was too strong, just after upgrading)
@@ -584,7 +599,7 @@ export class FieldDemons {
         const now = this.scene.time.now;
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
-        const { x, y } = f.foe, worth = ZONES[f.family].climb ? climbBounty(f.kind, PLACES[f.i], this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
+        const { x, y } = f.foe, worth = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, PLACES[f.i], this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
         // Its essence, all it's worth, for the Upgrade page (the user's: gold is for town), and a little gold
         inv?.gather(worth);
         this._sparkle(x, y - f.foe.tall / 2, 0xb884ff, 14);
@@ -610,7 +625,7 @@ export class FieldDemons {
     // ------------------------------------------------ them
 
     /** A demon's mind, each frame: `you` your feet (null if it can't see you: hidden in smoke, or `out`, fallen). */
-    _think(f, delta, dt, you, out) {
+    _think(f, delta, dt, you, out, gone = false) {
         const { foe } = f;
         f.cd -= delta;
         f.steady -= delta;
@@ -626,7 +641,7 @@ export class FieldDemons {
             return this._step(f, dx / d, dy / d, dt);
         }
         // You're hidden (Smoke Bomb, Vanish): one that was after you stands, lost
-        if (!you && !out && f.state !== 'post' && f.state !== 'home') {
+        if (!you && !out && !gone && f.state !== 'post' && f.state !== 'home') {
             if (f.state === 'windup') this._calm(f);
             return this._step(f, 0, 0, dt);
         }
@@ -824,11 +839,11 @@ export class FieldDemons {
         if (!this._open(foe.x, foe.y) || !this._open(to.x, to.y)) return false;
         if ((f.clearT = (f.clearT || 0) - delta) <= 0) {
             f.clearT = CLEAR_MS;
-            f.clear = this._straight(foe, to);
+            f.clear = this._straight(foe, to, f);
             f.routeAge = (f.routeAge || 0) + CLEAR_MS;
             if (f.clear) f.route = null;
             else if (!f.route || (f.routeAge >= ROUTE_EVERY && Math.hypot(f.routeTo.x - to.x, f.routeTo.y - to.y) > 2 * TILE)) {
-                f.route = this._route(foe, to, reach);
+                f.route = this._route(foe, to, reach, f);
                 f.routeTo = { x: to.x, y: to.y };
                 f.routeAge = 0;
                 if (!f.route) return 'none';
@@ -847,11 +862,16 @@ export class FieldDemons {
         return true;
     }
 
-    /** Can feet walk straight from `a` to `b`? */
-    _straight(a, b) {
-        const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8);
-        for (let i = 1; i <= n; i++) if (!this._open(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n)) return false;
+    /** Can feet walk straight from `a` to `b` (`f`'s, keeping to its zone)? */
+    _straight(a, b, f = null) {
+        const walk = this._walk(f), n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8);
+        for (let i = 1; i <= n; i++) if (!walk(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n)) return false;
         return true;
+    }
+
+    /** Where `f` may walk: open ground in its zone (anywhere open, for one out of it: it walks back in). */
+    _walk(f) {
+        return f && this._mine(f, f.foe.x, f.foe.y) ? (x, y) => this._open(x, y) && this._mine(f, x, y) : (x, y) => this._open(x, y);
     }
 
     /** Trying to walk, it's gone less than half a tile in STALL_MS. */
@@ -868,13 +888,16 @@ export class FieldDemons {
     }
 
     /**
-     * After you GIVE_UP_MS getting no nearer (by a tile) and never beside you nor winding up: true, it gives up.
+     * After you GIVE_UP_MS getting no nearer (by a tile, or along its way round) and never beside you nor winding up: true, it gives up.
      * (Close by with the way clear, waiting its turn or keeping its distance, it's still in the fight.)
      */
     _idle(f, d, delta) {
         const near = f.clear && d < Math.max(f.spec.keep || 0, f.spec.reach || REACH) + 100;
-        if (!f.idle || near || d < f.idle.best - TILE) {
-            f.idle = { best: d, t: 0 };
+        // (going round by a way it found, each step along it is getting nearer, however far that way first leads
+        // from you: kept to its zone, a way round can, and it gave up halfway)
+        const left = f.route?.length ?? Infinity;
+        if (!f.idle || near || d < f.idle.best - TILE || left < f.idle.left - 2) {
+            f.idle = { best: d, left, t: 0 };
             return false;
         }
         return (f.idle.t += delta) > GIVE_UP_MS;
@@ -884,12 +907,12 @@ export class FieldDemons {
      * A way on foot from `a` to `b` (feet) over the world's map, as points to walk through, or null if there's none
      * near: a search on a grid of ROUTE_CELL squares, no further than ROUTE_REACH beyond the two.
      */
-    _route(a, b, reach = ROUTE_REACH) {
-        const G = ROUTE_CELL, cell = (p) => [Math.round(p.x / G), Math.round(p.y / G)];
+    _route(a, b, reach = ROUTE_REACH, f = null) {
+        const walk = this._walk(f), G = ROUTE_CELL, cell = (p) => [Math.round(p.x / G), Math.round(p.y / G)];
         const [sx, sy] = cell(a), [tx, ty] = cell(b), pad = Math.ceil(reach / G);
         const x0 = Math.min(sx, tx) - pad, y0 = Math.min(sy, ty) - pad, w = Math.abs(sx - tx) + 2 * pad + 1, h = Math.abs(sy - ty) + 2 * pad + 1;
         const from = new Int32Array(w * h).fill(-2), at = (x, y) => (y - y0) * w + (x - x0);
-        const ok = (x, y) => x >= x0 && y >= y0 && x < x0 + w && y < y0 + h && from[at(x, y)] === -2 && this._open(x * G, y * G);
+        const ok = (x, y) => x >= x0 && y >= y0 && x < x0 + w && y < y0 + h && from[at(x, y)] === -2 && walk(x * G, y * G);
         const q = [[sx, sy]];
         from[at(sx, sy)] = -1;
         for (let k = 0; k < q.length; k++) {
@@ -942,16 +965,18 @@ export class FieldDemons {
         foe.walking = !!(dx || dy);
         const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
         const x0 = s.x, y0 = s.y, x = s.x + dx * v, y = s.y + dy * v;
-        if (!this._open(s.x, s.y + FEET)) s.setPosition(x, y);         // (pushed into rock: it walks out)
+        // (pushed into rock, or over its zone's edge: it walks out)
+        const may = this._walk(f);
+        if (!this._open(s.x, s.y + FEET)) s.setPosition(x, y);
         else {
-            if (this._open(x, s.y + FEET)) s.x = x;
-            if (this._open(s.x, y + FEET)) s.y = y;
+            if (may(x, s.y + FEET)) s.x = x;
+            if (may(s.x, y + FEET)) s.y = y;
         }
         if (v && (dx || dy) && s.x === x0 && s.y === y0) {
             // Walked square into rock (a cliff's diagonal stopped both ways at once): along it instead
             for (const a of SLIDE) {
                 const c = Math.cos(a), n = Math.sin(a), rx = dx * c - dy * n, ry = dx * n + dy * c;
-                if (this._open(x0 + rx * v, y0 + ry * v + FEET)) {
+                if (may(x0 + rx * v, y0 + ry * v + FEET)) {
                     s.x = x0 + rx * v;
                     s.y = y0 + ry * v;
                     break;
@@ -1084,6 +1109,13 @@ export class FieldDemons {
     }
 
     /** Can feet stand at (x, y) on the world's map? */
+    /** Is (x, y) in the zone `f` keeps to (or the sea, or anywhere for one that keeps to none)? */
+    _mine(f, x, y) {
+        if (f.zone === null) return true;
+        const z = this.scene.overworld?.zoneAt?.(x, y);
+        return !z || z.id === f.zone;
+    }
+
     _open(x, y) {
         return !this.scene.overworld.boxBlocked(x - 9, y - 5, 18, 10);
     }
