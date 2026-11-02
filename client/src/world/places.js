@@ -137,12 +137,8 @@ export const WORLD = {
   {
    "name": "Morvath",
    "type": "city",
-   "x": 13334,
-   "y": 4528,
-   "door": [
-    416,
-    141
-   ],
+   "x": 13456,
+   "y": 4588,
    "rect": [
     13344,
     4384,

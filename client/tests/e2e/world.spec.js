@@ -402,7 +402,7 @@ test.describe('Living world', () => {
         expect(result).toEqual({ landings: true, stuck: [] });
     });
 
-    test('Morvath stands on the open sea, its gate a water gate: out of reach on foot, you come out of it on dry ground by its walls', async ({ page }) => {
+    test('Morvath stands on the open sea, its gate a water gate: out of reach on foot, you come out of it onto the quay that runs round its walls to the shore', async ({ page }) => {
         // (the user's: the water to its south, the far shore well off; the Watch's view of it went with the strait)
         await enterWorld(page);
         const result = await page.evaluate(async () => {
@@ -424,11 +424,23 @@ test.describe('Living world', () => {
             const place = WORLD.places.find(p => p.name === 'Morvath');
             const [rx, ry, rw, rh] = place.rect;
             const south = [0.2, 0.5, 0.8].every(f => blocked[cell(rx + rw * f, ry + rh + 40)]);    // the sea under its south wall
-            return { walkToMorvath: !!seen[cell(place.x, place.y)], door: !blocked[cell(place.x, place.y)],
+            // from its gate along the quay to the shore on foot: far more ground to walk than the quay alone
+            const fromGate = new Uint8Array(n * n), q = [cell(place.x, place.y)];
+            fromGate[q[0]] = 1;
+            let walked = 0;
+            while (q.length && walked < 4000) {
+                const i = q.pop(), x = i % n, y = (i - x) / n;
+                walked++;
+                for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const j = ((y + dy + n) % n) * n + ((x + dx + n) % n);
+                    if (!blocked[j] && !fromGate[j]) { fromGate[j] = 1; q.push(j); }
+                }
+            }
+            return { walkToMorvath: !!seen[cell(place.x, place.y)], door: !blocked[cell(place.x, place.y)], ashore: walked >= 4000,
                      asks: gs.world.placeAt(place.x, place.y)?.name, south, dock: !!place.dock,
                      lookout: WORLD.vistas.some(v => v.name === 'Morvath') };
         });
-        expect(result).toEqual({ walkToMorvath: false, door: true, asks: 'Morvath', south: true, dock: false, lookout: false });
+        expect(result).toEqual({ walkToMorvath: false, door: true, ashore: true, asks: 'Morvath', south: true, dock: false, lookout: false });
     });
 
     test("across the channel from the south-west beach, Wreckers' Cave is in view but out of reach on foot", async ({ page }) => {
