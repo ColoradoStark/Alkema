@@ -1443,3 +1443,25 @@ release (https://github.com/crawl/tiles, releases/Ancient/Oct-5-2010, and the
 bow from releases/Nov-2015;
 artists: https://github.com/crawl/tiles/blob/master/ARTISTS.md).
   License: CC0
+
+======================================================================
+WILDLIFE
+======================================================================
+
+world/wildlife/gull.png and raven.png (gulls over the coasts, ravens over
+the cursed lands): "LPC Raven and Seagull", posted by Reemax, art by Tuomo
+Untinen.
+  License: CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-raven-and-seagull
+
+world/wildlife/shorebird.png, crow.png and sparrow.png (birds on the beaches,
+in the cursed lands and in the fields): "[LPC] Birds" by bluecarrot16.
+  License: CC-BY 4.0 / CC-BY-SA 4.0 / CC-BY 3.0 / CC-BY-SA 3.0 / OGA-BY 3.0 /
+  GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-birds
+
+world/wildlife/fox.png, arcticfox.png, doe.png and buck.png (foxes in the
+fields and the snows, deer at the woods' edge): "[LPC] bears, deer, lions and
+more" by tapatilorenzo (LPC Spring 2022).
+  License: CC-BY 4.0
+  https://opengameart.org/content/lpc-bears-deer-lions-and-more

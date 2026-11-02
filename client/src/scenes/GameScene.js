@@ -17,6 +17,8 @@ import { Chests } from '../battle/Chests.js';
 import { FieldDemons } from '../battle/FieldDemons.js';
 import { RiverBoats } from '../world/RiverBoats.js';
 import { SeaShips, capsule } from '../world/SeaShips.js';
+import { Wildlife } from '../world/Wildlife.js';
+import { Ambience } from '../world/Ambience.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 
@@ -106,11 +108,16 @@ export class GameScene extends Scene {
         this.riverBoats = new RiverBoats(this);
         // Ships going by off the coasts (scenery)
         this.seaShips = new SeaShips(this);
+        // Small life about the world, and its sounds: the sea, the wind, the woods, birds, crickets (scenery)
+        this.wildlife = new Wildlife(this);
+        this.ambience = new Ambience(this);
         this.events.once('shutdown', () => {
             this.chests.destroy();
             this.fieldDemons.destroy();
             this.riverBoats.destroy();
             this.seaShips.destroy();
+            this.wildlife.destroy();
+            this.ambience.destroy();
         });
         // Your ship, at anchor off Castle Dunmere, bow out to sea
         this.mooredShip = new Ship(this, WORLD.boat.x, WORLD.boat.y, 15, WORLD.boat.heading ?? Math.PI / 2);
@@ -174,6 +181,9 @@ export class GameScene extends Scene {
         this.updateZone(this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         this.riverBoats.update(delta, this.world === this.overworld && !this._changingRoom ? feet : null);
         this.seaShips.update(delta, this.world === this.overworld && !this._changingRoom ? feet : null);
+        const outside = this.world === this.overworld && !this._changingRoom ? feet : null;
+        this.wildlife.update(delta, outside, this.overworld);
+        this.ambience.update(delta, outside, this.overworld, !!this.localPlayer?.sailing);
         // Your ship runs into the ships at sea rather than over them: the two push each other apart (at anchor,
         // she doesn't move: they go round her)
         if (this.seaShips.loaded && this.world === this.overworld) {

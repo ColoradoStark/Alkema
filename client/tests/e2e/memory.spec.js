@@ -30,6 +30,8 @@ async function enterWorld(page) {
     });
     // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    // No wildlife of itself: a deer coming by as a place is weighed would be counted against it (its own case below)
+    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').wildlife.quiet = true; });
     // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
     await page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
@@ -273,6 +275,49 @@ test.describe('Memory', () => {
         expect(own).toBeLessThan(1);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('river-boats'))).toBe(false);
+    });
+
+    test("the wildlife: each kind's sheet comes as one appears, and goes a while after you've left them behind", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        const wild = () => page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('wild-')).sort());
+        await go(6320, 11120);
+        const base = await settled(page);
+        // every kind, a few at a time (as many as come at once), each where it stands
+        const kinds = ['fox', 'doe', 'buck', 'arcticfox', 'sparrow', 'shorebird', 'crow', 'gull', 'raven'];
+        let own = 0;
+        for (const kind of kinds) {
+            await expect.poll(() => page.evaluate((kind) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite, w = gs.wildlife;
+                for (const c of w.critters) w._drop(c);
+                w.critters = [];
+                const how = ['gull', 'raven'].includes(kind) ? 'circle' : 'ground';
+                for (let i = 0; i < 40; i++) {
+                    if (w.spawn(kind, me.x + 200 + (Math.random() - 0.5) * i * 8, me.y + (Math.random() - 0.5) * i * 8, how, 1)) return true;
+                }
+                return false;
+            }, kind), { timeout: 15000 }).toBe(true);
+            own = await page.evaluate(() => {
+                const t = window.__PHASER_GAME.textures;
+                return t.getTextureKeys().filter(k => k.startsWith('wild-')).reduce((mb, k) => { const s = t.get(k).source[0]; return mb + s.width * s.height * 4 / 2 ** 20; }, 0);
+            });
+        }
+        expect(await wild()).toEqual(kinds.map(k => `wild-${k}`).sort());
+        // walk far off: they're let go at once, their sheets FORGET_MS after
+        await go(6320 + 2400, 11120);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').wildlife.critters.length)).toBe(0);
+        await go(6320, 11120);
+        await expect.poll(wild, { timeout: 40000 }).toEqual([]);
+        const after = await settled(page);
+        console.log('the wildlife, every kind', +own.toFixed(2), 'MB');
+        expect(own).toBeLessThan(3);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.anims.toJSON().anims.filter(a => a.key.startsWith('wild-')).length)).toBe(0);
     });
 
     test("the ships at sea: their picture comes as you near the coast and goes when you head inland", async ({ page }) => {
