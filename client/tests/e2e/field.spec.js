@@ -579,8 +579,9 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         await page.evaluate(() => {
-            const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
-            Object.defineProperty(stats, 'attack', { value: 5, configurable: true, writable: true });      // (a new hero, the weakest sort)
+            // (weaker than any new hero: told only when short of the pack below too; as strong as this whatever the
+            // hero's stats come to, which arrive after you're in)
+            window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => 3 * 16;
         });
         const { PACKS, PLACES } = await places(page);
         const second = PACKS.find(p => p.family === 'vanar' && p.step === 1);
@@ -628,10 +629,7 @@ test.describe('The climb north of Dunmere (after Clicker Heroes)', () => {
         // Strong enough for the second pack, not the third
         await page.evaluate(async () => {
             const { strengthFor } = await import('/src/battle/zones.js');
-            const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
-            Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 20 }, configurable: true, writable: true });
-            ui.hp.max = 20; ui.hp.now = 20;
-            Object.defineProperty(stats, 'attack', { value: Math.ceil(strengthFor('vanar', 1) * 1.2 / 20), configurable: true, writable: true });
+            window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => strengthFor('vanar', 0) * 1.2;
         });
         // the first pack beaten; on the second's ground, nearer it than the third, within eight tiles of the third
         const spot = await page.evaluate(([a, b, firsts]) => {

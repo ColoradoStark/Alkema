@@ -541,7 +541,9 @@
 
 /* ---------- Upgrade: the heroes, as Clicker Heroes lists them ---------- */
 
+/* (never squeezed: the list is a scrolling column, and it crushed the one you're on to its least, its words over its frame) */
 .gear-up {
+    flex: none;
     display: flex;
     align-items: center;
     gap: 7px;

@@ -91,6 +91,20 @@ test.describe('Upgrades', () => {
         await expect(vigour.locator('.gear-up-level')).toHaveText('1/10');
     });
 
+    test("the one you're on holds all it says inside its frame, on a phone (the user's: its words spilled out over the gold border, squeezed by the list)", async ({ page }) => {
+        test.setTimeout(90000);
+        await page.setViewportSize({ width: 430, height: 932 });
+        await enterWorld(page);
+        await asMage(page, 1e6);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').gear.openUpgrades());
+        const spill = await page.locator('.gear-up.is-current').evaluate((row) => {
+            const box = row.getBoundingClientRect();
+            return [...row.querySelectorAll('*')].map(e => e.getBoundingClientRect())
+                .filter(r => r.height && (r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5)).length;
+        });
+        expect(spill).toBe(0);
+    });
+
     test('the goddesses: every one shown, her picture there to be shown, Gaia last', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

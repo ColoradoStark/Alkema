@@ -31,3 +31,12 @@ export function strengthFor(fam, step) {
     const z = ZONES[fam], c = z.climb;
     return z.attack * c.hp ** step * z.hp * c.hurt ** step;
 }
+
+/**
+ * Whether the `step`th pack up a climb is too strong for a hero this strong: short of even what the pack below it
+ * was made for (the user's ranger, a third of the second pack's mark, was told so and beat it unupgraded; a whole
+ * pack short is what fells you).
+ */
+export function tooStrong(fam, step, strength) {
+    return step > 0 && strength < strengthFor(fam, step - 1);
+}

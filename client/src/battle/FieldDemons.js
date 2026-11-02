@@ -44,7 +44,7 @@ import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, packEssence, strengthFor } from './zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -567,7 +567,7 @@ export class FieldDemons {
             if (PACKS.some((o, k) => o.family === p.family && o.step < p.step && Math.hypot(o.at[0] - feet.x, o.at[1] - feet.y) < far
                 && PLACES.some(q => q.pack === k && !this.slain.has(q.i)))) continue;
             this._warned.add(pack);
-            if (this._strength() >= strengthFor(p.family, p.step)) continue;
+            if (!tooStrong(p.family, p.step, this._strength())) continue;
             const ui = this.scene.scene.get('UIScene');
             const words = 'These foes are too strong for you. Upgrade first!';
             audio.play('error', { volume: 0.5 });

@@ -3,7 +3,7 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, packEssence, strengthFor } from '../../src/battle/zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong } from '../../src/battle/zones.js';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
 
@@ -66,5 +66,12 @@ describe('The climb north of Dunmere', () => {
         }
         for (const k of toFell) { expect(k).toBeGreaterThan(0.25); expect(k).toBeLessThan(2); }
         for (const k of toFall) { expect(k).toBeGreaterThan(0.5); expect(k).toBeLessThan(4); }
+    });
+
+    test("told a pack is too strong only when it is: short of even the pack below it (the user's ranger, attack 8 and 17 hit points, was told the second was too strong and beat it unupgraded)", () => {
+        expect(tooStrong('vanar', 1, 8 * 17)).toBe(false);
+        expect(tooStrong('vanar', 1, strengthFor('vanar', 0) - 1)).toBe(true);
+        expect(tooStrong('vanar', 2, 8 * 17)).toBe(true);
+        expect(tooStrong('vanar', 0, 1)).toBe(false);       // (the first is for anyone)
     });
 });
