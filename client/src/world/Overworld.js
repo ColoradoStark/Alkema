@@ -232,14 +232,13 @@ export class Overworld {
         this.scene.dayNight?.setOff(this.lamps, !on);
     }
 
-    /** The place whose icon the point (a hero's feet) is touching, if any. */
+    /** The place whose icon (or a port's dock, part of the town: worldgen's PORTS) the point (a hero's feet) is touching, if any. */
     placeAt(x, y, reach = 14) {
-        for (const p of WORLD.places) {
-            const [rx, ry, rw, rh] = p.rect;
+        const touching = ([rx, ry, rw, rh]) => {
             const dx = wrapDelta(rx + rw / 2, x), dy = wrapDelta(ry + rh / 2, y);
-            if (Math.abs(dx) <= rw / 2 + reach && Math.abs(dy) <= rh / 2 + reach) return p;
-        }
-        return null;
+            return Math.abs(dx) <= rw / 2 + reach && Math.abs(dy) <= rh / 2 + reach;
+        };
+        return WORLD.places.find(p => touching(p.rect) || (p.dock && touching(p.dock))) ?? null;
     }
 
     /**

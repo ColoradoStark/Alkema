@@ -46,18 +46,18 @@ const wrapAngle = a => ((a + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
 const LANE_SPEED = [46, 46, 48, 44, 50];
 export const SHIPS = [
     { lane: 0, kind: 'merchant', phase: 0.05 },
-    { lane: 0, kind: 'raider', phase: 0.38 },
-    { lane: 0, kind: 'merchant', phase: 0.71 },
+    { lane: 0, kind: 'raider', phase: 0.30 },
+    { lane: 0, kind: 'merchant', phase: 0.55 },
+    { lane: 0, kind: 'merchant', phase: 0.80 },
     { lane: 1, kind: 'merchant', phase: 0.15 },
-    { lane: 1, kind: 'raider', phase: 0.48 },
-    { lane: 1, kind: 'merchant', phase: 0.81 },
+    { lane: 1, kind: 'raider', phase: 0.40 },
+    { lane: 1, kind: 'merchant', phase: 0.65 },
+    { lane: 1, kind: 'raider', phase: 0.90 },
     { lane: 2, kind: 'merchant', phase: 0.25 },
     { lane: 2, kind: 'pirate', phase: 0.58 },
     { lane: 2, kind: 'raider', phase: 0.91 },
     { lane: 3, kind: 'merchant', phase: 0.35 },
-    { lane: 4, kind: 'merchant', phase: 0.10 },
-    { lane: 4, kind: 'pirate', phase: 0.43 },
-    { lane: 4, kind: 'raider', phase: 0.76 },
+    { lane: 4, kind: 'pirate', phase: 0.43 },      // (a short run now, Gull's Rest's dock side to Morvath's: one ship)
 ].map(s => ({ ...s, speed: LANE_SPEED[s.lane] }));
 const OARED = new Set(['raider']);
 

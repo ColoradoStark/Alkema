@@ -78,8 +78,12 @@ test.describe('Weather', () => {
         expect(seen.storm.drops).toBeGreaterThan(seen.normal.drops);
         expect(seen.storm.ambient).not.toBe(0xffffff);          // noon, and the sky's grey
         // Lightning: the sky lights up, then darkens again
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').weather.strike());
-        await page.waitForTimeout(50);
+        // (read a frame after the strike, not after 50 ms of the wall's clock: with browsers running side by
+        // side that was several frames, and the flash had faded below the mark)
+        await page.evaluate(() => new Promise(r => {
+            window.__PHASER_GAME.scene.getScene('GameScene').weather.strike();
+            requestAnimationFrame(() => requestAnimationFrame(r));
+        }));
         const lit = await sky(page);
         expect(lit.flash).toBeGreaterThan(0.3);
         expect(lit.ambient & 0xff).toBeGreaterThan(seen.storm.ambient & 0xff);
@@ -105,7 +109,10 @@ test.describe('Weather', () => {
         await enterWorld(page);
         await page.evaluate(async () => {
             const { WORLD } = await import('/src/world/places.js');
-            await window.__PHASER_GAME.scene.getScene('GameScene').enterPlace(WORLD.places.find(p => p.name === "Gull's Rest"));
+            // (entered with only its name and doorstep, as tests and some of the game's own calls do: the sky
+            // looks the place up by name; a place with no rect once threw every frame and froze the game)
+            const { name, x, y } = WORLD.places.find(p => p.name === "Gull's Rest");
+            await window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name, x, y });
         });
         await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.town && !gs._changingRoom; }, null, { timeout: 60000 });
         const street = await page.evaluate(async () => {

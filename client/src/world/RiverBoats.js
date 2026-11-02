@@ -84,12 +84,14 @@ export class RiverBoats {
         this.scene = scene;
         const data = scene.cache.json.get('world')?.riverBoats;
         this.image = data?.image;
+        this.frame = data?.frame || [104, 64];      // boats.png: a frame for each look, the river's first
+        const north = Math.max(0, (data?.looks || []).indexOf('north'));
         this.routes = (data?.routes || []).map(course);
         // (each river's boats as fast as makes its round as long as the longer's, so the two never drift into step)
         const longest = Math.max(...this.routes.map(r => r.length));
         for (const r of this.routes) Object.assign(r, { out: DOWN * r.length / longest, back: UP * r.length / longest });
-        // ...and the ferries straight across the water, as fast either way
-        for (const r of (data?.ferries || []).map(course)) this.routes.push(Object.assign(r, { out: FERRY, back: FERRY, ferry: true }));
+        // ...and the ferries straight across the water, as fast either way, in the north's tarred black (the user's: the far north's boats darker)
+        for (const r of (data?.ferries || []).map(course)) this.routes.push(Object.assign(r, { out: FERRY, back: FERRY, ferry: true, look: north }));
         this.boats = this.routes.length ? BOATS.filter(b => this.routes[b.route]).map(b => ({
             ...b, s: 0, way: 1, waiting: false, side: null, heading: null,
             t: Math.random() * 10, stroke: Math.random(), trail: 0, ripple: 0, sprite: null, last: null,
@@ -119,15 +121,15 @@ export class RiverBoats {
             if (!this.up) return scene.textures.remove(KEY);      // (gone from the river while it came)
             this.foam = new Foam(scene);
             for (const b of this.boats) {
-                b.sprite = scene.add.image(0, 0, KEY).setDepth(DEPTH.ground + 2);
+                b.sprite = scene.add.image(0, 0, KEY, this.routes[b.route].look || 0).setDepth(DEPTH.ground + 2);
                 b.last = null;
             }
             this.loaded = true;
         };
         if (scene.textures.exists(KEY)) return make();
         this._coming = true;
-        scene.load.once(`filecomplete-image-${KEY}`, make);
-        scene.load.image(KEY, `/world/${this.image}`);
+        scene.load.once(`filecomplete-spritesheet-${KEY}`, make);
+        scene.load.spritesheet(KEY, `/world/${this.image}`, { frameWidth: this.frame[0], frameHeight: this.frame[1] });
         scene.load.start();
     }
 

@@ -242,6 +242,34 @@ test.describe('Living world', () => {
         expect((await prompt()).visible).toBe(false);
     });
 
+    test("a port stands on the water, its dock joined to its icon: the dock asks you in, and its boats stop off the dock's head", async ({ page }) => {
+        // (the user's, November 2026: towns the boats use on the water's edge; a dock apart from its town
+        // was taken for somewhere to board a ship, so a dock is part of the town)
+        await enterWorld(page);
+        const ports = await page.evaluate(async () => {
+            const { WORLD } = await import('/src/world/places.js');
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const json = gs.cache.json.get('world');
+            const ends = [...json.seaShips.lanes.flatMap(l => [[l[0], l[1]], [l[l.length - 2], l[l.length - 1]]]),
+                ...json.riverBoats.ferries.flatMap(f => [[f[0], f[1]], [f[f.length - 3], f[f.length - 2]]])];
+            const wrap = d => { const s = WORLD.size; return ((d % s) + s * 1.5) % s - s / 2; };
+            return WORLD.places.filter(p => p.dock).map(p => {
+                const [x, y, w, h] = p.rect, [dx, dy, dw, dh] = p.dock;
+                const joined = dx <= x + w && dx + dw >= x && dy <= y + h && dy + dh >= y;   // overlapping or touching the icon
+                const mid = [dx + dw / 2, dy + dh / 2];
+                const asks = gs.world.placeAt(mid[0], mid[1])?.name;
+                const berth = Math.min(...ends.map(([ex, ey]) => Math.hypot(wrap(ex - mid[0]), wrap(ey - mid[1]))));
+                return { name: p.name, joined, asks, berth: Math.round(berth) };
+            });
+        });
+        expect(ports.map(p => p.name).sort()).toEqual(['Ashby', 'Gull\'s Rest', 'Morvath', 'Ravenford', 'Saltmere', 'Seacombe', 'Tumbledown']);
+        for (const p of ports) {
+            expect(p, p.name).toMatchObject({ joined: true, asks: p.name });
+            // (berthed off its head where there's room; where there isn't (Saltmere's, Morvath's), waiting just offshore)
+            expect(p.berth, `${p.name}: a boat waits within a few tiles of its dock`).toBeLessThan(12 * 32);
+        }
+    });
+
     test('the ship: walk into it to board, sail with momentum, steer into land to step ashore', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

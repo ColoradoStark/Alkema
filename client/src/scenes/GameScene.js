@@ -137,7 +137,10 @@ export class GameScene extends Scene {
         if (this.battle) return { kind: this.battle.snowing ? 'snow' : null, level: 'light' };
         if (this.town) {
             if (this.town.indoors || this.town.data.dark) return { kind: null, level: 'none' };
-            const place = this._townPlace && centreOf(this._townPlace);
+            // (the place as the world knows it, by name: a town can be entered with only its name and doorstep, and
+            // centreOf on a place with no rect threw every frame, which stops the game for good)
+            const known = this._townPlace?.rect ? this._townPlace : WORLD.places.find(p => p.name === this._townPlace?.name);
+            const place = known?.rect && centreOf(known);
             return weatherAt({ snowy: !!this.town.data.snow, gloom: !!place && inGloomhold(place.x, place.y, WORLD.places, WORLD.size) });
         }
         // (between a dungeon's fight and its level you're nowhere: your feet aren't on the world's map, whose top corner is the snowy north)

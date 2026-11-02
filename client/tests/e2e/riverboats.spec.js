@@ -33,7 +33,7 @@ const boats = (page) => page.evaluate(() => {
 });
 
 test.describe('River boats', () => {
-    test('a ferry goes back and forth across the water between Tumbledown and Ravenford', async ({ page }) => {
+    test("a ferry goes back and forth across the water between Tumbledown and Ravenford, in the north's tarred black", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         // (by her landing below Tumbledown, so the boats come)
@@ -51,11 +51,15 @@ test.describe('River boats', () => {
             const ferry = rb.boats.find(b => rb.routes[b.route] === r);
             const t0 = Date.now() / 1000, seen = new Set();
             for (let t = 0; t < 1200; t += 2) { rb._sail(ferry, 0.1, t0 + t); seen.add(ferry.way); }
+            const looks = gs.cache.json.get('world').riverBoats.looks;
             return { ferries: rb.boats.filter(b => rb.routes[b.route].ferry).length,
+                look: looks[ferry.sprite.frame.name], river: [...new Set(rb.boats.filter(b => !rb.routes[b.route].ferry).map(b => looks[b.sprite.frame.name]))],
                 tumbledown: Math.min(...ends.map(e => near(e, at('Tumbledown')))), ravenford: Math.min(...ends.map(e => near(e, at('Ravenford')))),
                 bothWays: seen.size };
         });
         expect(found.ferries).toBe(1);
+        expect(found.look).toBe('north');               // (the user's: the far north's boats darker; the river's keep their red and gold)
+        expect(found.river).toEqual(['river']);
         expect(found.tumbledown).toBeLessThan(16);      // (tiles from its middle: across the town to its shore, and 3 tiles out)
         expect(found.ravenford).toBeLessThan(16);
         expect(found.bothWays).toBe(2);
