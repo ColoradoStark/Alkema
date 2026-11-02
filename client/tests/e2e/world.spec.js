@@ -405,15 +405,16 @@ test.describe('Living world', () => {
         expect(result).toEqual({ landings: true, stuck: [] });
     });
 
-    test('Morvath stands on the sea out of reach on foot, and no lookout pans to it any more', async ({ page }) => {
-        // (the Watch's tip looked across the strait at it till it went to stand on the sea, the user's choice)
+    test('Morvath stands on the open sea, its gate a water gate: out of reach on foot, you come out of it on dry ground by its walls', async ({ page }) => {
+        // (the user's: the water to its south, the far shore well off; the Watch's view of it went with the strait)
         await enterWorld(page);
         const result = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const { WORLD } = await import('/src/world/places.js');
             const me = gs.localPlayer.sprite;
             const { cn: n, blocked, k } = gs.world, T = 32 / k;
-            const seen = new Uint8Array(n * n), start = Math.floor((me.y + 23) / T) * n + Math.floor(me.x / T);
+            const cell = (x, y) => Math.floor(y / T) * n + Math.floor(x / T);
+            const seen = new Uint8Array(n * n), start = cell(me.x, me.y + 23);
             const queue = [start];
             seen[start] = 1;
             while (queue.length) {
@@ -424,10 +425,13 @@ test.describe('Living world', () => {
                 }
             }
             const place = WORLD.places.find(p => p.name === 'Morvath');
-            return { walkToMorvath: !!seen[Math.floor(place.y / T) * n + Math.floor(place.x / T)],
-                     lookout: WORLD.vistas.some(v => v.name === 'Morvath'), dock: !!place.dock };
+            const [rx, ry, rw, rh] = place.rect;
+            const south = [0.2, 0.5, 0.8].every(f => blocked[cell(rx + rw * f, ry + rh + 40)]);    // the sea under its south wall
+            return { walkToMorvath: !!seen[cell(place.x, place.y)], door: !blocked[cell(place.x, place.y)],
+                     asks: gs.world.placeAt(place.x, place.y)?.name, south, dock: !!place.dock,
+                     lookout: WORLD.vistas.some(v => v.name === 'Morvath') };
         });
-        expect(result).toEqual({ walkToMorvath: false, lookout: false, dock: false });
+        expect(result).toEqual({ walkToMorvath: false, door: true, asks: 'Morvath', south: true, dock: false, lookout: false });
     });
 
     test("across the channel from the south-west beach, Wreckers' Cave is in view but out of reach on foot", async ({ page }) => {
