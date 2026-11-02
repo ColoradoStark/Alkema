@@ -10,8 +10,6 @@ import { DEPTH } from './Overworld.js';
 import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
 import { FIRE_ART } from './DayNight.js';
-import { Foe, loadFoe, forgetFoe } from '../battle/Foe.js';
-import { Demon, loadDemons, DEMONS } from '../battle/ActionBattle.js';
 import { audio } from '../audio/audio.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
@@ -71,7 +69,6 @@ export const TOWNS = {
 };
 
 const TOUCH = 44;               // a dungeon's gate, chest, lock or font: walk up against it and you work it (its solid edge, cell-rounded, holds you this far off)
-const FOE_TOUCH = 24;           // ...and a foe there: this close and you're fighting
 
 // A barrel smashed (the user's): most hold nothing, some a few coins, now and then something a shop will buy
 const BARREL = { gold: 0.35, item: 0.08, coins: [3, 14] };
@@ -203,7 +200,7 @@ export class Town {
         }) : [];
 
         // A dungeon's (tools/dungeongen.py): its water's own tint, what comes and goes with a flag (a gate,
-        // a chest shut and open, a drained hall's floor and its water's walls), what you work, its foes
+        // a chest shut and open, a drained hall's floor and its water's walls), what you work
         if (data.water && this.water) this.water.setTint(parseInt(data.water.slice(1), 16));
         this.baseBlocked = this.blocked.slice();
         // Where wanderers don't go: passages too thin to get round them in (by the map as built)
@@ -216,29 +213,7 @@ export class Town {
         // Barrels, crates and pots a swing breaks (tools/towngen.py `breaks`): back whole when you come again
         this.breaks = (data.breaks || []).map(b => ({ ...b, image: this.things[b.thing], broken: false }));
         this.rand = Math.random;      // what a barrel holds is rolled with this (tests fix it)
-        this.foes = [];
         this.refresh();
-        // (a boss is gone for good once beaten, its flag kept; the rest are gone till you next come down: GameScene.slain)
-        for (const [i, post] of (data.foes || []).entries()) {
-            const plan = { ...post, id: `${key}:${i}` };
-            if (scene.flags?.[plan.flag] || scene.slain?.has(plan.id)) continue;
-            if (plan.action) {          // demons, for a real-time fight (ActionBattle.js): their brute stands for them
-                loadDemons(scene).then(() => {
-                    const n = plan.companions, label = n == null ? null : n ? `+${n} companion${n > 1 ? 's' : ''}` : 'Alone';
-                    if (!this.gone) this.foes.push({ plan, foe: new Demon(scene, plan.x, plan.y, 'brute', label), armed: false });
-                }).catch(err => console.warn('No demons here', err));
-                continue;
-            }
-            loadFoe(scene, plan.kind).then(() => {
-                if (this.gone) {        // came after you'd gone: let it go (unless it's where you are now, or whom you're fighting)
-                    if (scene.fighting !== plan.kind && !scene.town?.data.foes?.some(p => p.kind === plan.kind)) forgetFoe(scene, plan.kind);
-                    return;
-                }
-                if (scene.flags?.[plan.flag]) return;
-                const foe = new Foe(scene, plan.x, plan.y, plan.kind);
-                this.foes.push({ plan, foe, armed: false });
-            }).catch(err => console.warn('No foe here', err));
-        }
 
         this.folk = [];
         this._waterFrame = 0;
@@ -362,20 +337,6 @@ export class Town {
         if (near && near !== this._touched) this.scene.useSwitch?.(near, feet);
         if (near) this._touched = near;
         else if (this._touched && Math.hypot(feet.x - this._touched.x, feet.y - this._touched.y) > TOUCH * 2) this._touched = null;
-    }
-
-    /** A dungeon's foe at its post, facing you; walk into it and you're fighting (once you've stepped clear of it). */
-    _watchFoes(feet) {
-        for (const f of this.foes) {
-            f.foe.face(feet.x, feet.y);
-            f.foe.setDepthAt();
-            const d = Math.hypot(feet.x - f.plan.x, feet.y - f.plan.y);
-            if (d > FOE_TOUCH * 3) f.armed = true;
-            if (f.armed && d < FOE_TOUCH) {
-                f.armed = false;
-                this.scene.enterBattle({ ...f.plan, count: f.plan.count ?? 1, country: 'cave', town: this.key });
-            }
-        }
     }
 
     get hour() {
@@ -577,7 +538,6 @@ export class Town {
         for (const t of this.things) t.setDepth(sortDepth(this.scene, t.getData('foot')));
         if (feet) {
             if (this.switches.length) this._touchSwitch(feet);
-            if (this.foes.length) this._watchFoes(feet);
             for (const s of this.stairs) s.label.setVisible(Math.hypot(feet.x - s.x, feet.y - s.y) < STAIR_NEAR);
         }
         // A fire sorts like what it stands on (a hearth's flames just in front of the hearth)
@@ -762,11 +722,6 @@ export class Town {
     destroy() {
         this.gone = true;
         this.gated.forEach(g => g.image?.destroy());
-        this.foes.forEach(f => f.foe.destroy());
-        for (const kind of new Set((this.data.foes || []).map(p => p.kind))) {
-            if (kind !== this.scene.fighting) forgetFoe(this.scene, kind);     // (not the one you're off to fight)
-        }
-        if (this.scene.fighting !== 'demons') this.scene.cache.json.remove(DEMONS);
         this.water?.destroy();
         this.ground.destroy();
         this.things.forEach(t => t.destroy());

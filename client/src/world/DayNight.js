@@ -31,8 +31,6 @@ const GLOW_AIR = 0.55;         // how bright the glow in the air round a lamp is
 
 // Ambient light by the hour, outdoors and in: [hour, colour], blended between
 const SKY = [[0, 0x262e58], [4.5, 0x262e58], [6, 0x9c7c90], [7.5, 0xffffff], [17.5, 0xffffff], [19, 0xe8a878], [20.5, 0x262e58], [24, 0x262e58]];
-// A battle is fought by moonlight, never darker than this (Ultima III's night fights were as clear as day's)
-const MOONLIT = 0xa8b8e0;
 // Underground (a dungeon level's `dark`): no hour reaches it; only its own lamps, and your light
 const UNDERGROUND = 0x343c52;
 const OVERCAST = 0x6a7486;      // the sky under heavy cloud (Weather.js's `overcast`: rain, a snowstorm)
@@ -189,7 +187,6 @@ export class DayNight {
         this.scene = scene;
         this.hourOverride = null;     // tests: stop the clock at an hour
         this.indoors = false;
-        this.moonlit = false;         // in a battle: night no darker than moonlight
         this.underground = false;     // down a dungeon: dark whatever the hour
         this.overcast = 0;            // out of doors: how grey the clouds make the sky, 0 to 1 (Weather.js)
         this.flash = 0;               // ...and how bright lightning lights it
@@ -275,10 +272,6 @@ export class DayNight {
     update(delta, feet = null) {
         const hour = this.hour;
         this.ambient = blend(this.indoors ? INDOORS : SKY, hour);
-        if (this.moonlit) {
-            const lift = s => Math.max((this.ambient >> s) & 255, (MOONLIT >> s) & 255) << s;
-            this.ambient = lift(16) | lift(8) | lift(0);
-        }
         this.dark = darkness(blend(SKY, hour));
         // Under cloud the sky greys (lamps lit and glowing through it), and lightning lights it all
         if (!this.indoors && !this.underground && (this.overcast > 0.005 || this.flash > 0.005)) {

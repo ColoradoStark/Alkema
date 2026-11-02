@@ -16,7 +16,7 @@
 // flipped there. Every frame Wesnoth did draw (standing, breathing, attack, defend) it plays.
 
 import { Foe, loadFoe, forgetFoe } from './Foe.js';
-import { DEMON_KINDS } from './ActionBattle.js';
+import { DEMON_KINDS } from './Demons.js';
 import { Ship } from '../world/Ship.js';
 
 const FEET = Ship.BELOW_HERO;

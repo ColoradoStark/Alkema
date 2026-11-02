@@ -181,7 +181,6 @@ export class BottomControls {
         const spacing = 100;
 
         this.attackButton = this._createActionButton(btnX - spacing / 2, btnY, btnSize, 'sword', 0x8b0000, 0xff0000, () => this.onAttack?.());
-        this.attackReady = true;
         this.abilityButton = this._createActionButton(btnX + spacing / 2, btnY, btnSize, 'scroll', 0x00008b, 0x0000ff, () => this.onAbility?.());
 
         // Cooldown on the ability: a shade sweeping away, a gold ring filling, seconds left
@@ -315,16 +314,6 @@ export class BottomControls {
         const [k, dx, dy] = map.fit?.[frame] || [1, 0, 0];
         icon.setFrame(frame).setScale(WEAPON_SCALE * k).setPosition(dx * WEAPON_SCALE, dy * WEAPON_SCALE);
         this.weaponFrame = frame;
-    }
-
-    /** Greys the attack button out when there's no one to strike (still pressable: it says why). */
-    setAttackReady(ready) {
-        if (ready === this.attackReady) return;
-        this.attackReady = ready;
-        this.attackButton.setAlpha(ready ? 1 : 0.45);
-        const icon = this.attackButton.getData('icon');
-        if (ready) icon.clearTint?.();
-        else icon.setTint?.(0x8a8a8a);
     }
 
     _buildTabBar() {

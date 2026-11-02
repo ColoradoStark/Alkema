@@ -157,34 +157,7 @@ test.describe('Memory', () => {
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
     });
 
-    test("a battle lets go of its map when it's over, and a foe's sheet goes once you've left it behind", async ({ page }) => {
-        test.setTimeout(120000);
-        await enterWorld(page);
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').encounters.spots[0].foe, null, { timeout: 30000 });
-        const base = await settled(page);
-        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.enterBattle(gs.encounters.spots[0]); });
-        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return gs.battle && !gs._changingRoom; }, null, { timeout: 30000 });
-        const inBattle = await held(page);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
-        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); return !gs.battle && !gs._changingRoom; }, null, { timeout: 15000 });
-        const after = await held(page);
-        console.log('battle', +(inBattle.mb - base.mb).toFixed(2), 'MB');
-        expect(inBattle.mb - base.mb).toBeLessThan(BUDGET_MB);
-        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
-        // Walk far off (here, to Saltmere) and the orc's sheet and animations go
-        await page.evaluate(async () => {
-            const { WORLD } = await import('/src/world/places.js');
-            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite, p = WORLD.places.find(p => p.name === 'Saltmere');
-            me.setPosition(p.x, p.y + 40);
-            me.body.reset(me.x, me.y);
-        });
-        await expect.poll(() => page.evaluate(() => ({
-            sheet: window.__PHASER_GAME.textures.exists('foe-pillager'),
-            anims: window.__PHASER_GAME.anims.exists('foe-pillager-stand-s'),
-        })), { timeout: 10000 }).toEqual({ sheet: false, anims: false });
-    });
-
-    test("down the grotto with its Vanar at their posts: each level under budget, and every foe's sheet let go on the way out", async ({ page }) => {
+    test("down the grotto: each level under budget, and all of it let go on the way out", async ({ page }) => {
         test.setTimeout(240000);
         await enterWorld(page);
         const base = await settled(page);
@@ -201,11 +174,7 @@ test.describe('Memory', () => {
                     await gs.changeMap(key, arrive, 'up');
                 }
             }, key);
-            // Every band at its post, drawn
-            await expect.poll(() => page.evaluate(() => {
-                const t = window.__PHASER_GAME.scene.getScene('GameScene').town;
-                return t && `${t.key}: ${t.foes.length} of ${t.data.foes.length}`;
-            }), { timeout: 30000 }).toMatch(new RegExp(`^${key}: (\\d+) of \\1$`));
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key), { timeout: 30000 }).toBe(key);
             report.push({ key, mb: Math.round((await held(page)).mb - base.mb) });
         }
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
@@ -215,45 +184,6 @@ test.describe('Memory', () => {
         for (const r of report) expect.soft(r.mb, r.key).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')))).toEqual([]);
-    });
-
-    test("the demons' real-time fight: under budget, and their sheets and file let go once it's over and you've gone", async ({ page }) => {
-        test.setTimeout(180000);
-        await enterWorld(page);
-        // (measured up Riverhold's road, clear of the coast's own demons: the grotto's mouth is on the coast)
-        const road = () => page.evaluate(async () => {
-            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
-            me.setPosition(6320, 11120);
-            me.body.reset(6320, 11120);
-        }).then(() => page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 }));
-        await road();
-        const base = await settled(page);
-        await page.evaluate(async () => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const { WORLD } = await import('/src/world/places.js');
-            await gs.enterPlace(WORLD.places.find(p => p.name === 'Gloomwater Grotto'));
-        });
-        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.foes.some(f => f.plan.companions === 3)), { timeout: 20000 }).toBe(true);
-        await page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            gs.enterBattle({ ...gs.town.foes.find(f => f.plan.companions === 3).plan, country: 'cave', town: gs.town.key });     // (the biggest)
-        });
-        await expect.poll(() => page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return !!gs.battle?.realtime && !gs._changingRoom && gs.battle.foes.every(f => f.foe.who.sprite.sprite);
-        }), { timeout: 30000 }).toBe(true);
-        const inFight = await settled(page);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('fled'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key ?? null), { timeout: 15000 }).toBe('gloomwater-1');
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
-        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
-        await road();
-        const after = await settled(page);
-        console.log('the demons\' fight', +(inFight.mb - base.mb).toFixed(2), 'MB');
-        expect(inFight.mb - base.mb).toBeLessThan(BUDGET_MB);
-        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
-        expect(await page.evaluate(() => ({ file: window.__PHASER_GAME.cache.json.exists('folk-demons'),
-            sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, sheets: [] });
     });
 
     test("the demons and orcs on the coast: their packs on three sheets (with their weapons) and five Wesnoth ones, under budget, and let go when you leave the coast", async ({ page }) => {

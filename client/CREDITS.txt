@@ -32,10 +32,6 @@ Music
     License: CC0
     https://opengameart.org/content/medieval-minstrel-dance
     https://opengameart.org/content/medieval-the-bards-tale
-  "Won! (Orchestral winning jingle)" by spuispuin (the victory stinger,
-  trimmed, mixed to mono and levelled):
-    License: CC-BY 4.0
-    https://opengameart.org/content/won-orchestral-winning-jingle
   From the soundtrack of The Battle for Wesnoth (https://www.wesnoth.org):
     "Into the Shadows" by Tyler Johnson (lost in a dark forest)
     "The Deep Path" by Gianmarco Leone (lost in a dark forest)
@@ -99,45 +95,28 @@ Wesnoth artists.
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/halo
 
 ======================================================================
-BATTLES
+FOES
 ======================================================================
 
-The foes you fight round Riverhold are The Battle for Wesnoth's
-(https://www.wesnoth.org) unit art, by the Wesnoth unit artists (the
-full list of contributors is in data/core/about.cfg of the Wesnoth
-repository): the Orcish Grunt; the Goblin Pillager, Spearman, Wolf
-Rider, Goblin Knight and Direwolf Rider; the Skeleton, Skeleton Rider, Bone Knight, Ghost,
-Shadow and Nightgaunt; and on the coast west of where you start, the
-Orcish Archer, Warrior and Warlord with grunts and goblin spearmen. Their
-standing, idle, walking, attack, defend and death frames are used, scaled
-up a quarter, with their team colour mapped to LPC cloth (maroon for orcs
-and goblins, purple for the undead; the grunt's, archer's, warrior's and
-warlord's every colour mapped to the LPC character palettes, and the
-grunt's dropped sword drawn into its last death frames).
+The orcs on the coast west of where you start are The Battle for
+Wesnoth's (https://www.wesnoth.org) unit art, by the Wesnoth unit
+artists (the full list of contributors is in data/core/about.cfg of the
+Wesnoth repository): the Orcish Grunt, Archer, Warrior and Warlord and
+the Goblin Spearman. Their standing, idle, attack, defend and death
+frames are used, scaled up a quarter, with their team colour mapped to
+LPC cloth (the grunt's, archer's, warrior's and warlord's every colour
+mapped to the LPC character palettes, and the grunt's dropped sword
+drawn into its last death frames).
   License: GNU GPL version 2 or later
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/units
-The foes in Gloomwater Grotto are Duelyst's Vanar (the Snowchaser, Ice
-Hornet, Crystal Beetle, Water Elemental, Kindred Hunter and Water Bear),
-by Counterplay Games' artists, released by Open Duelyst under CC0. Their
-breathing, idle, run, attack, hit and death frames are used, recoloured
-to match the brightness and saturation of the LPC character art; one copy of each is also matched to the LPC
-palettes. The Snowchaser, Ice Hornet, Crystal Beetle, Water Elemental,
-Kindred Hunter and Water Bear are scaled up a quarter.
+The foes on the road north of Castle Dunmere are Duelyst's Vanar (the
+Snowchaser, Ice Hornet, Crystal Beetle, Water Elemental, Kindred Hunter
+and Water Bear), by Counterplay Games' artists, released by Open Duelyst
+under CC0. Their breathing, idle, run, attack, hit and death frames are
+used, recoloured to match the brightness and saturation of the LPC
+character art, and scaled up.
   License: CC0 1.0 Universal (public domain dedication)
   https://github.com/open-duelyst/duelyst/tree/main/app/resources/units
-The cave battle map is drawn with Gloomwater Grotto's art (credited below:
-Wesnoth's cave floors and rough wall and mushroom groves, the LPC atlas's
-boulders, mushrooms and reeds, Sharm's bones and skulls).
-The battle maps are laid out from the same Wesnoth grass, snow and
-trees as the world map (below), with Wesnoth's dirt and its ground
-decorations (flowers, stones, rocks, mushrooms, snow) by its terrain
-artists.
-  License: GNU GPL version 2 or later
-  https://github.com/wesnoth/wesnoth/tree/master/data/core/images/terrain/flat
-  https://github.com/wesnoth/wesnoth/tree/master/data/core/images/terrain/embellishments
-Where foes and the party start on a battle map follows Ultima IV's
-combat maps (Origin Systems; freeware from Electronic Arts): the
-start positions only, no art or data from it.
 
 ======================================================================
 OVERWORLD MOUNTAINS, FORESTS, GRASS, SAND AND SNOW
@@ -1410,7 +1389,7 @@ GLOOMWATER GROTTO (THE DUNGEON)
 ======================================================================
 
 The grotto's levels (tools/dungeongen.py) blend The Battle for Wesnoth's
-terrain with LPC things, as the battle maps do:
+terrain with LPC things, as the world map does:
 
 wesnoth-cave/ (the cave floor, the earthy floor, the dark flagstones and the
 rough cave wall) and wesnoth-mushrooms/ (the mushroom groves, on dry ground and

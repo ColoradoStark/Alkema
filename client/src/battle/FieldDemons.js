@@ -1,21 +1,16 @@
-// Demons out on the overworld itself, fought where you meet them: no battle map,
-// the real-time fight's way of fighting (the user's prototype, October 2026,
-// beside the turn-based fights and the real-time ones on battle maps, to try
-// fighting in the open world). They stand along the coast between where new
-// heroes start and Castle Dunmere's gate (PACKS, on the world map's shore
-// along the walk there). Come within AGGRO of one and it comes for you:
+// Foes out on the overworld itself, fought where you meet them: the game's one way of fighting (the user's,
+// November 2026: the turn-based fights and the real-time ones on battle maps tried beside it, and gone). They
+// stand along the coast between where new heroes start and Castle Dunmere's gate (PACKS, on the world map's
+// shore along the walk there). Come within AGGRO of one and it comes for you:
 // it closes in, stops and flashes red (the wind-up), and swings; step out of
 // reach to dodge it. Your swing (the attack button, aimed at the nearest in
 // front of you) strikes what's before you when it lands. Get far enough away
 // and it gives up and walks back to its post.
 //
-// You fight them as in the real-time fight on a battle map (the user's: spells
-// and arrows worked differently out here): the same code, borrowed from
-// ActionBattle (BORROWED below). Your swing turns you to the nearest and lands
-// as it comes down; a bow's arrow flies at it and strikes when it gets there;
-// the blue button casts the spell you equipped (ActionSpells.js), with its
-// effects, particles and rest, and what it leaves on them (slowed, marked,
-// held...) and on you (warded, raging, hidden). Magic comes back as you fight.
+// Your swing turns you to the nearest and lands as it comes down; a bow's arrow flies at it and strikes when
+// it gets there; the blue button casts the spell you equipped (ActionSpells.js), with its effects, particles
+// and rest, and what it leaves on them (slowed, marked, held...) and on you (warded, raging, hidden). Magic
+// comes back as you fight.
 //
 // They stand in packs (PACKS: the user found lone ones dull, October 2026): the
 // real-time fight's three demons mixed, the fury darting in with her trident,
@@ -33,12 +28,12 @@
 // into a place. The slain stay down (the user's: with no hit points back but at a healer, a
 // beaten pack doesn't stand again while you're in the castle being mended).
 
-import { ActionBattle, Demon, DEMONS, DEMON_KINDS, loadDemons } from './ActionBattle.js';
+import { Demon, DEMONS, DEMON_KINDS, UNIT, loadDemons } from './Demons.js';
 import { Orc, ORC_KINDS, ORC_HITS, ORC_HURTS, ORC_PAY, ORC_PACKS, loadOrcs, forgetOrcs } from './FieldOrcs.js';
 import { VANAR_KINDS, VANAR_HITS, VANAR_HURTS, VANAR_PAY, VANAR_PACKS, loadVanar, forgetVanar } from './FieldVanar.js';
-import { rollLoot } from './Encounters.js';
-import { ACTION_SPELLS } from './ActionSpells.js';
-import { Battle, forgetFx, loadSpellFx, spellParticles } from './Battle.js';
+import { rollLoot } from './Chests.js';
+import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
+import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
@@ -48,7 +43,7 @@ import { ZONES, packEssence, strengthFor, tooStrong } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
-// How each fights out here: twice its battle-map pace (the world's hero walks faster, 128, and still outruns them all)
+// How each fights out here (the world's hero walks at 128, and still outruns them all)
 const KINDS = {
     fury: { ...DEMON_KINDS.fury, speed: 80 },
     brute: { ...DEMON_KINDS.brute, speed: 50 },
@@ -77,10 +72,15 @@ const LEASH = 10 * TILE;        // and gives up once you're this far from it, ho
 const LOOK_MS = [1000, 2000];   // which it sees only now and then, as it chases (the user's: once a second or two is enough)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
 const FAR = 40 * TILE;          // and go when you're this far from them all
-const REACH = 40, LUNGE = 26, SHOT_REACH = 220;
+const REACH = 40, LUNGE = 26, SHOT_REACH = 220;     // a blow's reach (feet to feet), a swing a little further off stepping you in to it; a shot's
+const AIM = Math.cos(Math.PI * 0.4);    // what's within 72 degrees of the way you face is "ahead"
+const SWING_HIT_MS = 170;       // from a swing starting to its landing
+const ARROW_SPEED = 320, BOLT_SPEED = 180;
+const SPELL_SWELL = 1.4;        // how much bigger a melee spell swings
+const SPELL_SHAKE = [150, 0.006];     // a starter spell, cast by you: a light shake (ms, intensity)
 const SIGHT = 12 * TILE;        // what a spell or a shot can go at: the demons this near you
 const SLOWED = 0.4;             // a slowed demon's pace (Frost Lance)
-const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you fight (as on a battle map)
+const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you fight
 const ATTACKERS = 2;            // at most this many wind up a blow at you at once; the rest circle (a warlock's fire doesn't wait its turn)
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
@@ -196,7 +196,7 @@ export class FieldDemons {
         this.slain = new Set();   // places whose demon is down (for good, this visit to the game)
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
-        this.shots = [];          // arrows and spells in flight (ActionBattle._launch, _fly)
+        this.shots = [];          // arrows and spells in flight (_launch, _fly)
         this._up = new Set();      // the bands (FAMILIES) come or coming: you're near their stretch of coast
         this._coming = new Set();  // those whose sheets are loading
         this._near = new Set();
@@ -206,7 +206,7 @@ export class FieldDemons {
         this.FEET = FEET;
         this.width = this.height = Infinity;        // (a shot flies its reach: the world has no edge to stop it)
         const ui = () => scene.scene.get('UIScene');
-        // You, as a battle map's party has you (what ActionSpells and the borrowed code ask of you)
+        // You, as the fight sees you (what ActionSpells and the swings ask of you)
         this.you = {
             get who() { return scene.localPlayer; },
             get name() { return (scene.localPlayer?.characterData?.name || 'You').split(' ')[0]; },
@@ -382,9 +382,9 @@ export class FieldDemons {
         this._forget(fam);
     }
 
-    /** A band's sheets go (a fight's own, if one's up, stay). */
+    /** A band's sheets go. */
     _forget(fam) {
-        if (!this.scene.battle) FAMILIES[fam].forget(this.scene);
+        FAMILIES[fam].forget(this.scene);
     }
 
     /** Where a demon stands at its place: there, or the nearest open ground about it. */
@@ -436,16 +436,16 @@ export class FieldDemons {
         this.fallen = false;
     }
 
-    /** The spells' effects go (a fight's own, if one's up, stay). */
+    /** The spells' effects go. */
     _unload() {
-        if (!this.scene.battle) forgetFx(this.scene);
+        forgetFx(this.scene);
     }
 
     // ------------------------------------------------ you, fighting them
 
     /**
-     * The attack button, with a demon near enough to go at: a swing (or a shot) at it as on a battle
-     * map, now or as soon as this one's done. False with none near: the world's own swing, then.
+     * The attack button, with a foe near enough to go at: a swing (or a shot) at it, now or as soon as
+     * this one's done. False with none near: the world's own swing, then.
      */
     attack() {
         if (!this.foes.length || this.fallen) return false;
@@ -456,7 +456,7 @@ export class FieldDemons {
     }
 
     /**
-     * The blue button, with a demon in sight: cast the spell you equipped, as on a battle map (at the
+     * The blue button, with a demon in sight: cast the spell you equipped (at the
      * rank you know it, if it isn't resting and you've the magic; then it rests). False with none near,
      * or none after you and it can't go: the world's own cast, then.
      */
@@ -464,7 +464,7 @@ export class FieldDemons {
         if (!this.standing.length || this.fallen) return false;
         const m = this.you, ui = this.scene.scene.get('UIScene'), book = m.book;
         const spell = book?.spell(book.equipped), at = book?.at(book?.equipped), kind = spell && ACTION_SPELLS[spell.kind];
-        // (it can't go: with one after you, it says why, as on a battle map; with none, the world's own cast)
+        // (it can't go: with one after you, it says why; with none, the world's own cast)
         const why = !spell || !at || !kind ? 'Equip a spell on the Equip page'
             : ui.bottomControls.coolingDown ? ''
             : (at.mp || 0) > (ui.mp?.now || 0) ? `${spell.name} needs ${at.mp} MP`
@@ -592,7 +592,7 @@ export class FieldDemons {
         if (this.combo > 1) this.scene.time.delayedCall(220, () => fx?.floatText(x, y - f.foe.tall - 16, `Combo ×${this.combo}`, '#ffb347', 16));
         const coin = Math.ceil(worth * GOLD_SHARE);
         if (f.spec.chest) {     // (the champion, the warlord)
-            this.scene.encounters?.drop(x, y, { gold: coin, item: rollLoot(4).item });
+            this.scene.chests?.drop(x, y, { gold: coin, item: rollLoot(4).item });
             return;
         }
         const gold = inv?.found(coin) ?? coin;
@@ -1074,7 +1074,7 @@ export class FieldDemons {
         if (this._open(x, y + FEET)) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
     }
 
-    /** Can't be stood on (water, or anything else in the way): what a battle map calls wet. */
+    /** Can't be stood on (water, or anything else in the way). */
     _wet(x, y) {
         return !this._open(x, y);
     }
@@ -1118,24 +1118,345 @@ export class FieldDemons {
         }
     }
 
+    // ------------------------------------------------ swings, shots, spells and their effects
+
+    /**
+     * Who a swing goes at: the nearest foe in reach, ahead of them first (a foe behind counts as
+     * further off). `reach` for a blow is a little more than its own: they step in to it.
+     */
+    _aim(m, reach) {
+        const me = this._feet(m), [fx, fy] = UNIT[m.who.sprite.currentDirection || 'up'];
+        let best = null, bestScore = Infinity;
+        for (const f of this.standing) {
+            const dx = f.foe.x - me.x, dy = f.foe.y - me.y, d = Math.hypot(dx, dy);
+            if (d > reach) continue;
+            const ahead = d < 1 || (dx * fx + dy * fy) / d >= AIM;
+            const score = ahead ? d : d * 1.8;
+            if (score < bestScore) {
+                best = f;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+
+    /** A swing or a shot at whoever's in reach. */
+    _swing(m, yours = false) {
+        const who = m.who;
+        const ranged = m.ranged;
+        const f = this._aim(m, ranged ? SHOT_REACH : REACH + LUNGE);
+        const me = this._feet(m);
+        if (f) {
+            who.sprite.setDirection(dirOf(f.foe.x - me.x, f.foe.y - me.y));
+            const d = Math.hypot(f.foe.x - me.x, f.foe.y - me.y);
+            if (!ranged && d > REACH - 6) {         // just out of reach: step in to it
+                const k = Math.min(LUNGE, d - REACH + 10) / d;
+                this.scene.tweens.add({ targets: who.sprite, x: who.sprite.x + (f.foe.x - me.x) * k, y: who.sprite.y + (f.foe.y - me.y) * k, duration: 110 });
+            }
+        }
+        who.shotRange = ranged ? 0.01 : undefined;          // (its own arrow flies only the way it faces: ours flies at them)
+        who.playAttack(yours ? () => this.scene.emitAttack() : undefined);
+        who.shotRange = undefined;
+        if (ranged) {
+            if (f) this.scene.time.delayedCall(200, () => this._shoot(m, f, 'arrow'));
+            return;
+        }
+        // The blow lands on what's before them when it comes down (it may have moved)
+        this.scene.time.delayedCall(SWING_HIT_MS, () => {
+            if (this.over || m.out) return;
+            const at = this._feet(m), [fx, fy] = UNIT[who.sprite.currentDirection || 'up'];
+            const struck = this.standing.filter(o => {
+                const dx = o.foe.x - at.x, dy = o.foe.y - at.y, d = Math.hypot(dx, dy);
+                return d <= REACH + 6 && (d < 16 || (dx * fx + dy * fy) / d >= AIM * 0.8);
+            }).slice(0, 2);
+            if (!struck.length) {
+                if (yours) audio.play('swing', { volume: 0.4 });
+                return;
+            }
+            for (const o of struck) this._strikeFoe(o, this._blow(m), at);
+        });
+    }
+
+    /** A shot flying from you at a foe (as fast as an arrow, or a bolt): it strikes the first foe it meets. */
+    _shoot(m, f, kind, damage = null) {
+        if (this.over || m.out) return;
+        const from = this._feet(m), to = { x: f.foe.x, y: f.foe.y - 18 };
+        this._launch({ x: from.x, y: from.y - 22 }, to, kind, 'party', damage ?? this._blow(m));
+    }
+
+    /** Something flying: an arrow, or fire (yours, or a warlock's). It goes the way it was aimed, to its range. */
+    _launch(from, to, kind, side, damage, { scale = 1, trail = null, reach = SHOT_REACH + 80, speed = null, onHit = null, tint = null, home = null } = {}) {
+        const a = Math.atan2(to.y - from.y, to.x - from.x);
+        speed ??= kind === 'arrow' ? ARROW_SPEED : BOLT_SPEED;
+        let sprite;
+        if (kind === 'arrow' && this.scene.textures.exists('arrow-projectile')) {
+            sprite = this.scene.add.sprite(from.x, from.y, 'arrow-projectile', 3 * 13 + 5).setRotation(a);
+            // (a foe's twang; yours played as you drew, and twice a shot grated, the user's)
+            if (side !== 'party') audio.play('bow', { volume: 0.5 });
+        } else {
+            const anim = kind === 'fire-missile' ? 'spell-fx-fire-missile' : 'spell-fx-fireball';
+            sprite = this.scene.add.sprite(from.x, from.y, 'spell-fx').play(anim).setRotation(a + Math.PI / 2).setScale(scale);
+            if (side === 'foe') sprite.setTint(0xb070ff);
+            if (!onHit) audio.play('zap', { volume: 0.5 });
+        }
+        sprite.setDepth(32);
+        if (tint) sprite.setTint(tint);
+        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit, home, speed, tint });
+    }
+
+    _fly(dt) {
+        for (const s of this.shots) {
+            if (s.done) continue;
+            if (s.home?.hp > 0) {       // (a missile that never misses turns after its foe)
+                const want = Math.atan2(s.home.foe.y - 18 - s.sprite.y, s.home.foe.x - s.sprite.x);
+                const now = Math.atan2(s.vy, s.vx), turn = Phaser.Math.Angle.Wrap(want - now);
+                const a = now + Phaser.Math.Clamp(turn, -6 * dt, 6 * dt);
+                s.vx = Math.cos(a) * s.speed;
+                s.vy = Math.sin(a) * s.speed;
+                s.sprite.setRotation(s.kind === 'arrow' ? a : a + Math.PI / 2);
+            }
+            const step = Math.hypot(s.vx, s.vy) * dt;
+            s.sprite.x += s.vx * dt;
+            s.sprite.y += s.vy * dt;
+            s.left -= step;
+            if (s.trail) {          // a spell's fire trails sparks
+                this.sparks.setParticleTint(s.trail);
+                this.sparks.emitParticleAt(s.sprite.x, s.sprite.y, 1);
+            }
+            const near = (x, y) => Math.hypot(s.sprite.x - x, s.sprite.y - (y - 18)) < 16;
+            if (s.side === 'party') {
+                const f = this.standing.find(o => near(o.foe.x, o.foe.y));
+                if (f) {
+                    s.done = true;
+                    const where = { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 };
+                    if (s.onHit) s.onHit(f, where);
+                    else {
+                        if (s.kind !== 'arrow') this._fx('fireball-impact', f.foe.x, f.foe.y, { origin: 0.75 });
+                        this._strikeFoe(f, s.damage, where);
+                    }
+                }
+            } else {
+                const m = this.fighting.find(o => near(o.who.sprite.x, o.who.sprite.y + FEET));
+                if (m) {
+                    s.done = true;
+                    if (s.kind !== 'arrow') this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75, tint: s.tint });      // (a water elemental's bursts in water's colour)
+                    this._hurt(m, s.damage, { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 });
+                }
+            }
+            if (s.left <= 0 || s.sprite.x < -20 || s.sprite.x > this.width + 20 || s.sprite.y < -20 || s.sprite.y > this.height + 20) s.done = true;
+            if (s.done) s.sprite.destroy();
+        }
+        this.shots = this.shots.filter(s => !s.done);
+    }
+
+    /**
+     * A melee spell's swing: bigger (they swell as they swing it), sparks of its colour along the arc,
+     * and `onHit(struck)` with every foe before them when it comes down.
+     */
+    _bigSwing(m, colour, yours, onHit, { aim = true, round = false } = {}) {
+        const who = m.who, s = who.sprite;
+        if (aim) {
+            const f = this._aim(m, this.MELEE_REACH + 20);
+            if (f) {
+                const me = this._feet(m), d = Math.hypot(f.foe.x - me.x, f.foe.y - me.y);
+                s.setDirection(dirOf(f.foe.x - me.x, f.foe.y - me.y));
+                if (d > REACH - 6) {
+                    const k = Math.min(LUNGE + 16, d - REACH + 10) / d;
+                    this.scene.tweens.add({ targets: s, x: s.x + (f.foe.x - me.x) * k, y: s.y + (f.foe.y - me.y) * k, duration: 110 });
+                }
+            }
+        }
+        who.isAttacking = false;
+        who.playAttack(yours ? () => this.scene.emitAttack() : undefined);
+        this._swell(m, colour);
+        this.scene.time.delayedCall(SWING_HIT_MS + 20, () => {
+            if (this.over || m.out) return;
+            const at = this._feet(m), [ux, uy] = UNIT[s.currentDirection || 'up'];
+            const struck = this.standing.filter(o => {
+                const dx = o.foe.x - at.x, dy = o.foe.y - at.y, d = Math.hypot(dx, dy);
+                return round ? d <= REACH * 1.8 : d <= REACH * 1.5 && (d < 18 || (dx * ux + dy * uy) / d >= AIM * 0.6);
+            });
+            for (const o of struck) this._sparkle(o.foe.x, o.foe.y - 22, colour, 10);
+            onHit(struck);
+        });
+    }
+
+    _nearestTo(p) {
+        return [...this.standing].sort((a, b) => Math.hypot(a.foe.x - p.x, a.foe.y - p.y) - Math.hypot(b.foe.x - p.x, b.foe.y - p.y))[0] || null;
+    }
+
+    _dirOf(dx, dy) { return dirOf(dx, dy); }
+
+    _castNow(m, spell, at, yours) {
+        if (yours) this._shakeFor(spell);
+        ACTION_SPELLS[spell.kind].run.call(this, m, spell, at, yours);
+    }
+
+    _no(words) {
+        audio.play('error', { volume: 0.5 });
+        this.say(words, 1600);
+    }
+
+    /** A foe stops its wind-up (staggered, lost its quarry). */
+    _calm(f) {
+        f.state = 'recover';
+        f.t = 300;
+        f.foe.tint(null);
+    }
+
+    /**
+     * What spells leave on people as the fight goes on: on foes, slowed, marked, cursed, fleeing,
+     * poisoned (a blow of it every second); on yours, warded, raging, hidden. Each runs down, and
+     * shows while it lasts (motes of its colour, now and then; the hidden see-through).
+     */
+    _statuses(delta) {
+        const puff = (this._puffT = (this._puffT || 0) + delta) >= 260;
+        if (puff) this._puffT = 0;
+        for (const f of this.standing) {
+            for (const k of ['slow', 'mark', 'curse', 'fear']) if (f[k] > 0) f[k] -= delta;
+            if (puff) {
+                const colour = f.poison ? 0x99e550 : f.slow > 0 ? 0x9fd0ff : f.curse > 0 || f.fear > 0 ? 0xb070ff : f.mark > 0 ? 0xff5050 : null;
+                if (colour) this._rise(f.foe.x, f.foe.y - 8, colour, 2);
+            }
+            if (f.poison) {
+                f.poison.t -= delta;
+                if ((f.poison.tick -= delta) <= 0) {
+                    f.poison.tick = 1000;
+                    f.hp = Math.max(0, f.hp - f.poison.dmg);
+                    this.scene.effects.floatText(f.foe.x, f.foe.y - f.foe.tall, String(f.poison.dmg), '#99e550', 16);
+                    if (f.hp <= 0) this._slay(f);
+                }
+                if (f.poison.t <= 0) f.poison = null;
+            }
+        }
+        for (const m of this.party) {
+            if (m.ward > 0) m.ward -= delta;
+            if (m.blockT > 0 && (m.blockT -= delta) <= 0) m.blocks = 0;
+            if (m.rage && (m.rage.t -= delta) <= 0) m.rage = null;
+            if (m.hidden > 0 && (m.hidden -= delta) <= 0) m.ambush = 0;
+            if (!m.fallen && (m.hidden > 0) !== !!m.seeThrough) {        // (only as it starts and ends: other fades are tweens)
+                m.seeThrough = m.hidden > 0;
+                m.who.sprite.setAlpha(m.seeThrough ? 0.35 : 1);
+            }
+            if (puff && !m.out) {
+                const s = m.who.sprite;
+                if (m.ward > 0 || m.blocks > 0) this._rise(s.x, s.y + 10, 0xfff6c0, 2);
+                if (m.rage) this._rise(s.x, s.y + 10, m.rage.colour, 2);
+            }
+        }
+    }
+
+    /** Healing light on whoever's worst hurt. */
+    _mend(m, them, mend = 6 + (m.spellPower || 0)) {
+        m.healCd = 5000;
+        m.who.playCast();
+        audio.play('holy', { volume: 0.7 });
+        const s = them.who.sprite;
+        this._fx('healing', s.x, s.y);
+        this.motes.setParticleTint(SPELL_COLOURS.MEND);
+        this.motes.explode(14, s.x, s.y + 14);
+        this.glints.setParticleTint(0xc8ffc8);
+        this.glints.explode(6, s.x, s.y);
+        them.life.now = Math.min(them.life.max, them.life.now + mend);
+        this.scene.effects.floatText(s.x, s.y - 30, `+${mend}`, '#7ee07e', 20);
+    }
+
+    _feet(m) { return { x: m.who.sprite.x, y: m.who.sprite.y + FEET }; }
+
+    /** How hard your blow lands (your attack, give or take), times `mult`: harder in a rage (Berserk), and from hiding
+     * (Vanish), which brings you out of it. */
+    _blow(m, mult = 1) {
+        let k = m.rage?.hit || 1;
+        if (m.ambush) {
+            k *= m.ambush;
+            m.ambush = 0;
+            m.hidden = 0;
+        }
+        return this._plainBlow(m, mult * k);
+    }
+
+    /** Your blow without what a rage or an ambush adds (a poison's strength). */
+    _plainBlow(m, mult = 1) {
+        const attack = m.attack ?? (this.scene.scene.get('UIScene')?.inventory?.stats?.attack || 5);
+        return Math.max(1, Math.round(attack * mult * (0.6 + Math.random() * 0.8)));
+    }
+
+    /** A burst of light of a colour: sparks and glints. */
+    _sparkle(x, y, colour, n = 10) {
+        this.sparks.setParticleTint(colour);
+        this.sparks.explode(n, x, y);
+        this.glints.setParticleTint(colour);
+        this.glints.explode(Math.ceil(n / 2), x, y);
+    }
+
+    /** Motes of a colour rising from a point (a mending). */
+    _rise(x, y, colour, n = 14) {
+        this.motes.setParticleTint(colour);
+        this.motes.explode(n, x, y);
+    }
+
+    /** Lightning from above on a point (feet): Wesnoth's bolt, a flash, sparks, a crack. */
+    _lightning(x, y) {
+        this._fx(`lightning-${1 + Math.floor(Math.random() * 3)}`, x, y + 4, { origin: 0.93, scale: 0.6 });
+        this._fx('white-impact', x, y - 16, { scale: 0.8 });
+        this._sparkle(x, y - 10, 0x9fd0ff, 16);
+        audio.play('zap', { volume: 0.9 });
+        audio.play('hit_blade', { volume: 0.6 });
+    }
+
+    /**
+     * A melee spell's swing (the user's): they swell as they swing it, sparks of its colour along the
+     * arc from one side of the way they face to the other, and the whoosh.
+     */
+    _swell(m, colour) {
+        const s = m.who.sprite;
+        // (only its own last swell stopped: Phaser's killTweensOf stops every tween on them, and Shadowstrike's
+        // fade back in went with it, the user left invisible)
+        m.swelling?.stop();
+        m.swelling = this.scene.tweens.add({ targets: s, scaleX: SPELL_SWELL, scaleY: SPELL_SWELL, duration: 90, ease: 'Back.easeOut',
+            yoyo: true, hold: 300, onComplete: () => s.setScale(1) });
+        const [fx, fy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[s.currentDirection || 'up'], face = Math.atan2(fy, fx);
+        for (let i = 0; i <= 6; i++) {
+            this.scene.time.delayedCall(40 + i * 22, () => {
+                if (!this.sparks.active) return;
+                const a = face - 1.1 + i * (2.2 / 6), r = 30;
+                this.sparks.setParticleTint(colour);
+                this.sparks.emitParticleAt(s.x + Math.cos(a) * r, s.y + 4 + Math.sin(a) * r * 0.8, 3);
+            });
+        }
+        audio.play('swing', { volume: 0.7 });
+    }
+
+    /** A spell you've had from the start, cast by you: the screen shakes a little (the user's). */
+    _shakeFor(spell) {
+        if (spell.ranks[0].level <= 1) this.scene.cameras.main.shake(...SPELL_SHAKE);
+    }
+
+    /** An effect's sprite, kept till it's done, so a fight that ends meanwhile takes it with it (its picture is let go then). */
+    _live(s) {
+        (this._effects ??= new Set()).add(s);
+        s.once('destroy', () => this._effects.delete(s));
+        return s;
+    }
+
+    /** An effect (fx.json) playing once at a point, then gone. */
+    _fx(name, x, y, { origin = 0.5, scale = 1, tint = null } = {}) {
+        const s = this._live(this.scene.add.sprite(x, y, FX).setOrigin(0.5, origin).setScale(scale).setDepth(FX_DEPTH));
+        if (tint) s.setTint(tint);
+        s.play(`${FX}-${name}`);
+        s.once('animationcomplete', () => s.destroy());
+        return new Promise(resolve => s.once('animationcomplete', resolve));
+    }
+
+    /** A spell's blow: its power with the caster's, or their blow times its `mult`, with little to chance. */
+    _spellBlow(m, at) {
+        if (at.power) return at.power + (m.spellPower || 0);
+        const attack = m.attack ?? (this.scene.scene.get('UIScene')?.inventory?.stats?.attack || 5);
+        return Math.max(1, Math.round(attack * at.mult * (0.9 + Math.random() * 0.2)));
+    }
+
     destroy() {
         this.release();
-    }
-}
-
-// What the real-time fight on a battle map does, done the same way out here (the user's): aiming,
-// swings and shots, things flying, spells' swings and casting, what spells leave on people, mending,
-// and the spells' effects and particles. They ask of `this` what FieldDemons has: party, fighting,
-// standing, foes, over, shots, sparks/motes/glints, _feet, _wet, _inside, _knock, _strikeFoe, _hurt, say.
-const BORROWED = [
-    [ActionBattle, ['_aim', '_swing', '_shoot', '_launch', '_fly', '_bigSwing', '_nearestTo', '_dirOf', '_castNow', '_no', '_blow',
-        '_calm', '_statuses', '_mend', '_feet']],
-    [Battle, ['_sparkle', '_rise', '_lightning', '_swell', '_shakeFor', '_live', '_fx', '_spellBlow']],
-];
-for (const [from, names] of BORROWED) {
-    for (const name of names) {
-        if (Object.hasOwn(FieldDemons.prototype, name)) throw new Error(`FieldDemons has its own ${name}`);     // (a borrowed one mustn't hide it)
-        FieldDemons.prototype[name] = from.prototype[name];
     }
 }
 

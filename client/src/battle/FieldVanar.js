@@ -11,7 +11,7 @@
 // orcs' (FieldOrcs.js `Orc`: any of battlegen's foes), their sheets loaded as you near the road.
 
 import { loadFoe, forgetFoe } from './Foe.js';
-import { DEMON_KINDS } from './ActionBattle.js';
+import { DEMON_KINDS } from './Demons.js';
 
 const SHEETS = ['snowchaser', 'icehornet', 'kindredhunter', 'crystalbeetle', 'waterelemental', 'waterbear'];
 const WATER = 0x7fd8ff;     // a water elemental's bolt: the fire's, in water's colour

@@ -2,8 +2,7 @@
 // six, each in three ranks (server/src/spells.json, sent with the shops'
 // catalogue), and which of them they know, to what rank. Every hero knows
 // whatever opens at level 1 (their class's first, and for mages and clerics a
-// bane); the rest wait in the cast menu, greyed with the level they come at.
-// One is equipped (Equip's Magic tab): the blue button casts it in a real-time
+// bane). One is equipped (Equip's Magic tab): the blue button casts it in a
 // fight. Kept in the hero's save, as their gear is. The hero's own learn the
 // rest, and their higher ranks, on the Upgrade page (client/src/upgrades/Upgrades.js).
 

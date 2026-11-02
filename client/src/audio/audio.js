@@ -14,15 +14,13 @@ const MUSIC_VOLUME = 0.6;
 const SFX_VOLUME = 1.0;
 const MASTER_VOLUME = 1.25; // the mix measures ~-19 LUFS with peaks well under 0 dBFS
 const FADE_MS = 1600;
-const STINGER_DUCK_MS = 3200; // the music under a stinger, till it's done
-const STINGER_LATE_MS = 1500; // a stinger not here by then has missed its moment
 const HEARING_RANGE = 520; // world px beyond which other players' fights are silent
 
 /**
  * Music, by mood. Each mood plays its tracks in turn, crossfading between them;
  * the game picks the mood from where you are (GameScene.updateMusic): out in
  * the world, lost in a dark forest, at sea, in the snows of the far north, or
- * in a battle.
+ * with foes after you.
  */
 export const MUSIC = {
     creator: [{ id: 'grassy-world' }], // replays, fading back in, when it ends
@@ -193,65 +191,6 @@ class Audio {
         this.music = null;
     }
 
-    /**
-     * Fetch a stinger ahead of its moment (`/audio/music/stinger-<name>`: a few seconds of music),
-     * so it plays the instant it's wanted.
-     */
-    prepareStinger(name) {
-        if (this.game && this.mode === 'all') this._ensureLoaded(`stinger-${name}`, () => {});
-    }
-
-    /**
-     * A stinger over the music (a fight won): the music dips under it, and it's let go once it's
-     * played. Music asked for meanwhile (the world's, back from the fight) waits for it to end, then
-     * fades in: never the two at once, and never a gap while the next track is still loading (it loads
-     * under the stinger). A stinger not loaded within STINGER_LATE_MS has missed its moment and isn't
-     * played at all (a slow phone heard one after the fight). With the music off, the short chime
-     * of the same name instead.
-     */
-    stinger(name) {
-        if (this.mode !== 'all' || !this.sound) return this.play(name);
-        const id = `stinger-${name}`, key = `music-${id}`;
-        const token = this._stingerToken = {};
-        const late = setTimeout(() => {
-            if (this._stingerToken !== token) return;
-            this._stingerToken = null;
-            this.game.cache.audio.remove(key);
-            this._afterStinger();
-        }, STINGER_LATE_MS);
-        this._ensureLoaded(id, () => {
-            clearTimeout(late);
-            if (this._stingerToken !== token) return void this.forgetStinger(name);
-            if (!this.game.cache.audio.exists(key) || (this.sound.locked && !this._resumeContext())) {
-                this._stingerToken = null;
-                return this._afterStinger();
-            }
-            const sound = this.sound.add(key, { volume: MUSIC_VOLUME });
-            this.duck(STINGER_DUCK_MS, 0.15);
-            sound.once('complete', () => {
-                sound.destroy();
-                this.game.cache.audio.remove(key);
-                if (this._stingerToken === token) this._stingerToken = null;
-                this._afterStinger();
-            });
-            sound.play();
-        });
-        return null;
-    }
-
-    /** The music that waited for a stinger to end, now. */
-    _afterStinger() {
-        const go = this._waiting;
-        this._waiting = null;
-        go?.();
-    }
-
-    /** Let go of a stinger fetched for a moment that never came (a fight fled). */
-    forgetStinger(name) {
-        const key = `music-stinger-${name}`;
-        if (!this.sound?.sounds.some(s => s.key === key && !s.pendingRemove)) this.game?.cache.audio.remove(key);
-    }
-
     /** Briefly dip the music under a moment (victory jingle, chest). */
     duck(ms = 1400, to = 0.35) {
         const s = this.music?.sound;
@@ -271,7 +210,6 @@ class Audio {
         const key = `music-${entry.id}`;
         this._ensureLoaded(entry.id, () => {
             if (this.music !== music) return;
-            if (this._stingerToken) return void (this._waiting = () => this._startTrack());
             const sound = this.sound.add(key, { loop: Boolean(entry.loop), volume: 0 });
             music.sound = sound;
             music.playsLeft = entry.plays || 1;
@@ -316,9 +254,9 @@ class Audio {
         sound.destroy();
         const list = this.music ? MUSIC[this.music.mood] : [];
         const upcoming = this.music ? list[(this.music.index + 1) % list.length] : null;
-        const current = this.music ? list[this.music.index % list.length] : null;     // (loaded, it may be waiting for a stinger to end)
+        const current = this.music ? list[this.music.index % list.length] : null;
         for (const key of this.game.cache.audio.getKeys()) {
-            if (!key.startsWith('music-') || key.startsWith('music-stinger-')) continue;      // (stingers free themselves)
+            if (!key.startsWith('music-')) continue;
             // (a destroyed sound stays on the manager's list till its next update)
             const inUse = this.sound.sounds.some(s => s.key === key && s !== sound && !s.pendingRemove)
                 || [upcoming, current].some(t => t && `music-${t.id}` === key);

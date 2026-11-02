@@ -70,7 +70,7 @@ export class PreloadScene extends Scene {
         // The LPC base set's treasure chests (two kinds: shut, ajar, open), for loot
         this.load.spritesheet('cc-chests', '/ui/chests.png', { frameWidth: 32, frameHeight: 32 });
 
-        // The battle maps and foes (their pictures load as you meet them)
+        // The foes' sheets and animations (tools/battlegen.py: their pictures load as you near them)
         this.load.json('battle', '/battle/battle.json');
 
         // Load arrow projectile spritesheet (13 cols x 4 rows of 64x64, directions: up/left/down/right)

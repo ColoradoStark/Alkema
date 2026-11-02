@@ -119,10 +119,10 @@ export class Player {
             this.lastAttackType = rangedAnim;
             const weaponType = getWeaponType(this.characterData);
             if (weaponType === 'slingshot') {
-                const range = this.shotRange;     // set in a battle: as far as the foe
+                const range = this.shotRange;     // set in a fight: as far as the foe
                 setTimeout(() => this._gone || spawnRock(this.scene, this.sprite.x, this.sprite.y, dir, range), 200);
             } else {
-                const range = this.shotRange;     // set in a battle: as far as the foe
+                const range = this.shotRange;     // set in a fight: as far as the foe
                 setTimeout(() => this._gone || spawnArrow(this.scene, this.sprite.x, this.sprite.y, dir, weaponType, range), 200);
             }
         } else {

@@ -1,11 +1,9 @@
-// Spells in the real-time fight (the user's): how each `kind` (server/src/spells.json) works when the
-// blue button casts the one you equipped, or a companion casts theirs. Each is called with the
-// ActionBattle as `this`, (m: who casts, spell, at: its numbers at the rank they know it, yours: you
+// Spells in a fight (the user's): how each `kind` (server/src/spells.json) works when the blue button
+// casts the one you equipped. Each is called with the fight (FieldDemons) as `this`, (m: who casts, spell, at: its numbers at the rank they know it, yours: you
 // cast it). `can` says why it can't be cast now (null: it can); `run` casts it, with its effect, its
 // particles and its sound. A melee one swings bigger, with sparks along the swing (`_bigSwing`).
 
 import { audio } from '../audio/audio.js';
-import { Battle } from './Battle.js';
 
 const ORANGE = 0xffa040, FIRE = 0xff7a30, STORM = 0x9fd0ff, SHADOW = 0xb070ff, MEND = 0x7ee07e;
 const ICE = 0xbfe8ff, HOLY = 0xfff2a0, WILD = 0x8ee860, RED = 0xff5050, SMOKE = 0xb8b0c8, EARTH = 0xc8a070, ARCANE = 0xd090ff;
@@ -517,7 +515,7 @@ export const ACTION_SPELLS = {
 
 /** A member's plain blow, without what a rage or an ambush adds (a poison's strength). */
 function plainBlow(battle, m) {
-    return Battle.prototype._blow.call(battle, m);
+    return battle._plainBlow(m);
 }
 
 export const SPELL_COLOURS = { ORANGE, FIRE, STORM, SHADOW, MEND };

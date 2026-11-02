@@ -272,10 +272,10 @@ test.describe('Demons on the coast', () => {
             const furies = fd.foes.filter(f => f.kind === 'fury' && f.hp > 0 && f.tier === fd.foes.find(o => o.kind === 'fury' && o.hp > 0).tier).slice(0, 2);
             const gold = [inv.essence];      // (essence: what a kill is worth)
             for (const f of furies) { fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 }); gold.push(inv.essence); }
-            const chests = gs.encounters.chests.length;
+            const chests = gs.chests.chests.length;
             const champ = fd.foes.find(f => f.kind === 'champion');
             fd._strikeFoe(champ, champ.hp, { x: champ.foe.x, y: champ.foe.y + 30 });
-            return { first: gold[1] - gold[0], second: gold[2] - gold[1], combo: fd.combo, chests: gs.encounters.chests.length - chests, label: champ.foe.who.nameText.text };
+            return { first: gold[1] - gold[0], second: gold[2] - gold[1], combo: fd.combo, chests: gs.chests.chests.length - chests, label: champ.foe.who.nameText.text };
         });
         expect(paid.second).toBeGreaterThan(paid.first);
         expect(paid.chests).toBe(1);
@@ -797,9 +797,9 @@ test.describe('Orcs on the coast west of the start', () => {
         // The warlord leaves a chest, and is labelled
         const lord = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, w = fd.foes.find(f => f.kind === 'warlord');
-            const chests = gs.encounters.chests.length;
+            const chests = gs.chests.chests.length;
             fd._strikeFoe(w, w.hp, { x: w.foe.x, y: w.foe.y + 30 });
-            return { chests: gs.encounters.chests.length - chests, label: w.foe.nameText.text };
+            return { chests: gs.chests.chests.length - chests, label: w.foe.nameText.text };
         });
         expect(lord).toEqual({ chests: 1, label: 'Warlord' });
     });
@@ -1126,9 +1126,9 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
         // The great bear leaves a chest, and is labelled
         const bear = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, b = fd.foes.find(f => f.kind === 'greatbear');
-            const chests = gs.encounters.chests.length;
+            const chests = gs.chests.chests.length;
             fd._strikeFoe(b, b.hp, { x: b.foe.x, y: b.foe.y + 30 });
-            return { chests: gs.encounters.chests.length - chests, label: b.foe.nameText.text };
+            return { chests: gs.chests.chests.length - chests, label: b.foe.nameText.text };
         });
         expect(bear).toEqual({ chests: 1, label: 'Great Bear' });
     });

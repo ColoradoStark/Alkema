@@ -10,7 +10,6 @@ import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
 import { Spellbook } from '../magic/Spellbook.js';
 import { Upgrades } from '../upgrades/Upgrades.js';
-import { CastMenu } from '../ui/CastMenu.js';
 
 const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often (hit points come back only at a healer, the user's)
 const HEAL_SHARE = 0.5;       // a healer mends you from nothing for this much of the cheapest upgrade you could buy next
@@ -42,7 +41,6 @@ export class UIScene extends Scene {
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
         // In a fight, the blue button asks which spell (or skill)
-        this.castMenu = new CastMenu(this, { onPick: (id) => this._castPicked(id) });
         this.dialogue.onClose = (who) => {
             this._lastTalk = who;
             this.bottomControls.container.setVisible(true);
@@ -342,11 +340,6 @@ export class UIScene extends Scene {
         return true;
     }
 
-    _castPicked(id) {
-        const battle = this.scene.get('GameScene')?.battle;
-        if (battle?.cast(id)) this.quests.record('cast');
-    }
-
     update(time, delta) {
         // The attack button shows the weapon you carry, changing as you change it
         const weapon = (this.scene.get('GameScene')?.localPlayer?.characterData?.selections || []).find(s => s.type === 'weapon') || null;
@@ -356,7 +349,7 @@ export class UIScene extends Scene {
             this.bottomControls.showWeapon(weapon);
         }
         // Hit points and magic in the top bar; magic comes back out of a fight
-        const inFight = !!this.scene.get('GameScene')?.battle || !!this.scene.get('GameScene')?.fieldDemons?.engaged;
+        const inFight = !!this.scene.get('GameScene')?.fieldDemons?.engaged;
         // Second Wind (an upgrade): magic comes back faster
         const regen = this.upgrades?.regen ?? 1;
         // Focus (an upgrade) adds to their magic: as much more as their stats' magic has changed
@@ -380,11 +373,7 @@ export class UIScene extends Scene {
         }
         // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
         this.bottomControls.setControlsShown(!this.gear?.visible);
-        // In a fight, attack is greyed out while there's no one in reach
-        const battle = this.scene.get('GameScene')?.battle;
-        this.bottomControls.setAttackReady(!battle || battle.over || battle.phase === 'foes' || battle.canStrike);
         this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
-        if (!inFight) this.castMenu.close();
         const dayNight = this.scene.get('GameScene')?.dayNight;
         if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);
         const gameScene = this.scene.get('GameScene');
@@ -398,16 +387,12 @@ export class UIScene extends Scene {
 
         if (this.cursors.up.isDown || this.wasd.W.isDown || keys.up) dy = -1;
         else if (this.cursors.down.isDown || this.wasd.S.isDown || keys.down) dy = 1;
-        // The pad's stick, any way you push it; a turn-based fight takes it as the arrow nearest
+        // The pad's stick, any way you push it
         const stick = this.bottomControls.stick;
-        if (stick) {
-            ({ dx, dy } = stick);
-            const fight = this.scene.get('GameScene')?.battle;
-            if (fight && !fight.realtime) [dx, dy] = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
-        }
+        if (stick) ({ dx, dy } = stick);
 
         const me = gameScene.localPlayer.sprite;
-        if (this.dialogue.visible || this.gear?.visible || this.castMenu.visible || this.enterPrompt.leaving) {        // the world waits while someone's talking, you're shopping, choosing a spell, or asked if you'd leave
+        if (this.dialogue.visible || this.gear?.visible || this.enterPrompt.leaving) {        // the world waits while someone's talking, you're shopping, or asked if you'd leave
             gameScene.handlePlayerMovement(0, 0);
             return;
         }
@@ -421,9 +406,8 @@ export class UIScene extends Scene {
         const others = [];
         for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
         // In town the overworld's minimap and quests wait for you outside
-        const outside = !gameScene.town && !gameScene.battle;
+        const outside = !gameScene.town;
         this.minimap.setVisible(outside);
-        this.quests.container.setVisible(!gameScene.battle);     // clear of the foes at the top of a battle map
         if (!outside) return;
         const quest = this.quests.current;
         this.minimap.update(me, others, quest?.kind === 'visit' ? quest : null);
@@ -448,10 +432,8 @@ export class UIScene extends Scene {
             return;
         }
         const gameScene = this.scene.get('GameScene');
-        if (gameScene?.battle) {
-            if (gameScene.battle.attack() !== false) this.quests.record('attack');
-        } else if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
-            // A demon near you on the coast: a swing or a shot at it, as on a battle map; else the world's own
+        if (gameScene?.localPlayer && !gameScene.localPlayer.sailing) {
+            // A foe near you: a swing or a shot at it; else the world's own
             if (!gameScene.fieldDemons?.attack()) gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');
         }
@@ -460,15 +442,8 @@ export class UIScene extends Scene {
     handleAbility() {
         if (this.gear?.visible) return;
         const gameScene = this.scene.get('GameScene');
-        // In a fight: which spell (or skill)? Then it's cast as your turn
-        if (gameScene?.battle) {
-            if (this.castMenu.visible) this.castMenu.close();
-            else if (gameScene.battle.realtime) gameScene.battle.castEquipped() && this.quests.record('cast');      // the spell you equipped
-            else if (gameScene.battle.canAct && gameScene.battle.active.book) this.castMenu.open(gameScene.battle.active.book, gameScene.battle);
-            return;
-        }
         if (!gameScene?.localPlayer || gameScene.localPlayer.sailing) return;
-        if (gameScene.fieldDemons?.castEquipped()) return;      // (demons in sight on the coast: the spell you equipped, as on a battle map)
+        if (gameScene.fieldDemons?.castEquipped()) return;      // (foes in sight: the spell you equipped)
         if (this.bottomControls.coolingDown) return;
         gameScene.localPlayer.playCast();
         gameScene.emitCast();

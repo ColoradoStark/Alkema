@@ -119,7 +119,7 @@ test.describe('Gloomwater Grotto', () => {
         expect(drained).toEqual({ water: false, floor: true });
     });
 
-    test('the great door wants the great key; the Drowned One is fought on a cave battle map, and once beaten is gone and the way out opens', async ({ page }) => {
+    test('the great door wants the great key, and beyond it the rope up takes you out by the mouth', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await goTo(page, 'gloomwater-5');
@@ -131,22 +131,7 @@ test.describe('Gloomwater Grotto', () => {
         await walkFrom(page, door.x, door.y - 44, 'down', 700);
         await expect.poll(() => flags(page).then(f => f['gw-door'])).toBe(true);
 
-        // Across the causeway to the Drowned One: a battle in the cave
-        const boss = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes[0]);
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length), { timeout: 20000 }).toBe(1);
-        await walkFrom(page, boss.x, boss.y - 120, 'down', 2500);
-        await expect.poll(() => page.evaluate(() => {
-            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
-            return b && { country: b.country, foes: b.foes.length, hp: b.foes[0].maxHp, said: b.log.text };
-        }), { timeout: 20000 }).toMatchObject({ country: 'cave', foes: 1, said: 'The Drowned One rises from the black water!' });
-        const ghost = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').foes.ghost.hp);
-        expect((await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.foes[0].maxHp))).toBe(ghost * 4);
-        // Won: back on the level, the Drowned One gone for good, and the rope up opens
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.end('won'));
-        await expect.poll(() => level(page), { timeout: 20000 }).toBe('gloomwater-5');
-        expect((await flags(page))['gw-boss']).toBe(true);
-        await page.waitForTimeout(800);
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.length)).toBe(0);
+        // Across the causeway, the rope up into the daylight (the Drowned One went with the battle maps)
         const rope = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.exits.find(e => e.to === null));
         await walkFrom(page, rope.rect[0] + rope.rect[2] / 2, rope.rect[1] + rope.rect[3] + 18, 'up', 1500);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.title.text), { timeout: 5000 }).toBe('Leave Gloomwater Grotto?');
@@ -160,134 +145,6 @@ test.describe('Gloomwater Grotto', () => {
             return Math.hypot(me.x - grotto.x, me.y + 23 - grotto.y);
         });
         expect(out).toBeLessThan(80);
-    });
-
-    test("Duelyst's Vanar keep the grotto: walk into a band and you fight them all in the cave; beaten, they're gone till you come down again, and what they carried is yours", async ({ page }) => {
-        test.setTimeout(150000);
-        await enterWorld(page);
-        await goTo(page, 'gloomwater-1');
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
-        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
-        // Toned down from Duelyst's colours, and side-on
-        const spec = await page.evaluate(() => window.__PHASER_GAME.cache.json.get('battle').foes.snowchaser);
-        expect(spec).toMatchObject({ side: true, look: 'grey', name: 'Snowchaser' });
-        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
-        await expect.poll(() => page.evaluate(() => {
-            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
-            return b && { country: b.country, foes: b.foes.length, side: b.foes.every(f => f.side), names: [...new Set(b.foes.map(f => f.foe.name))] };
-        }), { timeout: 20000 }).toEqual({ country: 'cave', foes: band.count, side: true, names: ['Snowchaser'] });
-        const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
-        await page.evaluate(() => { const b = window.__PHASER_GAME.scene.getScene('GameScene').battle; b.foes.forEach(f => { f.hp = 0; }); b._won(); });
-        await expect.poll(() => level(page), { timeout: 20000 }).toBe('gloomwater-1');
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold), { timeout: 5000 }).toBeGreaterThan(gold);
-        await page.waitForTimeout(800);
-        // That band gone; the other three still at their posts
-        const left = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).map(f => f.plan.kind).sort());
-        expect(left).toEqual(['snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
-        expect((await flags(page))).toEqual({});       // nothing kept: they'll be back
-        // Out and down again: back at their post
-        await page.evaluate(async () => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            await gs.leaveTown();
-        });
-        await expect.poll(() => level(page), { timeout: 15000 }).toBe(null);
-        await goTo(page, 'gloomwater-1');
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).map(f => f.plan.kind).sort()), { timeout: 20000 })
-            .toEqual(['snowchaser', 'snowchaser', 'snowchaser-lpc', 'snowchaser-lpc']);
-    });
-
-    test('a won fight ends in a short victory scene in the battle (a stinger, Victory!, the spoils), and nothing follows you onto the map (no snow either: the user had none near), nor are you left on the black on the way', async ({ page }) => {
-        test.setTimeout(150000);
-        await enterWorld(page);
-        await goTo(page, 'gloomwater-1');
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory?.gold), { timeout: 15000 }).toBeGreaterThan(0);
-        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
-        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
-        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
-        const gold = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold);
-        // The last of them falls (as a real blow ends it)
-        await page.evaluate(async () => {
-            const { audio } = await import('/src/audio/audio.js');
-            window.__played = [];
-            const stinger = audio.stinger.bind(audio);
-            audio.stinger = (name) => { window.__played.push(name); return stinger(name); };
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            window.__snow = 0;           // (on the way back the level is loading: you're nowhere, not in the snowy north)
-            gs.events.on('postupdate', () => { window.__snow = Math.max(window.__snow, gs.weather.emitter?.getAliveParticleCount() ?? 0); });
-            // ...and never you alone on the black while the level loads (the user saw it, a second or two after the stinger)
-            window.__bare = 0;
-            const cam = gs.cameras.main;
-            gs.events.on('postupdate', () => { if (!gs.battle && !gs.town && !(cam.fadeEffect.isComplete && cam.fadeEffect.alpha > 0.99)) window.__bare++; });
-            const b = gs.battle;
-            b.foes.forEach(f => { f.hp = 0; });
-            b._won();
-        });
-        const scene = await page.evaluate(() => {
-            const v = window.__PHASER_GAME.scene.getScene('GameScene').battle.victory;
-            return v && { shown: v.visible, lines: v.list.filter(o => o.text).map(o => o.text) };
-        });
-        expect(scene.shown).toBe(true);
-        expect(scene.lines[0]).toBe('Victory!');
-        expect(scene.lines.join(' ')).toMatch(/\+\d+ gold/);
-        expect(await page.evaluate(() => window.__played)).toEqual(['victory']);
-        // ...short: back on the level within a few seconds, the gold in your pack, and no coins, sparks or dust following you
-        await expect.poll(() => level(page), { timeout: 6000 }).toBe('gloomwater-1');
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.gold)).toBeGreaterThan(gold);
-        await page.waitForTimeout(300);
-        const alive = await page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return gs.children.list.filter(o => o.type === 'ParticleEmitter' && o.getAliveParticleCount() > 0 && !o.emitting).length;
-        });
-        expect(alive).toBe(0);
-        expect(await page.evaluate(() => window.__snow)).toBe(0);
-        expect(await page.evaluate(() => window.__bare)).toBe(0);
-    });
-
-    test("the cave fight's water: you can't wade into it, and it closes some of the ways out, not all", async ({ page }) => {
-        test.setTimeout(150000);
-        await enterWorld(page);
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
-        await goTo(page, 'gloomwater-1');
-        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
-        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
-        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
-        const step = (cell, dx) => page.evaluate(async ([cell, dx]) => {
-            const b = window.__PHASER_GAME.scene.getScene('GameScene').battle;
-            const m = b.active;
-            m.cell = cell;
-            b.held = false;
-            b.busy = false;
-            b.move(dx, 0);
-            await new Promise(r => setTimeout(r, 700));
-            return { cell: m.cell, out: !!m.out };
-        }, [cell, dx]);
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').battle.water.has('0,7'))).toBe(true);
-        // Beside the pool on the left: a step into it goes nowhere
-        expect(await step([1, 5], -1)).toEqual({ cell: [1, 5], out: false });
-        // Up on the left where it's dry, off the edge you go
-        expect((await step([0, 3], -1)).out).toBe(true);
-    });
-
-    test("the server gone mid-fight (a deploy restarts it): won, you're still put back on the level, not left in the dark", async ({ page }) => {
-        test.setTimeout(150000);
-        await enterWorld(page);
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').companions = []; });
-        await goTo(page, 'gloomwater-1');
-        const band = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.data.foes.find(f => f.kind === 'snowchaser'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.foes.filter(f => !f.plan.action).length), { timeout: 20000 }).toBe(4);
-        await walkFrom(page, band.x, band.y + 100, 'up', 2500);
-        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').battle?.foes?.length), { timeout: 20000 }).toBe(true);
-        await page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            gs.networkManager.request = async () => ({ ok: false, error: 'not-joined' });       // as after a restart: it doesn't know you
-            const b = gs.battle;
-            b.foes.forEach(f => { f.hp = 0; });
-            b._won();
-        });
-        await expect.poll(() => level(page), { timeout: 8000 }).toBe('gloomwater-1');
     });
 
     test('the font of clear water makes you whole', async ({ page }) => {
