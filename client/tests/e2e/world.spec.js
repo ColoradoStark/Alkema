@@ -262,10 +262,14 @@ test.describe('Living world', () => {
                 return { name: p.name, joined, asks, berth: Math.round(berth) };
             });
         });
-        expect(ports.map(p => p.name).sort()).toEqual(['Ashby', 'Gull\'s Rest', 'Morvath', 'Ravenford', 'Saltmere', 'Seacombe', 'Tumbledown']);
+        expect(ports.map(p => p.name).sort()).toEqual(['Ashby', "Gull's Rest", 'Saltmere', 'Seacombe', 'Tumbledown']);
+        // (the towns drawn as castles stand on the sea with no dock: the user found a dock on a castle weird)
+        const docked = await page.evaluate(async () => (await import('/src/world/places.js')).WORLD.places
+            .filter(p => ['Ravenford', 'Morvath'].includes(p.name)).map(p => !!p.dock));
+        expect(docked).toEqual([false, false]);
         for (const p of ports) {
             expect(p, p.name).toMatchObject({ joined: true, asks: p.name });
-            // (berthed off its head where there's room; where there isn't (Saltmere's, Morvath's), waiting just offshore)
+            // (berthed off its head where there's room; where there isn't (Saltmere's), waiting just offshore)
             expect(p.berth, `${p.name}: a boat waits within a few tiles of its dock`).toBeLessThan(12 * 32);
         }
     });
@@ -296,15 +300,21 @@ test.describe('Living world', () => {
             await wait(150);
             const shore = !!side && gs.world.isWalkable(x, y + 23);
             const toShip = AWAY[side];
-            await hold(toShip, 800);
+            // (by what the game has done, not the wall's clock: a busy machine runs fewer frames in a second,
+            // and she hadn't the way on for her wash, nor to coast, when four browsers ran at once)
+            const until = async (ok, ms) => { for (let t = 0; t < ms && !ok(); t += 50) await wait(50); };
+            keys[toShip] = true;
+            await until(() => gs.localPlayer.sailing, 3000);
             const boarded = gs.localPlayer.sailing && !me.visible;
-            await hold(toShip, 2500);
+            await until(() => gs.localPlayer.ship.speed > 120 && !gs.world.isWalkable(me.x, me.y + 23), 10000);
+            await wait(300);
+            keys[toShip] = false;
             const atSea = gs.localPlayer.sailing && !gs.world.isWalkable(me.x, me.y + 23);
             // Under way, foam washes off her sides and bow, as the ships at sea's does (the user's), and a wake astern
             const foam = gs.localPlayer.ship.foam, wash = foam.wash.getAliveParticleCount() > 0, wake = foam.wake.getAliveParticleCount() > 0;
             // Let go: she keeps sailing on for a moment before she slows
             const [ox, oy] = DIRS[toShip], before = me.x * ox + me.y * oy;
-            await wait(400);
+            await until(() => me.x * ox + me.y * oy - before > 10, 3000);
             const coasts = me.x * ox + me.y * oy - before > 10;
             // Come about and sail back to the beach until she runs ashore
             keys[side] = true;
@@ -395,25 +405,15 @@ test.describe('Living world', () => {
         expect(result).toEqual({ landings: true, stuck: [] });
     });
 
-    test('from the tip of the Watch the view pans across the strait to Morvath, out of reach on foot', async ({ page }) => {
+    test('Morvath stands on the sea out of reach on foot, and no lookout pans to it any more', async ({ page }) => {
+        // (the Watch's tip looked across the strait at it till it went to stand on the sea, the user's choice)
         await enterWorld(page);
         const result = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const cam = gs.cameras.main, me = gs.localPlayer.sprite;
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            const vista = (await import('/src/world/places.js')).WORLD.vistas.find(v => v.name === 'Morvath');
-            const label = gs.world.labels.find(l => l.text === 'Morvath');
-            const inView = () => cam.worldView.contains(label.x, label.y) && cam.worldView.contains(vista.look.x, vista.look.y + 90);
-            // (the view eases there by the game's clock, which a busy machine runs slower than the wall's: till it's settled)
-            const settled = async () => { for (let t = 0, z = -1, o = -1; t < 40 && (Math.abs(cam.zoom - z) > 0.002 || Math.abs(cam.followOffset.y - o) > 0.5 || t < 10); t++) { z = cam.zoom; o = cam.followOffset.y; await wait(250); } };
-            const stand = async (x, y) => { me.setPosition(x, y - 23); me.body.reset(x, y - 23); await settled(); };
-            await stand(vista.x, vista.y);
-            const atLookout = { morvath: inView(), hero: cam.worldView.contains(me.x, me.y) };
-            await stand(vista.x, vista.y + 400);
-            const away = { recentred: Math.abs(cam.followOffset.y) < 8 };
-            // and no way across on foot: search every cell you can walk to from the lookout
+            const { WORLD } = await import('/src/world/places.js');
+            const me = gs.localPlayer.sprite;
             const { cn: n, blocked, k } = gs.world, T = 32 / k;
-            const seen = new Uint8Array(n * n), start = Math.floor(vista.y / T) * n + Math.floor(vista.x / T);
+            const seen = new Uint8Array(n * n), start = Math.floor((me.y + 23) / T) * n + Math.floor(me.x / T);
             const queue = [start];
             seen[start] = 1;
             while (queue.length) {
@@ -423,10 +423,11 @@ test.describe('Living world', () => {
                     if (!blocked[j] && !seen[j]) { seen[j] = 1; queue.push(j); }
                 }
             }
-            const place = (await import('/src/world/places.js')).WORLD.places.find(p => p.name === 'Morvath');
-            return { atLookout, away, walkToMorvath: !!seen[Math.floor(place.y / T) * n + Math.floor(place.x / T)] };
+            const place = WORLD.places.find(p => p.name === 'Morvath');
+            return { walkToMorvath: !!seen[Math.floor(place.y / T) * n + Math.floor(place.x / T)],
+                     lookout: WORLD.vistas.some(v => v.name === 'Morvath'), dock: !!place.dock };
         });
-        expect(result).toEqual({ atLookout: { morvath: true, hero: true }, away: { recentred: true }, walkToMorvath: false });
+        expect(result).toEqual({ walkToMorvath: false, lookout: false, dock: false });
     });
 
     test("across the channel from the south-west beach, Wreckers' Cave is in view but out of reach on foot", async ({ page }) => {

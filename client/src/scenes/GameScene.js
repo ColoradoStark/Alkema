@@ -316,7 +316,7 @@ export class GameScene extends Scene {
     }
 
     /**
-     * At a lookout (the tip of the Watch, across the strait from Morvath) the
+     * At a lookout (the south-west beach, across the channel from Wreckers' Cave) the
      * view pans over the water to what it looks on; walk away and it comes back.
      */
     updateLookout(delta) {
