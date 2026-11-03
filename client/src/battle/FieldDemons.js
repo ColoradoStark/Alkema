@@ -85,7 +85,9 @@ const MP_BACK_MS = 3000;        // magic comes back, a point at a time, as you f
 const ATTACKERS = 2;            // at most this many wind up a blow at you at once; the rest circle (a warlock's fire doesn't wait its turn)
 const GUARD_MS = 700;           // struck, you can't be struck again for this long
 const KNOCK = 12;
-const STEADY_MS = 1500;         // staggered by a blow, it isn't again for this long: its next blow comes through (the user's: they kept hitting one faster than it could strike back)
+const STEP_MS = 50;             // the fight moves on in steps of at most this (a slow phone's long frame is several)
+const MAX_FRAME_MS = 250;       // ...and no more than this a frame (back from a hidden tab, not seconds at once)
+const STEADY_MS = 1500;        // staggered by a blow, it isn't again for this long: its next blow comes through (the user's: they kept hitting one faster than it could strike back)
 const BODY = 22;
 const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 // How each in a pack comes at you (the user's, after Pac-Man's ghosts: one pursues, one cuts you off, one
@@ -276,9 +278,12 @@ export class FieldDemons {
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
-            if (this._freeze <= 0) this.scene.anims.resumeAll();
             for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
-            return;
+            if (this._freeze > 0) return;
+            this.scene.anims.resumeAll();
+            // (only the hold's own moment: on a slow phone's long frame, the whole frame held slowed them against you)
+            delta = -this._freeze;
+            this._freeze = 0;
         }
         if (!this.foes.length) return;
         // A menu open (Upgrade, Equip, Items, a shop), the fight holds (the user's: upgrading, they were struck);
@@ -299,7 +304,18 @@ export class FieldDemons {
             if (!menu) this.you.guard = Math.max(this.you.guard, MENU_GRACE_MS);
         }
         if (menu) return;
-        const dt = Math.min(delta, 50) / 1000;
+        // A long frame (a slow phone's) in steps of at most STEP_MS: in one step cut short, they walked, wound up and
+        // came at you in slow motion while your swings came as fast as ever, and you could strike faster than they ever could back
+        for (let left = Math.min(delta, MAX_FRAME_MS); left > 0 && !(this._freeze > 0) && this.foes.length; left -= STEP_MS) {
+            this._tick(Math.min(left, STEP_MS), feet);
+        }
+        this._warn(feet);
+        this._bars();
+    }
+
+    /** The fight moved on `delta` ms (at most STEP_MS). */
+    _tick(delta, feet) {
+        const dt = delta / 1000;
         this.you.guard = Math.max(0, this.you.guard - delta);
         const me = this.scene.localPlayer;
         const out = this.fallen || !me?.sprite;
@@ -315,11 +331,9 @@ export class FieldDemons {
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
         }
-        this._warn(feet);
         this._fly(dt);
         this._statuses(delta);
         this._apart();
-        this._bars();
     }
 
     /** Your queued swing or spell, and your magic coming back as you fight. */

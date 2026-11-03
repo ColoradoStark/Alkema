@@ -56,6 +56,44 @@ const keepUp = (page) => page.evaluate(() => {
     ui.hp.max = Math.max(ui.hp.max, 100000); ui.hp.now = ui.hp.max;
 });
 
+/** Strike a kindred hunter as fast as the button goes for eight seconds of the game's clock: it still strikes back. */
+async function strikesBack(page) {
+    const { PLACES, PACKS } = await places(page);
+    const pack = PACKS.findIndex(p => p.family === 'vanar' && p.band.includes('kindredhunter'));
+    const h = PLACES.find(p => p.pack === pack && p.kind === 'kindredhunter');
+    await standAt(page, h.x, h.y + 300);
+    await expect.poll(() => page.evaluate((i) => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i)?.foe.ready, h.i), { timeout: 30000 }).toBe(true);
+    const r = await page.evaluate(async (i) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
+        const H = fd.foes.find(f => f.i === i);
+        H.hp = 1e6;
+        for (const o of fd.foes) if (o !== H) o.stun = 1e9;
+        me.setPosition(H.foe.x - 40, H.foe.y - 23);
+        me.body.reset(me.x, me.y);
+        fd._rouse(H.pack);
+        const swing = fd._foeSwing.bind(fd);
+        let swings = 0;
+        fd._foeSwing = (f) => { if (f === H) swings++; return swing(f); };
+        // (eight seconds of the game's own clock: a busy machine runs it slower than the wall's)
+        const t0 = gs.time.now, log = [];
+        let last = '';
+        while (gs.time.now - t0 < 8000) {
+            const st = `${H.state}${H.stun > 0 ? ' stun' : ''}${H.steady > 0 ? ' steady' : ''} d${Math.round(Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23))} dy${Math.round(H.foe.y - me.y - 23)}`;
+            if (st.replace(/ d-?\d+ dy-?\d+/, '') !== last) { log.push(`${Math.round(gs.time.now - t0)} ${st}`); last = st.replace(/ d-?\d+ dy-?\d+/, ''); }
+            ui.hp.now = ui.hp.max;
+            fd.attack();            // (as fast as the button goes: a press mid-swing is kept)
+            if (Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23) > 50) {       // (after it as it's knocked back)
+                me.setPosition(H.foe.x - 36, H.foe.y - 23);
+                me.body.reset(me.x, me.y);
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
+        return { swings, struck: 1e6 - H.hp, log };
+    }, h.i);
+    expect(r.struck).toBeGreaterThan(0);
+    expect(r.swings, r.log.join(' | ')).toBeGreaterThanOrEqual(2);
+}
+
 test.describe('Demons on the coast', () => {
     test('a spell equipped with the demons near shows on the blue button at once, not only after a cast', async ({ page }) => {
         test.setTimeout(90000);
@@ -1201,40 +1239,16 @@ test.describe("Duelyst's Vanar north of Dunmere", () => {
     test("struck again and again as fast as you can swing, a foe still strikes back (the user's: they kept hitting one faster than it could attack, wearing it down): a blow staggers it once, then not again for a moment", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
-        const { PLACES, PACKS } = await places(page);
-        const pack = PACKS.findIndex(p => p.family === 'vanar' && p.band.includes('kindredhunter'));
-        const h = PLACES.find(p => p.pack === pack && p.kind === 'kindredhunter');
-        await standAt(page, h.x, h.y + 300);
-        await expect.poll(() => page.evaluate((i) => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i)?.foe.ready, h.i), { timeout: 30000 }).toBe(true);
-        const r = await page.evaluate(async (i) => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
-            const H = fd.foes.find(f => f.i === i);
-            H.hp = 1e6;
-            for (const o of fd.foes) if (o !== H) o.stun = 1e9;
-            me.setPosition(H.foe.x - 40, H.foe.y - 23);
-            me.body.reset(me.x, me.y);
-            fd._rouse(H.pack);
-            const swing = fd._foeSwing.bind(fd);
-            let swings = 0;
-            fd._foeSwing = (f) => { if (f === H) swings++; return swing(f); };
-            // (eight seconds of the game's own clock: a busy machine runs it slower than the wall's)
-            const t0 = gs.time.now, log = [];
-            let last = '';
-            while (gs.time.now - t0 < 8000) {
-                const st = `${H.state}${H.stun > 0 ? ' stun' : ''}${H.steady > 0 ? ' steady' : ''} d${Math.round(Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23))} dy${Math.round(H.foe.y - me.y - 23)}`;
-                if (st.replace(/ d-?\d+ dy-?\d+/, '') !== last) { log.push(`${Math.round(gs.time.now - t0)} ${st}`); last = st.replace(/ d-?\d+ dy-?\d+/, ''); }
-                ui.hp.now = ui.hp.max;
-                fd.attack();            // (as fast as the button goes: a press mid-swing is kept)
-                if (Math.hypot(H.foe.x - me.x, H.foe.y - me.y - 23) > 50) {       // (after it as it's knocked back)
-                    me.setPosition(H.foe.x - 36, H.foe.y - 23);
-                    me.body.reset(me.x, me.y);
-                }
-                await new Promise(r => setTimeout(r, 100));
-            }
-            return { swings, struck: 1e6 - H.hp, log };
-        }, h.i);
-        expect(r.struck).toBeGreaterThan(0);
-        expect(r.swings, r.log.join(' | ')).toBeGreaterThanOrEqual(2);
+        await strikesBack(page);
+    });
+
+    test("on a slow phone too (the CPU slowed eight times): a foe struck as fast as you can swing still strikes back, not slowed against you", async ({ page }) => {
+        // (its long frames were cut to 50 ms and a hit-stop held a whole one: it walked and wound up in slow motion while you didn't)
+        test.setTimeout(180000);
+        await enterWorld(page);
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 });
+        await strikesBack(page);
     });
 
     test('a water elemental hangs back and throws water at you', async ({ page }) => {
