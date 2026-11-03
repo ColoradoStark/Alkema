@@ -1,0 +1,7 @@
+Duelyst unit art (duelyst-<unit>/f6_<unit>.png and .plist): the Vanar Kindred's
+Snowchaser, Ice Hornet, Crystal Beetle, Water Elemental, Kindred Hunter and Water
+Bear, by Counterplay Games' artists, as released by Open Duelyst under CC0 1.0
+Universal (DUELYST-LICENSE.txt), taken unchanged from
+https://github.com/open-duelyst/duelyst/tree/main/app/resources/units
+(commit 2843f2400854136598631288c2e8dfb8f5173de7).
+Their frame timings are Duelyst's own (app/data/resources.js frameDelay).

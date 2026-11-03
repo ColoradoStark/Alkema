@@ -1,0 +1,23 @@
+Mountains, forests, grass, sand and snow: The Battle for Wesnoth
+=============================================
+
+The images in wesnoth-mountains/, wesnoth-forest/ and wesnoth-ground/ are the
+mountain, forest (snowy woods included), grass, sand and snow terrain art of The
+Battle for Wesnoth (https://www.wesnoth.org), taken unchanged from
+data/core/images/terrain/mountains, .../terrain/forest, .../terrain/grass,
+.../terrain/sand and .../terrain/frozen in
+https://github.com/wesnoth/wesnoth (wesnoth-ground's files are named <dir>-<file>).
+
+Artists: the Wesnoth terrain artists, chiefly Hogne Håskjold (frame), terrain
+art director, who made much of the current terrain and especially the
+mountains; the desert ("dry") mountains are by doofus-01. The full list of
+contributors is in data/core/about.cfg of the Wesnoth repository.
+
+License: GNU GPL version 2 or later (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+
+In this game the mountains are reassembled from their per-hex slices and their
+hex-cut edges dissolved into the grass, single trees are cut out of the sparse
+woods, and all their colours are mapped to the game's palette
+(tools/worldart.py: wesnoth_mountain, trees); the grass and sand hexes are
+laid out into seamless repeating fields that fill the ground tiles
+(tools/worldgen.py: hex_field); the results are in client/assets/world.

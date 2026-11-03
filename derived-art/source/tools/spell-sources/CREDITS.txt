@@ -1,0 +1,19 @@
+Spell icons: Painterly Spell Icons, parts 1-4, by J. W. Bjerk (eleazzaar)
+https://opengameart.org/content/painterly-spell-icons-part-1
+https://opengameart.org/content/painterly-spell-icons-part-2
+https://opengameart.org/content/painterly-spell-icons-part-3
+https://opengameart.org/content/painterly-spell-icons-part-4
+License: CC-BY 3.0 (also offered under CC-BY-SA 3.0/4.0 and GPL 2.0)
+Credit: J. W. Bjerk (eleazzaar) -- www.jwbjerk.com/art -- find this and other open art at: http://opengameart.org
+painterly/ holds the 256 px originals used (each icon's brightest version, the pack's file
+names without the part prefix); tools/spellgen.py scales them to 64 px for the game.
+painterly/tiers/ holds, scaled to 128 px and otherwise unchanged, the pack's two dimmer versions of
+each of those icons and one other colour of each (a spell's tiers on the Magic tab).
+
+Spell effects: The Battle for Wesnoth (https://www.wesnoth.org)
+wesnoth-fx/ holds frames taken unchanged from data/core/images/projectiles and
+data/core/images/halo (fireball and its impact, fire bursts, flame burst, the
+fire missile, druid healing, leadership flare, teleport, dark magic, the lightning bolts and the white missile's impact) in
+https://github.com/wesnoth/wesnoth, by the Wesnoth artists (the full list of
+contributors is in data/core/about.cfg).
+License: GNU GPL version 2 or later.

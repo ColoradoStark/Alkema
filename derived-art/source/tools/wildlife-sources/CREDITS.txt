@@ -1,0 +1,16 @@
+The overworld's wildlife (tools/wildlife.py lays these out as client/assets/world/wildlife/*.png).
+
+reemax-raven-seagull.png: "LPC Raven and Seagull", posted by Reemax, art by Tuomo Untinen.
+  License: CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-raven-and-seagull
+
+bluecarrot16-bird_2_white.png, bluecarrot16-bird_2_black.png, bluecarrot16-bird_3_sparrow.png:
+"[LPC] Birds" by bluecarrot16 (the cardinal's colours after Refuzzle's "Winter Birds", CC0).
+  License: CC-BY 4.0 / CC-BY-SA 4.0 / CC-BY 3.0 / CC-BY-SA 3.0 / OGA-BY 3.0 / GPL 3.0 / GPL 2.0
+  https://opengameart.org/content/lpc-birds
+
+tapatilorenzo-fox-woods.png, tapatilorenzo-fox-arctic.png, tapatilorenzo-deer-light-doe.png,
+tapatilorenzo-deer-light-buck.png: "[LPC] bears, deer, lions and more" by tapatilorenzo
+(LPC Spring 2022), from lpc_animals_2022_v1.1.zip.
+  License: CC-BY 4.0
+  https://opengameart.org/content/lpc-bears-deer-lions-and-more

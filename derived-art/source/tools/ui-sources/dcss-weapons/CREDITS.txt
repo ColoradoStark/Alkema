@@ -1,0 +1,16 @@
+Weapon icons: Dungeon Crawl Stone Soup tiles
+=============================================
+
+These 32x32 tiles are from the Dungeon Crawl Stone Soup tile set, as released
+under CC0 by the Crawl tiles project (releases/Ancient/Oct-5-2010/item/weapon
+in https://github.com/crawl/tiles), by the DCSS artists (list:
+https://github.com/crawl/tiles/blob/master/ARTISTS.md). License: CC0 1.0
+(public domain dedication), http://creativecommons.org/publicdomain/zero/1.0/
+
+longbow1-2015.png is longbow1.png from the same project's Nov-2015 release
+(releases/Nov-2015/item/weapon/ranged), also CC0.
+
+The attack button's long sword (client/assets/ui/long_sword_1_old.png until
+October 2026) is this set's long_sword1.png. tools/weapon_icons.py lays them
+side by side, unchanged, in client/assets/ui/weapons.png, and says which
+weapon shows which (the attack button shows the weapon you carry).
