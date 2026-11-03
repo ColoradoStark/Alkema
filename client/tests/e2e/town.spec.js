@@ -12,7 +12,7 @@ async function enterWorld(page) {
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite, null, { timeout: 30000 });
     // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
-    // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
+    // These begin where heroes start: the road below Riverhold
     await page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
         me.setPosition(6320, 11120);
@@ -363,7 +363,7 @@ test.describe('Riverhold', () => {
         // (what the game loads, not the maps behind its doors fetched ahead into the browser's cache: those are fetch()es)
         page.on('request', r => { if (r.url().includes('/folk/') && r.resourceType() !== 'fetch') fetched.push(new URL(r.url()).pathname); });
         await enterWorld(page);
-        // (from Riverhold's road on: heroes start on the coast, where its demons' file comes and goes)
+        // (on Riverhold's road, where heroes start, no foes about)
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length && !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._loading);
         fetched.length = 0;
         // The server never gets round to making anyone

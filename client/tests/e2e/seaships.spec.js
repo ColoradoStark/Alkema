@@ -4,7 +4,7 @@
 // when you head inland or into a place.
 import { test, expect } from '@playwright/test';
 
-const DUNMERE = [10928, 10224];      // Castle Dunmere's drawbridge, where new heroes start, by the sea
+const DUNMERE = [10928, 10224];      // Castle Dunmere's drawbridge, by the sea
 const INLAND = [6320, 11120];        // the road below Riverhold, far from the sea
 
 async function enterWorld(page) {

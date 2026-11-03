@@ -1,18 +1,17 @@
 // The world's zones (client/src/world/zonemap.js, tools/zonegen.py from the user's drawing) without a browser: the
-// four kingdoms and their zones, the home zone holding where heroes start and the whole climb, and a warden over its
-// every edge too strong for anyone the climb's upgrades could make.
+// four kingdoms and their zones, heroes starting below Riverhold by the home zone, and every pack in it standing in it.
 import { describe, test, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { zoneMap } from '../../src/world/zonemap.js';
-import { HOME, WALL, strengthFor } from '../../src/battle/zones.js';
-import WARDENS from '../../src/battle/wardens.json';
+import { HOME } from '../../src/battle/zones.js';
 
 const map = zoneMap(JSON.parse(readFileSync(new URL('../../assets/world/zones.json', import.meta.url))));
-// (the climb's packs, read from FieldVanar.js's source: the module itself wants a browser)
-const vanar = readFileSync(new URL('../../src/battle/FieldVanar.js', import.meta.url), 'utf8');
-const VANAR_PACKS = [...vanar.slice(vanar.indexOf('VANAR_PACKS = ['), vanar.indexOf('];', vanar.indexOf('VANAR_PACKS = [')))
-    .matchAll(/at: \[(\d+), (\d+)\]/g)].map(m => ({ at: [Number(m[1]), Number(m[2])] }));
-const START = { x: 341 * 32 + 16, y: 319 * 32 + 16 };       // Castle Dunmere's drawbridge (worldgen's START)
+const WORLD = JSON.parse(readFileSync(new URL('../../assets/world/overworld.json', import.meta.url)));
+const START = { x: WORLD.spawn.x * 32 + 16, y: WORLD.spawn.y * 32 + 16 };       // below Riverhold's gate (worldgen's START)
+// (the bands' packs, read from Bands.js's source: the module itself wants a browser's loader)
+const bands = readFileSync(new URL('../../src/battle/Bands.js', import.meta.url), 'utf8');
+const ZONE_PACKS = [...bands.slice(bands.indexOf('z35: ['), bands.indexOf('],\n};'))
+    .matchAll(/at: \[(\d+), (\d+)\]/g)].map(m => [Number(m[1]), Number(m[2])]);
 
 describe('Zones', () => {
     test("36 zones in four kingdoms, the user's: Dunmere 10, Grimhold 14, Nightspire 6, Gloomhold 6", () => {
@@ -22,25 +21,16 @@ describe('Zones', () => {
         expect(new Set(map.zones.map(z => z.name)).size).toBe(36);
     });
 
-    test('heroes start in the home zone, and every pack of the climb stands in it', () => {
-        expect(VANAR_PACKS).toHaveLength(7);
+    test('heroes start below Riverhold, in its wood (33), and the Saltmere Point (35) is the home zone, all seven of its packs in it', () => {
         expect(map.home).toBe(HOME);
-        expect(map.at(START.x, START.y).id).toBe(HOME);
-        for (const p of VANAR_PACKS) expect(map.at(...p.at)?.id).toBe(HOME);
+        expect(HOME).toBe(35);
+        expect(map.at(START.x, START.y).id).toBe(33);
+        expect(ZONE_PACKS).toHaveLength(7);
+        for (const at of ZONE_PACKS) expect(map.at(...at)?.id).toBe(HOME);
     });
 
     test('the world wraps, and the sea is no zone', () => {
-        expect(map.at(START.x + 512 * 32, START.y - 512 * 32).id).toBe(HOME);
+        expect(map.at(START.x + 512 * 32, START.y - 512 * 32).id).toBe(33);
         expect(map.at(5, 5)).toBeNull();
-    });
-
-    test('a warden stands just over each of its edges, never in it, and no hero the climb pays for is a match for one', () => {
-        expect(WARDENS.length).toBeGreaterThan(10);
-        for (const w of WARDENS) {
-            expect(w.zone).not.toBe(HOME);
-            expect(map.at(...w.at).id).toBe(w.zone);
-        }
-        // (the climb's last pack's mark, times about ten upgrades the road buys and four more: still far short)
-        expect(strengthFor('vanar', VANAR_PACKS.length - 1 + WALL)).toBeGreaterThan(strengthFor('vanar', VANAR_PACKS.length - 1) * 3.4 ** 14 * 5);
     });
 });

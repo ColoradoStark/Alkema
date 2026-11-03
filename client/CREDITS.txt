@@ -98,18 +98,19 @@ Wesnoth artists.
 FOES
 ======================================================================
 
-The orcs on the coast west of where you start are The Battle for
-Wesnoth's (https://www.wesnoth.org) unit art, by the Wesnoth unit
-artists (the full list of contributors is in data/core/about.cfg of the
-Wesnoth repository): the Orcish Grunt, Archer, Warrior and Warlord and
-the Goblin Spearman. Their standing, idle, attack, defend and death
+The foes out on the world are The Battle for Wesnoth's
+(https://www.wesnoth.org) unit art, by the Wesnoth unit artists (the
+full list of contributors is in data/core/about.cfg of the Wesnoth
+repository): the Giant Rat, Ruffian, Woodsman, Footpad, Poacher, Goblin
+Spearman, Goblin Impaler and Goblin Rouser on the Saltmere Point, and
+the Orcish Grunt, Archer, Warrior and Warlord made for the coast before. Their standing, idle, attack, defend and death
 frames are used, scaled up a quarter, with their team colour mapped to
 LPC cloth (the grunt's, archer's, warrior's and warlord's every colour
 mapped to the LPC character palettes, and the grunt's dropped sword
 drawn into its last death frames).
   License: GNU GPL version 2 or later
   https://github.com/wesnoth/wesnoth/tree/master/data/core/images/units
-The foes on the road north of Castle Dunmere are Duelyst's Vanar (the
+Duelyst's Vanar, kept for the dungeons (not out on the world now: the
 Snowchaser, Ice Hornet, Crystal Beetle, Water Elemental, Kindred Hunter
 and Water Bear), by Counterplay Games' artists, released by Open Duelyst
 under CC0. Their breathing, idle, run, attack, hit and death frames are

@@ -9,11 +9,12 @@ Writes to client/assets/battle/:
 The battle maps it made for the turn-based and real-time fights went with them (the user's, November 2026:
 fighting out on the world is the game's one way).
 
-Run:  python tools/battlegen.py
+Run:  python tools/battlegen.py [--duelyst]
 """
 
 import json
 import os
+import sys
 
 import numpy as np
 from PIL import Image
@@ -187,6 +188,69 @@ FOES = {
             'breeze-s': seq('warlord-victory', [1, 2, 3, 4, 5, 4, 3, 2, 1], [90] * 4 + [1000] + [110] * 4),
             'attack-s': seq('warlord-attack-sword-', range(1, 7), [100, 100, 75, 100, 100, 75]) + [('warlord', 50)],
             'defend-s': hit(['warlord-defend-1', 'warlord-defend-2']),
+        }},
+
+    # The Saltmere Point, below Riverhold (zone 35, the first loop: docs/WORLD.md): the wharf rats, the river's
+    # outlaws and the goblins come up the coast. None walks in Wesnoth's art but the spearman: the rest hop
+    # (FieldOrcs.js `Orc`). Each its own cloth: the outlaws' drab, the goblins' their spearman's
+    'rat': {
+        'name': 'Giant Rat', 'race': 'beast', 'hp': 15, 'damage': 4, 'folder': 'wesnoth-rat', 'cloth': 'brown',
+        'anims': {
+            'stand-s': [('giant-rat', 1000)],
+            'attack-s': seq('giant-rat-attack-', range(1, 8), 100),
+            'defend-s': hit(['giant-rat-defend-1', 'giant-rat-defend-2']),
+            'die-s': seq('giant-rat-die-', range(1, 4), 100),
+        }},
+    'ruffian': {
+        'name': 'Ruffian', 'race': 'human', 'hp': 16, 'damage': 4, 'folder': 'wesnoth-ruffian', 'cloth': 'charcoal',
+        'anims': {
+            'stand-s': [('ruffian', 1000)],
+            'breeze-s': seq('ruffian-idle-', [1, 2, 3, 4, 5, 4, 3, 2, 1], 200),
+            'attack-s': seq('ruffian-attack-', range(1, 10), 100),
+            'defend-s': hit(['ruffian-defend-1', 'ruffian-defend-2']),
+        }},
+    'woodsman': {
+        'name': 'Woodsman', 'race': 'human', 'hp': 18, 'damage': 4, 'folder': 'wesnoth-woodsman', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('woodsman', 1000)],
+            'breeze-s': seq('woodsman-idle-', list(range(1, 15)) + [3, 2, 1],
+                            [100, 150, 200, 150, 150, 200, 1200, 200, 1200, 150, 150, 100, 100, 1300, 200, 200, 150]),
+            'attack-s': [('woodsman-bow', 65)] + seq('woodsman-bow-attack-', [1, 2, 3, 4, 1], [75, 75, 100, 130, 65]),
+            'defend-s': hit(['woodsman-bow', 'woodsman-bow-defend']),
+        }},
+    'footpad': {
+        'name': 'Footpad', 'race': 'human', 'hp': 30, 'damage': 5, 'folder': 'wesnoth-footpad', 'cloth': 'slate',
+        'anims': {
+            'stand-s': [('footpad', 1000)],
+            'breeze-s': seq('footpad-idle-', [1, 2, 3, 4, 3, 2, 3, 4, 3, 2, 1], [100, 100, 100, 200, 100, 100, 100, 200, 100, 100, 100]),
+            'attack-s': [('footpad-attack1', 250), ('footpad-attack2', 100), ('footpad', 100)],
+            'defend-s': hit(['footpad', 'footpad-defend']),
+        }},
+    'poacher': {
+        'name': 'Poacher', 'race': 'human', 'hp': 33, 'damage': 5, 'folder': 'wesnoth-poacher', 'cloth': 'walnut',
+        'anims': {
+            'stand-s': [('poacher', 1000)],
+            'attack-s': seq('poacher-bow-attack', range(1, 8), [50, 50, 50, 50, 200, 50, 100]) + [('poacher-bow-attack1', 50)],
+            'defend-s': hit(['poacher-bow-attack1', 'poacher-bow-defend']),
+        }},
+    'impaler': {
+        'name': 'Goblin Impaler', 'race': 'goblin', 'hp': 26, 'damage': 7, 'folder': 'wesnoth-impaler', 'cloth': ORC_CLOTH,
+        'anims': {
+            'stand-s': [('impaler', 1000)], 'stand-n': [('impaler-ne', 1000)],
+            'attack-s': [('impaler', 75)] + seq('impaler-attack-se-', [1, 2, 1], [50, 150, 50]) + [('impaler', 75)],
+            'attack-n': [('impaler-ne', 75), ('impaler-attack-ne', 250), ('impaler-ne', 75)],
+            'defend-s': hit(['impaler', 'impaler-defend']), 'defend-n': hit(['impaler-ne', 'impaler-ne-defend']),
+            'die-s': seq('impaler-death-', range(1, 10), [80, 75, 70, 65, 60, 55, 50, 45, 150]),
+        }},
+    'rouser': {
+        'name': 'Goblin Rouser', 'race': 'goblin', 'hp': 31, 'damage': 7, 'folder': 'wesnoth-rouser', 'cloth': ORC_CLOTH,
+        'anims': {
+            'stand-s': [('rouser', 1000)], 'stand-n': [('rouser-ne', 1000)],
+            'breeze-s': [('rouser', 600), ('rouser-lead-1', 300), ('rouser-lead-2', 600), ('rouser-lead-1', 300)],
+            'attack-s': [('rouser', 25), ('rouser-defend', 50), ('rouser-attack1', 50), ('rouser-attack-se', 150),
+                         ('rouser-attack3', 50), ('rouser-attack4', 50), ('rouser', 25)],
+            'attack-n': [('rouser-ne', 25), ('rouser-attack1', 50), ('rouser-attack-ne', 150), ('rouser-attack3', 50), ('rouser-ne', 25)],
+            'defend-s': hit(['rouser', 'rouser-defend']), 'defend-n': hit(['rouser-ne', 'rouser-ne-defend']),
         }},
 }
 
@@ -390,11 +454,17 @@ def main():
         sheet, foes[kind] = foe_sheet(spec)
         sheet.save(os.path.join(OUT, f'{kind}.png'), optimize=True)
         foes[kind]['image'] = f'{kind}.png'
-    heroes = creator_look()
-    for unit in DUELYST:
-        sheet, foes[unit] = duelyst_sheet(unit, heroes)
-        sheet.save(os.path.join(OUT, f'{unit}.png'), optimize=True)
-        foes[unit]['image'] = f'{unit}.png'
+    # Duelyst's are made again only asked (--duelyst): made against today's townsfolk, they'd come out a little
+    # different, and the user is keeping them as they are for the dungeons
+    if '--duelyst' in sys.argv:
+        heroes = creator_look()
+        for unit in DUELYST:
+            sheet, foes[unit] = duelyst_sheet(unit, heroes)
+            sheet.save(os.path.join(OUT, f'{unit}.png'), optimize=True)
+            foes[unit]['image'] = f'{unit}.png'
+    else:
+        with open(os.path.join(OUT, 'battle.json')) as f:
+            foes.update({k: v for k, v in json.load(f)['foes'].items() if k in DUELYST})
     with open(os.path.join(OUT, 'battle.json'), 'w') as f:
         json.dump({'foes': foes}, f, indent=1)
     print('foes:', ', '.join(foes))

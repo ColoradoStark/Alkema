@@ -130,7 +130,7 @@ test.describe('Living world', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const { world } = gs, { forest } = world;
             const me = gs.localPlayer.sprite;
-            // Round Riverhold, where heroes started before the start moved to Castle Dunmere: Dunmere's beside
+            // Round Riverhold, where heroes start: Dunmere's beside
             // the hills, and the pines dotted up a range's lower slopes stand on rock, which blocks on its own
             me.setPosition(6320, 11120);
             // Trees are sprites standing on their feet: check every one within 40 tiles of the start
@@ -222,7 +222,7 @@ test.describe('Living world', () => {
 
     test('walking up to a place asks whether to enter; No closes it', async ({ page }) => {
         await enterWorld(page);
-        // On the road just below Riverhold (where heroes started before the start moved to Castle Dunmere): walk up into it
+        // On the road just below Riverhold (where heroes start): walk up into it
         await page.evaluate(async () => {
             const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
             me.setPosition(6320, 11120);
@@ -305,6 +305,11 @@ test.describe('Living world', () => {
             const until = async (ok, ms) => { for (let t = 0; t < ms && !ok(); t += 50) await wait(50); };
             keys[toShip] = true;
             await until(() => gs.localPlayer.sailing, 3000);
+            // (what checked her way, said if she didn't coast: twice she didn't, in full runs, November 2026, and it
+            // wasn't found why; it passed 49 times after)
+            const checked = [], sh = gs.localPlayer.ship, bump = sh.bump.bind(sh), shoved = sh.shoved.bind(sh);
+            sh.bump = (...a) => { checked.push(`bump at ${Math.round(sh.speed)}`); return bump(...a); };
+            sh.shoved = (...a) => { checked.push(`shoved at ${Math.round(sh.speed)}`); return shoved(...a); };
             const boarded = gs.localPlayer.sailing && !me.visible;
             await until(() => gs.localPlayer.ship.speed > 120 && !gs.world.isWalkable(me.x, me.y + 23), 10000);
             await wait(300);
@@ -316,6 +321,7 @@ test.describe('Living world', () => {
             const [ox, oy] = DIRS[toShip], before = me.x * ox + me.y * oy;
             await until(() => me.x * ox + me.y * oy - before > 10, 3000);
             const coasts = me.x * ox + me.y * oy - before > 10;
+            if (!coasts) console.log('Not coasting:', JSON.stringify({ checked, speed: sh.speed, moved: me.x * ox + me.y * oy - before, fps: game.loop.actualFps }));
             // Come about and sail back to the beach until she runs ashore
             keys[side] = true;
             for (let t = 0; t < 250 && gs.localPlayer.sailing; t++) await wait(100);

@@ -2003,10 +2003,10 @@ for y, x in zip(*np.nonzero(unmapped & ~treed)):   # as though the wood ran on u
     mini[y, x] = c
 Image.fromarray(mini).save(os.path.join(OUT, 'minimap.png'))
 
-# New heroes start just below START (for now Castle Dunmere's drawbridge, at the user's asking, to try the
-# Duelyst foes on the road north of it; Gloomwater Grotto's shore before, to test the grotto quicker; Dunmere
-# before that, to see the castle first; Riverhold first of all)
-START = 'Castle Dunmere'
+# New heroes start just below START: Riverhold again (the user's, November 2026: the first loop is the Saltmere Point
+# below it, zone 35, docs/WORLD.md); before, Castle Dunmere's drawbridge, to try the Duelyst foes north of it;
+# Gloomwater Grotto's shore, to test the grotto quicker; Dunmere, to see the castle first; Riverhold first of all)
+START = 'Riverhold'
 rx, ry, rw, rh = next(p for p in PLACES if p['name'] == START)['rect']
 spawn = min(((x, y) for y in range(ry + rh, ry + rh + 6) for x in range(rx - 3, rx + rw + 3) if not blocked[y % N, x % N]),
             key=lambda t: (t[0] - (rx + rw / 2 - 0.5)) ** 2 + (t[1] - ry - rh) ** 2)

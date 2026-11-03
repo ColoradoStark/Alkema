@@ -1,37 +1,27 @@
 // Foes out on the overworld itself, fought where you meet them: the game's one way of fighting (the user's,
-// November 2026: the turn-based fights and the real-time ones on battle maps tried beside it, and gone). They
-// stand along the coast between where new heroes start and Castle Dunmere's gate (PACKS, on the world map's
-// shore along the walk there). Come within AGGRO of one and it comes for you:
-// it closes in, stops and flashes red (the wind-up), and swings; step out of
-// reach to dodge it. Your swing (the attack button, aimed at the nearest in
-// front of you) strikes what's before you when it lands. Get far enough away
-// and it gives up and walks back to its post.
+// November 2026: the turn-based fights and the real-time ones on battle maps tried beside it, and gone). Who stands
+// where is each zone's (Bands.js; docs/WORLD.md: Wesnoth's units, zone by zone, by remoteness and climate). Come
+// within AGGRO of one and it comes for you: it closes in, stops and flashes red (the wind-up), and swings; step out of
+// reach to dodge it. Your swing (the attack button, aimed at the nearest in front of you) strikes what's before you
+// when it lands. Get far enough away and it gives up and walks back to its post.
 //
 // Your swing turns you to the nearest and lands as it comes down; a bow's arrow flies at it and strikes when
 // it gets there; the blue button casts the spell you equipped (ActionSpells.js), with its effects, particles
 // and rest, and what it leaves on them (slowed, marked, held...) and on you (warded, raging, hidden). Magic
 // comes back as you fight.
 //
-// They stand in packs (PACKS: the user found lone ones dull, October 2026): the
-// real-time fight's three demons mixed, the fury darting in with her trident,
-// the brute's slow heavy axe you wait out and punish (it isn't staggered), the
-// warlock hanging back throwing fire; rouse one and its pack comes. Halfway
-// along stands a champion, a big brute, that leaves a chest. They're matched
-// to your hero as they come (`numbers`: a fury takes about three of your
-// blows, whatever you've bought), and grow tougher along the road toward
-// Dunmere (each pack's `tier`), and every one you fell bursts into gold
-// (`bounty`: a share of what your next upgrade costs, more along the road,
+// They stand in packs (PACKS: the user found lone ones dull, October 2026), each zone's a climb (zones.js): its
+// fighters darting in, the heavy ones a blow doesn't stagger, the shooters hanging back; rouse one and its pack comes.
+// Its last is its boss, grown and named, and leaves a chest. Every one you fell pays essence (a share of its pack's,
 // more for kills close together, COMBO_MS apart).
 //
-// Their three sheets load once you're near the coast (NEAR) with the spells'
-// effects, and are let go with the demons when you're far from it (FAR), or go
-// into a place. The slain stay down (the user's: with no hit points back but at a healer, a
-// beaten pack doesn't stand again while you're in the castle being mended).
+// A zone's sheets load once you're near its packs (NEAR) with the spells' effects, and are let go when you're far from
+// them (FAR), or go into a place. The slain stay down for the visit (the user's: with no hit points back but at a
+// healer, a beaten pack doesn't stand again while you're in town being mended).
 
-import { Demon, DEMONS, DEMON_KINDS, UNIT, loadDemons } from './Demons.js';
-import { Orc, ORC_KINDS, ORC_HITS, ORC_HURTS, ORC_PAY, ORC_PACKS, loadOrcs, forgetOrcs } from './FieldOrcs.js';
-import { VANAR_KINDS, VANAR_HITS, VANAR_HURTS, VANAR_PAY, VANAR_PACKS, loadVanar, forgetVanar, loadWardens, forgetWardens } from './FieldVanar.js';
-import WARDENS from './wardens.json';
+import { UNIT } from './Demons.js';
+import { Orc } from './FieldOrcs.js';
+import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand } from './Bands.js';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -40,29 +30,15 @@ import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, HOME, WALL, packEssence, strengthFor, tooStrong } from './zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
-// How each fights out here (the world's hero walks at 128, and still outruns them all)
-const KINDS = {
-    fury: { ...DEMON_KINDS.fury, speed: 80 },
-    brute: { ...DEMON_KINDS.brute, speed: 50 },
-    warlock: { ...DEMON_KINDS.warlock, speed: 52 },
-    // (nearly a fury's pace, the user's: it should be a stressful event)
-    champion: { ...DEMON_KINDS.brute, speed: 74, reach: 46, windup: 750, recover: 950, sheet: 'brute', scale: 1.35, label: 'Champion', chest: true },
-    // The orcs west of the start (FieldOrcs.js), the same mix in Wesnoth's
-    ...ORC_KINDS, warlord: { ...ORC_KINDS.warlord, chest: true },
-    // Duelyst's Vanar north of Dunmere (FieldVanar.js)
-    ...VANAR_KINDS,
-};
-// Made for its zone's hero (`numbers`, `ZONES`): how many of that hero's blows each takes, and how much of their hit points its blow takes
-const HITS = { fury: 3, warlock: 2.5, brute: 6, champion: 22, ...ORC_HITS, ...VANAR_HITS };
-// (the user never fell below 80% at a third of these, October 2026: a fight on the road should be one you can lose)
-const HURTS = { fury: 0.1, warlock: 0.09, brute: 0.2, champion: 0.22, ...ORC_HURTS, ...VANAR_HURTS };
+// How each fights out here, how many of its zone's hero's blows it takes and how much of their hit points its blow
+// (Bands.js, by its Wesnoth level), and what it's worth (`bounty`, off a climb)
+const KINDS = BAND_KINDS, HITS = BAND_HITS, HURTS = BAND_HURTS, PAY = BAND_PAY;
+// (the user never fell below 80% at a third of HURTS, October 2026: a fight on the road should be one you can lose)
 const SOFTER = 1.4;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder), then twice that (the user's, November 2026: they didn't hurt enough)
-// What each is worth (`bounty`): this share of the cheapest upgrade you could buy next (the champion's in its chest)
-const PAY = { fury: 0.3, warlock: 0.35, brute: 0.6, champion: 4, ...ORC_PAY, ...VANAR_PAY };      // (a pack near the start buys about one)
 const GOLD_SHARE = 0.25;        // a felled foe's gold, a share of its essence (what pays a healer)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
 const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
@@ -109,57 +85,20 @@ const HOME_REACH = 40 * TILE;   // and looks this far about for it (it walked th
 const MENU_GRACE_MS = 1200;     // back from a menu, you've this long before anything strikes you
 const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // ways along a wall, tried in turn
 
-// The packs, from the start to Dunmere: where each stands (feet, on the shore along the walk there, worked
-// out from the world map's walking and sailing layers), and who's in it, each tougher than the last
-export const PACKS = [
-// (a caster in every pack, the user's: more fire coming at you)
-    { at: [9904, 11728], band: ['fury', 'fury', 'warlock'] },
-    { at: [10064, 11536], band: ['fury', 'brute', 'warlock'] },
-    { at: [10352, 11344], band: ['fury', 'fury', 'warlock', 'warlock'] },
-    { at: [10672, 11344], band: ['brute', 'fury', 'warlock', 'fury'] },
-    // halfway: the champion, well escorted (the user's)
-    { at: [10960, 11376], band: ['champion', 'fury', 'fury', 'warlock', 'warlock', 'fury'] },
-    { at: [11152, 11152], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
-    { at: [11312, 10992], band: ['fury', 'warlock', 'warlock', 'fury', 'warlock'] },
-    { at: [11088, 10800], band: ['brute', 'brute', 'fury', 'warlock', 'warlock'] },
-    { at: [11056, 10544], band: ['brute', 'fury', 'warlock', 'fury', 'warlock'] },
-].map((p, k, all) => ({ ...p, family: 'demons', tier: 1 + (TIER_END - 1) * k / (all.length - 1) }))
-    .concat(ORC_PACKS.map((p, k, all) => ({ ...p, family: 'orcs', tier: 1 + (TIER_END - 1) * k / (all.length - 1) })))
-    .concat(VANAR_PACKS.map((p, k, all) => ({ ...p, family: 'vanar', tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })))
-    // (a warden over the home zone's every edge, tools/zonegen.py: one each, made WALL packs up the climb past its last)
-    .concat(WARDENS.map(w => ({ at: w.at, band: ['warden'], family: 'wardens', tier: 1, step: VANAR_PACKS.length - 1 + WALL })));
+// The packs, zone by zone (Bands.js): each zone's a climb, its `step`th pack the `step`th up it
+export const PACKS = Object.entries(BANDS).flatMap(([family, packs]) =>
+    packs.map((p, k, all) => ({ ...p, family, tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })));
 
-/** Each band's bodies: their sheets loaded and let go, and one made (feet at x, y). */
-const FAMILIES = {
-    demons: {
-        load: (scene) => loadDemons(scene),
-        forget: (scene) => scene.cache.json.remove(DEMONS),
-        make: (scene, x, y, kind, spec) => new Demon(scene, x, y, spec.sheet || kind, spec.label),
-        sheet: (kind) => KINDS[kind].sheet || kind,
-    },
-    orcs: {
-        load: (scene) => loadOrcs(scene),
-        forget: (scene) => forgetOrcs(scene),
-        make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
-        sheet: (kind) => kind,
-    },
-    vanar: {
-        load: (scene) => loadVanar(scene),
-        forget: (scene) => forgetVanar(scene),
-        make: (scene, x, y, kind, spec) => new Orc(scene, x, y, spec.sheet || kind, spec.label),
-        sheet: (kind) => KINDS[kind].sheet || kind,
-    },
-    wardens: {
-        load: (scene) => loadWardens(scene),
-        forget: (scene) => forgetWardens(scene),
-        make: (scene, x, y, kind, spec) => new Orc(scene, x, y, spec.sheet, spec.label),
-        sheet: () => 'waterbear',
-        climb: 'vanar',         // (made on the climb's scale)
-    },
-};
+/** Each zone's bodies: its sheets loaded and let go, and one made (feet at x, y). */
+const FAMILIES = Object.fromEntries(Object.keys(BANDS).map(zone => [zone, {
+    load: (scene) => loadBand(scene, zone),
+    forget: (scene) => forgetBand(scene, zone),
+    make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
+    sheet: (kind) => kind,
+}]));
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
 
-/** Each demon (and orc) on the coast, a place for each: { x, y (feet, before they're stood clear of rock), kind, family, pack, tier, i }. */
+/** Each foe in every zone, a place for each: { x, y (feet, before they're stood clear of rock), kind, family, pack, tier, i }. */
 export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
     x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, family: p.family, pack, tier: p.tier, step: p.step ?? 0,
     role: KINDS[kind].ranged ? 'caster' : ROLES[p.band.slice(0, k).filter(o => !KINDS[o].ranged).length % ROLES.length],
@@ -1508,5 +1447,3 @@ export class FieldDemons {
     }
 }
 
-/** Where new heroes started (below the grotto, October 2026), between the demons' road and the orcs' coast. */
-export const FIELD_START = { x: 9712, y: 12144 };

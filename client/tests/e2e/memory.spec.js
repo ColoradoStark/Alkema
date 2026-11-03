@@ -32,7 +32,7 @@ async function enterWorld(page) {
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
     // No wildlife of itself: a deer coming by as a place is weighed would be counted against it (its own case below)
     await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').wildlife.quiet = true; });
-    // These begin where heroes started before the start moved to Castle Dunmere: the road below Riverhold
+    // These begin where heroes start: the road below Riverhold
     await page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
         me.setPosition(6320, 11120);
@@ -41,8 +41,8 @@ async function enterWorld(page) {
     });
 }
 
-/** Keep the hero standing among foes on the world (as field.spec.js does): felled, you come to by Castle Dunmere, among
- * the demons and the Vanar, and everything there stays held where the test thinks you've walked away. */
+/** Keep the hero standing among foes on the world (as field.spec.js does): felled, you come to where heroes start, and
+ * what the test thinks it's weighing is somewhere else. */
 const keepUp = (page) => page.evaluate(() => {
     const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
     if (stats && !(stats.hp?.max >= 100000)) Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 100000 }, configurable: true, writable: true });
@@ -188,65 +188,33 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')))).toEqual([]);
     });
 
-    test("the demons and orcs on the coast: their packs on three sheets (with their weapons) and five Wesnoth ones, under budget, and let go when you leave the coast", async ({ page }) => {
+    test("the Saltmere Point's foes: its seven packs on their Wesnoth sheets, under budget, and let go when you leave the Point", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await keepUp(page);
-        const base = await settled(page);
         const go = (x, y) => page.evaluate(([x, y]) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
             me.setPosition(x, y);
             me.body.reset(x, y);
         }, [x, y]);
-        const { spawn } = await page.evaluate(async () => ({ spawn: (await import('/src/battle/FieldDemons.js')).FIELD_START }));
-        await go(spawn.x, spawn.y - 23);
+        // (measured from Riverhold's road, where heroes start, away from every band)
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+        const base = await settled(page);
         const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES })));
-        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.filter(p => p.family === 'demons' || p.family === 'orcs').length, { timeout: 30000 });
-        // (and the frames their weapons are drawn in, cut from their sheets)
-        await page.waitForFunction(() => ['fury', 'brute'].every(k => window.__PHASER_GAME.textures.getTextureKeys().some(t => t.startsWith(`sprite_demons-${k}_os_`))), null, { timeout: 15000 });
-        const coast = await settled(page);
+        // Where the river road comes into the Point: every pack of it comes, none roused
+        await go(6192, 12480 - 23);
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.length, { timeout: 30000 });
+        const point = await settled(page);
+        const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
         await go(6320, 11120);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
         const after = await settled(page);
-        console.log('the coast\'s demons and orcs', +(coast.mb - base.mb).toFixed(2), 'MB');
-        expect(coast.mb - base.mb).toBeLessThan(BUDGET_MB);
+        console.log("the Saltmere Point's foes", +(point.mb - base.mb).toFixed(2), 'MB', sheets.join(' '));
+        expect(sheets).toEqual(['foe-footpad', 'foe-impaler', 'foe-poacher', 'foe-rat', 'foe-rouser', 'foe-ruffian', 'foe-spearman', 'foe-woodsman']);
+        expect(point.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
-        // Their file, their sheet and the spells' effects all gone
-        expect(await page.evaluate(() => ({ file: window.__PHASER_GAME.cache.json.exists('folk-demons'), fx: window.__PHASER_GAME.textures.exists('spell-fx'),
-            sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.includes('demons-')) }))).toEqual({ file: false, fx: false, sheets: [] });
-        // and the orcs' (Riverhold's road has its own grunt and spearman posted: only theirs stay)
-        expect(await page.evaluate(() => ['archer', 'warrior', 'warlord'].filter(k => window.__PHASER_GAME.textures.exists(`foe-${k}`)))).toEqual([]);
-    });
-
-    test("Duelyst's Vanar north of Dunmere: thirty on the grotto's six sheets, and the home zone's wardens, under budget, and let go when you leave their road", async ({ page }) => {
-        test.setTimeout(120000);
-        await enterWorld(page);
-        await keepUp(page);
-        const go = (x, y) => page.evaluate(([x, y]) => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
-            me.setPosition(x, y);
-            me.body.reset(x, y);
-        }, [x, y]);
-        // (measured from Riverhold's road, away from every band: new heroes start by Dunmere, among them)
-        await go(6320, 11120);
-        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
-        const base = await settled(page);
-        const { PACKS, PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PACKS: m.PACKS, PLACES: m.PLACES })));
-        const mid = PACKS.filter(p => p.family === 'vanar')[3].at;          // (past the demons' reach)
-        await go(mid[0], mid[1] - 23);
-        const n = PLACES.filter(p => p.family === 'vanar').length;
-        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'vanar' && f.foe.ready).length === n, n, { timeout: 30000 });
-        // (and the wardens over the home zone's edges, on the water bear's sheet: let go with it)
-        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.family === 'wardens' && f.foe.ready), null, { timeout: 30000 });
-        const road = await settled(page);
-        await go(6320, 11120);
-        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
-        const after = await settled(page);
-        console.log("the Vanar north of Dunmere", +(road.mb - base.mb).toFixed(2), 'MB');
-        expect(road.mb - base.mb).toBeLessThan(BUDGET_MB);
-        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
-        expect(await page.evaluate(() => ['snowchaser', 'icehornet', 'kindredhunter', 'crystalbeetle', 'waterbear', 'waterelemental', 'spell-fx']
-            .filter(k => window.__PHASER_GAME.textures.exists(k === 'spell-fx' ? k : `foe-${k}`)))).toEqual([]);
+        // Their sheets and the spells' effects all gone
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
     });
 
     test("the river boats round Riverhold: their picture comes as you near the river and goes when you leave it", async ({ page }) => {

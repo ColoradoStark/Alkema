@@ -1,5 +1,5 @@
-// Castle Dunmere, in the manner of Ultima's castles: new heroes start at its
-// drawbridge for now (the user's, to see it first). In through the gate to the
+// Castle Dunmere, in the manner of Ultima's castles: on the road below its
+// drawbridge you're asked in. In through the gate to the
 // courtyard, the guard walking their beat; through the keep's door to the
 // throne room, the Duke before his throne, doors behind it to the feast hall
 // and the library, a stair up to his chambers and one down to the dungeon; and
@@ -36,7 +36,7 @@ test.describe('Castle Dunmere', () => {
     test("on the road below the castle's drawbridge you're asked in, and find the courtyard full: the guard walking their beat", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
-        await page.evaluate(() => {         // (where new heroes started, before the user moved the start to the grotto)
+        await page.evaluate(() => {         // (on the road below the drawbridge)
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
             me.setPosition(10928, 10224);
             me.body.reset(10928, 10224);

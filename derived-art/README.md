@@ -1,7 +1,7 @@
 # Derived art
 
 Much of Alkema's art is other artists' work, changed by us: The Battle for Wesnoth's terrain and
-orcs recoloured and reassembled, Liberated Pixel Cup (LPC) tiles built into towns and castles,
+units recoloured and reassembled, Liberated Pixel Cup (LPC) tiles built into towns and castles,
 LPC animals and birds laid out for the game. Their licences ask us to share what we made from
 them under the same terms. This folder says what each of those pictures is, who drew what it's
 made from, what we changed, and the licence you may use it under.
@@ -25,7 +25,7 @@ made from, what we changed, and the licence you may use it under.
 
 - **The Battle for Wesnoth's art** (https://www.wesnoth.org) is GPL 2.0 or later. Every picture
   with any Wesnoth art in it is offered under the **GPL 3.0**: the overworld's ground, mountains
-  and trees, the orcs, the spells' effects, Gloomwater Grotto's levels, Castle Grimhold's grounds
+  and trees, the foes, the spells' effects, Gloomwater Grotto's levels, Castle Grimhold's grounds
   with its mountains. The LPC art blended into these is offered by its artists under the GPL 3.0
   as well, as most LPC art is.
 - **The ships** (`client/assets/world/ships.png`, `ship.png`, `boats.png`) are drawn in code in the
@@ -34,7 +34,7 @@ made from, what we changed, and the licence you may use it under.
 - **Pictures made only from LPC art** (towns, Castle Dunmere, rooms, the water, the wildlife,
   the jesters' caps) are offered under the licences their pieces allow: CC-BY-SA (3.0 or 4.0)
   and, where every piece allows it, the GPL 3.0. Each picture's options are in `CREDITS.csv`.
-- **Open Duelyst's art** (the Vanar foes) and **Dungeon Crawl Stone Soup's tiles** (the weapon
+- **Open Duelyst's art** (the Vanar, kept for the dungeons) and **Dungeon Crawl Stone Soup's tiles** (the weapon
   icons) are CC0. Nothing is owed, but they're credited all the same.
 
 Using any of these, credit the original artists named in `CREDITS.csv` (and in the credits file

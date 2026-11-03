@@ -2,30 +2,21 @@
 // balance can be tested without a browser (tests/unit/zones.test.js).
 
 /**
- * How hard each band is is its zone's, not matched to you (the user's, October 2026, a crude first try): each is
- * made for a hero this strong. North of Dunmere, where heroes start, a new one (attack 4-9, hit points 16-31); the
- * orcs west, one about four times as strong; the demons south, one forty times: no invisible wall, but no going
- * that way yet. Grow, and a band gets easier.
+ * How hard each zone is (docs/WORLD.md: by how remote it is and how hostile its climate): its packs are a climb, each
+ * made for a hero this strong, not matched to you. Grow, and a zone gets easier.
  */
 export const ZONES = {
-    // North of Dunmere, the climb (the user's, after Clicker Heroes): each pack 2.5 times the health of the one
-    // before and its blow twice (at 1.6 and 1.5, Clicker Heroes' own, an archer still beat the next unupgraded: the
-    // user wants it a wall), paying `essence` times `more` a pack along it: the first falls fast to a new hero, and
-    // each after needs what the last paid spent on the Upgrade page, or you die. What it pays grows slowly (the user's,
-    // November 2026: the numbers got too big too fast, millions up one road), the upgrades' prices as slowly with it
-    vanar: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 50, more: 1.5 } },
-    orcs: { attack: 28, hp: 90, defence: 14 },
-    demons: { attack: 300, hp: 900, defence: 60 },
+    // The Saltmere Point (35), below Riverhold where heroes start: the first loop, after Clicker Heroes. Its first pack
+    // made for the weakest new hero, each pack up it 2.5 times the health of the one before and its blow twice (at 1.6
+    // and 1.5, Clicker Heroes' own, an archer still beat the next unupgraded: the user wants it a wall), paying `essence`
+    // times `more` a pack along it: the first falls fast to a new hero, and each after needs what the last paid spent
+    // on the Upgrade page, or you die. What it pays grows slowly (the user's, November 2026: the numbers got too big too
+    // fast, millions up one road), the upgrades' prices as slowly with it
+    z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 50, more: 1.5 } },
 };
 
-/**
- * The world's zones (client/src/world/zonemap.js, the user's drawing, November 2026): each is like a level. The home
- * zone, 30, holds Castle Dunmere where heroes start and the climb up the road north (`vanar`), the core loop to get
- * working first (the user's). Its foes never leave it, nor any zone's theirs; and just over its every edge a warden
- * stands, made `WALL` packs further up the climb than its last (it's not an invisible wall, but it stops you).
- */
-export const HOME = 30;
-export const WALL = 12;
+/** The home zone: the Saltmere Point, the first loop (the user's: clear one zone, then grow). */
+export const HOME = 35;
 
 /** On a climb, what the `step`th pack up it pays between them (a share each, by how long each takes to fell). */
 export function packEssence(fam, step) {

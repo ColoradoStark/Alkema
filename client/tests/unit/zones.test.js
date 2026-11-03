@@ -1,4 +1,4 @@
-// The climb north of Dunmere (client/src/battle/zones.js) against the Upgrade page (client/src/upgrades/Upgrades.js),
+// The climb up the Saltmere Point below Riverhold (client/src/battle/zones.js) against the Upgrade page (client/src/upgrades/Upgrades.js),
 // without a browser: what each pack pays, spent one level at a time, buys the strength the next asks, for every
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
@@ -20,11 +20,11 @@ function fresh(a, h) {
     return { u, inventory, strength: () => { const s = u.apply(BASE(a, h)); return s.attack * s.hp.max; } };
 }
 
-describe('The climb north of Dunmere', () => {
+describe('The climb up the Saltmere Point', () => {
     test("each pack up it 2.5 times the health of the one before, its blow twice: a wall you upgrade past", () => {
-        const z = ZONES.vanar;
-        expect(strengthFor('vanar', 1) / strengthFor('vanar', 0)).toBe(z.climb.hp * z.climb.hurt);
-        expect(packEssence('vanar', 1) / packEssence('vanar', 0)).toBe(z.climb.more);
+        const z = ZONES.z35;
+        expect(strengthFor('z35', 1) / strengthFor('z35', 0)).toBe(z.climb.hp * z.climb.hurt);
+        expect(packEssence('z35', 1) / packEssence('z35', 0)).toBe(z.climb.more);
     });
 
     test("the whole road, all seven packs, buys about ten upgrades (the user's: seventeen up it was too many), every new hero, with combos or without; never short for the next pack, and all spent the weakest not a pack ahead; no goddess on it", () => {
@@ -34,11 +34,11 @@ describe('The climb north of Dunmere', () => {
                 const { u, inventory, strength } = fresh(a, h);
                 let n = 0;
                 for (let step = 1; step <= PACKS; step++) {
-                    inventory.essence += packEssence('vanar', step - 1) * combo;
+                    inventory.essence += packEssence('z35', step - 1) * combo;
                     while (u.buy(u.current.id).ok) n++;
                     if (step === PACKS) break;
-                    if (strength() < strengthFor('vanar', step)) short.push(`${a}/${h} short for pack ${step + 1}`);
-                    if (a === 4 && combo === 1) ahead.push(strength() / strengthFor('vanar', step));
+                    if (strength() < strengthFor('z35', step)) short.push(`${a}/${h} short for pack ${step + 1}`);
+                    if (a === 4 && combo === 1) ahead.push(strength() / strengthFor('z35', step));
                 }
                 counts.push(n);
                 vigour.push(u.current.id);
@@ -48,17 +48,17 @@ describe('The climb north of Dunmere', () => {
         expect(Math.min(...counts)).toBeGreaterThanOrEqual(9);
         expect(Math.max(...counts)).toBeLessThanOrEqual(11);
         expect(vigour.every(id => !id.startsWith('goddess-'))).toBe(true);
-        expect(Math.max(...ahead)).toBeLessThan(ZONES.vanar.climb.hp * ZONES.vanar.climb.hurt);
+        expect(Math.max(...ahead)).toBeLessThan(ZONES.z35.climb.hp * ZONES.z35.climb.hurt);
         // (no new hero skips two packs' upgrades)
-        for (const [a, h] of HEROES) expect(a * h).toBeLessThan(strengthFor('vanar', 2));
+        for (const [a, h] of HEROES) expect(a * h).toBeLessThan(strengthFor('z35', 2));
     });
 
     test("a fight stays a fight all the way up: the blows to fell a foe and the blows it takes to fell you stay near the first pack's (each pack 2.5 times the health, its blow twice: not one blow kills either way)", () => {
         const { u, inventory } = fresh(7, 20);
-        const z = ZONES.vanar.climb, start = u.apply(BASE(7, 20));
+        const z = ZONES.z35.climb, start = u.apply(BASE(7, 20));
         const toFell = [], toFall = [];
         for (let step = 1; step < PACKS; step++) {
-            inventory.essence += packEssence('vanar', step - 1);
+            inventory.essence += packEssence('z35', step - 1);
             while (u.buy(u.current.id).ok);
             const s = u.apply(BASE(7, 20));
             toFell.push((z.hp ** step / s.attack) / (1 / start.attack));            // your blows to fell one, against the first pack's
@@ -69,9 +69,9 @@ describe('The climb north of Dunmere', () => {
     });
 
     test("told a pack is too strong only when it is: short of even the pack below it (the user's ranger, attack 8 and 17 hit points, was told the second was too strong and beat it unupgraded)", () => {
-        expect(tooStrong('vanar', 1, 8 * 17)).toBe(false);
-        expect(tooStrong('vanar', 1, strengthFor('vanar', 0) - 1)).toBe(true);
-        expect(tooStrong('vanar', 2, 8 * 17)).toBe(true);
-        expect(tooStrong('vanar', 0, 1)).toBe(false);       // (the first is for anyone)
+        expect(tooStrong('z35', 1, 8 * 17)).toBe(false);
+        expect(tooStrong('z35', 1, strengthFor('z35', 0) - 1)).toBe(true);
+        expect(tooStrong('z35', 2, 8 * 17)).toBe(true);
+        expect(tooStrong('z35', 0, 1)).toBe(false);       // (the first is for anyone)
     });
 });

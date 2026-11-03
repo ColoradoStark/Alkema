@@ -2,7 +2,7 @@
 // tests/unit/wildlife.test.js): what only a browser shows, that they're drawn, move, flee and fly, and are let go.
 import { test, expect } from '@playwright/test';
 
-const DUNMERE = { x: 10928, y: 10240 };      // Castle Dunmere's drawbridge, by the sea, where new heroes start
+const DUNMERE = { x: 10928, y: 10240 };      // Castle Dunmere's drawbridge, by the sea
 
 async function enterWorld(page) {
     await page.goto('/');
@@ -16,7 +16,7 @@ async function enterWorld(page) {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
         gs.dayNight.hourOverride = 12;
         gs.weatherOverride = { kind: null, level: 'none' };
-        gs.fieldDemons.update = () => {};        // (the demons on the coast stay away: scenery's tested here, not fights)
+        gs.fieldDemons.update = () => {};        // (no foes about: scenery's tested here, not fights)
     });
 }
 

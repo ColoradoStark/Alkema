@@ -1,4 +1,5 @@
 import { HOME } from '../battle/zones.js';
+import { BANDS } from '../battle/Bands.js';
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
@@ -379,7 +380,8 @@ export class GameScene extends Scene {
         const zone = feet && this.overworld.zoneAt(feet.x, feet.y);
         if (!zone || zone.id === this.zone?.id) return;
         this.zone = zone;
-        this.scene.get('UIScene')?.zoneCard?.(zone, zone.id !== HOME && !EXPLORE);
+        // (its foes far too strong: a zone past the home zone with foes in it yet, docs/WORLD.md)
+        this.scene.get('UIScene')?.zoneCard?.(zone, zone.id !== HOME && !!BANDS[`z${zone.id}`] && !EXPLORE);
     }
 
     updateGate() {

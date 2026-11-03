@@ -23,19 +23,34 @@ const asClass = (page, cls, spell) => page.evaluate(([cls, spell]) => {
     ui.spellbook.equip(spell);
 }, [cls, spell]);
 
-/** Out by the demons on the coast (where new heroes started), every one of them drawn; what's heard, and every shake of the screen. */
+/** Out on the Saltmere Point (below Riverhold), on open ground away from its packs, every one of them drawn; what's
+ * heard, and every shake of the screen. */
 async function fight(page) {
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
-        const { FIELD_START } = await import('/src/battle/FieldDemons.js');
-        me.setPosition(FIELD_START.x, FIELD_START.y - 23);
+        me.setPosition(6192, 12480 - 23);       // (where the river road comes in: they come)
         me.body.reset(me.x, me.y);
     });
+    const n = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => m.PLACES.length));
     await expect.poll(() => page.evaluate(() => {
         const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-        const demons = fd.foes.filter(f => f.family === 'demons');
-        return demons.length > 2 && demons.every(f => f.foe.ready);
-    }), { timeout: 30000 }).toBe(true);
+        return fd.foes.filter(f => f.foe.ready).length;
+    }), { timeout: 30000 }).toBe(n);
+    // Open ground in the Point, room all about it, as far from every pack as can be
+    await page.evaluate(async () => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+        const { PACKS } = await import('/src/battle/FieldDemons.js');
+        let best = null;
+        for (let y = 12500; y < 13600; y += 16) for (let x = 6100; x < 7100; x += 16) {
+            const room = [[0, 0], [-60, -60], [60, -60], [-60, 60], [60, 60], [120, -40], [0, -80]].every(([dx, dy]) => fd._open(x + dx, y + dy) && gs.overworld.zoneAt(x + dx, y + dy)?.id === 35);
+            if (!room) continue;
+            const gap = Math.min(...PACKS.map(p => Math.hypot(p.at[0] - x, p.at[1] - y)));
+            if (!best || gap > best.gap) best = { x, y, gap };
+        }
+        for (const f of fd.foes) f.stun = 1e9;      // (held where they stand)
+        me.setPosition(best.x, best.y - 23);
+        me.body.reset(me.x, me.y);
+    });
     await page.evaluate(async () => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), stats = gs.scene.get('UIScene').inventory.stats;
         // (500 hit points, no defence: the game sets your most hit points from your stats every frame)
@@ -50,16 +65,16 @@ async function fight(page) {
         gs.cameras.main.shake = (...a) => { window.__shakes++; return shake(...a); };
         window.__fx = new Set();
         gs.events.on('postupdate', () => gs.children.list.forEach(c => c.texture?.key === 'spell-fx' && c.anims?.currentAnim && window.__fx.add(c.anims.currentAnim.key)));
-        // The two demons nearest, foe 0 and foe 1 (the rest held where they stand)
+        // The two foes nearest, foe 0 and foe 1 (the rest held where they stand)
         const fd = gs.fieldDemons, me = gs.localPlayer.sprite;
-        const near = fd.foes.filter(f => f.family === 'demons' && !f.spec.ranged)
+        const near = fd.foes.filter(f => !f.spec.ranged && !f.spec.boss)
             .sort((a, b) => Math.hypot(a.foe.x - me.x, a.foe.y - me.y) - Math.hypot(b.foe.x - me.x, b.foe.y - me.y));
         window.__two = near.slice(0, 2);
         window.__spot = { x: me.x, y: me.y + 23 };
     });
 }
 
-/** Every demon held where it stands but `keep` (of foe 0 and 1), foe 0 `ahead` px before you, with magic to spare. */
+/** Every foe held where it stands but `keep` (of foe 0 and 1), foe 0 `ahead` px before you, with magic to spare. */
 const stage = (page, ahead = 34, keep = []) => page.evaluate(([ahead, keep]) => {
     const gs = window.__PHASER_GAME.scene.getScene('GameScene'), b = gs.fieldDemons, ui = gs.scene.get('UIScene'), at = window.__spot;
     for (const f of b.foes) if (!window.__two.includes(f)) f.stun = 1e9;
