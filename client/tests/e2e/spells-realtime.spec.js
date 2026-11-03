@@ -12,7 +12,11 @@ async function enterWorld(page) {
     }, null, { timeout: 60000 });
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
-    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        gs.dayNight.hourOverride = 12;
+        gs.fieldDemons.only = (family) => family === 'z35';      // (the Point's band, not the first area's guards: this is about spells)
+    });
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook, null, { timeout: 20000 });
 }
 
@@ -31,7 +35,7 @@ async function fight(page) {
         me.setPosition(6192, 12480 - 23);       // (where the river road comes in: they come)
         me.body.reset(me.x, me.y);
     });
-    const n = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => m.PLACES.length));
+    const n = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => m.PLACES.filter(p => p.family === 'z35').length));
     await expect.poll(() => page.evaluate(() => {
         const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
         return fd.foes.filter(f => f.foe.ready).length;
@@ -44,7 +48,7 @@ async function fight(page) {
         for (let y = 12500; y < 13600; y += 16) for (let x = 6100; x < 7100; x += 16) {
             const room = [[0, 0], [-60, -60], [60, -60], [-60, 60], [60, 60], [120, -40], [0, -80]].every(([dx, dy]) => fd._open(x + dx, y + dy) && gs.overworld.zoneAt(x + dx, y + dy)?.id === 35);
             if (!room) continue;
-            const gap = Math.min(...PACKS.map(p => Math.hypot(p.at[0] - x, p.at[1] - y)));
+            const gap = Math.min(...PACKS.filter(p => p.family === 'z35').map(p => Math.hypot(p.at[0] - x, p.at[1] - y)));
             if (!best || gap > best.gap) best = { x, y, gap };
         }
         for (const f of fd.foes) f.stun = 1e9;      // (held where they stand)

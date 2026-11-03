@@ -192,6 +192,8 @@ test.describe('Memory', () => {
         test.setTimeout(120000);
         await enterWorld(page);
         await keepUp(page);
+        // (the Point's band alone: the first area's guards have their own case)
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (family) => family === 'z35'; });
         const go = (x, y) => page.evaluate(([x, y]) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
             me.setPosition(x, y);
@@ -200,7 +202,7 @@ test.describe('Memory', () => {
         // (measured from Riverhold's road, where heroes start, away from every band)
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
         const base = await settled(page);
-        const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES })));
+        const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES.filter(p => p.family === 'z35') })));
         // Where the river road comes into the Point: every pack of it comes, none roused
         await go(6192, 12480 - 23);
         await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.length, { timeout: 30000 });
@@ -214,6 +216,46 @@ test.describe('Memory', () => {
         expect(point.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         // Their sheets and the spells' effects all gone
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
+    });
+
+    test("the first area's guards: a stretch of the road's, its elder woses and sorceresses, under budget, and let go when you leave it", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await keepUp(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        // (measured by Castle Dunmere's drawbridge, far from every band and guard)
+        await go(10928, 10224);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+        const base = await settled(page);
+        // On the road by a guard group's stretch (not in the trees, where they'd fell you): its guards come
+        const road = await page.evaluate(async () => {
+            const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
+            const [gx, gy] = (await import('/src/battle/Bands.js')).BANDS['guards-2'][2].at;
+            for (let r = 64; r <= 192; r += 16) for (let a = 0; a < 16; a++) {
+                const x = gx + Math.cos(a * Math.PI / 8) * r, y = gy + Math.sin(a * Math.PI / 8) * r;
+                if (!ow.boxBlocked(x - 9, y - 5, 18, 10) && !(ow.forest.depthAt(x, y) > 0) && ow.zoneAt(x, y)?.id === 33) return { x, y };
+            }
+            return null;
+        });
+        await go(road.x, road.y - 23);
+        await page.waitForFunction(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return fd.foes.some(f => f.family === 'guards-2') && fd.foes.every(f => f.foe.ready); }, null, { timeout: 30000 });
+        const near = await page.evaluate(() => [...new Set(window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.map(f => f.family))].sort());
+        const there = await settled(page);
+        const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
+        await go(10928, 10224);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+        const after = await settled(page);
+        console.log("the first area's guards", +(there.mb - base.mb).toFixed(2), 'MB', near.join(' '), sheets.join(' '));
+        expect(sheets).toEqual(expect.arrayContaining(['foe-elderwose', 'foe-sorceress']));
+        expect(near.filter(f => f.startsWith('guards')).length).toBeLessThan(5);     // (not every group about the road: only those near)
+        expect(there.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
     });
 

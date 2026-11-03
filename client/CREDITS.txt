@@ -102,7 +102,8 @@ The foes out on the world are The Battle for Wesnoth's
 (https://www.wesnoth.org) unit art, by the Wesnoth unit artists (the
 full list of contributors is in data/core/about.cfg of the Wesnoth
 repository): the Giant Rat, Ruffian, Woodsman, Footpad, Poacher, Goblin
-Spearman, Goblin Impaler and Goblin Rouser on the Saltmere Point, and
+Spearman, Goblin Impaler and Goblin Rouser on the Saltmere Point, the
+Elder Wose and Elvish Sorceress guarding the great wood round it, and
 the Orcish Grunt, Archer, Warrior and Warlord made for the coast before. Their standing, idle, attack, defend and death
 frames are used, scaled up a quarter, with their team colour mapped to
 LPC cloth (the grunt's, archer's, warrior's and warlord's every colour

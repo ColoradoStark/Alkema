@@ -10,7 +10,8 @@ The wesnoth-<foe>/ folders hold the units' frames from The Battle for Wesnoth
 https://github.com/wesnoth/wesnoth, by the Wesnoth unit artists, their animation timings from
 data/core/units (commit cad4edaccdb0a1e1f430afc7adcab07b3fd79671 for those added in November 2026): the
 Orcish Grunt, Archer, Warrior and Warlord and the Goblin Spearman, for the coast west of the old start; the
-Giant Rat, Ruffian, Woodsman, Footpad, Poacher, Goblin Impaler and Goblin Rouser for the Saltmere Point. tools/battlegen.py recolours their team colour (to LPC cloth); the grunt's colours are all
+Giant Rat, Ruffian, Woodsman, Footpad, Poacher, Goblin Impaler and Goblin Rouser for the Saltmere Point; the
+Elder Wose and Elvish Sorceress guarding the great wood round it. tools/battlegen.py recolours their team colour (to LPC cloth); the grunt's colours are all
 mapped to the LPC character palettes (team colour to maroon cloth, iron to LPC iron and steel, leather to
 LPC leather), and its dropped sword is drawn into its last death frames.
 

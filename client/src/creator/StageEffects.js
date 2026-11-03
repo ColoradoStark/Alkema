@@ -198,7 +198,8 @@ export class StageEffects {
 }
 
 /** Keeps a debris emitter's particles above a ground line: bounce, scuff, rest. */
-class Ground {
+/** Where debris lands (exported for effects.spec.js). */
+export class Ground {
     constructor() {
         this.y = 0;
     }
@@ -213,7 +214,9 @@ class Ground {
                     return;
                 }
                 p.y = ground.y;
-                p.velocityY = p.velocityY > 70 ? -p.velocityY * 0.35 : 0; // bounce, then rest
+                // bounce, then rest: landing slower than 70 a second, and what one frame's gravity adds (debris falls at up to
+                // 1000), or on a slow phone's long frame a resting splinter was kicked back up and hopped on the spot
+                p.velocityY = p.velocityY > 70 + delta ? -p.velocityY * 0.35 : 0;
                 p.velocityX *= 0.78; // scuff along the ground
             },
         };

@@ -4,7 +4,8 @@
 // comes for you, winds up (flashing red) and swings; your swing strikes it; far enough off it goes home.
 import { test, expect } from '@playwright/test';
 
-async function enterWorld(page, path = '/') {
+/** Into the world; only the Point's band comes (`bands`: 'all' lets the first area's guards come too). */
+async function enterWorld(page, path = '/', bands = 'z35') {
     await page.goto(path);
     await page.waitForFunction(() => {
         const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
@@ -12,7 +13,11 @@ async function enterWorld(page, path = '/') {
     }, null, { timeout: 60000 });
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
-    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    await page.evaluate((bands) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        gs.dayNight.hourOverride = 12;
+        gs.fieldDemons.only = bands === 'all' ? null : (family) => family === bands;
+    }, bands);
 }
 
 /** Put the hero's feet at (x, y). */
@@ -41,7 +46,8 @@ const field = (page) => page.evaluate(() => {
     };
 });
 
-const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES, PACKS: m.PACKS })));
+// (the Point's: its packs and places come first in PACKS and PLACES, so their numbers are the same)
+const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES.filter(p => p.family === 'z35'), PACKS: m.PACKS.filter(p => p.family === 'z35') })));
 
 /** At the Point, every pack of it come and drawn. */
 async function atThePoint(page) {
@@ -325,7 +331,11 @@ test.describe("The Saltmere Point's foes", () => {
         }, null, { timeout: 45000 });
         await page.locator('#cc-play').click();
         await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene')?.spellbook && window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.dayNight.hourOverride = 12;
+            gs.fieldDemons.only = (family) => family === 'z35';
+        });
         const { PLACES, PACKS } = await places(page);
         await atThePoint(page);
         // Six tiles straight off the loneliest pack, on the side furthest from any other, facing it: they stay at their posts
@@ -467,7 +477,7 @@ test.describe('A fight on the world sounds like one', () => {
         await page.evaluate(async () => { window.__packs = await import('/src/battle/FieldDemons.js'); });
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
-            const { PACKS } = window.__packs;
+            const PACKS = window.__packs.PACKS.filter(p => p.family === 'z35');
             // (three tiles off the first pack, on the side away from the rest: none of them roused too)
             const p = fd.foes.find(f => f.pack === 0).post;
             const at = [...Array(16)].map((_, a) => ({ x: p.x + Math.cos(a * Math.PI / 8) * 100, y: p.y + Math.sin(a * Math.PI / 8) * 100 }))
@@ -575,7 +585,7 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
             const { numbers, ZONES, PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
             const z = ZONES.z35;
             return { steps: PACKS.filter(p => p.family === 'z35').map(p => p.step), ratio: numbers('rouser', 1, z, 3).hp / numbers('rouser', 1, z, 0).hp,
-                places: PLACES.every(p => p.step === PACKS[p.pack].step), boss: PACKS.at(-1).band[0] };
+                places: PLACES.every(p => p.step === PACKS[p.pack].step), boss: PACKS.filter(p => p.family === 'z35').at(-1).band[0] };
         });
         expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6]);
         expect(r.ratio / 2.5 ** 3).toBeCloseTo(1, 1);
@@ -1025,7 +1035,7 @@ test.describe('Struck again and again, a foe still strikes back', () => {
                     me.setPosition(qx, qy - 23); me.body.reset(me.x, me.y);
                     ok = Math.hypot(f.foe.x - qx, f.foe.y - qy) < 70 || f.state === 'windup';
                     const st = `${f.state}${f.route ? ' r' + f.route.length : ''}`;
-                    if (st !== last) { trail.push(`${Math.round(game)} ${st} ${Math.round(f.foe.x)},${Math.round(f.foe.y)}`); last = st; }
+                    if (st !== last || Math.floor(game / 500) !== Math.floor((game - 50) / 500)) { trail.push(`${Math.round(game)} ${st} ${Math.round(f.foe.x)},${Math.round(f.foe.y)} to ${f.route?.[0] ? Math.round(f.route[0].x) + ',' + Math.round(f.route[0].y) : '-'} c${Math.round(f.cornered || 0)} stun${Math.round(f.stun || 0)} st${Math.round(f.stall || 0)} idle${f.idle ? Math.round(f.idle.t) : '-'} slow${f.slow || 0} frz${Math.round(fd._freeze || 0)} held${fd._held ? 1 : 0}`); last = st; }
                     await new Promise(r => requestAnimationFrame(r));
                     game += Math.min(gs.game.loop.delta, 50);
                 }
@@ -1180,6 +1190,86 @@ test.describe('A blow holds the world only a moment', () => {
             return paused;
         });
         expect(paused).toBe(false);
+    });
+});
+
+test.describe("The first area is blocked off (the user's: the story beyond isn't written yet)", () => {
+    /** A guard by the road out of Riverhold (`woods`) with open road a few tiles from it, and wood beside it. */
+    const roadside = (page) => page.evaluate(async () => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+        const { PACKS } = await import('/src/battle/FieldDemons.js');
+        const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), wood = (x, y) => ow.forest.depthAt(x, y) > 0;
+        for (const p of PACKS.filter(p => p.guard && p.woods)) {
+            const [gx, gy] = p.at;
+            let road = null, inWood = null;
+            for (let r = 64; r <= 192 && !road; r += 16) for (let a = 0; a < 16 && !road; a++) {
+                const x = gx + Math.cos(a * Math.PI / 8) * r, y = gy + Math.sin(a * Math.PI / 8) * r;
+                if (open(x, y) && !wood(x, y) && ow.zoneAt(x, y)?.id === 33) road = { x, y };
+            }
+            for (let a = 0; a < 16 && !inWood; a++) {
+                const x = gx + Math.cos(a * Math.PI / 8) * 48, y = gy + Math.sin(a * Math.PI / 8) * 48;
+                if (open(x, y) && wood(x, y) && ow.zoneAt(x, y)?.id === 33) inWood = { x, y };
+            }
+            if (road && inWood) return { family: p.family, at: { x: gx, y: gy }, road, inWood };
+        }
+        return null;
+    });
+    const guard = (page, at) => page.evaluate(({ x, y }) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        const f = gs.fieldDemons.foes.find(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48 && f.family.startsWith('guards'));
+        return f && { state: f.state, kind: f.kind, hp: f.maxHp, onRoad: !(gs.overworld.forest.depthAt(f.foe.x, f.foe.y) > 0), ready: f.foe.ready };
+    }, at);
+
+    test("on the road out of Riverhold no guard comes for you; step into the wood and one does, far too strong, and it never sets foot on the road", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const spot = await roadside(page);
+        expect(spot).not.toBeNull();
+        await standAt(page, spot.road.x, spot.road.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g?.ready), { timeout: 30000 }).toBe(true);
+        // On the road, a few tiles off it: it stands
+        await page.waitForTimeout(2500);
+        expect((await guard(page, spot.at)).state).toBe('post');
+        // Into the trees beside it: it comes, and the Point's whole climb wouldn't make you its match
+        await standAt(page, spot.inWood.x, spot.inWood.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).not.toBe('post');
+        const g = await guard(page, spot.at);
+        expect(['elderwose', 'sorceress']).toContain(g.kind);
+        expect(g.hp).toBeGreaterThan(1e6);
+        // Back on the road: it turns for home, never stepping out of the trees
+        await standAt(page, spot.road.x, spot.road.y);
+        for (let k = 0; k < 15; k++) {
+            expect((await guard(page, spot.at)).onRoad, 'never on the road').toBe(false);
+            await page.waitForTimeout(200);
+        }
+        await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/home|post/);
+    });
+
+    test("over the bridge and up the bank, the guard there holds its whole zone, open ground and all; and none stands in the Point", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const posts = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            return PACKS.filter(p => p.guard).map(p => ({ at: p.at, woods: !!p.woods, zone: ow.zoneAt(...p.at)?.id }));
+        });
+        expect(posts.every(p => p.zone !== 35)).toBe(true);
+        const bridge = posts.find(p => p.zone === 34);
+        expect(bridge?.woods).toBe(false);
+        // Stand on its ground, a little off its post: it comes
+        const near = await page.evaluate(([x, y]) => {
+            const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
+            for (let r = 48; r <= 112; r += 16) for (let a = 0; a < 16; a++) {
+                const px = x + Math.cos(a * Math.PI / 8) * r, py = y + Math.sin(a * Math.PI / 8) * r;
+                if (!ow.boxBlocked(px - 9, py - 5, 18, 10) && ow.zoneAt(px, py)?.id === 34) return { x: px, y: py };
+            }
+            return null;
+        }, bridge.at);
+        expect(near).not.toBeNull();
+        await standAt(page, near.x, near.y);
+        await expect.poll(() => guard(page, { x: bridge.at[0], y: bridge.at[1] }).then(g => g?.state), { timeout: 30000 }).toMatch(/chase|windup|recover/);
     });
 });
 

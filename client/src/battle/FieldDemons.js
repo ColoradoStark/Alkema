@@ -21,7 +21,7 @@
 
 import { UNIT } from './Demons.js';
 import { Orc } from './FieldOrcs.js';
-import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand } from './Bands.js';
+import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand, climbOf } from './Bands.js';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -87,7 +87,7 @@ const SLIDE = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];     // way
 
 // The packs, zone by zone (Bands.js): each zone's a climb, its `step`th pack the `step`th up it
 export const PACKS = Object.entries(BANDS).flatMap(([family, packs]) =>
-    packs.map((p, k, all) => ({ ...p, family, tier: 1 + (TIER_END - 1) * k / (all.length - 1), step: k })));
+    packs.map((p, k, all) => ({ ...p, family, tier: 1 + (TIER_END - 1) * k / Math.max(1, all.length - 1), step: p.step ?? k })));
 
 /** Each zone's bodies: its sheets loaded and let go, and one made (feet at x, y). */
 const FAMILIES = Object.fromEntries(Object.keys(BANDS).map(zone => [zone, {
@@ -95,6 +95,7 @@ const FAMILIES = Object.fromEntries(Object.keys(BANDS).map(zone => [zone, {
     forget: (scene) => forgetBand(scene, zone),
     make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
     sheet: (kind) => kind,
+    climb: climbOf(zone),
 }]));
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
 
@@ -151,6 +152,7 @@ export class FieldDemons {
         this._up = new Set();      // the bands (FAMILIES) come or coming: you're near their stretch of coast
         this._coming = new Set();  // those whose sheets are loading
         this._near = new Set();
+        this.only = null;         // (the tests' switch, as weatherOverride: which bands may come, family => bool; null, every one)
         this._freeze = 0;
         this._mpT = 0;
         this.MELEE_REACH = REACH + LUNGE + 10;
@@ -206,10 +208,10 @@ export class FieldDemons {
             return this.release();
         }
         // Each band comes as you near its stretch of coast, and goes as you leave it
-        this._near = new Set(Object.keys(FAMILIES).filter(fam => PACKS.some(({ at: [x, y], family }) =>
+        this._near = new Set(Object.keys(FAMILIES).filter(fam => (!this.only || this.only(fam)) && PACKS.some(({ at: [x, y], family }) =>
             family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? FAR : NEAR))));
         // (and stays while one of it is after you, however far from its posts it's followed you)
-        for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT) this._near.add(f.family);
+        for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT && (!this.only || this.only(f.family))) this._near.add(f.family);
         if (!this._near.size) return this.release();
         // A spell equipped meanwhile (Equip's Magic tab, the fight held): the blue button shows it at once
         if (this.bars && this._shown !== this.scene.scene.get('UIScene')?.spellbook?.equipped) this._showSpell();
@@ -265,7 +267,7 @@ export class FieldDemons {
         const yours = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id ?? null;
         for (const f of this.foes) {
             if (f.hp <= 0) continue;
-            const gone = yours !== null && f.zone !== null && yours !== f.zone;
+            const gone = yours !== null && !this._mine(f, feet.x, feet.y);
             this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
@@ -320,7 +322,7 @@ export class FieldDemons {
                 // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
                 // home and was mended at once; none known, it goes where it likes)
                 const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
@@ -528,7 +530,7 @@ export class FieldDemons {
     _warn(feet) {
         this._warned ??= new Set();
         for (const [pack, p] of PACKS.entries()) {
-            if (!ZONES[p.family]?.climb || !p.step || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;
+            if (!ZONES[p.family]?.climb || !p.step || p.guard || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
             if (PLACES.every(q => q.pack !== pack || this.slain.has(q.i))) continue;
             // (a pack below it still standing and nearer you is the one you're at: the packs stand about eight tiles
             // apart, and fighting one, the user was told the one beyond it was too strong, just after upgrading)
@@ -1066,6 +1068,8 @@ export class FieldDemons {
     /** Can feet stand at (x, y) on the world's map? */
     /** Is (x, y) in the zone `f` keeps to (or the sea, or anywhere for one that keeps to none)? */
     _mine(f, x, y) {
+        // (one that keeps to the trees, the first area's guards: off the road, out of the wood, isn't its)
+        if (f.woods && !(this.scene.overworld?.forest?.depthAt(x, y) > 0)) return false;
         if (f.zone === null) return true;
         const z = this.scene.overworld?.zoneAt?.(x, y);
         return !z || z.id === f.zone;

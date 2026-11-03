@@ -252,6 +252,22 @@ FOES = {
             'attack-n': [('rouser-ne', 25), ('rouser-attack1', 50), ('rouser-attack-ne', 150), ('rouser-attack3', 50), ('rouser-ne', 25)],
             'defend-s': hit(['rouser', 'rouser-defend']), 'defend-n': hit(['rouser-ne', 'rouser-ne-defend']),
         }},
+    # The Southern Forest's guards, round the first area (docs/WORLD.md): an elder wose, and a sorceress casting
+    'elderwose': {
+        'name': 'Elder Wose', 'race': 'wose', 'hp': 64, 'damage': 13, 'folder': 'wesnoth-elderwose', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('wose-elder', 1000)],
+            'attack-s': [('wose-elder-attack-1', 400), ('wose-elder-attack-2', 200), ('wose-elder-attack-1', 100), ('wose-elder', 50)],
+            'defend-s': hit(['wose-elder', 'wose-elder-defend']),
+            'die-s': seq('wose-elder-die-fall-', range(1, 16), 100),
+        }},
+    'sorceress': {
+        'name': 'Elvish Sorceress', 'race': 'elf', 'hp': 41, 'damage': 7, 'folder': 'wesnoth-sorceress', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('sorceress', 1000)],
+            'attack-s': seq('sorceress-magic-', [1, 2, 3, 2, 1], [75, 75, 300, 75, 75]) + [('sorceress', 50)],
+            'defend-s': hit(['sorceress-defend-1', 'sorceress-defend-2']),
+        }},
 }
 
 # Wesnoth's team colour: these magenta shades, darkest to lightest (data/core/team-colors)

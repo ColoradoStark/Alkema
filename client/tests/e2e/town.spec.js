@@ -11,7 +11,11 @@ async function enterWorld(page) {
     await page.locator('#cc-play').click();
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite, null, { timeout: 30000 });
     // Broad day, whenever the test runs: the townsfolk are out at work (daynight.spec.js tests the night)
-    await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hourOverride = 12; });
+    await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        gs.dayNight.hourOverride = 12;
+        gs.fieldDemons.only = () => false;      // (no foes: the first area's guards stand by Riverhold's road)
+    });
     // These begin where heroes start: the road below Riverhold
     await page.evaluate(() => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;

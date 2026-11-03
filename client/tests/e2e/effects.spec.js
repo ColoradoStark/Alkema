@@ -52,21 +52,42 @@ test.describe('Stage effects', () => {
 
     test('debris bounces and comes to rest on the ground', async ({ page }) => {
         await stage(page);
-        const ys = await page.evaluate(async () => {
+        const seen = await page.evaluate(async () => {
             const fx = window.__PHASER_GAME.scene.getScene('CreateScene').effects;
             fx.splinters.killAll();
             fx.impact('wood', 150, 100, 160);
-            // 900 ms of the game's time (debris falls on the game clock, which lags the wall clock under load)
+            // Followed on the game's clock (debris falls on it, which lags the wall clock under load) till just before
+            // they fade (their lifespan, 1100 ms): the slowest, thrown straight up as fast as they go, rises, falls,
+            // bounces twice and rests at about a second, so a look at 900 ms caught some mid-hop (a fifth of runs)
             const scene = window.__PHASER_GAME.scene.getScene('CreateScene');
-            const t0 = scene.time.now;
-            while (scene.time.now - t0 < 900) await new Promise(r => setTimeout(r, 50));
-            return fx.splinters.alive.map(p => ({ y: p.y, vy: p.velocityY }));
+            const t0 = scene.time.now, mine = [...fx.splinters.alive], rested = new Set();
+            let lowest = 0;
+            while (scene.time.now - t0 < 1060) {
+                for (const p of mine) {
+                    lowest = Math.max(lowest, p.y);
+                    if (p.y >= 159.5 && p.velocityY === 0) rested.add(p);
+                }
+                await new Promise(r => setTimeout(r, 20));
+            }
+            return { n: mine.length, rested: rested.size, lowest };
         });
-        expect(ys.length).toBeGreaterThan(0);
-        for (const p of ys) {
-            expect(p.y).toBeLessThanOrEqual(160.5);
-        }
-        expect(ys.filter(p => p.y >= 159.5).length).toBeGreaterThan(ys.length / 2); // most have landed
+        expect(seen.n).toBeGreaterThan(0);
+        expect(seen.lowest).toBeLessThanOrEqual(160.5);            // never through the ground
+        expect(seen.rested).toBeGreaterThan(seen.n / 2);           // most come to rest on it
+    });
+
+    test("on a slow phone too, debris that has come to rest stays at rest (one long frame's gravity kicked it back up: it hopped on the spot and never settled)", async ({ page }) => {
+        await stage(page);
+        const vy = await page.evaluate(async () => {
+            const { Ground } = await import('/src/creator/StageEffects.js');
+            const ground = new Ground(), processor = ground.processor();
+            ground.y = 160;
+            // At rest on the ground, then a frame of 100 ms (10 frames a second): gravity's 900 has given it 90 down
+            const p = { x: 0, y: 160 + 9, velocityX: 0, velocityY: 90, angle: 0 };
+            processor.update(p, 100);
+            return p.velocityY;
+        });
+        expect(vy).toBe(0);
     });
 
     test('a skeleton struck in melee rattles instead of throwing debris', async ({ page }) => {
