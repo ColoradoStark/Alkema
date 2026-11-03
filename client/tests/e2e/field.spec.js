@@ -3,8 +3,8 @@
 // for you, winds up (flashing red) and swings; your swing strikes it; far enough off it goes home.
 import { test, expect } from '@playwright/test';
 
-async function enterWorld(page) {
-    await page.goto('/');
+async function enterWorld(page, path = '/') {
+    await page.goto(path);
     await page.waitForFunction(() => {
         const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
         return s?.figure?.visible && !s._inFlight;
@@ -1481,5 +1481,37 @@ test.describe("The world's zones (the user's: each like a level)", () => {
             await page.waitForTimeout(200);
         }
         await expect.poll(() => warden().then(w => w.state), { timeout: 10000 }).toMatch(/home|post/);
+    });
+});
+
+test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and see it)', () => {
+    test('no foe comes out anywhere, you walk three times as fast, past the home zone nothing says its foes are too strong, and nothing is saved', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page, '/?explore');
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').exploring?.text)).toBe('EXPLORE');
+        // By the climb's first pack, a warden and the demons: none comes out
+        const posts = await places(page).then(({ PACKS }) => ['vanar', 'wardens', 'demons'].map(fam => PACKS.find(p => p.family === fam).at));
+        for (const [x, y] of posts) {
+            await standAt(page, x + 40, y);
+            await page.waitForTimeout(2500);
+            expect(await field(page).then(f => f.count)).toBe(0);
+        }
+        // Past the home zone, its card without the warning
+        const card = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._zoneCard?.list.map(t => t.text));
+        expect(card).toHaveLength(2);
+        // Three times a walk
+        await standAt(page, ...posts[0]);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(800);
+        const vx = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.body.velocity.x);
+        await page.keyboard.up('ArrowRight');
+        expect(vx).toBeCloseTo(128 * 3, 0);
+        // Nothing saved
+        const gold = await page.evaluate(() => {
+            const account = window.__ALKEMA_ACCOUNT;
+            account.updateProgress({ gold: 123456 });
+            return account.current?.data?.gold;
+        });
+        expect(gold).not.toBe(123456);
     });
 });

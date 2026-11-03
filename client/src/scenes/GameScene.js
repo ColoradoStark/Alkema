@@ -15,6 +15,7 @@ import { Weather } from '../world/Weather.js';
 import { weatherAt, inGloomhold, centreOf } from '../world/climate.js';
 import { Chests } from '../battle/Chests.js';
 import { FieldDemons } from '../battle/FieldDemons.js';
+import { EXPLORE, SPEED } from '../explore.js';
 import { RiverBoats } from '../world/RiverBoats.js';
 import { SeaShips, capsule } from '../world/SeaShips.js';
 import { Wildlife } from '../world/Wildlife.js';
@@ -177,7 +178,7 @@ export class GameScene extends Scene {
         this.updateGate();
         this.updatePortraits(time, feet);
         if (!this.town && !this._changingRoom && !this.localPlayer?.sailing) this.chests.update(feet);
-        this.fieldDemons.update(delta, this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
+        this.fieldDemons.update(delta, this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing && !EXPLORE ? feet : null);
         this.updateZone(this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing ? feet : null);
         this.riverBoats.update(delta, this.world === this.overworld && !this._changingRoom ? feet : null);
         this.seaShips.update(delta, this.world === this.overworld && !this._changingRoom ? feet : null);
@@ -378,7 +379,7 @@ export class GameScene extends Scene {
         const zone = feet && this.overworld.zoneAt(feet.x, feet.y);
         if (!zone || zone.id === this.zone?.id) return;
         this.zone = zone;
-        this.scene.get('UIScene')?.zoneCard?.(zone, zone.id !== HOME);
+        this.scene.get('UIScene')?.zoneCard?.(zone, zone.id !== HOME && !EXPLORE);
     }
 
     updateGate() {
@@ -696,7 +697,7 @@ export class GameScene extends Scene {
             // Easing into a walk: a little at first, full speed by EASE_IN_MS
             this._pace = dx || dy ? Math.min(1, (this._pace || 0.15) + this.game.loop.delta / EASE_IN_MS) : 0;
             const pace = this._pace * this._pace * (3 - 2 * this._pace);       // slow away, then up to speed
-            const quick = this.fieldDemons.you.rage?.speed || 1;          // (Swiftness, Berserk: a fight on the coast)
+            const quick = (this.fieldDemons.you.rage?.speed || 1) * (EXPLORE ? SPEED : 1);   // (Swiftness, Berserk: a fight on the coast)
             vx = dx * WALK_SPEED * pace * quick;
             vy = dy * WALK_SPEED * pace * quick;
             this.localPlayer.setVelocity(vx, vy);

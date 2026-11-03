@@ -5,6 +5,8 @@
 // saves are moved into the account. Each save is one hero: their look, name,
 // quest progress and gold. Up to MAX_SAVES.
 
+import { EXPLORE } from '../explore.js';
+
 const GUEST_KEY = 'alkema.saves';
 const LAST_KEY = 'alkema.lastSave';
 export const MAX_SAVES = 10;
@@ -210,7 +212,7 @@ class Account {
     /** Update the current save's progress (quests, gold). Written shortly after. */
     updateProgress(fields) {
         const save = this.current;
-        if (!save) return;
+        if (!save || EXPLORE) return;
         save.data = { ...save.data, ...fields };
         this._write(save);
     }

@@ -15,6 +15,7 @@ const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this o
 const HEAL_SHARE = 0.5;       // a healer mends you from nothing for this much of the cheapest upgrade you could buy next
 const TOO_POOR = ["You haven't the gold, I'm afraid. Come back when you have it."];
 import { account } from '../account/account.js';
+import { EXPLORE } from '../explore.js';
 
 const ABILITY_COOLDOWN_MS = 3000;
 
@@ -29,6 +30,8 @@ export class UIScene extends Scene {
         this._addMapVignette();
         this._addGoldenHour();
         this.minimap = new Minimap(this, this.scale.width - 48, 80);
+        // (explore mode, /?explore: said under the minimap, so it's never taken for the game)
+        if (EXPLORE) this.exploring = this.add.text(this.scale.width - 48, 132, 'EXPLORE', { fontFamily: 'Romulus', fontSize: '14px', color: '#9fe8ff', stroke: '#1d131e', strokeThickness: 3 }).setOrigin(0.5).setDepth(23);
         // Quests pick up where this hero left off, and their progress is saved
         this.quests = new QuestTracker(this, account.current?.data?.quests, quests => account.updateProgress({ quests }));
         this.topBar = new TopBar(this);
