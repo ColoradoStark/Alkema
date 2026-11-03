@@ -27,7 +27,9 @@ export const VANAR_KINDS = {
     greatbear: { ...DEMON_KINDS.brute, speed: 74, reach: 54, windup: 750, recover: 950, side: true, sheet: 'waterbear', scale: 1.2, label: 'Great Bear', chest: true },
     // Over the home zone's every edge (zones.js `WALL`, tools/zonegen.py's wardens): a water bear grown, made far
     // up the climb, as quick as the great bear
-    warden: { ...DEMON_KINDS.brute, speed: 74, reach: 54, windup: 700, recover: 900, side: true, sheet: 'waterbear', scale: 1.3, label: 'Warden' },
+    // (a warden is quicker than you, comes straight on and keeps coming as it winds up, the user's: they walked
+    // straight past one, side-on and standing still to swing, the length of its wind-up out of reach)
+    warden: { ...DEMON_KINDS.brute, speed: 154, reach: 54, windup: 700, recover: 900, presses: true, sheet: 'waterbear', scale: 1.3, label: 'Warden' },
 };
 // (what a bane looks for: battle.json's races)
 const RACES = { waterelemental: 'elemental', kindredhunter: 'vanar' };

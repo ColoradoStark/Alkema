@@ -1482,6 +1482,64 @@ test.describe("The world's zones (the user's: each like a level)", () => {
         }
         await expect.poll(() => warden().then(w => w.state), { timeout: 10000 }).toMatch(/home|post/);
     });
+    test("a pack keeps to one zone, its post's, though it stands on a border (struck from over it, an orc on the far side went home and was mended at once)", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const spawn = await page.evaluate(async () => (await import('/src/battle/FieldDemons.js')).FIELD_START);
+        await standAt(page, spawn.x, spawn.y);
+        const { PLACES, PACKS } = await places(page);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(onCoast).length);
+        const split = await page.evaluate((PACKS) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            return PACKS.map((p, i) => ({ i, post: gs.overworld.zoneAt(...p.at)?.id ?? null, theirs: [...new Set(fd.foes.filter(f => f.pack === i).map(f => f.zone))] }))
+                .filter(p => p.theirs.length && (p.theirs.length > 1 || p.theirs[0] !== p.post));
+        }, PACKS);
+        expect(split).toEqual([]);
+    });
+
+    test("a warden is quicker than you: walking on past it into its zone, it catches you and fells you (the user walked straight past them)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        // A warden, and a straight line of open ground in its zone running past it: from two tiles off it, on 14 tiles
+        const run = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10);
+            for (const p of PACKS.filter(p => p.family === 'wardens')) {
+                const [wx, wy] = p.at, zone = ow.zoneAt(wx, wy).id;
+                for (let a = 0; a < 16; a++) {
+                    const ux = Math.cos(a * Math.PI / 8), uy = Math.sin(a * Math.PI / 8);
+                    const from = { x: wx + ux * 64, y: wy + uy * 64 };
+                    let ok = true;
+                    for (let k = 0; k <= 14 * 32 && ok; k += 8) ok = open(from.x + ux * k, from.y + uy * k) && ow.zoneAt(from.x + ux * k, from.y + uy * k)?.id === zone;
+                    if (ok) return { from, ux, uy, warden: { x: wx, y: wy } };
+                }
+            }
+            return null;
+        });
+        expect(run).not.toBeNull();
+        await standAt(page, run.from.x, run.from.y);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.family === 'wardens' && f.foe.ready)), { timeout: 30000 }).toBe(true);
+        // Walk on at a hero's walking speed by the game's own clock, and see if a blow lands before the line ends
+        const out = await page.evaluate((run) => new Promise(done => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            const me = gs.localPlayer.sprite, hp0 = ui.hp.now;
+            let gone = 0;
+            const step = () => {
+                const dt = Math.min(gs.game.loop.delta, 50) / 1000;
+                if (ui.hp.now < hp0 || gs.fieldDemons.fallen || gone >= 14 * 32) {
+                    gs.events.off('update', step);
+                    return done({ struck: ui.hp.now < hp0 || !!gs.fieldDemons.fallen, gone: Math.round(gone) });
+                }
+                const v = 128 * dt;
+                gone += v;
+                me.setPosition(me.x + run.ux * v, me.y + run.uy * v);
+                me.body.reset(me.x, me.y);
+            };
+            gs.events.on('update', step);
+        }), run);
+        expect(out.struck, `walked ${out.gone} px past it untouched`).toBe(true);
+    });
 });
 
 test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and see it)', () => {

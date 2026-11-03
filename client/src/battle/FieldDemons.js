@@ -364,8 +364,9 @@ export class FieldDemons {
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
                 const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
-                // (the zone it keeps to: none known, it goes where it likes)
-                const zone = this.scene.overworld?.zoneAt?.(at.x, at.y)?.id ?? null;
+                // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
+                // home and was mended at once; none known, it goes where it likes)
+                const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
                 return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
@@ -670,6 +671,7 @@ export class FieldDemons {
         }
         const dx = you.x - foe.x, dy = you.y - foe.y, u = d || 1;
         if (f.state === 'windup') {
+            if (f.spec.presses && d > f.spec.reach * 0.6) this._step(f, dx / u, dy / u, dt, 1, you);     // (a warden: no walking out of its reach)
             foe.face(you.x, you.y);
             f.t -= delta;
             foe.tint(Math.floor(f.t / 90) % 2 ? 0xff5050 : 0xffb0b0);     // the tell
