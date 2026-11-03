@@ -422,6 +422,46 @@ test.describe('Memory', () => {
         expect(after.frame).toBeGreaterThan(frame + 10);       // still running
     });
 
+    test("another changing clothes before their first sheet is in: the late sheet isn't drawn under the new look, nor let go under them", async ({ page }) => {
+        // (a full test run froze a game this way: a hero joining in their saved gear changed clothes at once; their first
+        // sheet came in after, its animations made under the new look's name, then that sheet let go under them)
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            const fetched = window.fetch;     // (the new clothes come after the first: as they did)
+            window.fetch = (url, ...rest) => String(url).includes('again=1')
+                ? new Promise(r => setTimeout(r, 1500)).then(() => fetched(url, ...rest)) : fetched(url, ...rest);
+            const character = { ...me.characterData, id: 'stranger-dressing', spriteUrl: me.characterData.spriteUrl };
+            gs.addPlayer({ id: 'stranger-dressing', x: me.x + 40, y: me.y + 40, character });
+            const sep = character.spriteUrl.includes('?') ? '&' : '?';
+            gs.players.get('stranger-dressing').updateAppearance({ ...character, spriteUrl: `${character.spriteUrl}${sep}again=1` });
+        });
+        await page.waitForFunction(() => window.__PHASER_GAME.textures.exists('sprite_stranger-dressing~1'), null, { timeout: 60000 });
+        const frame = await page.evaluate(() => window.__PHASER_GAME.loop.frame);
+        await page.waitForTimeout(1000);
+        const held = () => page.evaluate(() => {
+            const g = window.__PHASER_GAME;
+            return { textures: g.textures.getTextureKeys().filter(k => k.includes('stranger-dressing')).sort(),
+                // every animation of theirs drawn from a sheet still held
+                anims: g.anims.toJSON().anims.filter(a => a.key.includes('stranger-dressing'))
+                    .map(a => a.frames[0].key).filter((k, i, all) => all.indexOf(k) === i).sort(),
+                frame: g.loop.frame };
+        });
+        const during = await held();
+        expect(errors).toEqual([]);
+        expect(during.textures).toEqual(['sprite_stranger-dressing~1']);
+        expect(during.anims).toEqual(['sprite_stranger-dressing~1']);
+        expect(during.frame).toBeGreaterThan(frame + 10);      // still running
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').removePlayer('stranger-dressing'));
+        await page.waitForTimeout(500);
+        const after = await held();
+        expect(errors).toEqual([]);
+        expect(after).toMatchObject({ textures: [], anims: [] });
+    });
+
     test("the goddesses' pictures are held only while the Upgrade page is open", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

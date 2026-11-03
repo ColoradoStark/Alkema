@@ -52,10 +52,12 @@ export class CompositeCharacter extends Phaser.GameObjects.Container {
             return;
         }
 
-        const scene = this.scene;
+        const scene = this.scene, look = this.look;
         loadCharacterSpritesheet(scene, spriteUrl, textureKey, oversizedFrom(this.characterData.spriteMeta))
             .then(({ cols }) => {
-                if (!this.scene) return this._forget(this.look, scene);   // gone before it came
+                // Gone before it came, or in other clothes meanwhile (updateCharacter brings those): shown, its animations
+                // were made under the new look's name and drew this sheet once it was let go, which froze the game
+                if (!this.scene || this.look !== look) return this._forget(look, scene);
                 if (cols) this.sheetCols = cols;
                 this.onTextureReady(textureKey);
             })
