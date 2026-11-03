@@ -14,7 +14,7 @@ const share = (where, level) => {
 describe('Weather', () => {
     test("Gloomhold: light rain 55% of the time, normal rain, a storm or none 15% each (the user's)", () => {
         for (const [level, odds] of Object.entries(GLOOMHOLD_ODDS)) expect(share({ gloom: true }, level)).toBeCloseTo(odds, 1);
-        expect(GLOOMHOLD_ODDS).toEqual({ light: 0.55, normal: 0.15, storm: 0.15, none: 0.15 });
+        expect(GLOOMHOLD_ODDS).toEqual({ light: 0.5, normal: 0.15, storm: 0.05, none: 0.3 });
     });
 
     test('the far north snows lightly, with a heavy snowstorm 15% of the time', () => {

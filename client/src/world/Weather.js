@@ -30,7 +30,7 @@ const KINDS = {
     },
     rain: {
         texture: 'fx-raindrop', w: 2, h: 11, splash: true,
-        light: { frequency: 6, max: 300, speedY: [480, 560], speedX: [-50, -30], scale: [0.8, 1], alpha: [0.45, 0.7], overcast: 0.22, rain: 0.05 },
+        light: { frequency: 16, max: 110, speedY: [480, 560], speedX: [-50, -30], scale: [0.8, 1], alpha: [0.25, 0.45], overcast: 0.12, rain: 0.03 },     // (very light: the user's)
         normal: { frequency: 2, max: 700, speedY: [620, 740], speedX: [-100, -70], scale: [0.75, 1.05], alpha: [0.4, 0.65], overcast: 0.45, rain: 0.11 },
         storm: { frequency: 0.8, max: 1300, speedY: [820, 980], speedX: [-300, -230], scale: [0.8, 1.15], alpha: [0.45, 0.75], overcast: 0.8, rain: 0.2, wind: 0.07, lightning: true },
     },

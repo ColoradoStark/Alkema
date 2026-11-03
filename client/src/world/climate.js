@@ -9,8 +9,9 @@
 export const SPELL_MS = 4 * 60 * 1000;          // a spell of weather: a sixth of the 24-minute day
 export const LEVELS = ['none', 'light', 'normal', 'storm'];
 
-// The odds of each spell (the user's): Gloomhold light rain 55%, then normal, a storm or a dry spell 15% each
-export const GLOOMHOLD_ODDS = { light: 0.55, normal: 0.15, storm: 0.15, none: 0.15 };
+// The odds of each spell (the user's): Gloomhold light rain 50%, normal 15%, a storm 5%, dry 30% (November 2026:
+// 55% light and 15% storms was a little too much)
+export const GLOOMHOLD_ODDS = { light: 0.5, normal: 0.15, storm: 0.05, none: 0.3 };
 // ...and the far north snows lightly, with a 15% chance of a heavy snowstorm (the user's)
 export const NORTH_ODDS = { light: 0.85, storm: 0.15 };
 
