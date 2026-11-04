@@ -863,6 +863,38 @@ def grim(img):
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
 
 
+def _bark_ramp():
+    """The LPC trunk's browns (Sharm's, the overworld's trees' bark), darkest to lightest."""
+    px = np.array(Image.open(os.path.join(tg.ROOT, 'tools', 'worldgen-sources', 'trunk.png')).convert('RGBA')).reshape(-1, 4)
+    px = px[px[:, 3] > 250][:, :3].astype(float)
+    lum = px @ [0.3, 0.59, 0.11]
+    px, lum = px[lum > 20], lum[lum > 20]
+    return px[np.argsort(lum)]
+
+
+def dead_oak(name, flip=False, grow=1.5):
+    """The Battle for Wesnoth's dead oak (GPL, as Grimhold's mountains are: the 4-Season set's bare tree is
+    OGA-BY only), grown chunky as the ships are and its bark in the LPC trunk's browns, shade for shade."""
+    im = Image.open(os.path.join(tg.ROOT, 'tools', 'worldgen-sources', 'wesnoth-forest', f'{name}.png')).convert('RGBA')
+    im = im.crop(im.getbbox())
+    if flip:
+        im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    im = im.resize((round(im.width * grow), round(im.height * grow)), Image.NEAREST)
+    a = np.array(im).astype(float)
+    lum = a[..., :3] @ [0.3, 0.59, 0.11]
+    lo, hi = np.percentile(lum[a[..., 3] > 0], [2, 98])
+    ramp = _bark_ramp()
+    a[..., :3] = ramp[(np.clip((lum - lo) / (hi - lo), 0, 1) * (len(ramp) - 1)).astype(int)]
+    img = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+    return piece(img, 0, 0, img.width, img.height)
+
+
+DEAD_OAKS = [('great-oak-tree-dead', False), ('great-oak-tree-dead2', True), ('great-oak-tree-dead', True), ('great-oak-tree-dead2', False)]
+for _i, (_name, _flip) in enumerate(DEAD_OAKS):
+    tg.PROPS[f'dead_oak{_i}'] = (lambda n=_name, f=_flip: dead_oak(n, f))
+    tg.BASES[f'dead_oak{_i}'] = (0.35, 14, 0.65)
+
+
 def crimson(img):
     """The towers' blue cones turned crimson-black."""
     a = np.array(img).astype(float)
@@ -988,11 +1020,22 @@ def grimhold():
     for x, y, kind in ((9.5, 31.2, 'grave'), (11.5, 31.4, 'grave_cross'), (13.5, 31.2, 'grave_small'), (10.5, 33, 'tomb'),
                        (14.6, 33.2, 'grave'), (12.6, 33.4, 'grave_small')):
         p(kind, x, y)
+    # Dead oaks, the courtyard's in earth of their own (the user's: not out of the cobbles)
+    t.dead_oaks = []
+    def oak(x, y, bed=True):
+        if bed:
+            t.paint(int(x) - 1, int(y) - 1, int(x) + 2, int(y) + 1, 'Dirt_Brown')
+            t.cobble[int(y) - 1:int(y) + 2, int(x) - 1:int(x) + 3] = False
+        p(f'dead_oak{len(t.dead_oaks) % len(DEAD_OAKS)}', x, y)
+        t.dead_oaks.append((x, y))
     for x, y in ((17.6, 29.8), (39.4, 22.4), (8.6, 24.6), (30.8, 31.8)):
-        p('bare_tree', x, y)
+        oak(x, y)
     for x in range(0, W, 3):
         if not 20 <= x <= 27:
-            p('bare_tree' if x % 2 else 'pine', x + 1.5, H - 0.4)
+            if x % 2:
+                oak(x + 1.5, H - 0.4, bed=False)
+            else:
+                p('pine', x + 1.5, H - 0.4)
     for y in range(13, H - 2, 3):
         p('pine', 0.9, y + 1)
         p('pine', W - 0.9, y + 1)
