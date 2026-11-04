@@ -14,3 +14,7 @@ The attack button's long sword (client/assets/ui/long_sword_1_old.png until
 October 2026) is this set's long_sword1.png. tools/weapon_icons.py lays them
 side by side, unchanged, in client/assets/ui/weapons.png, and says which
 weapon shows which (the attack button shows the weapon you carry).
+
+The blue button's scroll (client/assets/ui/scroll_old.png, shown until a
+spell's painting takes its place) is this release's item/scroll/scroll.png,
+unchanged, also CC0.

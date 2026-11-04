@@ -1446,6 +1446,11 @@ bow from releases/Nov-2015;
 artists: https://github.com/crawl/tiles/blob/master/ARTISTS.md).
   License: CC0
 
+ui/scroll_old.png (the blue button's scroll, before a spell's painting shows):
+Dungeon Crawl Stone Soup's scroll.png, unchanged, from the same 2010 release
+(releases/Ancient/Oct-5-2010/item/scroll), by the DCSS artists.
+  License: CC0
+
 ======================================================================
 WILDLIFE
 ======================================================================
