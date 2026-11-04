@@ -745,7 +745,7 @@ test.describe('Seacombe', () => {
             return { says: keeper.plan.says[0], doors: t.data.exits.filter(e => e.to).map(e => e.to), barred: t.data.shut.map(d => d.says) };
         });
         expect(shut.says).toMatch(/Shut/);
-        expect(shut.doors.sort()).toEqual(['seacombe-cottage', 'seacombe-croft', 'seacombe-farmhouse', 'seacombe-house1']);
+        expect(shut.doors.sort()).toEqual(['seacombe-cottage', 'seacombe-croft', 'seacombe-farmhouse', 'seacombe-healer', 'seacombe-house1']);
         expect(shut.barred).toContain('The door is barred.');
         // Out through the gate and back on the overworld, by Seacombe
         await page.evaluate(() => {
@@ -762,11 +762,11 @@ test.describe('Seacombe', () => {
 });
 
 for (const v of [
-    { name: 'Fernwick', key: 'fernwick', folk: 16, doors: ['cottage', 'farmhouse', 'house1', 'weaver', 'woodcutter'], out: { x: 40, row: 27, dir: 'left' } },
-    { name: 'Ashby', key: 'ashby', folk: 15, doors: ['farmhouse', 'fisherman', 'house1', 'house2', 'house3', 'hut', 'netmaker'], out: { x: 68 * 32 - 40, row: 26, dir: 'right' } },
-    { name: 'Tumbledown', key: 'tumbledown', folk: 16, doors: ['fisher', 'house1', 'house2', 'house3', 'house4', 'longhall', 'smokehouse', 'trapper', 'woodcutter'], out: { x: 40, row: 24, dir: 'left' },
+    { name: 'Fernwick', key: 'fernwick', folk: 16, doors: ['cottage', 'farmhouse', 'healer', 'house1', 'weaver', 'woodcutter'], out: { x: 40, row: 27, dir: 'left' } },
+    { name: 'Ashby', key: 'ashby', folk: 15, doors: ['farmhouse', 'fisherman', 'healer', 'house1', 'house2', 'house3', 'hut', 'netmaker'], out: { x: 68 * 32 - 40, row: 26, dir: 'right' } },
+    { name: 'Tumbledown', key: 'tumbledown', folk: 16, doors: ['fisher', 'healer', 'house1', 'house2', 'house3', 'house4', 'longhall', 'smokehouse', 'trapper', 'woodcutter'], out: { x: 40, row: 24, dir: 'left' },
       chores: ['chop', 'dig', 'fish', 'sit'] },
-    { name: "Gull's Rest", key: 'gulls_rest', folk: 16, doors: ['alehouse', 'boatwright', 'fisherman', 'house1', 'house2', 'house3', 'house4', 'house5', 'netloft', 'smokehouse'], out: { x: 40, row: 26, dir: 'left' },
+    { name: "Gull's Rest", key: 'gulls_rest', folk: 16, doors: ['alehouse', 'boatwright', 'fisherman', 'healer', 'house1', 'house2', 'house3', 'house4', 'house5', 'netloft', 'smokehouse'], out: { x: 40, row: 26, dir: 'left' },
       chores: ['dig', 'fish', 'sit', 'water'] },
 ]) {
     test.describe(v.name, () => {

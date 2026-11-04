@@ -6,6 +6,7 @@
 // quest progress and gold. Up to MAX_SAVES.
 
 import { EXPLORE } from '../explore.js';
+import { morningClock } from '../world/clock.js';
 
 const GUEST_KEY = 'alkema.saves';
 const LAST_KEY = 'alkema.lastSave';
@@ -200,7 +201,8 @@ class Account {
                 if (!spare) return null;
                 await this.deleteSave(spare.id);
             }
-            save = { id: newId(), data: { quests: { index: 0, progress: 0 }, gold: 0 }, updated_at: '' };
+            // (its own clock: a new hero starts in the morning, the user's)
+            save = { id: newId(), data: { quests: { index: 0, progress: 0 }, gold: 0, clock: morningClock() }, updated_at: '' };
             this.saves.unshift(save);
         }
         save.data = { ...save.data, ...fields };

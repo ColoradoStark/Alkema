@@ -48,6 +48,13 @@ const light = (page) => page.evaluate(() => {
 });
 
 test.describe('Day and night', () => {
+    test("a new hero starts in the morning, whatever the hour (the user's), the day running on from there", async ({ page }) => {
+        await enterWorld(page);
+        const at = await page.evaluate(() => ({ hour: window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hour }));
+        expect(at.hour).toBeGreaterThan(7.9);
+        expect(at.hour).toBeLessThan(9);
+    });
+
     test('the world is drawn in the light of the hour: bright at noon, moonlit at midnight, the towns on the map lit', async ({ page }) => {
         await enterWorld(page);
         await hour(page, 12);

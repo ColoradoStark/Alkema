@@ -147,6 +147,7 @@ export class Orc extends Foe {
     }
 
     grow(scale) {
+        this.tall = this.tall / this.scale * scale;      // (how far it stands above its feet, at its size)
         this.scale = scale;
         this.sprite.setScale(scale);
         this._stand();
@@ -199,7 +200,7 @@ export class Orc extends Foe {
     setDepthAt() {
         super.setDepthAt();
         this.shadow?.setDepth(this.sprite.depth - 0.01);
-        this.nameText?.setPosition(this.x, this.y - this.tall * this.scale - 4).setDepth(this.sprite.depth + 1);
+        this.nameText?.setPosition(this.x, this.y - this.tall - 4).setDepth(this.sprite.depth + 1);
     }
 
     die() {

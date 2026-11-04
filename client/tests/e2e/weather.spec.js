@@ -25,7 +25,7 @@ const sky = (page) => page.evaluate(async () => {
     const { WORLD } = await import('/src/world/places.js');
     const gs = window.__PHASER_GAME.scene.getScene('GameScene'), w = gs.weather;
     const me = gs.localPlayer.sprite, feet = { x: me.x, y: me.y + 23 };
-    const should = gs.town ? null : weatherAt({ snowy: gs.overworld.isSnowy(feet.x, feet.y), gloom: inGloomhold(feet.x, feet.y, WORLD.places, WORLD.size) });
+    const should = gs.town ? null : weatherAt({ snowy: gs.overworld.isSnowy(feet.x, feet.y), gloom: inGloomhold(feet.x, feet.y, WORLD.places, WORLD.size, (x, y) => gs.overworld.zoneAt(x, y)?.kingdom) });
     return {
         kind: w.kind, level: w.level, should, drops: w.emitter?.getAliveParticleCount() ?? 0,
         overcast: w.overcast, flash: w.flash, whiteout: w.whiteout?.alpha ?? 0, ambient: gs.dayNight.ambient,

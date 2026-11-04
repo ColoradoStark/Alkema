@@ -48,8 +48,11 @@ export function centreOf(place) {
     return { x: x + w / 2, y: y + h / 2 };
 }
 
-/** Is world point (x, y) in Gloomhold's lands? (the world wraps both ways) */
-export function inGloomhold(x, y, places, size) {
+/** Is world point (x, y) in Gloomhold's lands? (the world wraps both ways) Given `kingdomAt` (x, y => a kingdom's
+ * name), never in another kingdom's (the user's: it rains only in Gloomhold; its reach took in Nightspire's shore). */
+export function inGloomhold(x, y, places, size, kingdomAt = null) {
+    const kingdom = kingdomAt?.(x, y);     // (none at sea, or with no zones loaded: the castle's reach alone)
+    if (kingdom && kingdom !== 'Gloomhold') return false;
     const castle = places.find(p => p.name === GLOOMHOLD);
     if (!castle) return false;
     const c = centreOf(castle);

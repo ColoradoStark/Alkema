@@ -91,6 +91,23 @@ test.describe('Upgrades', () => {
         await expect(vigour.locator('.gear-up-level')).toHaveText('1/10');
     });
 
+    test("buying a level doesn't mend you, and coming back you're as hurt as you left (the user's: the only way to heal is the healer)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await asMage(page, 1e9);
+        await ui(page, (ui) => { ui.hp.now = 3; });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
+        const before = await ui(page, (ui) => ui.hp.max);
+        await page.locator('.gear-up[data-up="might"] .gear-up-buy').click();
+        await expect.poll(() => ui(page, (ui) => ui.hp.max)).toBeGreaterThan(before);
+        expect(await ui(page, (ui) => ui.hp.now)).toBe(3);
+        // Kept with the hero, and back next time as it was
+        await expect.poll(() => page.evaluate(async () => (await import('/src/account/account.js')).account.current.data.hp)).toBe(3);
+        await page.reload();
+        await enterWorld(page);
+        await expect.poll(() => ui(page, (ui) => ui.hp?.now), { timeout: 30000 }).toBe(3);
+    });
+
     test("the one you're on holds all it says inside its frame, on a phone (the user's: its words spilled out over the gold border, squeezed by the list)", async ({ page }) => {
         test.setTimeout(90000);
         await page.setViewportSize({ width: 430, height: 932 });

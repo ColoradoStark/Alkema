@@ -599,6 +599,7 @@ class Town:
         self.things = []       # (image, left px, bottom px, solid boxes in px)
         self.folk = []
         self.decks = []        # walkable art laid over the water (the pier, the footbridge)
+        self.placed = []       # (prop name, tile x, tile y): what put() stood where (tools/test_towngen.py looks for the boats)
         self.doors = []        # (building plan, door x px, front wall's foot px): the ones you can go in
         self.buildings = []    # every building's plan
         self.shut = []         # {rect, says}: the doors that don't open, and what trying one tells you
@@ -658,6 +659,7 @@ class Town:
     def put(self, name, tx, ty, solid=True):
         """A prop centred on tile column tx, its foot on tile row ty (fractions allowed)."""
         img = PROPS[name]()
+        self.placed.append((name, tx, ty))
         left, bottom = tx * T - img.width / 2, ty * T
         boxes = []
         if solid:
@@ -729,6 +731,45 @@ class Town:
         left, bottom = tx * T - img.width / 2, ty * T
         self.add(img, left, bottom, [(left + 2, bottom - 18, left + img.width - 2, bottom)])
         breakable(self.things[-1], 'crate')
+
+
+def widen_west(t, k, key, ground='Grass'):
+    """Grow town t by k columns on its west, everything in it moved over (its gate and where you arrive stay at
+    the west edge, in the new columns): for a town given more on that side once it was laid out."""
+    dx = k * T
+    t.cols += k
+    t.width += dx
+    t.v = np.concatenate([np.full((t.rows + 1, k), ground, dtype=object), t.v], axis=1)
+    t.cobble = np.concatenate([np.zeros((t.rows + 1, k), bool), t.cobble], axis=1)
+    moved = []
+    for th in t.things:
+        img, left, bottom, solid = th
+        new = (img, left + dx, bottom, [(x0 + dx, y0, x1 + dx, y1) for x0, y0, x1, y1 in solid])
+        moved.append(breakable(new, breaks(th)) if breaks(th) else new)
+    t.things[:] = moved
+    for f in t.folk:
+        if 'post' in f:
+            f['post'] = (f['post'][0] + k, f['post'][1])
+        if 'wander' in f:
+            x0, y0, x1, y1 = f['wander']
+            f['wander'] = [x0 + k, y0, x1 + k, y1]
+    t.decks = [(kind, x + k, y, w, h) for kind, x, y, w, h in t.decks]
+    t.doors = [(b, x + dx, foot) for b, x, foot in t.doors]
+    for b in t.buildings:
+        b['_doors'] = [(x + dx, y) for x, y in b['_doors']]
+        b['_at'] = (b['_at'][0] + k, b['_at'][1])
+    for s in t.shut:
+        s['rect'][0] += dx
+    t.lights = [[x + dx, y, kind] for x, y, kind in t.lights]
+    t.placed = [(name, x + k, y) for name, x, y in t.placed]
+    for e in t.exits:                  # the doors into its rooms, and back out of them into the street
+        if e['to']:
+            e['rect'][0] += dx
+    for room in getattr(t, 'rooms', {}).values():
+        for e in room.exits:
+            if e['to'] == key:
+                e['at'][0] += dx
+    return t
 
 
 # ------------------------------------------------------------------ inside the buildings
@@ -1188,22 +1229,24 @@ WREN = [{'type': t, 'item': i, 'variant': v} for t, i, v in [
 
 def rooms_inside(t, town):
     """A room for every building in town t with a door you can use: its map key -> Room."""
-    rooms = {}
-    for bld, door_x, foot in t.doors:
-        inside = bld['inside']
-        rw, rh = inside['size']
-        scale = 2 if inside['kind'] in HOMES else 1     # homes twice as big each way (the user's: too small to move about in)
-        rw, rh = rw * scale, rh * scale
-        room = furnish(inside['kind'], rw, rh, random.Random(inside['name']))
-        key = f"{town}-{inside['name']}"
-        rooms[key] = room
-        outside = [round(door_x), foot + 24]
-        t.exits.append({'rect': [round(door_x) - 14, foot, 28, 18], 'to': key, 'at': room.arrive, 'dir': 'up', 'door': True})
-        room.exits.append({'rect': [room.px(room.door - 1) + 2, room.py(room.rh) - 16, 3 * T - 4, 16], 'to': town,
-                           'at': outside, 'dir': 'down', 'door': True})     # three tiles wide: the user hunted for the one spot that let them out
-        room.scale = scale
-        bld['_room'] = room
-    return rooms
+    return dict(room_behind(t, town, bld, door_x, foot) for bld, door_x, foot in t.doors)
+
+
+def room_behind(t, town, bld, door_x, foot):
+    """The room behind a building's door, and the ways in and out of it: (its map key, the Room)."""
+    inside = bld['inside']
+    rw, rh = inside['size']
+    scale = 2 if inside['kind'] in HOMES else 1     # homes twice as big each way (the user's: too small to move about in)
+    rw, rh = rw * scale, rh * scale
+    room = furnish(inside['kind'], rw, rh, random.Random(inside['name']))
+    key = f"{town}-{inside['name']}"
+    outside = [round(door_x), foot + 24]
+    t.exits.append({'rect': [round(door_x) - 14, foot, 28, 18], 'to': key, 'at': room.arrive, 'dir': 'up', 'door': True})
+    room.exits.append({'rect': [room.px(room.door - 1) + 2, room.py(room.rh) - 16, 3 * T - 4, 16], 'to': town,
+                       'at': outside, 'dir': 'down', 'door': True})     # three tiles wide: the user hunted for the one spot that let them out
+    room.scale = scale
+    bld['_room'] = room
+    return key, room
 
 
 def inside(bld, **folk):
@@ -1346,9 +1389,9 @@ def riverhold():
     t.lane([(51, 23), (55, 23), (55, 12)], half=1)       # over the creek to the hermit
     t.lane([(55, 23), (55, 33)], half=1)                  # ...and down to the fisherman
     t.lane([(17, 16), (17, 9), (16, 6)], half=1)          # the alley behind the smithy
-    t.lane([(39, 17), (39, 22)], half=1)                  # healer's door to the road
-    t.lane([(34, 16), (35, 6), (40, 5)], half=1)          # round the healer to the graves
-    t.lane([(5, 18), (5, 23)], half=1)
+    t.lane([(39, 17), (39, 22)], half=1)                  # the armourer's door to the road
+    t.lane([(34, 16), (35, 6), (40, 5)], half=1)          # round the armourer to the graves
+    t.lane([(4, 19), (4, 23)], half=1)                    # the healer's door, by the gate
     t.lane([(17, 28), (17, 37), (40, 37)], half=1)        # the riverside walk behind the shops
     t.lane([(26, 28), (26, 30)], half=1)
     t.lane([(34, 28), (34, 37)], half=1)
@@ -1366,12 +1409,13 @@ def riverhold():
                         sign="THE FERRYMAN'S REST", icon='inn', inside=dict(name='inn', kind='inn', size=(19, 12))))
     t.torch(24.6, 14.5)     # torches either side of the inn door, lit at dusk
     t.torch(27.4, 14.5)
-    healer = b(35, 7, dict(w=9, roof=4, storeys=[('stone', 3), ('stone', 2)], roof_kind='slate',
-                           doors=[dict(at=4.5, kind='arched')], windows=[1.5, 7.5], sign='HEALER',
+    # The healer's, just inside the gate (the user's: you come into town to be healed, and shouldn't have to cross it)
+    healer = b(1, 10, dict(w=7, roof=4, storeys=[('stone', 3), ('stone', 2)], roof_kind='slate',
+                           doors=[dict(at=3.5, kind='arched')], windows=[1.5, 5.5], sign='HEALER',
                            styles=('posts', 'plain', 'posts'), inside=dict(name='healer', kind='healer', size=(12, 9))))
     smith = b(8, 9, dict(w=7, roof=3, storeys=[('tan', 3)], roof_kind='red', doors=[dict(at=3.5)],
                          windows=[1.5, 5.5], sign='WEAPONSMITH', icon='sword', inside=dict(name='weapons', kind='weapons', size=(9, 8))))
-    armour = b(1, 12, dict(w=6, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=4)],
+    armour = b(36, 10, dict(w=6, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=3.5)],
                            windows=[1.5], sign='ARMOURER', icon='smith', inside=dict(name='armour', kind='armour', size=(8, 8))))
     stable = b(3, 26, dict(w=10, roof=3, storeys=[('tan', 2)], roof_kind='brown',
                            doors=[dict(at=3, kind='stable'), dict(at=7, kind='stable')], sign='STABLES'))
@@ -1412,7 +1456,7 @@ def riverhold():
     p('notice', 28.5, 16.3)
     # Around the buildings
     p('anvil', 14.2, 16.2)
-    p('woodpile', 7, 14.9)
+    p('woodpile', 15.6, 13.2)
     p('hay', 2.2, 32)
     p('hay_bales', 4.5, 35.5)
     p('cart', 8.5, 35)
@@ -1421,7 +1465,7 @@ def riverhold():
     p('washing', 39, 31.5, solid=False)
     p('signpost', 4, 21.8)
     p('bench', 30.5, 16.4)
-    # The graveyard behind the healer
+    # The graveyard behind the armourer's
     for gx, gy, kind in ((37, 3, 'grave'), (39, 3, 'grave_small'), (41, 3, 'grave'), (43, 3.2, 'grave_cross'),
                          (37.5, 5.5, 'grave_small'), (40, 5.7, 'tomb'), (42.5, 5.6, 'grave')):
         p(kind, gx, gy)
@@ -1449,7 +1493,7 @@ def riverhold():
         trees.append(('pine', W - 1.2, y + 1.5))
     for x, y in ((51.8, 16), (57, 18), (52.5, 25.5), (58, 26), (57.5, 39), (51.6, 36), (44.2, 12),
                  (44.5, 33.5), (30.5, 1.2), (33.5, 2), (10.6, 39.3), (5.2, 39.3),
-                 (42.6, 21), (34, 31.5), (2.3, 9.6), (8.6, 38.2)):
+                 (42.6, 21), (34, 31.5), (8.6, 38.2)):
         trees.append(('oak' if int(x + y) % 3 else 'tree', x, y))
     for kind, x, y in trees:
         p(kind, x, y)
@@ -1481,7 +1525,7 @@ def riverhold():
     F(guard(2, 'Gate guard', post=(3.2, 26.2), facing='up', says="Papers? No, we don't do papers here. Just don't start anything."))
     F(guard(3, post=(33.6, 17.4), facing='left', says='Move along. Nothing to see in the square but cabbages and gossip.'))
     F(guard(4, post=(18.8, 28.2), facing='right', says='The Lady pays us to stand here. So I stand here.'))
-    F(guard(5, post=(41.6, 17.8), facing='down', says="The healer's busy enough without you starting fights."))
+    F(guard(5, post=(41.6, 17.8), facing='down', says="Armourer's behind me. Buy something that'll keep the healer from seeing you twice."))
     F(guard(6, post=(43.2, 21.4), facing='right', says='The hermit lives over the creek. Odd fellow. Harmless, mostly.'))
     F(guard(7, post=(22.2, 38.6), facing='down', says="Nobody crosses till the river drops. Ferryman's orders. Well, mine."))
     F(guard(8, post=(34.8, 6.6), facing='right', says="Captain wants the graves watched, nights too. Don't ask me why. I didn't."))
@@ -1709,7 +1753,6 @@ def seacombe():
     t.crate('potatoes', 18.8, 19.6)
     p('notice', 24.2, 16)
     p('bench', 24.2, 19.6)
-    p('signpost', 3.6, 20.8)
     # The feed store: sacks stacked out front for when it opens, a cart waiting
     p('sacks', 2.6, 13.6)
     p('open_sacks', 13.8, 14.4)
@@ -1747,9 +1790,8 @@ def seacombe():
     for x in range(14, 39, 3):
         if not 19 <= x <= 22:
             p('oak' if x % 2 else 'pine', x + rng.uniform(-0.4, 0.4), 1.4 + rng.uniform(0, 0.5))
-    for y in range(6, 40, 3):
-        if not 18 <= y <= 25:
-            p('pine' if y % 2 else 'oak', 0.9, y + 0.8)
+    for y in range(6, 18, 3):       # (the wood once went on south of the road too, before the harbour was there)
+        p('pine' if y % 2 else 'oak', 0.9, y + 0.8)
     for y in range(4, 40, 3):
         if not 20 <= y <= 25:
             p('pine', MW - 0.9, y + 1.5)
@@ -1837,8 +1879,7 @@ def seacombe():
                says=["First field cut, two to go. The wheat'll want another fortnight.",
                      "Mind the brook if you cross at dusk. It's deeper than it looks."]))
 
-    rooms = rooms_inside(t, 'seacombe')
-    t.rooms = rooms
+    t.rooms = rooms_inside(t, 'seacombe')
     inside(farmhouse, **villager('gran', 'Gran Harrow', 'Grandmother', 'female',
                                  farmhand('female', 'hair_bangs_bun', black, ('torso_clothes_longsleeve2', 'brown'),
                                           ('legs_skirts_plain', 'charcoal'), over=('torso_aprons_apron_full', 'white'), old=True),
@@ -1856,7 +1897,63 @@ def seacombe():
                              says="Hal's out in the stubble. He'll be in when the light goes.",
                              night_says=["The fire's warm, if you'd care to share it.",
                                          "Hush now. Just stay a while, and let me look at you."]))
+    return seacombe_harbour(t, 'seacombe')
+
+
+HARBOUR = 10     # Seacombe's harbour: the columns added to its west, where its dock is on the overworld (the user's, November 2026)
+
+
+def seacombe_harbour(t, key):
+    """Seacombe's shore (the user's, November 2026: the boats stop there, so it has its dock in the village): the
+    combe as it was, moved over, and to its west, by the gate, the sea with a beach, a dock out into it and boats tied
+    up, and the healer's house just inside the gate (the user's: you come in to be healed, not to cross the village)."""
+    k = HARBOUR
+    widen_west(t, k, key)
+    MH = t.rows
+    hr = random.Random('seacombe-harbour')       # (the towns' own rng left as it was)
+    # The road in from the gate to the combe's
+    t.lane([(0, 22), (k + 1, 22)])
+    # The sea along the west below the road, a beach of sand between it and the grass
+    for y in range(25, MH + 1):
+        edge = min(6 + round(0.8 * np.sin(y / 2.3) + 0.5 * np.sin(y / 1.3)), y - 23)
+        t.v[y, 0:edge + 3] = 'Sand'
+        if edge > 0 and y >= 26:
+            t.v[y, 0:edge] = 'Water'
+    t.decks.append(('dock', 1, 32, 9, 3))     # Reid's dock, out from the beach
+    p = t.put
+    p('boat', 3.4, 31.4, solid=False)          # tied up either side of it
+    p('boat_r', 4.6, 37.6, solid=False)
+    p('boat', 8.0, 41.6, solid=False)          # ...and one hauled up on the beach
+    p('crates', 9.4, 30.6)
+    p('barrel', 9.2, 36.6)
+    t.crate('herring', 8.2, 30.8)
+    # The orchard and the wood go on to the west edge above the road
+    for x in range(1, 10, 3):
+        for y in (1.6, 4.3):
+            p('tree', x + 0.8 + (y > 2) * 1.5, y)
+    for y in (6.8, 9.8):
+        p('pine' if int(y) % 2 else 'oak', 0.9, y + hr.uniform(-0.2, 0.2))
+    p('signpost', 7.6, 20.8)
+    # The healer, by the gate
+    healer = t.build(2, 13, dict(w=6, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=3, kind='arched')],
+                                 windows=[1.2, 4.8], sign='HEALER', styles=('posts', 'plain', 'posts'),
+                                 inside=dict(name='healer', kind='healer', size=(12, 9))))
+    t.lane([(5, 20), (5, 22)])
+    t.rooms.update([room_behind(t, key, *t.doors[-1])])
+    inside(healer, **healer_of(villager('bryony', 'Bryony Pyke', 'Healer', 'female',
+                                        farmhand('female', 'hair_braid', 'dark brown', ('torso_clothes_robe', 'white'),
+                                                 ('legs_skirts_plain', 'white'), wear=[('cape', 'cape_solid', 'brown')]),
+                                        post=(9, 5.4), facing='left',
+                                        says="Come in, my love. Sit you down. There's not a scrape nor a bruise I can't mend.",
+                                        ask=dict(q='Shall I see to your wounds?',
+                                                 yes=["There now, all better. Off you go, and mind the brook on your way."],
+                                                 no=["Suit yourself, my love. I'm here when you want me."]))))
     return t
+
+
+def healer_of(folk):
+    """A village's healer: she mends you, for her price (UIScene.healPrice), any hour of the day or night."""
+    return folk | dict(cls='cleric', heals=True)
 
 
 def edge_trees(t, skip_rows=(), skip_cols=(), left=True, right=True, top=True, bottom=True):
@@ -1900,7 +1997,7 @@ def fernwick():
 
     # The lane through the village; tracks up to the woodcutter's, the orchard, the fields, round to the barn
     t.lane([(0, 27), (58, 27)])
-    t.lane([(4, 16), (4, 27)])
+    t.lane([(4, 16), (6, 17), (6, 27)])                  # (round the healer's)
     t.lane([(31, 27), (31, 17)])
     t.lane([(54, 27), (54, 5)])
     t.lane([(57, 27), (57, 39), (43, 39)])
@@ -1919,6 +2016,9 @@ def fernwick():
                        inside=dict(name='woodcutter', kind='cottage', size=(7, 7))))
     b(44, 30, dict(w=9, roof=3, storeys=[('tan', 3)], roof_kind='brown',
                    doors=[dict(at=2.5, kind='stable'), dict(at=6.5, kind='stable')]))
+    # The healer's, just inside the gate (the user's: you come in to be healed, not to cross the village)
+    healer = b(1, 19, dict(w=4, roof=3, storeys=[('stone', 3)], roof_kind='green', doors=[dict(at=2, kind='arched')], windows=[3.3],
+                           sign='HEALER', styles=('posts', 'plain', 'posts'), inside=dict(name='healer', kind='healer', size=(12, 9))))
 
     # Gardens: a picket kitchen garden on the lane, beds fenced in south-west, more round the pond and up by the fields
     t.plant(34, 20, 40, 24, ['pepper', 'carrot', 'onion', 'beet'], (SPROUT, GROWING, RIPE))
@@ -1953,7 +2053,7 @@ def fernwick():
     p('cart', 13, 10.8)
     p('barrels', 1.9, 17.4)
     # The green: a well, a bench by the pond, the apple stall, the notice board
-    p('signpost', 3.6, 25.6)
+    p('signpost', 2.4, 30.4)
     p('stall_red', 19.4, 30.2)
     t.crate('apples', 17.6, 30.6)
     t.crate('carrots', 21.2, 30.6)
@@ -1961,7 +2061,7 @@ def fernwick():
     p('notice', 23.6, 25.8)
     p('well', 40.6, 32.6)
     p('washing', 18.2, 17.4, solid=False)
-    p('churn', 6.2, 26.0)
+    p('churn', 8.4, 26.2)
     p('buckets', 15.4, 26.0)
     for x, y in ((25.2, 37), (37.6, 34.6), (29.4, 42.6), (36.8, 42.4)):
         p('reeds', x, y, solid=False)
@@ -1982,10 +2082,10 @@ def fernwick():
     p('small_bales', 52.4, 49.4)
     p('small_bales', 58.4, 48.6)
 
-    edge_trees(t, skip_rows=[(23, 30)], skip_cols=range(53, 57))
+    edge_trees(t, skip_rows=[(20, 30)], skip_cols=range(53, 57))
     for x, y in ((14.6, 4.2), (38.4, 4.4), (43, 25), (2.6, 49.2), (24.6, 50.6), (42.6, 50.4), (64.2, 26.4)):
         p('oak', x, y)
-    for x, y in ((6.6, 4.6), (21.6, 4.2), (27.6, 4.8), (42.2, 8.6), (12.6, 18.4), (2.2, 21.2), (40.4, 46.4), (64.6, 41.6)):
+    for x, y in ((6.6, 4.6), (21.6, 4.2), (27.6, 4.8), (42.2, 8.6), (12.6, 18.4), (40.4, 46.4), (64.6, 41.6)):
         p('bush', x, y)
 
     F = t.person
@@ -2085,6 +2185,14 @@ def fernwick():
                      "Hal Furrow over in Seacombe's my cousin. Long way west, that. I've never been."]))
 
     t.rooms = rooms_inside(t, 'fernwick')
+    inside(healer, **healer_of(villager('hazel', 'Hazel Briar', 'Healer', 'female',
+                                        fern('female', 'hair_braid', ('torso_clothes_robe', 'white'), ('legs_skirts_plain', 'white'),
+                                             wear=[('cape', 'cape_solid', 'forest')]),
+                                        post=(9, 5.4), facing='left',
+                                        says="Come in out of the wood, love. Whatever bit you or tripped you, I've a poultice for it.",
+                                        ask=dict(q='Shall I see to your wounds?',
+                                                 yes=["There, right as rain. Keep to the paths, mind. The wood's not kind to strangers."],
+                                                 no=["Right you are. The kettle's on if you change your mind."]))))
     inside(farmhouse, **villager('goody', 'Goody Wold', 'Grandmother', 'female',
                                  fern('female', 'hair_bangs_bun', ('torso_clothes_longsleeve2', 'brown'),
                                       ('legs_skirts_plain', 'charcoal'), over=('torso_aprons_apron_full', 'white'), old=True),
@@ -2123,7 +2231,7 @@ def ashby():
     MW, MH = t.cols, t.rows
     t.paint(0, 0, 6, MH, 'Water')
     t.paint(7, 0, 10, MH, 'Sand')
-    t.decks.append(('pier', 1, 23, 7, 5))
+    t.decks.append(('dock', 1, 23, 9, 5))      # Reid's dock, out from the shore where the boats put in
 
     # The road from the gate down to the shore; tracks up to the fields, along them, round the barn, down the gardens
     t.lane([(10, 26), (67, 26)])
@@ -2150,6 +2258,9 @@ def ashby():
                    doors=[dict(at=2.5, kind='stable'), dict(at=6.5, kind='stable')]))
     hut = b(13, 44, dict(w=3, roof=3, storeys=[('tan', 3)], roof_kind='pyramid_old', doors=[dict(at=1.5)],
                          inside=dict(name='hut', kind='shack', size=(7, 7))))
+    # The healer's, just inside the gate (the user's: you come in to be healed, not to cross the village)
+    healer = b(58, 20, dict(w=6, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=3, kind='arched')], windows=[1.2, 4.8],
+                            sign='HEALER', styles=('posts', 'plain', 'posts'), inside=dict(name='healer', kind='healer', size=(12, 9))))
 
     # Grain along the top of the cliff, gardens fenced in south of the road, a kitchen garden by the gate
     t.field('grain', 12, 6, 11, 6)
@@ -2162,13 +2273,15 @@ def ashby():
     t.plant(41, 40, 49, 47, ['corn'], (GROWING, RIPE, RIPE), rows='down')
     t.fence_round(28, 29, 50, 48, gaps=[(37, 29), (38, 29), (39, 29)])
     t.fence([(x, 38) for x in range(29, 36)] + [(x, 38) for x in range(41, 49)])
-    t.plant(57, 19, 63, 23, ['leek', 'onion', 'carrot'], (SEEDLING, SPROUT, GROWING))
-    t.fence_round(56, 18, 64, 24, gaps=[(60, 24)], style='picket')
+    t.plant(57, 17, 63, 19, ['leek', 'onion', 'carrot'], (SEEDLING, SPROUT, GROWING))     # (behind the healer's)
+    t.fence_round(56, 16, 64, 19, gaps=[(60, 16)], style='picket')
     t.field('grain', 53, 30, 10, 6)
     t.plant(53, 40, 63, 47, ['potato', 'carrot', 'beet', 'onion'], (4,))
 
     p = t.put
-    # The shore: the catch landed on the pier, nets drying, boats' gear
+    # The shore: the catch landed on the dock, boats tied up alongside, nets drying, boats' gear
+    p('boat', 3.6, 22.4, solid=False)
+    p('boat_r', 4.2, 30.8, solid=False)
     p('bench', 3.4, 26.8)
     p('crates', 9.4, 22.6)
     p('barrel', 8.6, 23.4)
@@ -2180,7 +2293,7 @@ def ashby():
     p('well', 26, 32.4)
     p('notice', 24, 29.4)
     p('bench', 25.4, 36.2)
-    p('signpost', 64.6, 23.6)
+    p('signpost', 65.4, 23.6)
     t.crate('potatoes', 24.4, 34.2)
     t.crate('carrots', 27.6, 34.4)
     # The barn yard
@@ -2250,7 +2363,7 @@ def ashby():
     F(villager('hilde', 'Hilde Barley', 'Gardener', 'female',
                ash('female', 'hair_bangs_bun', 'blonde', ('torso_clothes_longsleeve2', 'white'), ('legs_skirts_plain', 'brown'),
                    over=('torso_aprons_apron_half', 'tan'), chore='water'),
-               wander=[57.5, 19.5, 62.5, 22.5], chore='water',
+               wander=[57.5, 17.2, 62.5, 18.6], chore='water',
                says=['Mind the leeks. If you must step on something, step on my heart instead.',
                      "Onions make me cry. You make me smile. I know which I'd rather."],
                night_says=["The garden's asleep, and so is everyone else. Shall we keep each other awake?",
@@ -2307,6 +2420,14 @@ def ashby():
                      "Olaf and Anders are my boys. Olaf dreams of rows. Anders dreams of the sea."]))
 
     t.rooms = rooms_inside(t, 'ashby')
+    inside(healer, **healer_of(villager('ylva', 'Ylva Crane', 'Healer', 'female',
+                                        ash('female', 'hair_braid', 'blonde', ('torso_clothes_robe', 'white'), ('legs_skirts_plain', 'white'),
+                                            wear=[('cape', 'cape_solid', 'navy')]),
+                                        post=(9, 5.4), facing='left',
+                                        says="Come in, pet, out of the wind. Sit yourself down and let's have a look at you.",
+                                        ask=dict(q='Shall I see to your wounds?',
+                                                 yes=["There, pet, mended. Gan canny out there, mind."],
+                                                 no=["Aye, well. I'll be here when the sea's done with you."]))))
     inside(nets, **villager('ingrid', 'Ingrid Saltash', 'Net-maker', 'female',
                             ash('female', 'hair_bangs_bun', 'platinum', ('torso_clothes_longsleeve2', 'brown'),
                                 ('legs_skirts_plain', 'charcoal'), over=('torso_aprons_apron_full', 'white'), old=True),
@@ -2401,6 +2522,12 @@ def tumbledown():
     trapper = b(55, 27, dict(w=4, roof=3, storeys=[('tan', 3)], roof_kind='snow', doors=[dict(at=2)],
                              inside=dict(name='trapper', kind='shack', size=(7, 7))))
     b(44, 33, dict(w=8, roof=3, storeys=[('tan', 3)], roof_kind='snow', doors=[dict(at=4, kind='stable')]))   # the boat shed
+    # The healer's, just inside the gate (the user's: you come in to be healed, not to cross the village)
+    healer = b(2, 16, dict(w=5, roof=3, storeys=[('stone', 3)], roof_kind='snow', chimney=1.2, doors=[dict(at=2.5, kind='arched')],
+                           windows=[4], sign='HEALER', styles=('posts', 'plain', 'posts'),
+                           inside=dict(name='healer', kind='healer', size=(12, 9))))
+    # The dock, out past the ice to open water off the point, where the boats put in
+    t.decks.append(('pier', 54, 39, 3, 9))
 
     p = t.put
     # Firewood for the winter, stacked against every wall, and the chopping blocks
@@ -2418,20 +2545,21 @@ def tumbledown():
     p('well', 26.4, 30.6)
     p('notice', 30.8, 27.6)
     p('bench', 22.4, 22.2)
-    p('signpost', 3.6, 21.4)
+    p('signpost', 3.6, 28.4)
     p('cart', 15.4, 36.8)
     p('handcart', 56.8, 38.6)
     # The shore: boats hauled up out of the ice, the day's catch, the gear
     p('boat', 10, 40.6, solid=False)
     p('boat_r', 18, 41.4, solid=False)
-    p('boat', 54.6, 41.8, solid=False)
+    p('boat_r', 58.4, 46.4, solid=False)       # tied up at the dock
+    p('boat', 51.6, 41.4, solid=False)
     p('bench', 28.4, 39.6)
     t.crate('herring', 37.4, 40.2)
     t.crate('trout', 38.8, 41.0)
     p('barrel', 26.2, 40.4)
     p('crates', 42.2, 41.2)
     # Rocks, frosted brush and bare trees in the snow
-    for name, x, y in (('rock', 4, 37.6), ('rocks', 63.4, 37.8), ('rock_low', 22.2, 38.6), ('rock_low', 53.4, 39.8),
+    for name, x, y in (('rock', 4, 37.6), ('rocks', 63.4, 37.8), ('rock_low', 22.2, 38.6), ('rock_low', 52.2, 39.2),
                        ('frosted_bush', 4.2, 32.2), ('frosted_bush', 35.6, 33.8), ('frosted_bush', 64.4, 25.2),
                        ('frosted_bush', 16.6, 23.2), ('snowy_tree', 3.6, 14.6), ('bare_tree', 64.2, 14.4),
                        ('snowy_tree', 30.4, 36.6), ('bare_tree', 61.2, 35.2), ('snowy_tree', 24.2, 11.4), ('bare_tree', 30, 10.6)):
@@ -2551,6 +2679,14 @@ def tumbledown():
                      "I watch the road. Snow mostly. Once a bear. The bear was more polite than most."]))
 
     t.rooms = rooms_inside(t, 'tumbledown')
+    inside(healer, **healer_of(villager('sigrun', 'Sigrun Vik', 'Healer', 'female',
+                                        north('female', 'hair_braid', 'white', ('torso_clothes_robe', 'white'), ('legs_skirts_plain', 'white'),
+                                              wear=[('cape', 'cape_solid', 'charcoal'), ('neck', 'neck_scarf', 'red')]),
+                                        post=(9, 5.4), facing='left',
+                                        says="Come in by the fire, quick, before the cold gets in. Frostbite or fang, I've seen to both.",
+                                        ask=dict(q='Shall I see to your wounds?',
+                                                 yes=["So. Mended, and warm again. Keep your hands in your sleeves out there."],
+                                                 no=["As you like. The fire stays lit all night."]))))
     inside(hall, **villager('brynja', 'Brynja', 'Alewife', 'female',
                             north('female', 'hair_bangs_bun', 'platinum', ('torso_clothes_longsleeve2', 'white'),
                                   ('legs_skirts_plain', 'brown'), over=('torso_aprons_apron_full', 'tan')),
@@ -2637,6 +2773,9 @@ def gulls_rest():
                    inside=dict(name='house4', kind='house', size=(8, 7))))
     b(25, 42, dict(w=6, roof=3, storeys=[('tan', 3)], roof_kind='slate', doors=[dict(at=4)], windows=[1.5],
                    inside=dict(name='house5', kind='house', size=(8, 7))))
+    # The healer's, just inside the gate (the user's: you come in to be healed, not to cross the village)
+    healer = b(2, 18, dict(w=5, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=2.5, kind='arched')], windows=[4],
+                           sign='HEALER', styles=('posts', 'plain', 'posts'), inside=dict(name='healer', kind='healer', size=(12, 9))))
 
     # Gardens behind the houses: a few rows for the pot
     t.plant(5, 11, 12, 15, ['carrot', 'onion', 'leek'], (GROWING, RIPE))
@@ -2653,7 +2792,7 @@ def gulls_rest():
     p('barrels', 40.6, 34.6)
     p('notice', 36.4, 29.6)
     p('well', 33.6, 34.2)
-    p('signpost', 3.6, 23.6)
+    p('signpost', 3.2, 29.4)
     # The docks: the catch landed on the planks, boats tied up alongside, more hauled out on the beach
     p('big_fish', 57.4, 19.4, solid=False)
     p('flatfish', 59.2, 19.6, solid=False)
@@ -2788,6 +2927,14 @@ def gulls_rest():
                      "Dara's my cousin. We don't look it. Her side went south, mine stayed put."]))
 
     t.rooms = rooms_inside(t, 'gulls_rest')
+    inside(healer, **healer_of(villager('kerensa', 'Kerensa Trewin', 'Healer', 'female',
+                                        salt('female', 'light', 'hair_braid', 'chestnut', ('torso_clothes_robe', 'white'),
+                                             ('legs_skirts_plain', 'white'), wear=[('cape', 'cape_solid', 'teal')]),
+                                        post=(9, 5.4), facing='left',
+                                        says="Come in, my handsome, come in. Hooks, nets or worse, I've stitched it all.",
+                                        ask=dict(q='Shall I see to your wounds?',
+                                                 yes=["There you are, my lover, good as new. Dreckly you'll be back, I expect."],
+                                                 no=["Proper job. You know where I am, my handsome."]))))
     inside(tavern, **villager('hob', 'Hob Gannet', 'Alehouse keeper', 'male',
                               salt('male', 'light', 'hair_balding', 'light brown', ('torso_clothes_longsleeve2', 'white'),
                                    ('legs_pants', 'charcoal'), over=('torso_aprons_apron', 'white')),

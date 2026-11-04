@@ -65,6 +65,9 @@ const STEP_MS = 50;             // the fight moves on in steps of at most this (
 const MAX_FRAME_MS = 250;       // ...and no more than this a frame (back from a hidden tab, not seconds at once)
 const STEADY_MS = 1500;        // staggered by a blow, it isn't again for this long: its next blow comes through (the user's: they kept hitting one faster than it could strike back)
 const BODY = 22;
+// Every foe twice the size Wesnoth drew it at the heroes' height (the user's, November 2026), a boss's growth on top;
+// bodies keep apart by their size (BODY at 1)
+export const FOE_SCALE = 2;
 const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 // How each in a pack comes at you (the user's, after Pac-Man's ghosts: one pursues, one cuts you off, one
 // gets round you, one wanders and darts in), by its place among its pack's fighters (casters keep back)
@@ -75,6 +78,17 @@ const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rathe
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
+// The first area's guards warn before they fight (the user's, November 2026: stepping into the wood by night, they
+// were killed before they knew it): within BAR_DEEP tiles of its edge (the wood's gloom is near black past it), or of
+// where you crossed into a guarded zone, a guard comes and stands before you, warns you off, and doesn't strike;
+// further in, it fights
+export const BAR_DEEP = 3;
+const BAR = 1.3 * TILE;          // it stands this far before you
+const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
+const BAR_WORDS = {
+    elderwose: 'An Elder Wose blocks your way: "Turn back, little one. None walk the old wood without the Wardens\' leave, and you have not earned it."',
+    sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
+};
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
 const ROUTE_CELL = 16, ROUTE_REACH = 16 * TILE;       // with rock between, it finds a way round on a grid this fine, this far about
@@ -265,6 +279,7 @@ export class FieldDemons {
         if (!out) this._yours(delta);
         // Out of a foe's zone, you're out of its reach: it doesn't follow you over (the user's)
         const yours = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id ?? null;
+        if (yours !== null && yours !== this._entry?.zone) this._entry = { zone: yours, x: feet.x, y: feet.y };       // (where you crossed into it: a guard's ground is reckoned from there)
         for (const f of this.foes) {
             if (f.hp <= 0) continue;
             const gone = yours !== null && !this._mine(f, feet.x, feet.y);
@@ -315,14 +330,14 @@ export class FieldDemons {
                 const spec = KINDS[p.kind];
                 const at = this._clear(p);
                 const foe = band.make(this.scene, at.x, at.y, p.kind, spec);
-                if (spec.scale) foe.grow(spec.scale);
+                foe.grow(FOE_SCALE * (spec.scale || 1));
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
                 const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
                 // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
                 // home and was mended at once; none known, it goes where it likes)
                 const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
             };
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
@@ -605,6 +620,8 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
+            if (d <= AGGRO && f.guard && this._shallow(f, you)) return this._bar(f, you, d, dt, delta);
+            f.barring = false;
             if (d <= AGGRO && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
                 this._rouse(f.pack);
@@ -895,6 +912,30 @@ export class FieldDemons {
         f.stallAt = null;
     }
 
+    /** How far in you are on a guard's ground (tiles): the wood's depth, or how far from where you crossed into its zone. */
+    _deep(f, you) {
+        if (f.woods) return this.scene.overworld?.forest?.depthAt(you.x, you.y) ?? 0;
+        const e = this._entry;
+        return e?.zone === f.zone ? 1 + Math.hypot(you.x - e.x, you.y - e.y) / TILE : 0;
+    }
+
+    /** Are you only at the edge of a guard's ground, where it warns before it fights? */
+    _shallow(f, you) {
+        return this._deep(f, you) <= BAR_DEEP;
+    }
+
+    /** A guard comes and stands before you, facing you, and warns you off: no blow. */
+    _bar(f, you, d, dt, delta) {
+        const { foe } = f;
+        if (d > BAR) this._step(f, (you.x - foe.x) / d, (you.y - foe.y) / d, dt, 1, you);
+        else this._step(f, 0, 0, dt, 1, you);
+        if (!f.barring || (f.barT -= delta) <= 0) {
+            this.say(BAR_WORDS[f.kind] ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
+            f.barT = BAR_SAY_MS;
+        }
+        f.barring = true;
+    }
+
     /** Home to its post, walking, round by the map (never put back there: the user's, it could go wrong all sorts of ways). */
     _home(f, dt, fromPost, delta = dt * 1000) {
         if (fromPost < 4) {
@@ -1082,13 +1123,14 @@ export class FieldDemons {
     /** No two on one spot (you're moved least). */
     _apart() {
         const me = this.scene.localPlayer?.sprite;
-        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, w: 1 }));
-        if (me && !this.fallen) all.push({ s: me, w: 0.15 });
+        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, w: 1, r: BODY / 2 * (f.foe.scale || 1) }));
+        if (me && !this.fallen) all.push({ s: me, w: 0.15, r: BODY / 2 });
         for (let i = 0; i < all.length; i++) {
             for (let j = i + 1; j < all.length; j++) {
                 const a = all[i].s, b = all[j].s, dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-                if (d >= BODY) continue;
-                const push = (BODY - d) / 2, ux = d ? dx / d : 1, uy = d ? dy / d : 0;
+                const body = all[i].r + all[j].r;
+                if (d >= body) continue;
+                const push = (body - d) / 2, ux = d ? dx / d : 1, uy = d ? dy / d : 0;
                 for (const [s, k] of [[a, -push * all[i].w], [b, push * all[j].w]]) {
                     if (this._open(s.x + ux * k, s.y + uy * k + FEET)) s.setPosition(s.x + ux * k, s.y + uy * k);
                 }
@@ -1103,7 +1145,7 @@ export class FieldDemons {
         g.clear();
         for (const f of this.foes) {
             if (f.hp <= 0 || f.hp >= f.maxHp) continue;
-            const w = f.spec.scale ? 44 : 28, x = f.foe.x - w / 2, y = f.foe.y - f.foe.tall * (f.spec.scale || 1) - 6;
+            const w = f.spec.scale ? 44 : 28, x = f.foe.x - w / 2, y = f.foe.y - f.foe.tall - 6;
             g.fillStyle(0x1d131e, 0.9).fillRect(x - 1, y - 1, w + 2, 5);
             g.fillStyle(0xd04648, 1).fillRect(x, y, w * f.hp / f.maxHp, 3);
         }

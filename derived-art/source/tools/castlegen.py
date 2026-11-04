@@ -537,14 +537,16 @@ def dunmere():
     t.paint(17, 19, 31, 31, 'Dirt_Brown')
     t.cobble[20:31, 18:31] = True
     t.cobble[30:38, 22:27] = True
-    t.lane([(13, 27), (17, 27)], half=1)                  # to the chapel
+    t.lane([(18, 31), (22, 31)], half=1)                  # to the chapel, from the gate
     t.lane([(31, 26), (35, 26)], half=1)                  # to the barracks
     t.lane([(10, 18), (17, 20)], half=1)                  # round to the stables
 
     keep_door = fortify(t)
 
     b = t.build
-    chapel = b(9, 21, dict(w=8, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=4, kind='arched')],
+    # The chapel, where the healer keeps, just inside the gate on the left (the user's: you come in to be healed,
+    # and shouldn't have to cross the castle for it)
+    chapel = b(11, 25, dict(w=8, roof=3, storeys=[('stone', 3)], roof_kind='slate', doors=[dict(at=6.5, kind='arched')],
                            windows=[1.5, 6.5], sign='HEALER', styles=('posts', 'plain', 'posts'),
                            inside=dict(name='chapel', kind='healer', size=(12, 9))))
     barracks = b(31, 19, dict(w=9, roof=3, storeys=[('stone', 2), ('tan', 2)], roof_kind='red', doors=[dict(at=4.5)],
@@ -562,11 +564,11 @@ def dunmere():
     p('anvil', 37.5, 28)
     p('woodpile', 40, 31.6)
     p('handcart', 9.4, 32.4)
-    for x, y in ((39.5, 21.5), (17.5, 31.6), (30.5, 31.6)):
+    for x, y in ((39.5, 21.5), (30.5, 31.6)):
         p('bush', x, y)
     # The kitchen garden, behind the chapel
-    t.plant(9, 30, 15, 33, ['beet', 'carrot', 'onion', 'leek'], stages=(tg.RIPE,))
-    p('oak', 17.8, 29.6)
+    t.plant(9, 22, 15, 25, ['beet', 'carrot', 'onion', 'leek'], stages=(tg.RIPE,))
+    p('oak', 16.6, 23.4)
     # Woods beyond the moat
     for x in range(0, W, 3):
         if not 20 <= x <= 27:
@@ -741,10 +743,10 @@ def dunmere():
     F(guard(1, 'Bridge warden', post=(21.2, 42.2), facing='down', says="Castle Dunmere. State your business, or just admire the moat. Most do."))
     F(guard(2, 'Bridge guard', post=(26.8, 42.2), facing='down', says="Bridge comes up at the first sign of trouble. Hasn't in eleven years."))
     F(guard(3, 'Gate guard', post=(21.4, 31.8), facing='down', says="Inside the walls, you keep the Duke's peace. Outside, the Duke keeps none."))
-    F(guard(4, 'Gate guard', post=(26.6, 31.8), facing='down', says="Healer's in the chapel, on the left. You look like you'll want her."))
+    F(guard(4, 'Gate guard', post=(26.6, 31.8), facing='down', says="Healer's in the chapel, there on your left. You look like you'll want her."))
     F(guard(5, 'Keep guard', post=(21.4, 20.4), facing='down', says="The Duke holds court in the great hall. Mind your manners, and your blade."))
     F(guard(6, 'Keep guard', post=(26.6, 20.4), facing='down', says="Straight through and up the carpet. Don't make him wait."))
-    F(guard(7, 'Watchman', wander=[9, 30.5, 39, 32.4], says="Dunmere takes no side. Doesn't mean we sleep."))
+    F(guard(7, 'Watchman', wander=[21, 30.5, 39, 32.4], says="Dunmere takes no side. Doesn't mean we sleep."))
     F(guard(8, 'Watchman', wander=[18, 20.5, 30.5, 30.5], says="Riverhold grumbles we never answer. We answer. Slowly."))
     F(guard(9, 'Watchman', wander=[33, 27.5, 39.5, 31], says="Captain drills us at dawn. Ask me after, if you want sense out of me."))
     F(guard(10, 'Watchman', wander=[9, 18.5, 16.5, 23.5], says="North road's gone quiet. Too quiet, the captain says. I say quiet's quiet."))
@@ -754,7 +756,7 @@ def dunmere():
     F(dict(id='gardener', name='Old Hob', role='Gardener', race='human', cls='peasant', body='male', night='barracks',
            outfit=tg.farmhand('male', 'hair_plain', 'gray', ('torso_clothes_longsleeve', 'white'), ('legs_pants', 'brown'),
                               over=('torso_aprons_overalls', 'leather'), chore='hoe', old=True),
-           wander=[9.5, 30.4, 14.5, 32.4], chore='hoe',
+           wander=[9.5, 22.4, 14.5, 24.4], chore='hoe',
            says=["Cabbages for the Duke's table. He won't eat them, but his guard will.",
                  "Forty years I've dug this bed. The walls keep the wind off and the wolves out."]))
     F(dict(id='maid', name='Wynn', role='Maidservant', race='human', cls='peasant', body='female', outfit=MAID, night='keep',
@@ -762,7 +764,7 @@ def dunmere():
     F(dict(id='page', name='Pip', role='Page', race='human', cls='noble', body='male', outfit=PAGE, night='keep',
            wander=[17.5, 20.5, 31, 33], says="I carry the Duke's letters! Well. I carry them to the man who carries them."))
     F(dict(id='pilgrim', role='Pilgrim', race='human', cls='cleric', body='male', seed=75, night='chapel',
-           wander=[12, 27.6, 18, 29], says="I walked from Saltmere to be blessed in the Duke's chapel. My feet are less blessed."))
+           wander=[8.4, 26, 11, 31], says="I walked from Saltmere to be blessed in the Duke's chapel. My feet are less blessed."))
     F(dict(id='merchant', name='Gunnar', role='Merchant', race='human', cls='merchant', body='male', outfit=MERCHANT, night='keep',
            post=(27.6, 24.4), facing='down', says="Came to sell the Duke iron. He bought it, too. Paid in coin, not promises, unlike Riverhold."))
     F(dict(id='knight', role='Knight', race='human', cls='warrior', body='female', seed=77, night='barracks',

@@ -140,6 +140,23 @@ export function rankAt(level) {
     return RANKS.filter(r => level >= r).length;
 }
 
+/**
+ * Your hit points as your most changes (a level bought, gear put on or taken off): raised, you're as hurt as you
+ * were, lowered, held to it (the user's, November 2026: a level bought healed you by as much as it raised your
+ * most, and the only way to heal is the healer).
+ */
+export function lifeAfter(hp, max) {
+    return { now: Math.min(hp.now, max), max };
+}
+
+/**
+ * The hit points you join with: what your save kept (`hp`, the user's: coming back to the game filled them), held
+ * to your most; a new hero, or a save from before it was kept, full. Fallen as you left, you come to with one.
+ */
+export function lifeAtStart(saved, max) {
+    return { now: Number.isFinite(saved) ? Math.max(1, Math.min(Math.round(saved), max)) : max, max };
+}
+
 export class Upgrades {
     /**
      * @param {object} opts

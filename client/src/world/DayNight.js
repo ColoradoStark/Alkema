@@ -21,8 +21,9 @@
 
 import Phaser from 'phaser';
 import { wrapDelta } from './Overworld.js';
+import { hourAt } from './clock.js';
 
-export const DAY_MS = 24 * 60 * 1000;
+export { DAY_MS } from './clock.js';
 
 const SCALE = 4;               // the light map's pixels are this many screen pixels across
 const DEPTH = 26.5;            // over the world and the trees' crowns; under the place names, glows, snow and effects
@@ -64,10 +65,7 @@ export const FIRE_ART = {
     campfire: { file: 'campfire.png', w: 32, h: 32, frames: 4, rate: 8 },
 };
 
-/** The hour (0-24) at a moment. */
-export function hourAt(now = Date.now()) {
-    return ((now % DAY_MS) + DAY_MS) % DAY_MS / DAY_MS * 24;
-}
+export { hourAt };
 
 /** Whether it's night at an hour: the sky more than half way to midnight's dark (portraits' night paintings). */
 export function isNight(hour) {
@@ -186,6 +184,7 @@ export class DayNight {
     constructor(scene) {
         this.scene = scene;
         this.hourOverride = null;     // tests: stop the clock at an hour
+        this.clock = 0;               // the hero's own clock (clock.js: a new hero starts in the morning)
         this.indoors = false;
         this.underground = false;     // down a dungeon: dark whatever the hour
         this.overcast = 0;            // out of doors: how grey the clouds make the sky, 0 to 1 (Weather.js)
@@ -208,7 +207,7 @@ export class DayNight {
     }
 
     get hour() {
-        return this.hourOverride ?? hourAt();
+        return this.hourOverride ?? hourAt(Date.now(), this.clock);
     }
 
     /**

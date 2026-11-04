@@ -9,7 +9,7 @@ import { Dialogue, portraitUrl, nightNow } from '../ui/Dialogue.js';
 import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
 import { Spellbook } from '../magic/Spellbook.js';
-import { Upgrades } from '../upgrades/Upgrades.js';
+import { Upgrades, lifeAfter, lifeAtStart } from '../upgrades/Upgrades.js';
 
 const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often (hit points come back only at a healer, the user's)
 const HEAL_SHARE = 0.5;       // a healer mends you from nothing for this much of the cheapest upgrade you could buy next
@@ -89,12 +89,14 @@ export class UIScene extends Scene {
         // What they've bought on the Upgrade page: on their stats, their finds and their spells
         this.upgrades = new Upgrades({ inventory: this.inventory, spellbook: this.spellbook });
         this.inventory.upgrades = this.upgrades;
-        // Their magic and hit points: full to start, spent casting and lost to blows in a fight, coming back slowly out of one
+        // Their magic: full to start, spent casting, coming back slowly out of a fight
         const mp = gear.stats?.mp?.max || 0;
         this.mp = { now: mp, max: mp };
         this._mpMax = mp;       // (what the server reckoned: their upgrades are added in update)
-        const hp = gear.stats?.hp?.max || 1;
-        this.hp = { now: hp, max: hp };
+        // Their hit points: as their save kept them (the user's: coming back filled them), lost to blows, mended only
+        // by a healer; kept in the save as `hp` as they change (update)
+        this.hp = lifeAtStart(account.current?.data?.hp, this.inventory.stats?.hp?.max || gear.stats?.hp?.max || 1);
+        this._hpKept = this.hp.now;
         this.gear = new GearScreen({
             inventory: this.inventory,
             hero: () => this.scene.get('GameScene')?.localPlayer?.characterData,
@@ -394,7 +396,11 @@ export class UIScene extends Scene {
         }
         if (this.hp) {
             const max = this.inventory?.stats?.hp?.max;
-            if (max && max !== this.hp.max) this.hp = Object.assign(this.hp, { max, now: Math.min(this.hp.now + Math.max(0, max - this.hp.max), max) });
+            if (max && max !== this.hp.max) Object.assign(this.hp, lifeAfter(this.hp, max));
+            if (this.hp.now !== this._hpKept) {
+                this._hpKept = this.hp.now;
+                account.updateProgress({ hp: this.hp.now });
+            }
         }
         // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
         this.bottomControls.setControlsShown(!this.gear?.visible);

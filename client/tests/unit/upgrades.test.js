@@ -3,7 +3,7 @@
 // spells taught as they're maxed; heroes from before starting afresh. (What it looks like is upgrades.spec.js's.)
 import { readFileSync } from 'node:fs';
 import { describe, test, expect, beforeEach } from 'vitest';
-import { Upgrades, HEROES, MAX } from '../../src/upgrades/Upgrades.js';
+import { Upgrades, HEROES, MAX, lifeAfter, lifeAtStart } from '../../src/upgrades/Upgrades.js';
 import { Spellbook } from '../../src/magic/Spellbook.js';
 import { account } from '../../src/account/account.js';
 
@@ -108,5 +108,37 @@ describe('Upgrades', () => {
         expect(u.level('frost-lance')).toBe(10);
         expect(account.current.data.upgradesOwn).toBe(true);
         expect(account.current.data.upgrades['goddess-brigid']).toBeUndefined();
+    });
+});
+
+// Hit points come back only at a healer (the user's, November 2026: buying a level of Vigour or a goddess healed you
+// by as much as it raised your most), and they're kept with the hero, so coming back to the game doesn't fill them.
+describe('Hit points', () => {
+    test("a level bought (or gear put on) raises your most hit points, not the ones you have", () => {
+        expect(lifeAfter({ now: 5, max: 20 }, 68)).toEqual({ now: 5, max: 68 });
+        expect(lifeAfter({ now: 20, max: 20 }, 68)).toEqual({ now: 20, max: 68 });
+    });
+
+    test('your most lowered (gear taken off), what you have is held to it', () => {
+        expect(lifeAfter({ now: 60, max: 68 }, 20)).toEqual({ now: 20, max: 20 });
+        expect(lifeAfter({ now: 5, max: 68 }, 20)).toEqual({ now: 5, max: 20 });
+    });
+
+    test('buying a level (Strength of Arm gives hit points too) leaves you as hurt as you were', () => {
+        const { u } = hero('warrior');
+        const before = u.apply(BASE).hp.max;
+        const hp = { now: 3, max: before };
+        expect(u.buy('might').ok).toBe(true);
+        expect(lifeAfter(hp, u.apply(BASE).hp.max)).toEqual({ now: 3, max: u.apply(BASE).hp.max });
+        expect(u.apply(BASE).hp.max).toBeGreaterThan(before);
+    });
+
+    test('you join with the hit points your save kept, held to your most; a new hero or a save from before, full', () => {
+        expect(lifeAtStart(7, 68)).toEqual({ now: 7, max: 68 });
+        expect(lifeAtStart(90, 68)).toEqual({ now: 68, max: 68 });
+        expect(lifeAtStart(undefined, 68)).toEqual({ now: 68, max: 68 });
+        expect(lifeAtStart(null, 68)).toEqual({ now: 68, max: 68 });
+        expect(lifeAtStart('x', 68)).toEqual({ now: 68, max: 68 });
+        expect(lifeAtStart(0, 68)).toEqual({ now: 1, max: 68 });       // (fallen as you left: you come to with one)
     });
 });

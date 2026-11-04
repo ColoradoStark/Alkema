@@ -1035,7 +1035,13 @@ test.describe('Struck again and again, a foe still strikes back', () => {
                     me.setPosition(qx, qy - 23); me.body.reset(me.x, me.y);
                     ok = Math.hypot(f.foe.x - qx, f.foe.y - qy) < 70 || f.state === 'windup';
                     const st = `${f.state}${f.route ? ' r' + f.route.length : ''}`;
-                    if (st !== last || Math.floor(game / 500) !== Math.floor((game - 50) / 500)) { trail.push(`${Math.round(game)} ${st} ${Math.round(f.foe.x)},${Math.round(f.foe.y)} to ${f.route?.[0] ? Math.round(f.route[0].x) + ',' + Math.round(f.route[0].y) : '-'} c${Math.round(f.cornered || 0)} stun${Math.round(f.stun || 0)} st${Math.round(f.stall || 0)} idle${f.idle ? Math.round(f.idle.t) : '-'} slow${f.slow || 0} frz${Math.round(fd._freeze || 0)} held${fd._held ? 1 : 0}`); last = st; }
+                    if (st !== last || Math.floor(game / 500) !== Math.floor((game - 50) / 500)) { trail.push(`${Math.round(game)} ${st} ${Math.round(f.foe.x)},${Math.round(f.foe.y)} to ${f.route?.[0] ? Math.round(f.route[0].x) + ',' + Math.round(f.route[0].y) : '-'} c${Math.round(f.cornered || 0)} stun${Math.round(f.stun || 0)} st${Math.round(f.stall || 0)} idle${f.idle ? Math.round(f.idle.t) : '-'} slow${f.slow || 0} frz${Math.round(fd._freeze || 0)} held${fd._held ? 1 : 0}${(() => {
+                        // (what holds it: the nearest other body, whether its next step is open ground, the frame)
+                        const o = fd.foes.filter(o => o !== f && o.hp > 0).map(o => Math.hypot(o.foe.x - f.foe.x, o.foe.y - f.foe.y)).sort((a, b) => a - b)[0];
+                        const p = f.route?.[0], g = p && Math.hypot(p.x - f.foe.x, p.y - f.foe.y), may = fd._walk(f);
+                        const open = p && g ? may(f.foe.x + (p.x - f.foe.x) / g * 4, f.foe.y + (p.y - f.foe.y) / g * 4) : null;
+                        return ` near${Math.round(o ?? -1)} open${open === null ? '-' : open ? 1 : 0} dt${Math.round(gs.game.loop.delta)}`;
+                    })()}`); last = st; }
                     await new Promise(r => requestAnimationFrame(r));
                     game += Math.min(gs.game.loop.delta, 50);
                 }
@@ -1194,33 +1200,35 @@ test.describe('A blow holds the world only a moment', () => {
 });
 
 test.describe("The first area is blocked off (the user's: the story beyond isn't written yet)", () => {
-    /** A guard by the road out of Riverhold (`woods`) with open road a few tiles from it, and wood beside it. */
+    /** A guard by the road out of Riverhold (`woods`) with open road a few tiles from it, and wood beside it: at its
+     * edge (within BAR_DEEP tiles in, where it warns) and deeper (where it fights), both within its reach. */
     const roadside = (page) => page.evaluate(async () => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
-        const { PACKS } = await import('/src/battle/FieldDemons.js');
-        const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), wood = (x, y) => ow.forest.depthAt(x, y) > 0;
+        const { PACKS, BAR_DEEP } = await import('/src/battle/FieldDemons.js');
+        const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), depth = (x, y) => ow.forest.depthAt(x, y);
+        const near = (gx, gy, ok, r0 = 32, r1 = 144) => {
+            for (let r = r0; r <= r1; r += 16) for (let a = 0; a < 16; a++) {
+                const x = gx + Math.cos(a * Math.PI / 8) * r, y = gy + Math.sin(a * Math.PI / 8) * r;
+                if (open(x, y) && ow.zoneAt(x, y)?.id === 33 && ok(depth(x, y))) return { x, y };
+            }
+            return null;
+        };
         for (const p of PACKS.filter(p => p.guard && p.woods)) {
             const [gx, gy] = p.at;
-            let road = null, inWood = null;
-            for (let r = 64; r <= 192 && !road; r += 16) for (let a = 0; a < 16 && !road; a++) {
-                const x = gx + Math.cos(a * Math.PI / 8) * r, y = gy + Math.sin(a * Math.PI / 8) * r;
-                if (open(x, y) && !wood(x, y) && ow.zoneAt(x, y)?.id === 33) road = { x, y };
-            }
-            for (let a = 0; a < 16 && !inWood; a++) {
-                const x = gx + Math.cos(a * Math.PI / 8) * 48, y = gy + Math.sin(a * Math.PI / 8) * 48;
-                if (open(x, y) && wood(x, y) && ow.zoneAt(x, y)?.id === 33) inWood = { x, y };
-            }
-            if (road && inWood) return { family: p.family, at: { x: gx, y: gy }, road, inWood };
+            const road = near(gx, gy, d => !(d > 0), 64, 192), edge = near(gx, gy, d => d === 1), deep = near(gx, gy, d => d > BAR_DEEP + 0.5);
+            if (road && edge && deep) return { family: p.family, at: { x: gx, y: gy }, road, edge, deep };
         }
         return null;
     });
     const guard = (page, at) => page.evaluate(({ x, y }) => {
-        const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
         const f = gs.fieldDemons.foes.find(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48 && f.family.startsWith('guards'));
-        return f && { state: f.state, kind: f.kind, hp: f.maxHp, onRoad: !(gs.overworld.forest.depthAt(f.foe.x, f.foe.y) > 0), ready: f.foe.ready };
+        return f && { state: f.state, kind: f.kind, hp: f.maxHp, barring: !!f.barring, off: Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23), onRoad: !(gs.overworld.forest.depthAt(f.foe.x, f.foe.y) > 0), ready: f.foe.ready };
     }, at);
+    const notice = (page) => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '');
+    const hurt = (page) => page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); return ui.hp.max - ui.hp.now; });
 
-    test("on the road out of Riverhold no guard comes for you; step into the wood and one does, far too strong, and it never sets foot on the road", async ({ page }) => {
+    test("on the road out of Riverhold no guard comes for you; at the wood's edge one comes and warns you off, striking no blow (the user's: they died before they knew it); deeper, it fights, far too strong; and it never sets foot on the road", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         await keepUp(page);
@@ -1231,9 +1239,17 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         // On the road, a few tiles off it: it stands
         await page.waitForTimeout(2500);
         expect((await guard(page, spot.at)).state).toBe('post');
-        // Into the trees beside it: it comes, and the Point's whole climb wouldn't make you its match
-        await standAt(page, spot.inWood.x, spot.inWood.y);
-        await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).not.toBe('post');
+        // A step into the trees: it comes and stands before you, and says why you may go no further
+        await standAt(page, spot.edge.x, spot.edge.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g.barring && g.off < 64), { timeout: 10000 }).toBe(true);
+        expect(await notice(page)).toMatch(/Turn back/);
+        await page.waitForTimeout(3000);
+        const g0 = await guard(page, spot.at);
+        expect(g0.state, 'it warns, it does not fight').toBe('post');
+        expect(await hurt(page), 'no blow struck').toBe(0);
+        // Deeper in: it fights, and the Point's whole climb wouldn't make you its match
+        await standAt(page, spot.deep.x, spot.deep.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/chase|windup|recover/);
         const g = await guard(page, spot.at);
         expect(['elderwose', 'sorceress']).toContain(g.kind);
         expect(g.hp).toBeGreaterThan(1e6);
@@ -1246,7 +1262,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/home|post/);
     });
 
-    test("over the bridge and up the bank, the guard there holds its whole zone, open ground and all; and none stands in the Point", async ({ page }) => {
+    test("over the bridge and up the bank, the guard there holds its whole zone, open ground and all, warning you off as you cross into it and fighting further in; and none stands in the Point", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         await keepUp(page);
@@ -1258,18 +1274,26 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         expect(posts.every(p => p.zone !== 35)).toBe(true);
         const bridge = posts.find(p => p.zone === 34);
         expect(bridge?.woods).toBe(false);
-        // Stand on its ground, a little off its post: it comes
-        const near = await page.evaluate(([x, y]) => {
+        // Two spots on its ground within its reach, more than BAR_DEEP tiles apart: crossing in at the first, it warns;
+        // walked on to the second, it fights
+        const spots = await page.evaluate(async ([x, y]) => {
             const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
-            for (let r = 48; r <= 112; r += 16) for (let a = 0; a < 16; a++) {
+            const { BAR_DEEP } = await import('/src/battle/FieldDemons.js');
+            const all = [];
+            for (let r = 32; r <= 144; r += 16) for (let a = 0; a < 16; a++) {
                 const px = x + Math.cos(a * Math.PI / 8) * r, py = y + Math.sin(a * Math.PI / 8) * r;
-                if (!ow.boxBlocked(px - 9, py - 5, 18, 10) && ow.zoneAt(px, py)?.id === 34) return { x: px, y: py };
+                if (!ow.boxBlocked(px - 9, py - 5, 18, 10) && ow.zoneAt(px, py)?.id === 34) all.push({ x: px, y: py });
             }
+            for (const a of all) for (const b of all) if (Math.hypot(a.x - b.x, a.y - b.y) > (BAR_DEEP + 0.5) * 32) return [a, b];
             return null;
         }, bridge.at);
-        expect(near).not.toBeNull();
-        await standAt(page, near.x, near.y);
-        await expect.poll(() => guard(page, { x: bridge.at[0], y: bridge.at[1] }).then(g => g?.state), { timeout: 30000 }).toMatch(/chase|windup|recover/);
+        expect(spots).not.toBeNull();
+        const at = { x: bridge.at[0], y: bridge.at[1] };
+        await standAt(page, spots[0].x, spots[0].y);
+        await expect.poll(() => guard(page, at).then(g => g?.barring), { timeout: 30000 }).toBe(true);
+        expect((await guard(page, at)).state).toBe('post');
+        await standAt(page, spots[1].x, spots[1].y);
+        await expect.poll(() => guard(page, at).then(g => g?.state), { timeout: 30000 }).toMatch(/chase|windup|recover/);
     });
 });
 

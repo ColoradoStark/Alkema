@@ -1,6 +1,8 @@
 // The weather (client/src/world/climate.js) without a browser: Gloomhold's rain at the user's odds,
 // snow in its far north, the far north's snowstorms, and whose lands are Gloomhold's.
 import { describe, test, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { zoneMap } from '../../src/world/zonemap.js';
 import { weatherAt, spellOf, inGloomhold, SPELL_MS, GLOOMHOLD_ODDS, NORTH_ODDS } from '../../src/world/climate.js';
 import { WORLD } from '../../src/world/places.js';
 
@@ -49,5 +51,14 @@ describe('Weather', () => {
         };
         for (const name of ['Castle Gloomhold', 'Morvath', "Gull's Rest", 'Skullkeep Pit']) expect(at(name), name).toBe(true);
         for (const name of ['Ashby', 'Tumbledown', 'Duskmere', 'Goldvale', 'Castle Dunmere', 'Riverhold']) expect(at(name), name).toBe(false);
+    });
+
+    test("it rains in no other kingdom (the user's: only Gloomhold): Nightspire's Pale Shore, in sight of its castle, is dry", () => {
+        const zones = zoneMap(JSON.parse(readFileSync(new URL('../../assets/world/zones.json', import.meta.url))));
+        const kingdomAt = (x, y) => zones.at(x, y)?.kingdom;
+        expect(kingdomAt(11312, 4592)).toBe('Nightspire');
+        expect(inGloomhold(11312, 4592, WORLD.places, WORLD.size, kingdomAt)).toBe(false);
+        const [x, y, w, h] = WORLD.places.find(p => p.name === 'Castle Gloomhold').rect;
+        expect(inGloomhold(x + w / 2, y + h / 2, WORLD.places, WORLD.size, kingdomAt)).toBe(true);
     });
 });

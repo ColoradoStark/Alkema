@@ -97,6 +97,7 @@ export class GameScene extends Scene {
     createWorld() {
         // The light of the hour (everything in the world is drawn in it), and the weather: snow up north, rain in Gloomhold
         this.dayNight = new DayNight(this);
+        this.dayNight.clock = account.current?.data?.clock ?? 0;
         this.weather = new Weather(this);
         this.weatherOverride = null;     // tests: { kind, level } in place of the sky's
         this.events.once('shutdown', () => this.weather.destroy());
@@ -143,12 +144,15 @@ export class GameScene extends Scene {
             // centreOf on a place with no rect threw every frame, which stops the game for good)
             const known = this._townPlace?.rect ? this._townPlace : WORLD.places.find(p => p.name === this._townPlace?.name);
             const place = known?.rect && centreOf(known);
-            return weatherAt({ snowy: !!this.town.data.snow, gloom: !!place && inGloomhold(place.x, place.y, WORLD.places, WORLD.size) });
+            return weatherAt({ snowy: !!this.town.data.snow, gloom: !!place && inGloomhold(place.x, place.y, WORLD.places, WORLD.size, this._kingdomAt) });
         }
         // (between a dungeon's fight and its level you're nowhere: your feet aren't on the world's map, whose top corner is the snowy north)
         if (this.world !== this.overworld || !feet) return { kind: null, level: 'none' };
-        return weatherAt({ snowy: this.overworld.isSnowy(feet.x, feet.y), gloom: inGloomhold(feet.x, feet.y, WORLD.places, WORLD.size) });
+        return weatherAt({ snowy: this.overworld.isSnowy(feet.x, feet.y), gloom: inGloomhold(feet.x, feet.y, WORLD.places, WORLD.size, this._kingdomAt) });
     }
+
+    /** The kingdom at world (x, y), or undefined with no zones loaded (weather: only Gloomhold rains). */
+    _kingdomAt = (x, y) => this.overworld?.zoneAt(x, y)?.kingdom;
 
     applyPendingSpriteMeta() {
         const metaMap = this.networkManager.spriteMetaMap;
