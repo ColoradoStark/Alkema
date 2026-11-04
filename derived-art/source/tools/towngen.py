@@ -510,6 +510,26 @@ BASES.update({'snow_pine': (0.35, 20, 0.65), 'snow_pine2': (0.35, 20, 0.65), 'sn
               'bare_tree': (0.35, 12, 0.65), 'snowy_tree': (0.35, 12, 0.65), 'frosted_bush': (0.1, 16, 0.9),
               'stump': (0.2, 20, 0.8), 'roots': (0.2, 16, 0.8), 'boat': None, 'boat_r': None,
               'big_fish': None, 'flatfish': None})
+
+
+def wesnoth_tree(name, flip=False, grow=1.5):
+    """A tree from The Battle for Wesnoth's forests (GPL; its snowy fir and winter thickets in Tumbledown,
+    the user's: they look really good), grown 1.5x as Grimhold's dead oaks are, its colours its own."""
+    im = Image.open(os.path.join(ROOT, 'tools', 'worldgen-sources', 'wesnoth-forest', f'{name}.png')).convert('RGBA')
+    im = im.crop(im.getbbox())
+    if flip:
+        im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    return im.resize((round(im.width * grow), round(im.height * grow)), Image.NEAREST)
+
+
+for _key, _name, _flip, _base in (('snowy_fir', 'great-tree-snowy', False, (0.35, 14, 0.65)),
+                                  ('snowy_fir_r', 'great-tree-snowy', True, (0.35, 14, 0.65)),
+                                  ('thicket', 'deciduous-winter-snow-sparse', False, (0.2, 18, 0.8)),
+                                  ('thicket_small', 'deciduous-winter-snow-sparse-small', False, (0.25, 16, 0.75)),
+                                  ('thicket2', 'deciduous-winter-snow-sparse2', True, (0.2, 18, 0.8)),
+                                  ('thicket3', 'deciduous-winter-snow-sparse3', False, (0.2, 18, 0.8))):
+    PROPS[_key] = (lambda n=_name, f=_flip: wesnoth_tree(n, f))
+    BASES[_key] = _base
 # The catch, heaped in an open crate like the produce
 PRODUCE.update({'herring': (544, 928), 'mackerel': (608, 928), 'cod': (928, 928), 'trout': (640, 928),
                 'crabs': (992, 704), 'mussels': (896, 704), 'oysters': (960, 704)})
@@ -2563,6 +2583,12 @@ def tumbledown():
                        ('frosted_bush', 4.2, 32.2), ('frosted_bush', 35.6, 33.8), ('frosted_bush', 64.4, 25.2),
                        ('frosted_bush', 16.6, 23.2), ('snowy_tree', 3.6, 14.6), ('bare_tree', 64.2, 14.4),
                        ('snowy_tree', 30.4, 36.6), ('bare_tree', 61.2, 35.2), ('snowy_tree', 24.2, 11.4), ('bare_tree', 30, 10.6)):
+        p(name, x, y)
+    # Wesnoth's snowy firs and winter thickets about the town (the user's, November 2026)
+    for name, x, y in (('snowy_fir', 59.6, 14), ('thicket', 7, 13.4), ('thicket_small', 66, 21.6),
+                       ('snowy_fir_r', 37, 37.6), ('thicket2', 20.6, 37.4), ('thicket3', 65.4, 30.2),
+                       ('thicket_small', 11, 38), ('thicket', 33, 12.8),
+                       ('snowy_fir', 30.2, 33)):     # by the well, the middle of the town
         p(name, x, y)
     snow_edge(t, skip_rows=[(19, 28)], deep=3)
     # The clearing the woodcutters have made, and the old graves under the pines
