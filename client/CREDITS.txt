@@ -1439,6 +1439,12 @@ fx/flames.png (the flames in the hearths): "[LPC] Flames" by Lanea Zimmerman
   License: CC-BY 3.0 / GPL 3.0 / GPL 2.0
   https://opengameart.org/content/lpc-flames
 
+projectiles/rock.png (the slingshot's stone): a stone from "[LPC] Rocks" by
+bluecarrot16 (after Hyptosis, Evert, Lanea Zimmerman (Sharm) and others; every
+artist in tools/towngen-sources/CREDITS-rocks.txt), unchanged.
+  License: CC-BY-SA 4.0 / CC-BY-SA 3.0
+  https://opengameart.org/content/lpc-rocks
+
 ui/weapons.png (the attack button's weapons: the one you carry): Dungeon Crawl
 Stone Soup's tiles by the DCSS artists, from the Crawl tiles project's 2010
 release (https://github.com/crawl/tiles, releases/Ancient/Oct-5-2010, and the
