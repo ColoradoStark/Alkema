@@ -47,7 +47,8 @@ The game's full credits, every piece of art, sound and font, are in `client/CRED
 
 - Gloomwater Grotto's first level (`client/assets/towns/gloomwater-1.png`) has a dock drawn from
   Reid's "Dock tileset", which is CC-BY-SA 3.0 only, beside Wesnoth's GPL cave art. The two
-  licences can't be combined, so the dock is to be replaced with one under the GPL.
+  licences can't be combined, so the dock is to be replaced with one under the GPL when the grotto
+  is next rebuilt.
 - Castle Grimhold's grounds (`grimhold-things.png`, GPL 3.0) have bare trees from "[LPC Revised]
   4-Season Terrain", which is OGA-BY 3.0 only. Whether OGA-BY 3.0 can go into a GPL work isn't
   settled, so they may be replaced with bare trees under the GPL too.
