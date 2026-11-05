@@ -65,9 +65,9 @@ const STEP_MS = 50;             // the fight moves on in steps of at most this (
 const MAX_FRAME_MS = 250;       // ...and no more than this a frame (back from a hidden tab, not seconds at once)
 const STEADY_MS = 1500;        // staggered by a blow, it isn't again for this long: its next blow comes through (the user's: they kept hitting one faster than it could strike back)
 const BODY = 22;
-// Every foe twice the size Wesnoth drew it at the heroes' height (the user's, November 2026), a boss's growth on top;
-// bodies keep apart by their size (BODY at 1)
-export const FOE_SCALE = 2;
+// Foes at the heroes' height as Wesnoth drew them, some a little bigger (`scale` in Bands.js), a boss up to twice
+// (the user's, November 2026: every foe twice the size was far too big); bodies keep apart by their size (BODY at 1)
+export const FOE_SCALE = 1;
 const LEVEL = 12;               // a side-on foe swings at you only this near level with you (and misses you this far off it)
 // How each in a pack comes at you (the user's, after Pac-Man's ghosts: one pursues, one cuts you off, one
 // gets round you, one wanders and darts in), by its place among its pack's fighters (casters keep back)
@@ -79,10 +79,11 @@ const DART = 0.35;              // ...and darts in this often a second, given it
 const FALL_MS = 1600;
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
 // The first area's guards warn before they fight (the user's, November 2026: stepping into the wood by night, they
-// were killed before they knew it): within BAR_DEEP tiles of its edge (the wood's gloom is near black past it), or of
-// where you crossed into a guarded zone, a guard comes and stands before you, warns you off, and doesn't strike;
-// further in, it fights
-export const BAR_DEEP = 3;
+// were killed before they knew it): a wood's guard lets you NOTICE_DEEP tiles in, where its gloom begins (the user's:
+// at the very edge was still too near); then, within BAR_DEEP tiles of its edge, or of where you crossed into a guarded
+// zone, a guard comes and stands before you, warns you off, and doesn't strike; further in, it fights
+export const BAR_DEEP = 4;
+export const NOTICE_DEEP = 2;
 const BAR = 1.3 * TILE;          // it stands this far before you
 const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
 const BAR_WORDS = {
@@ -620,6 +621,7 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
+            if (you && f.guard && f.woods && this._deep(f, you) < NOTICE_DEEP) return this._home(f, dt, fromPost, delta);
             if (d <= AGGRO && f.guard && this._shallow(f, you)) return this._bar(f, you, d, dt, delta);
             f.barring = false;
             if (d <= AGGRO && !((f.calm -= delta) > 0)) {
@@ -832,7 +834,14 @@ export class FieldDemons {
             return false;
         }
         const p = f.route[0], gx = p.x - foe.x, gy = p.y - foe.y, g = Math.hypot(gx, gy);
-        this._step(f, gx / g, gy / g, dt, pace);
+        const v = f.spec.speed * pace * dt;
+        if (this._step(f, gx / g, gy / g, dt, pace) < v / 2) {
+            // Caught on a corner (rock's, or its zone's edge on a tile's line) a hair off its way's line: it squares
+            // up onto the line, and goes on along it (it crept toward it ever slower, never there: stuck six seconds)
+            const may = this._walk(f), s = foe.sprite, k = (n) => Math.max(-v, Math.min(v, n));
+            if (Math.abs(gy) < Math.abs(gx)) { if (may(foe.x, foe.y + k(gy))) s.y += k(gy); }
+            else if (may(foe.x + k(gx), foe.y)) s.x += k(gx);
+        }
         return true;
     }
 
@@ -957,7 +966,7 @@ export class FieldDemons {
         this._step(f, (f.post.x - f.foe.x) / fromPost, (f.post.y - f.foe.y) / fromPost, dt, 0.7);
     }
 
-    /** It walks (dx, dy) a step's worth, facing its way or, given `facing` (feet), that. */
+    /** It walks (dx, dy) a step's worth, facing its way or, given `facing` (feet), that; how far it went. */
     _step(f, dx, dy, dt, pace = 1, facing = null) {
         const foe = f.foe, s = foe.sprite;
         foe.walking = !!(dx || dy);
@@ -983,9 +992,10 @@ export class FieldDemons {
         }
         const went = Math.hypot(s.x - x0, s.y - y0);
         if (went) foe.travel?.(went, (s.x - x0) / went);        // (one that slides steps by how far it went)
-        if (foe.striking) return;
+        if (foe.striking) return went;
         if (dx || dy) foe.walkAnim(f.dir = facing ? steadyDir(f.dir, facing.x - foe.x, facing.y - foe.y) : steadyDir(f.dir, dx, dy));
         else foe.halt();
+        return went;
     }
 
     /** Everything holds a moment as a blow lands; none once they're gone (a spell's blow landing as you went through a door held the world still). */

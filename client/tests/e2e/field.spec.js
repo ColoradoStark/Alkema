@@ -1056,6 +1056,29 @@ test.describe('Struck again and again, a foe still strikes back', () => {
 });
 
 test.describe('Never stuck', () => {
+    test("going round by its way, it doesn't catch on a rock's corner a hair off its line (the ledge test's foe stood 6 s a hundredth of a pixel above a turn of its way, the tile beside it over its zone's edge, creeping toward the line and never there)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await atThePoint(page);
+        const held = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            gs.scene.pause();
+            const f = fd.foes.find(o => o.kind === 'impaler');
+            const out = [];
+            // (where it stood by the Point's ledge: its way on east along y 12768, a tile's top line, the tile east of it above that line another zone)
+            for (const off of [0.1, 0.25, 0.4, 0.6, 0.8, 1, 1.5, 2, 3]) {
+                f.foe.sprite.setPosition(6207, 12768 - off - 23);
+                Object.assign(f, { state: 'chase', clear: false, clearT: 1e9, route: [{ x: 6224, y: 12768 }, { x: 6240, y: 12768 }, { x: 6256, y: 12768 }], slow: 0 });
+                const x0 = f.foe.x;
+                for (let k = 0; k < 15; k++) fd._way(f, { x: 6340, y: 12740 }, 33, 0.033);
+                if (f.foe.x - x0 < 10) out.push(`${off}: ${Math.round((f.foe.x - x0) * 10) / 10} px`);
+            }
+            gs.scene.resume();
+            return out;
+        });
+        expect(held, 'half a second on its way, it went under 10 px').toEqual([]);
+    });
+
     test("wherever you are in the Point, a foe gets to you or gives up and walks home (never put back there: the user's): none stands stuck at rock or water (the user's, five times: the great bear stood stuck by the castle)", async ({ page }) => {
         test.setTimeout(300000);
         await enterWorld(page);
@@ -1204,7 +1227,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
      * edge (within BAR_DEEP tiles in, where it warns) and deeper (where it fights), both within its reach. */
     const roadside = (page) => page.evaluate(async () => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
-        const { PACKS, BAR_DEEP } = await import('/src/battle/FieldDemons.js');
+        const { PACKS, BAR_DEEP, NOTICE_DEEP } = await import('/src/battle/FieldDemons.js');
         const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), depth = (x, y) => ow.forest.depthAt(x, y);
         const near = (gx, gy, ok, r0 = 32, r1 = 144) => {
             for (let r = r0; r <= r1; r += 16) for (let a = 0; a < 16; a++) {
@@ -1215,8 +1238,9 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         };
         for (const p of PACKS.filter(p => p.guard && p.woods)) {
             const [gx, gy] = p.at;
-            const road = near(gx, gy, d => !(d > 0), 64, 192), edge = near(gx, gy, d => d === 1), deep = near(gx, gy, d => d > BAR_DEEP + 0.5);
-            if (road && edge && deep) return { family: p.family, at: { x: gx, y: gy }, road, edge, deep };
+            const road = near(gx, gy, d => !(d > 0), 64, 192), edge = near(gx, gy, d => d > 0 && d < NOTICE_DEEP),
+                dim = near(gx, gy, d => d >= NOTICE_DEEP && d <= BAR_DEEP), deep = near(gx, gy, d => d > BAR_DEEP + 0.5);
+            if (road && edge && dim && deep) return { family: p.family, at: { x: gx, y: gy }, road, edge, dim, deep };
         }
         return null;
     });
@@ -1228,7 +1252,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
     const notice = (page) => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '');
     const hurt = (page) => page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); return ui.hp.max - ui.hp.now; });
 
-    test("on the road out of Riverhold no guard comes for you; at the wood's edge one comes and warns you off, striking no blow (the user's: they died before they knew it); deeper, it fights, far too strong; and it never sets foot on the road", async ({ page }) => {
+    test("on the road out of Riverhold no guard comes for you; a step into the wood nothing comes; on where it darkens one comes and warns you off, striking no blow (the user's: they died before they knew it, then found it came too near the edge); deeper, it fights, far too strong; and it never sets foot on the road", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         await keepUp(page);
@@ -1239,8 +1263,14 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         // On the road, a few tiles off it: it stands
         await page.waitForTimeout(2500);
         expect((await guard(page, spot.at)).state).toBe('post');
-        // A step into the trees: it comes and stands before you, and says why you may go no further
+        // A step into the trees, before the gloom falls: it still stands (the user's: it came too near the edge)
         await standAt(page, spot.edge.x, spot.edge.y);
+        await page.waitForTimeout(2500);
+        const g1 = await guard(page, spot.at);
+        expect(g1.state, 'at the very edge it stands').toBe('post');
+        expect(g1.barring, 'and says nothing yet').toBe(false);
+        // On in, where the wood darkens: it comes and stands before you, and says why you may go no further
+        await standAt(page, spot.dim.x, spot.dim.y);
         await expect.poll(() => guard(page, spot.at).then(g => g.barring && g.off < 64), { timeout: 10000 }).toBe(true);
         expect(await notice(page)).toMatch(/Turn back/);
         await page.waitForTimeout(3000);

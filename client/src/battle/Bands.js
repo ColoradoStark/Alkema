@@ -26,10 +26,10 @@ export const BAND_KINDS = {
     woodsman: shooter(0, { race: 'human' }),
     footpad: melee(1, { speed: 76, windup: 480, recover: 700, lunge: 18, race: 'human' }),
     poacher: shooter(1, { race: 'human' }),
-    impaler: melee(1, { speed: 66, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'goblin' }),
+    impaler: melee(1, { speed: 66, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'goblin', scale: 1.3 }),     // (a big one: the user's, some a little bigger than you)
     // (its leader, a boss: grown, named, a chest; nearly a rat's pace, the climb's stressful moment)
     rouser: { ...DEMON_KINDS.brute, speed: 74, reach: 50, windup: 700, recover: 900, anim: 'attack', race: 'goblin', level: 1,
-        boss: true, scale: 1.4, label: 'Goblin Rouser', chest: true },
+        boss: true, scale: 1.75, label: 'Goblin Rouser', chest: true },
     // The Southern Forest's guards round the first area (its wood keeps anyone off the road out of it: the user's,
     // block the first area off till the story says where the journey goes): an elder wose, grown, and a sorceress
     // throwing faerie fire, both a little quicker than you (the user walked past slower wardens)
