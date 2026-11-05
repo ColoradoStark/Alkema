@@ -8,7 +8,8 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
 COPY . .
-RUN npm run build
+# Each file timed by what's in it, so one unchanged by a deploy comes back to a browser as a 304 (stamp.mjs)
+RUN npm run build && node stamp.mjs dist
 
 FROM nginx:alpine AS prod
 
