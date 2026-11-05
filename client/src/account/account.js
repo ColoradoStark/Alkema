@@ -206,6 +206,9 @@ class Account {
             this.saves.unshift(save);
         }
         save.data = { ...save.data, ...fields };
+        // (a hero from before heroes had a clock of their own starts their next day in the morning too: the user's,
+        // played again with a new look, theirs began at night)
+        save.data.clock ??= morningClock();
         this.markPlayed(save.id);
         await this._write(save, { now: true });
         return save;

@@ -86,6 +86,8 @@ export const BAR_DEEP = 4;
 export const NOTICE_DEEP = 2;
 const BAR = 1.3 * TILE;          // it stands this far before you
 const BAR_PRESS = 20;            // ...and walking on in, this near: inside its body's reach, so you're put back
+const BAR_HOLD_MS = 700;         // ...and stays so, this long after you last pressed on
+const BAR_TURN = 16;             // it turns to you only once you're this far round it, side to side
 const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
 const BAR_WORDS = {
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
@@ -332,6 +334,7 @@ export class FieldDemons {
                 const at = this._clear(p);
                 const foe = band.make(this.scene, at.x, at.y, p.kind, spec);
                 foe.grow(FOE_SCALE * (spec.scale || 1));
+                if (spec.paper === false) foe.paper = false;
                 if (spec.label) foe.labelColour('#ff8a7a');
                 foe.setDepthAt();
                 const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
@@ -940,15 +943,38 @@ export class FieldDemons {
      */
     _bar(f, you, d, dt, delta) {
         const { foe } = f;
-        // (walking further in, across your way; else toward its post)
+        // (one at a time, the nearest: the next post's, barring you too, walked into you from behind and shoved you
+        // round the first; another stands and watches)
+        if (this.foes.some(o => o !== f && o.barring && o.hp > 0 && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d)) {
+            f.barring = false;
+            this._step(f, 0, 0, dt, 1, you);
+            if (!foe.striking && Math.abs(you.x - foe.x) > BAR_TURN) foe.face?.(you.x, foe.y);
+            return;
+        }
+        // (walking further in, across your way, and a moment after: as you're put back out of it your pace drops, and
+        // let go at once it stepped back and came on again, shaking; else toward its post)
         const v = this.scene.localPlayer?.sprite?.body?.velocity, sp = v ? Math.hypot(v.x, v.y) : 0;
         const ahead = sp > 20 && { x: you.x + v.x / sp * 2 * TILE, y: you.y + v.y / sp * 2 * TILE };
-        const pressing = ahead && this._deep(f, ahead) > this._deep(f, you);
-        const [px, py] = pressing ? [v.x / sp, v.y / sp] : [f.post.x - you.x, f.post.y - you.y];
+        if (ahead && this._deep(f, ahead) > this._deep(f, you)) {
+            f.pressT = BAR_HOLD_MS;
+            f.press = { x: v.x / sp, y: v.y / sp };
+        } else f.pressT = Math.max(0, (f.pressT || 0) - delta);
+        const pressing = f.pressT > 0;
+        const [px, py] = pressing ? [f.press.x, f.press.y] : [f.post.x - you.x, f.post.y - you.y];
         const pd = Math.hypot(px, py) || 1, at = pressing ? BAR_PRESS : BAR;      // (pressing on: right up against you, so you're put back)
         const tx = you.x + px / pd * at, ty = you.y + py / pd * at, g = Math.hypot(tx - foe.x, ty - foe.y);
-        if (g > 3 && (pressing || d > BAR)) this._step(f, (tx - foe.x) / g, (ty - foe.y) / g, dt, Math.min(1, g / (f.spec.speed * dt || 1)), you);
-        else this._step(f, 0, 0, dt, 1, you);
+        // (already in your way, it only keeps across it, onto your line, and you slide off it no way round: following a
+        // spot just ahead of you as you were put back, it went back and forth)
+        const rx = foe.x - you.x, ry = foe.y - you.y, along = (rx * px + ry * py) / pd;
+        const inWay = pressing && along > 0 && along < BODY * (foe.scale || 1) + BODY;
+        const [wx, wy] = inWay ? [you.x + px / pd * along, you.y + py / pd * along] : [tx, ty], w = Math.hypot(wx - foe.x, wy - foe.y);
+        // (facing you side-on, turning only once you're well round it: straight above or below, it flipped to and fro)
+        const left = Math.abs(rx) > BAR_TURN ? rx > 0 : foe.left ?? rx > 0, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
+        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(1, w / (f.spec.speed * dt || 1)), facing);
+        else {
+            this._step(f, 0, 0, dt, 1, you);
+            if (!foe.striking) foe.face?.(facing.x, facing.y);
+        }
         if (!f.barring || (f.barT -= delta) <= 0) {
             this.say(BAR_WORDS[f.kind] ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
             f.barT = BAR_SAY_MS;

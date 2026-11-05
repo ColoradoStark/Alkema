@@ -55,6 +55,24 @@ test.describe('Day and night', () => {
         expect(at.hour).toBeLessThan(9);
     });
 
+    test("a hero saved before heroes had their own clock, played again, starts in the morning too (the user's: their new character began at night)", async ({ page }) => {
+        await enterWorld(page);
+        // Saved as heroes were before: no clock
+        await page.evaluate(() => {
+            const all = JSON.parse(localStorage.getItem('alkema.saves'));
+            for (const s of all.saves) delete s.data.clock;
+            localStorage.setItem('alkema.saves', JSON.stringify(all));
+        });
+        await enterWorld(page);      // the creator shows the last hero played: Play
+        const at = await page.evaluate(() => ({
+            hour: window.__PHASER_GAME.scene.getScene('GameScene').dayNight.hour,
+            clock: window.__ALKEMA_ACCOUNT.current?.data?.clock,
+        }));
+        expect(at.clock, 'given a clock of their own').toEqual(expect.any(Number));
+        expect(at.hour).toBeGreaterThan(7.9);
+        expect(at.hour).toBeLessThan(9);
+    });
+
     test('the world is drawn in the light of the hour: bright at noon, moonlit at midnight, the towns on the map lit', async ({ page }) => {
         await enterWorld(page);
         await hour(page, 12);

@@ -54,6 +54,7 @@ export class Orc extends Foe {
         this._lean = 0;
         this._foot = 1;
         this._turnT = 0;
+        this.paper = true;      // a paper turn (false: at once)
         this.shadow = this.slides ? scene.add.ellipse(x, y, 26, 8, 0x000000, 0.28) : null;
     }
 
@@ -118,6 +119,7 @@ export class Orc extends Foe {
         if (!this.slides) return this.sprite.setFlipX(left);
         if (left === this.left) return;
         this.left = left;
+        if (!this.paper) return this.sprite.setFlipX(left);
         this._turnT = TURN_MS - this._turnT;      // (turning back mid-turn: back the way it came)
     }
 

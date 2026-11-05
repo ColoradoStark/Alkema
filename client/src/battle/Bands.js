@@ -33,7 +33,8 @@ export const BAND_KINDS = {
     // The Southern Forest's guards round the first area (its wood keeps anyone off the road out of it: the user's,
     // block the first area off till the story says where the journey goes): an elvish sorceress throwing faerie fire,
     // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
-    sorceress: shooter(2, { speed: 140, missile: null, tint: 0x9fe8ff, race: 'elf' }),
+    // (turning at once, no paper turn: the user's, November 2026, they'd rather the elves didn't)
+    sorceress: shooter(2, { speed: 140, missile: null, tint: 0x9fe8ff, race: 'elf', paper: false }),
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
 export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));

@@ -1291,12 +1291,37 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         const w0 = await where();
         const dx = w0.it.x - w0.me.x, dy = w0.it.y - w0.me.y;
         const [key, axis, sign] = Math.abs(dx) > Math.abs(dy) ? [dx > 0 ? 'ArrowRight' : 'ArrowLeft', 'x', Math.sign(dx)] : [dy > 0 ? 'ArrowDown' : 'ArrowUp', 'y', Math.sign(dy)];
+        // Every frame she's in your way: how she turns and how she moves
+        await page.evaluate(({ x, y }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const f = gs.fieldDemons.foes.find(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48);
+            const log = window.__barLog = [];
+            window.__barRec = () => log.push({ mx: gs.localPlayer.sprite.x, my: gs.localPlayer.sprite.y + 23, bar: !!f.barring, x: f.foe.x, y: f.foe.y, left: f.foe.left, turn: f.foe._turnT, rot: f.foe.sprite.rotation });
+            gs.events.on('postupdate', window.__barRec);
+        }, spot.at);
         await page.keyboard.down(key);
         await page.waitForTimeout(1800);
         await page.keyboard.up(key);
+        await page.waitForTimeout(1500);       // ...and standing there, up against her
+        const log = await page.evaluate(() => {
+            window.__PHASER_GAME.scene.getScene('GameScene').events.off('postupdate', window.__barRec);
+            return window.__barLog;
+        });
+        // She doesn't turn like a card (the user's: they'd rather the elves didn't), and doesn't shake: blocking you,
+        // she faces one way, and her steps don't go back and forth
+        const flips = log.filter((s, i) => i && s.left !== log[i - 1].left).length;
+        let backs = 0;
+        for (let i = 2; i < log.length; i++) {
+            const a = { x: log[i - 1].x - log[i - 2].x, y: log[i - 1].y - log[i - 2].y }, b = { x: log[i].x - log[i - 1].x, y: log[i].y - log[i - 1].y };
+            if (Math.hypot(a.x, a.y) > 0.3 && Math.hypot(b.x, b.y) > 0.3 && a.x * b.x + a.y * b.y < 0) backs++;
+        }
+        const diag = JSON.stringify({ frames: log.length, flips, backs, turning: log.filter(s => s.turn > 0).length, rocking: log.filter(s => Math.abs(s.rot) > 0.01).length, sample: log.filter((_, i) => i % 4 === 0).map(s => [Math.round(s.x), Math.round(s.y), Math.round(s.mx), Math.round(s.my), s.left ? 'L' : 'R', s.bar]) });
+        expect(log.filter(s => s.turn > 0).length, `no card turn: ${diag}`).toBe(0);
+        expect(flips, `facing one way: ${diag}`).toBeLessThanOrEqual(1);
+        expect(backs, `no shaking: ${diag}`).toBeLessThanOrEqual(2);
         const w1 = await where();
         // (you'd have walked over 200 px: you got no further than where it stood)
-        expect((w1.me[axis] - w0.me[axis]) * sign, 'no further than up to it').toBeLessThan(Math.abs(w0.it[axis] - w0.me[axis]));
+        expect((w1.me[axis] - w0.me[axis]) * sign, `no further than up to it: ${diag}`).toBeLessThan(Math.abs(w0.it[axis] - w0.me[axis]));
         expect(Math.hypot(w1.it.x - w1.me.x, w1.it.y - w1.me.y), 'it stands before you still').toBeLessThan(48);
         expect((await guard(page, spot.at)).barring, 'warning you, not fighting').toBe(true);
         expect(await hurt(page), 'and still no blow').toBe(0);
