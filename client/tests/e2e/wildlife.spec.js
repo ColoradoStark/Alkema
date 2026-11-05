@@ -16,7 +16,8 @@ async function enterWorld(page) {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
         gs.dayNight.hourOverride = 12;
         gs.weatherOverride = { kind: null, level: 'none' };
-        gs.fieldDemons.update = () => {};        // (no foes about: scenery's tested here, not fights)
+        gs.fieldDemons.release();                // (no foes about: scenery's tested here, not fights; any come for you
+        gs.fieldDemons.update = () => {};        // already let go, or the fight they'd keep on keeps the animals away)
     });
 }
 
@@ -52,6 +53,36 @@ test.describe('Wildlife and the sounds of the world', () => {
         await enterWorld(page);
         await go(page, DUNMERE.x, DUNMERE.y);
         await expect.poll(async () => (await critters(page)).filter(c => c.drawn).length, { timeout: 45000 }).toBeGreaterThan(0);
+    });
+
+    test('no peaceful animal on a battlefield: none comes by a pack still standing; a fight sends those about off; once it is cleared they come again', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await go(page, DUNMERE.x, DUNMERE.y);
+        await release(page);
+        await put(page, 'doe', 0, 160);      // (its sheet in, and the spot open ground)
+        await release(page);
+        // A foe standing off that spot (dx from it), in a state, with hit points
+        const foe = (dx, state, hp = 10) => page.evaluate(([dx, state, hp]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            gs.fieldDemons.foes = [{ foe: { x: me.x + dx, y: me.y + 23 + 160 }, hp, state, guard: false }];
+        }, [dx, state, hp]);
+        const tryPut = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            return gs.wildlife.spawn('doe', me.x, me.y + 23 + 160, 'ground', 1);
+        });
+        await foe(60, 'post');
+        expect(await tryPut()).toBe(false);              // by a pack still standing: none
+        await foe(3000, 'post');
+        expect(await tryPut()).toBe(true);               // far from it: one comes
+        // A foe comes for you: the deer goes, and none other comes while it's on
+        await foe(3000, 'chase');
+        await expect.poll(async () => (await critters(page)).length, { timeout: 5000 }).toBe(0);
+        expect(await tryPut()).toBe(false);
+        // Felled, the field cleared: they come again
+        await foe(60, 'chase', 0);
+        expect(await tryPut()).toBe(true);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes = []; });
     });
 
     test('a fox bolts as you come near; a flock of shorebirds takes off together and rises as it flies; a gull wheels overhead, its shadow below', async ({ page }) => {

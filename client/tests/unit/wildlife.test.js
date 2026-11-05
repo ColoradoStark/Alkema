@@ -1,6 +1,6 @@
 // What lives where (client/src/world/wildlife-rules.js) and what's heard where (ambience-mix.js), without a browser.
 import { describe, test, expect } from 'vitest';
-import { chooseWildlife, facing, BIRDS } from '../../src/world/wildlife-rules.js';
+import { chooseWildlife, facing, BIRDS, onBattlefield, BATTLEFIELD } from '../../src/world/wildlife-rules.js';
 import { ambienceMix } from '../../src/world/ambience-mix.js';
 import { SHEETS } from '../../src/world/wildlife-sheets.js';
 
@@ -90,5 +90,19 @@ describe('The sounds of the world', () => {
         expect(calls({ snow: true }).wolf).toBe(0);
         expect(calls({ land: false, sea: true }, { sailing: true }).creak).toBe(1);
         expect(calls({}).creak).toBe(0);
+    });
+});
+
+describe('No wildlife on a battlefield', () => {
+    const at = (x, y, more = {}) => ({ x, y, hp: 10, ...more });
+    test('near a foe still standing it is a battlefield; once it is down, or far off, it is not', () => {
+        expect(onBattlefield([at(0, 0)], 100, 100)).toBe(true);
+        expect(onBattlefield([at(0, 0, { hp: 0 })], 100, 100)).toBe(false);
+        expect(onBattlefield([at(0, 0)], BATTLEFIELD + 1, 0)).toBe(false);
+        expect(onBattlefield([], 0, 0)).toBe(false);
+    });
+    test('a guard at its post is a sentry, not a battle; after you, it is one', () => {
+        expect(onBattlefield([at(0, 0, { guard: true })], 50, 0)).toBe(false);
+        expect(onBattlefield([at(0, 0, { guard: true, after: true })], 50, 0)).toBe(true);
     });
 });

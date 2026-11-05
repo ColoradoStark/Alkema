@@ -10,12 +10,16 @@
 // ground, and drift on. The art is human-drawn LPC (tools/wildlife.py, credits in tools/wildlife-sources):
 // each sheet a row per way it faces, its walk and its flight.
 //
+// None on a battlefield (the user's, November 2026: deer ambled through their fight): none is put down near a
+// foe still standing, and while one is after you none comes at all, and those about bolt and are gone, fading
+// as they go; once the field's cleared they come again. Birds wheeling overhead aren't in it.
+//
 // Memory (weak phones): a kind's sheet loads only when one is about to appear and goes once none of its kind
 // has been about for FORGET_MS; going into a place lets everything go at once, and a sheet arriving after
 // that is let go as it lands.
 
 import { SHEETS } from './wildlife-sheets.js';
-import { chooseWildlife, facing, BIRDS } from './wildlife-rules.js';
+import { chooseWildlife, facing, BIRDS, onBattlefield } from './wildlife-rules.js';
 import { terrainAt } from './surroundings.js';
 import { DEPTH, wrapDelta } from './Overworld.js';
 import { sortDepth } from './Forest.js';
@@ -27,6 +31,7 @@ const MAX_FLYING = 3;          // ...and wheeling overhead
 const EVERY = [1600, 4000];    // ms between looking for somewhere to put some
 const OUT = 56;                // px beyond the view's edge they appear
 const GONE = 720;              // px from you beyond which one is let go
+const FADE_S = 1.2;            // s a scared animal takes to fade from sight in a fight
 const FORGET_MS = 20000;       // a kind's sheet kept this long after the last of it went
 const FLY_DEPTH = DEPTH.canopy + 0.3;     // over the trees' crowns, under the night's light map (DayNight, 26.5)
 const SHADOW_DEPTH = DEPTH.features + 1;  // on the ground, under the trees
@@ -72,12 +77,13 @@ export class Wildlife {
             if (!this.quiet) this._look(feet, world);
         }
         const now = this.scene.time.now;
+        if (this._fight()) for (const c of this.critters) if (c.how !== 'circle' && !c.fading) this._scare(c, feet);
         for (const c of this.critters) {
             this._step(c, dt, feet, world);
             this._last[c.kind] = now;
         }
         this.critters = this.critters.filter(c => {
-            if (Math.hypot(wrapDelta(feet.x, c.x), wrapDelta(feet.y, c.y)) < GONE) return true;
+            if (Math.hypot(wrapDelta(feet.x, c.x), wrapDelta(feet.y, c.y)) < GONE && !(c.fading && c.sprite.alpha <= 0)) return true;
             this._drop(c);
             return false;
         });
@@ -92,6 +98,12 @@ export class Wildlife {
     /** Somewhere just out of sight: put there what lives there, if anything, and there's room for it. */
     _look(feet, world) {
         const scene = this.scene, view = scene.cameras.main.worldView;
+        // A pick kept while its kind's sheet came: put there now it's in, if that's still out of sight (thrown
+        // away, the first animal waited for its kind to be picked again where it could stand, half a minute and more)
+        const kept = this._kept;
+        this._kept = null;
+        if (kept && this._ready.has(kept.kind) && !view.contains(kept.x, kept.y)
+            && this.spawn(kept.kind, kept.x, kept.y, kept.how, kept.count, world)) return;
         const a = Math.random() * Math.PI * 2, cos = Math.cos(a), sin = Math.sin(a);
         const k = Math.min((view.width / 2 + OUT) / (Math.abs(cos) || 1e-6), (view.height / 2 + OUT) / (Math.abs(sin) || 1e-6));
         const x = view.centerX + cos * k, y = view.centerY + sin * k;
@@ -99,7 +111,7 @@ export class Wildlife {
         const wet = !!w?.kind && (w.kind === 'rain' ? w.level !== 'light' : w.level === 'storm');
         const pick = chooseWildlife(terrainAt(world, x, y), { night: isNight(scene.dayNight?.hour ?? 12), wet });
         if (!pick) return;
-        this.spawn(pick.kind, x, y, pick.how, pick.count, world);
+        if (!this.spawn(pick.kind, x, y, pick.how, pick.count, world) && this._loading.has(pick.kind)) this._kept = { ...pick, x, y };
     }
 
     /**
@@ -110,6 +122,7 @@ export class Wildlife {
         if (how === 'circle' ? this._flying >= MAX_FLYING : this._ground + count > MAX_GROUND) return false;
         if (!this._load(kind)) return false;
         if (how !== 'circle' && world.placeAt(x, y, 32)) return false;
+        if (how !== 'circle' && (this._fight() || onBattlefield(this._foes(), x, y))) return false;
         const flock = { up: false };
         let made = 0;
         for (let i = 0; i < count; i++) {
@@ -119,6 +132,29 @@ export class Wildlife {
             made++;
         }
         return made > 0;
+    }
+
+    /** Where the foes about are (FieldDemons'), for onBattlefield. */
+    _foes() {
+        return (this.scene.fieldDemons?.foes ?? []).map(f => ({ x: f.foe.x, y: f.foe.y, hp: f.hp, guard: f.guard,
+            after: f.state !== 'home' && f.state !== 'post' }));
+    }
+
+    /** Is one of them after you? */
+    _fight() {
+        return !!this.scene.fieldDemons?.engaged;
+    }
+
+    /** A fight's on: off it goes, away from you, and fades from sight as it goes. */
+    _scare(c, feet) {
+        c.fading = true;
+        if (BIRDS.has(c.kind)) c.flock.up = true;
+        else if (c.state !== 'flee') {
+            const m = MAMMAL[c.kind], a = Math.atan2(wrapDelta(feet.y, c.y), wrapDelta(feet.x, c.x));
+            c.state = 'flee';
+            c.vx = Math.cos(a) * m.run;
+            c.vy = Math.sin(a) * m.run;
+        }
     }
 
     _make(kind, x, y, how, flock) {
@@ -165,6 +201,11 @@ export class Wildlife {
         c.sprite.setPosition(c.x, c.y - c.lift);
         if (c.state !== 'wheel' && c.state !== 'fly' && c.state !== 'leave') c.sprite.setDepth(sortDepth(this.scene, c.y));
         c.shadow?.setPosition(c.x, c.y);
+        if (c.fading) {
+            const alpha = Math.max(0, c.sprite.alpha - dt / FADE_S);
+            c.sprite.setAlpha(alpha);
+            c.shadow?.setAlpha(alpha);
+        }
     }
 
     /** A fox or a deer: stands, ambles a little way, stands again; bolts from you as you come near. */
@@ -346,6 +387,7 @@ export class Wildlife {
         this.critters = [];
         for (const kind of [...this._ready]) this._forget(kind);
         this._wait = 1200;
+        this._kept = null;
     }
 
     destroy() {

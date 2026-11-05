@@ -49,3 +49,16 @@ export function facing(vx, vy) {
 
 /** Is this kind a bird (it flies off when you come near)? */
 export const BIRDS = new Set(['gull', 'raven', 'shorebird', 'crow', 'sparrow']);
+
+/** How near a foe still standing (or one after you) no animal comes, or stays (px: nine tiles). */
+export const BATTLEFIELD = 288;
+
+/**
+ * Is (x, y) on a battlefield (the user's, November 2026: deer ambled through their fight; no peaceful animal
+ * about a battle, only once the field's cleared)? Within BATTLEFIELD of a foe still standing, or of a guard
+ * that's after you (a guard at its post is a sentry, not a battle).
+ * @param {{x: number, y: number, hp: number, guard?: boolean, after?: boolean}[]} foes
+ */
+export function onBattlefield(foes, x, y, reach = BATTLEFIELD) {
+    return foes.some(f => f.hp > 0 && (f.after || !f.guard) && Math.hypot(f.x - x, f.y - y) < reach);
+}
