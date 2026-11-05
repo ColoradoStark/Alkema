@@ -21,6 +21,7 @@ export function forgetFx(scene) {
     for (const name of Object.keys(scene.cache.json.get(FX_ANIMS)?.anims || {})) scene.anims.remove(`${FX}-${name}`);
     if (scene.textures.exists(FX)) scene.textures.remove(FX);
     if (scene.textures.exists(ICONS)) scene.textures.remove(ICONS);
+    for (const key of ['danger-skull', 'danger-glow']) if (scene.textures.exists(key)) scene.textures.remove(key);
     scene.cache.json.remove(FX_ANIMS);
     scene.cache.json.remove(ICONS_INDEX);
 }
@@ -29,7 +30,8 @@ export function forgetFx(scene) {
 const SPELL_FILES = [{ type: 'atlas', key: FX, url: ['/spells/fx.png', '/spells/fx.json'] },
     { type: 'json', key: FX_ANIMS, url: '/spells/fx.json' },
     { type: 'spritesheet', key: ICONS, url: ['/spells/icons.png', { frameWidth: 64, frameHeight: 64 }] },
-    { type: 'json', key: ICONS_INDEX, url: '/spells/icons.json' }];
+    { type: 'json', key: ICONS_INDEX, url: '/spells/icons.json' },
+    { type: 'image', key: 'danger-skull', url: '/ui/danger-skull.png' }];      // (over a pack too strong for you: FieldDemons._skulls)
 
 /** Load the spells' effects and icons (a fight out on the world: FieldDemons.js); forgetFx lets them go. */
 export function loadSpellFx(scene) {

@@ -77,6 +77,8 @@ const RING = 64;                // a flanker makes for this far off you, on the 
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
+const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
+const SKULL_BOB = 2;            // px it bobs, up and down
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
 // The first area's guards warn before they fight (the user's, November 2026: stepping into the wood by night, they
 // were killed before they knew it): a wood's guard lets you NOTICE_DEEP tiles in, where its gloom begins (the user's:
@@ -268,6 +270,7 @@ export class FieldDemons {
             this._tick(Math.min(left, STEP_MS), feet);
         }
         this._warn(feet);
+        this._skulls();
         this._bars();
     }
 
@@ -369,6 +372,7 @@ export class FieldDemons {
         // (one sheet between many: destroyed together, the first lets it go)
         for (const f of this.foes) if (f.family === fam) f.foe.destroy();
         this.foes = this.foes.filter(f => f.family !== fam);
+        this._skulls();         // (theirs go with them)
         this._forget(fam);
     }
 
@@ -401,6 +405,7 @@ export class FieldDemons {
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
         this._warned?.clear();
+        this._unmark();
         for (const fam of [...this._up]) this._dismiss(fam);
         if (this._freeze > 0) this.scene.anims.resumeAll();        // (a hit-stop never outlives them)
         this._freeze = 0;
@@ -563,6 +568,65 @@ export class FieldDemons {
             audio.play('error', { volume: 0.5 });
             if (!ui?.tutorUpgrade?.(`${words} Spend your essence on the Upgrade page.`)) ui?.notice?.(words, 4000);
         }
+    }
+
+    /**
+     * A skull floats over each pack too strong for you, glowing (the user's, November 2026, after The Witcher 3's
+     * skull: you see from afar which pack to leave for later, no words): a pack up a climb (not the first area's
+     * guards), its foes still at their posts (roused, the fight's on and it goes), and gone once you're strong
+     * enough for it (`tooStrong`, as `_warn`). Over the night's dark (`FX_DEPTH`): a warning shows at any hour.
+     */
+    _skulls() {
+        const marks = this._marks ??= new Map();
+        const want = new Set();
+        if (this.scene.textures.exists('danger-skull')) {
+            const strength = this._strength(), bob = Math.sin(this.scene.time.now / 380) * SKULL_BOB;
+            for (const [k, p] of PACKS.entries()) {
+                if (!this._up.has(p.family) || p.guard || !ZONES[p.family]?.climb || !tooStrong(p.family, p.step, strength)) continue;
+                const mine = this.foes.filter(f => f.pack === k && f.hp > 0);
+                if (!mine.length || mine.some(f => f.state !== 'post' || !f.foe.ready)) continue;
+                want.add(k);
+                let m = marks.get(k);
+                if (!m) {
+                    m = { glow: this.scene.add.image(0, 0, this._glowTex()).setDepth(FX_DEPTH).setAlpha(0.8),
+                        skull: this.scene.add.image(0, 0, 'danger-skull').setScale(2).setDepth(FX_DEPTH + 0.1) };
+                    marks.set(k, m);
+                }
+                const x = mine.reduce((t, f) => t + f.foe.x, 0) / mine.length;
+                const y = Math.min(...mine.map(f => f.foe.y - (f.foe.tall || 48))) - SKULL_LIFT - 17 + bob;
+                m.skull.setPosition(x, y);
+                m.glow.setPosition(x, y).setScale(1 + bob / 20);
+            }
+        }
+        for (const [k, m] of marks) if (!want.has(k)) {
+            m.glow.destroy();
+            m.skull.destroy();
+            marks.delete(k);
+        }
+    }
+
+    /** Every skull over a pack goes. */
+    _unmark() {
+        for (const m of this._marks?.values() || []) {
+            m.glow.destroy();
+            m.skull.destroy();
+        }
+        this._marks?.clear();
+    }
+
+    /** A soft red glow behind the skull (made here: a blur, no art), let go with the spells' effects (forgetFx). */
+    _glowTex() {
+        const key = 'danger-glow', size = 64;
+        if (this.scene.textures.exists(key)) return key;
+        const tex = this.scene.textures.createCanvas(key, size, size);
+        const ctx = tex.getContext(), g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        g.addColorStop(0, 'rgba(220, 30, 20, 0.75)');
+        g.addColorStop(0.45, 'rgba(200, 20, 15, 0.35)');
+        g.addColorStop(1, 'rgba(180, 10, 10, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, size, size);
+        tex.refresh();
+        return key;
     }
 
     /**

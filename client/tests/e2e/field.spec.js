@@ -637,6 +637,48 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(await pointing()).toBe(null);
     });
 
+    test("a skull floats over every pack too strong for you, none over one you can beat; strong enough, or the pack roused, it goes; leaving, every skull goes (the user's, after The Witcher 3's)", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._think = () => {}; });     // (all at their posts)
+        await atThePoint(page);
+        const marks = () => page.evaluate(() => {
+            const g = window.__PHASER_GAME, fd = g.scene.getScene('GameScene').fieldDemons;
+            return { packs: [...(fd._marks?.keys() || [])].sort((a, b) => a - b), shown: g.scene.getScene('GameScene').children.list.filter(o => o.texture?.key === 'danger-skull').length };
+        });
+        const { PACKS } = await places(page);
+        // a new hero: a skull over each pack too strong for them (the last ones, whatever their class), none over the first
+        const want = await page.evaluate(async (PACKS) => {
+            const { tooStrong } = await import('/src/battle/zones.js'), fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return PACKS.map((p, k) => k).filter(k => tooStrong('z35', PACKS[k].step, fd._strength()));
+        }, PACKS);
+        expect(want).toContain(PACKS.length - 1);
+        expect(want).not.toContain(0);
+        await expect.poll(() => marks().then(m => m.packs), { timeout: 10000 }).toEqual(want);
+        let m = await marks();
+        expect(m.shown).toBe(want.length);
+        // the one over a pack sits above its heads
+        const over = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, [k, s] = [...fd._marks.entries()][0];
+            const heads = fd.foes.filter(f => f.pack === k).map(f => f.foe.y - f.foe.tall);
+            return s.skull.y < Math.min(...heads);
+        });
+        expect(over).toBe(true);
+        // roused, a pack's skull goes
+        const k = m.packs[0];
+        await page.evaluate((k) => { for (const f of window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes) if (f.pack === k) f.state = 'chase'; }, k);
+        await expect.poll(() => marks().then(m => m.packs.includes(k)), { timeout: 5000 }).toBe(false);
+        // strong enough for all of them: none
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => 1e12; });
+        await expect.poll(() => marks().then(m => m.shown), { timeout: 5000 }).toBe(0);
+        // weak again, then away from the Point: they go with the band, and the skull's picture with them
+        await page.evaluate(() => { delete window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength; });
+        await expect.poll(() => marks().then(m => m.shown), { timeout: 5000 }).toBeGreaterThan(0);
+        await standAt(page, START.x, START.y);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('danger-skull')), { timeout: 30000 }).toBe(false);
+        expect((await marks()).shown).toBe(0);
+    });
+
     test("fighting a pack you're strong enough for, you're not told the one beyond it is too strong (the user's: told so just after upgrading, the next pack but one being as near as eight tiles); beaten, then you are", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);

@@ -1,0 +1,12 @@
+Danger skull: Dungeon Crawl Stone Soup tile
+===========================================
+
+skull.png is releases/Ancient/Oct-5-2010/UNUSED/spells/components/skull.png
+from the Dungeon Crawl Stone Soup tile set (https://github.com/crawl/tiles),
+by the DCSS artists (list: https://github.com/crawl/tiles/blob/master/ARTISTS.md).
+License: CC0 1.0 (public domain dedication),
+http://creativecommons.org/publicdomain/zero/1.0/
+
+client/assets/ui/danger-skull.png is it cropped to its drawn 14x17 pixels,
+otherwise unchanged. It floats over a pack of foes too strong for you
+(FieldDemons._skulls), as The Witcher 3's skull does.
