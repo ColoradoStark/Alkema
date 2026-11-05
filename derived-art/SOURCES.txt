@@ -7,6 +7,7 @@ tools/towngen.py
 tools/castlegen.py
 tools/town_terrain.py
 tools/spellgen.py
+tools/elven_glow.py
 tools/wildlife.py
 tools/weapon_icons.py
 tools/jester_cap.py

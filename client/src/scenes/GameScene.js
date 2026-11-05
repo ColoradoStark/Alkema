@@ -21,6 +21,7 @@ import { RiverBoats } from '../world/RiverBoats.js';
 import { SeaShips, capsule } from '../world/SeaShips.js';
 import { Wildlife } from '../world/Wildlife.js';
 import { Ambience } from '../world/Ambience.js';
+import { ElvenGlow } from '../world/ElvenGlow.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 
@@ -115,7 +116,10 @@ export class GameScene extends Scene {
         // Small life about the world, and its sounds: the sea, the wind, the woods, birds, crickets (scenery)
         this.wildlife = new Wildlife(this);
         this.ambience = new Ambience(this);
+        // The elven spear's glow, on whoever carries it
+        this.elvenGlow = new ElvenGlow(this);
         this.events.once('shutdown', () => {
+            this.elvenGlow.destroy();
             this.chests.destroy();
             this.fieldDemons.destroy();
             this.riverBoats.destroy();
@@ -219,6 +223,7 @@ export class GameScene extends Scene {
             // Heroes and trees sort by where they stand, so you pass in front of and behind each other
             if (player?.sprite && !player.sailing) player.sprite.setDepth(sortDepth(this, player.sprite.y + FEET));
         });
+        this.elvenGlow?.update(this.players, this.town ? [] : this.chests.hoards);
     }
 
     /**

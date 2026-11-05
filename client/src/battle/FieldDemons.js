@@ -90,6 +90,10 @@ const BAR = 1.3 * TILE;          // it stands this far before you
 const BAR_PRESS = 20;            // ...and walking on in, this near: inside its body's reach, so you're put back
 const BAR_HOLD_MS = 700;         // ...and stays so, this long after you last pressed on
 const BAR_TURN = 16;             // it turns to you only once you're this far round it, side to side
+const SHADOW = 2.5 * TILE;       // in the trees by its post, it keeps level with you this far either way of it
+const RUSH = 1.5;                // ...keeping level with you or in your way, half again its pace
+const GLANCE_MS = 350;           // ...where you'll cross its line, judged this often
+const BAR_WALL = 1.25 * TILE;    // barring, it stands in the way in this far either side of it
 const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
 const BAR_WORDS = {
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
@@ -227,8 +231,8 @@ export class FieldDemons {
             return this.release();
         }
         // Each band comes as you near its stretch of coast, and goes as you leave it
-        this._near = new Set(Object.keys(FAMILIES).filter(fam => (!this.only || this.only(fam)) && PACKS.some(({ at: [x, y], family }) =>
-            family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? FAR : NEAR))));
+        this._near = new Set(Object.keys(FAMILIES).filter(fam => (!this.only || this.only(fam)) && PACKS.some(({ at: [x, y], family, near, far }) =>
+            family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? far ?? FAR : near ?? NEAR))));
         // (and stays while one of it is after you, however far from its posts it's followed you)
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT && (!this.only || this.only(f.family))) this._near.add(f.family);
         if (!this._near.size) return this.release();
@@ -582,7 +586,7 @@ export class FieldDemons {
         if (this.scene.textures.exists('danger-skull')) {
             const strength = this._strength(), bob = Math.sin(this.scene.time.now / 380) * SKULL_BOB;
             for (const [k, p] of PACKS.entries()) {
-                if (!this._up.has(p.family) || p.guard || !ZONES[p.family]?.climb || !tooStrong(p.family, p.step, strength)) continue;
+                if (!this._up.has(p.family) || p.guard || !ZONES[climbOf(p.family)]?.climb || !tooStrong(climbOf(p.family), p.step, strength)) continue;      // (the wood's heart's too: its climb's the Point's)
                 const mine = this.foes.filter(f => f.pack === k && f.hp > 0);
                 if (!mine.length || mine.some(f => f.state !== 'post' || !f.foe.ready)) continue;
                 want.add(k);
@@ -688,7 +692,11 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
-            if (you && f.guard && f.woods && this._deep(f, you) < NOTICE_DEEP) return this._home(f, dt, fromPost, delta);
+            if (you && f.guard && f.woods && this._deep(f, you) < NOTICE_DEEP) {
+                if (d <= AGGRO && this._deep(f, you) > 0) return this._shadow(f, you, dt, delta);
+                f.shadowK = null;
+                return this._home(f, dt, fromPost, delta);
+            }
             if (d <= AGGRO && f.guard && this._shallow(f, you)) return this._bar(f, you, d, dt, delta);
             f.barring = false;
             if (d <= AGGRO && !((f.calm -= delta) > 0)) {
@@ -1034,7 +1042,7 @@ export class FieldDemons {
         const [wx, wy] = inWay ? [you.x + px / pd * along, you.y + py / pd * along] : [tx, ty], w = Math.hypot(wx - foe.x, wy - foe.y);
         // (facing you side-on, turning only once you're well round it: straight above or below, it flipped to and fro)
         const left = Math.abs(rx) > BAR_TURN ? rx > 0 : foe.left ?? rx > 0, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
-        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(1, w / (f.spec.speed * dt || 1)), facing);
+        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(RUSH, w / (f.spec.speed * dt || 1)), facing);
         else {
             this._step(f, 0, 0, dt, 1, you);
             if (!foe.striking) foe.face?.(facing.x, facing.y);
@@ -1044,6 +1052,44 @@ export class FieldDemons {
             f.barT = BAR_SAY_MS;
         }
         f.barring = true;
+    }
+
+    /**
+     * You're in the trees by its post, not yet where it warns: it keeps level with you along its line, a tile in front of
+     * where it stops warning, saying nothing and never coming out to you (the user's: at the edge it came too near), so
+     * it's in your way as you go on in (the user ran in between two posts, past them both; `SHADOW` either way of its post).
+     */
+    _shadow(f, you, dt, delta) {
+        const { foe, post } = f, { along, deeper } = this._line(f);
+        // (a tile in front of where it warns no more: its post is BAR_DEEP in, and reached there it fought)
+        const fore = deeper ? Math.max(0, (this.scene.overworld.forest.depthAt(post.x, post.y) - (BAR_DEEP - 1)) * TILE) : 0;
+        // (where you'll cross its line, coming in on the slant, not where you are: there it was beside you, not before you)
+        const v = this.scene.localPlayer?.sprite?.body?.velocity, at = { x: post.x - (deeper?.x ?? 0) * fore, y: post.y - (deeper?.y ?? 0) * fore };
+        const ahead = deeper && v ? (at.x - you.x) * deeper.x + (at.y - you.y) * deeper.y : 0, vin = deeper && v ? v.x * deeper.x + v.y * deeper.y : 0;
+        const lead = ahead > 0 && vin > 20 ? Math.min(1, ahead / vin) : 0;
+        // (looked at now and then, a glance: a quick feint can still get past it, the user's: harder, not impossible)
+        if (f.shadowK == null || (f.glance -= delta) <= 0) {
+            f.glance = GLANCE_MS;
+            f.shadowK = Math.max(-SHADOW, Math.min(SHADOW, (you.x + (v?.x ?? 0) * lead - post.x) * along.x + (you.y + (v?.y ?? 0) * lead - post.y) * along.y));
+        }
+        const k = f.shadowK;
+        const tx = post.x + along.x * k - (deeper?.x ?? 0) * fore, ty = post.y + along.y * k - (deeper?.y ?? 0) * fore, g = Math.hypot(tx - foe.x, ty - foe.y);
+        f.barring = false;
+        const left = Math.abs(you.x - foe.x) > BAR_TURN ? you.x < foe.x : foe.left ?? you.x < foe.x, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
+        if (g > 3) return this._step(f, (tx - foe.x) / g, (ty - foe.y) / g, dt, Math.min(RUSH, g / (f.spec.speed * dt || 1)), facing);
+        this._step(f, 0, 0, dt);
+        if (!foe.striking) foe.face?.(facing.x, facing.y);
+    }
+
+    /** A wood's guard's line at its post: `along` it, and `deeper` into the wood (none where the wood's flat about it). */
+    _line(f) {
+        if (!f.line) {
+            const { post } = f, depth = (x, y) => (f.woods && this.scene.overworld?.forest?.depthAt(x, y)) || 0;
+            const gx = depth(post.x + TILE, post.y) - depth(post.x - TILE, post.y), gy = depth(post.x, post.y + TILE) - depth(post.x, post.y - TILE);
+            const g = Math.hypot(gx, gy);
+            f.line = g ? { along: { x: -gy / g, y: gx / g }, deeper: { x: gx / g, y: gy / g } } : { along: { x: 0, y: 0 }, deeper: null };
+        }
+        return f.line;
     }
 
     /** Home to its post, walking, round by the map (never put back there: the user's, it could go wrong all sorts of ways). */
@@ -1241,6 +1287,12 @@ export class FieldDemons {
             if (f.hp <= 0 || !f.barring) continue;
             const r = BODY * (f.foe.scale || 1) + BODY / 2, d = Math.hypot(f.foe.x - x, f.foe.y - y);
             if (d < r && d < Math.hypot(f.foe.x - px, f.foe.y - py)) return true;
+            // (and a wood's guard bars the way in either side of it, `BAR_WALL`: round, a dash on the slant slid you off
+            // it and past; round its end you can still get, quick)
+            const { along, deeper } = this._line(f);
+            if (!deeper) continue;
+            const side = (x - f.foe.x) * deeper.x + (y - f.foe.y) * deeper.y, was = (px - f.foe.x) * deeper.x + (py - f.foe.y) * deeper.y;
+            if (Math.abs((x - f.foe.x) * along.x + (y - f.foe.y) * along.y) < BAR_WALL && Math.abs(side) < r && side > was) return true;
         }
         return false;
     }

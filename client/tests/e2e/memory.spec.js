@@ -260,6 +260,42 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
     });
 
+    test("the wood's heart past the guards: its elves' packs near its chest and the chest's gleam, under budget, and all let go when you leave", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await keepUp(page);
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        // (they'd fell you at once: held from coming for you, what's measured is what they hold)
+        await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, update = fd.update.bind(fd);
+            fd.update = (delta, feet) => { for (const f of fd.foes) f.calm = 1e9; return update(delta, feet); };
+        });
+        await go(10928, 10224);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+        const base = await settled(page);
+        const [cx, cy] = await page.evaluate(async () => (await import('/src/battle/Bands.js')).HEART_CHEST);
+        await go(cx + 40, cy + 40 - 23);
+        await page.waitForFunction(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            return fd.foes.some(f => f.kind === 'sylph') && fd.foes.every(f => f.foe.ready) && window.__PHASER_GAME.textures.exists('elven-glow'); }, null, { timeout: 30000 });
+        const there = await settled(page);
+        const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
+        await go(10928, 10224);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+        // (the gleam's picture goes a while after it's out of sight)
+        await page.waitForFunction(() => !window.__PHASER_GAME.textures.exists('elven-glow'), null, { timeout: 30000 });
+        const after = await settled(page);
+        console.log("the wood's heart", +(there.mb - base.mb).toFixed(2), 'MB', sheets.join(' '));
+        expect(sheets).toEqual(expect.arrayContaining(['foe-sylph', 'foe-enchantress', 'foe-shyde']));
+        expect(there.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx' || k === 'elven-glow'))).toEqual([]);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.chests.length), 'its chest gone too').toBe(0);
+    });
+
     test("the river boats round Riverhold: their picture comes as you near the river and goes when you leave it", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

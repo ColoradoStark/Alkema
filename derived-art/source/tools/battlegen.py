@@ -268,6 +268,45 @@ FOES = {
             'attack-s': seq('sorceress-magic-', [1, 2, 3, 2, 1], [75, 75, 300, 75, 75]) + [('sorceress', 50)],
             'defend-s': hit(['sorceress-defend-1', 'sorceress-defend-2']),
         }},
+    # More of the wood elves (data/core/units/elves), each casting its strongest ranged attack: the shaman's entangle,
+    # the druid's and shyde's thorns, the enchantress's and sylph's faerie fire (halos aside, as the sorceress's).
+    # Wesnoth gives none a death, and the sylph a single frame (only her halo moves)
+    'shaman': {
+        'name': 'Elvish Shaman', 'race': 'elf', 'hp': 26, 'damage': 4, 'folder': 'wesnoth-shaman', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('shaman', 1000)],
+            'breeze-s': seq('shaman-idle-', [1, 2, 3, 4, 5, 6, 6, 5, 4, 3], 200),
+            'attack-s': [('shaman', 225), ('shaman-attack2', 225), ('shaman', 100), ('shaman', 50)],
+            'defend-s': hit(['shaman', 'shaman-defend']),
+        }},
+    'druid': {
+        'name': 'Elvish Druid', 'race': 'elf', 'hp': 36, 'damage': 6, 'folder': 'wesnoth-druid', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('druid', 1000)],
+            'attack-s': seq('druid-magic-', [1, 2, 3, 4, 4, 3, 2, 1], 75) + [('druid', 50)],
+            'defend-s': hit(['druid-defend-1', 'druid-defend-2']),
+        }},
+    'enchantress': {
+        'name': 'Elvish Enchantress', 'race': 'elf', 'hp': 50, 'damage': 10, 'folder': 'wesnoth-enchantress', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('enchantress', 1000)],
+            'attack-s': seq('enchantress-magic-', [1, 2, 2, 2, 2, 2, 1], 75) + [('enchantress', 50)],
+            'defend-s': hit(['enchantress-defend-1', 'enchantress-defend-2']),
+        }},
+    'shyde': {
+        'name': 'Elvish Shyde', 'race': 'elf', 'hp': 46, 'damage': 8, 'folder': 'wesnoth-shyde', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('shyde', 1000)],
+            'attack-s': [('shyde-ftouch-attack3', 600), ('shyde', 50)],      # held while its nature halo plays, 8 x 75
+            'defend-s': hit(['shyde', 'shyde-defend']),
+        }},
+    'sylph': {
+        'name': 'Elvish Sylph', 'race': 'elf', 'hp': 60, 'damage': 10, 'folder': 'wesnoth-sylph', 'cloth': 'forest',
+        'anims': {
+            'stand-s': [('sylph', 1000)],
+            'attack-s': [('sylph', 525)],                                       # its faerie fire halo, 7 x 75
+            'defend-s': hit(['sylph']),
+        }},
 }
 
 # Wesnoth's team colour: these magenta shades, darkest to lightest (data/core/team-colors)

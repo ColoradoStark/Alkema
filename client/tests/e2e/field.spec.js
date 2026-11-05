@@ -1382,6 +1382,59 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/home|post/);
     });
 
+    test("dashing into the wood between two posts, a guard is there before you (the user's: they ran between them, past, to the wood's middle; harder now, not impossible)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        // Two neighbouring posts in the wood by the river road, and the road between them: the way in is straight
+        // away from the road, between them
+        const gap = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), depth = (x, y) => ow.forest.depthAt(x, y);
+            const posts = PACKS.filter(p => p.guard && p.woods).map(p => p.at);
+            for (const a of posts) for (const b of posts) {
+                const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+                if (a === b || d < 120 || d > 200) continue;
+                const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+                // the way into the wood across the gap, and a road spot back along it
+                const nx = -(b[1] - a[1]) / d, ny = (b[0] - a[0]) / d;
+                for (const s of [1, -1]) {
+                    let road = null;
+                    for (let r = 32; r < 200 && !road; r += 8) {
+                        const x = mx - s * nx * r, y = my - s * ny * r;
+                        if (open(x, y) && !(depth(x, y) > 0)) road = { x, y };
+                    }
+                    const deep = { x: mx + s * nx * 160, y: my + s * ny * 160 };
+                    if (road && depth(deep.x, deep.y) > depth(mx, my)) return { road, way: { x: s * nx, y: s * ny }, posts: [a, b] };
+                }
+            }
+            return null;
+        });
+        expect(gap).not.toBeNull();
+        await standAt(page, gap.road.x, gap.road.y);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.guard && f.foe.ready).length), { timeout: 30000 }).toBeGreaterThan(1);
+        await page.waitForTimeout(1500);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite, log = window.__dash = [];
+            window.__dashRec = () => log.push([Math.round(gs.overworld.forest.depthAt(me.x, me.y + 23) * 10) / 10, ...gs.fieldDemons.foes.filter(f => f.guard)
+                .map(f => ({ f, d: Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23) })).sort((a, b) => a.d - b.d).slice(0, 2).map(({ f, d }) => `${f.state}${f.barring ? "+bar" : ""}@${Math.round(d)} p${Math.round(Math.hypot(f.foe.x - f.post.x, f.foe.y - f.post.y))} fd${gs.overworld.forest.depthAt(f.foe.x, f.foe.y)}`)]);
+            gs.events.on('postupdate', window.__dashRec);
+        });
+        // Run straight in (the keys nearest the way)
+        const keys = [gap.way.x > 0.38 ? 'ArrowRight' : gap.way.x < -0.38 ? 'ArrowLeft' : null, gap.way.y > 0.38 ? 'ArrowDown' : gap.way.y < -0.38 ? 'ArrowUp' : null].filter(Boolean);
+        for (const k of keys) await page.keyboard.down(k);
+        await page.waitForTimeout(3000);
+        for (const k of keys) await page.keyboard.up(k);
+        const deepest = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            return gs.overworld.forest.depthAt(me.x, me.y + 23);
+        });
+        const { BAR_DEEP } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ BAR_DEEP: m.BAR_DEEP })));
+        const dash = await page.evaluate(() => window.__dash.filter((_, i) => i % 3 === 0));
+        expect(deepest, `stopped where they warn, not let past: ${JSON.stringify(dash)}`).toBeLessThanOrEqual(BAR_DEEP);
+    });
+
     test("over the bridge and up the bank, the guard there holds its whole zone, open ground and all, warning you off as you cross into it and fighting further in; and none stands in the Point", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
@@ -1414,6 +1467,70 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         expect((await guard(page, at)).state).toBe('post');
         await standAt(page, spots[1].x, spots[1].y);
         await expect.poll(() => guard(page, at).then(g => g?.state), { timeout: 30000 }).toMatch(/chase|windup|recover/);
+    });
+});
+
+test.describe("The wood's heart (the user's: past the guards a death run, its packs far too strong, and one prize for the quick)", () => {
+    test("the wood past the guards is full of elves' packs far too strong for you, only those near you made; at its heart a chest, guarded, with an elven spear in it, once for each hero; carried, the spear sparkles, its picture let go once it's put away", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const heart = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            const { HEART_CHEST } = await import('/src/battle/Bands.js');
+            const packs = PACKS.filter(p => p.family.startsWith('heart'));
+            const guards = PACKS.filter(p => p.guard).map(p => p.at);
+            return {
+                chest: HEART_CHEST, count: packs.length,
+                // every one in the wood, in its zone, its band all elves, and well past where the guards stand
+                inWood: packs.every(p => ow.forest.depthAt(...p.at) > 0 && ow.zoneAt(...p.at)?.id === 33),
+                elves: [...new Set(packs.flatMap(p => p.band))].sort(),
+                clear: Math.min(...packs.map(p => Math.min(...guards.map(g => Math.hypot(g[0] - p.at[0], g[1] - p.at[1]))))) / 32,
+                chestDeep: ow.forest.depthAt(...HEART_CHEST),
+            };
+        });
+        expect(heart.count, 'a lot of them (the user\'s)').toBeGreaterThan(20);
+        expect(heart.inWood).toBe(true);
+        expect(heart.elves).toEqual(['druid', 'enchantress', 'shaman', 'shyde', 'sorceress', 'sylph']);
+        expect(heart.clear, 'none within reach of a guard\'s post').toBeGreaterThan(5);
+        expect(heart.chestDeep, 'deep in the wood').toBeGreaterThan(10);
+
+        // At the chest: its keepers about it, only the packs near made, every one far too strong
+        await standAt(page, heart.chest[0] + 40, heart.chest[1] + 40);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'sylph' && f.foe.ready)), { timeout: 30000 }).toBe(true);
+        const about = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return { bodies: fd.foes.length, families: [...fd._up].filter(f => f.startsWith('heart')).length, weakest: Math.min(...fd.foes.map(f => f.maxHp)), skulls: fd._marks?.size ?? 0 };
+        });
+        expect(about.bodies, 'only the packs near you (weak phones)').toBeLessThan(30);
+        expect(about.weakest).toBeGreaterThan(1e6);
+        // Walk into the chest (they're held: this is about the chest): the spear's yours, and its glow over the chest went with it
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (f) => false; });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.hoards.length), { timeout: 10000 }).toBe(1);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('elven-glow')), { timeout: 10000 }).toBe(true);
+        await standAt(page, heart.chest[0], heart.chest[1]);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.bag.includes('elven-spear')), { timeout: 10000 }).toBe(true);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').flags['heart-spear'])).toBe(true);
+        // ...once: away and back, no chest
+        await standAt(page, heart.chest[0] + 700, heart.chest[1]);
+        await page.waitForTimeout(7000);
+        await standAt(page, heart.chest[0] + 40, heart.chest[1] + 40);
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.chests.length), 'no second chest').toBe(0);
+
+        // Carried, it sparkles: the faerie fire's stars coming off it
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip('elven-spear'));
+        await expect.poll(() => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), em = gs.elvenGlow.lit.get(gs.localPlayer.id);
+            return !!em && em.emitting && em.getAliveParticleCount() > 0;
+        }), { timeout: 30000 }).toBe(true);
+        const stats = await page.evaluate(() => { const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory; return { spear: inv.item('spear').attack, elven: inv.item('elven-spear').attack }; });
+        expect(stats.elven, 'a look and nothing more (the user\'s)').toBe(stats.spear);
+        // Put away: the glow goes, and its picture with it
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.unequip('weapon'));
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('elven-glow')), { timeout: 30000 }).toBe(false);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').elvenGlow.lit.size)).toBe(0);
     });
 });
 

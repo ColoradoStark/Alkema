@@ -1830,6 +1830,319 @@
    },
    "image": "sorceress.png"
   },
+  "shaman": {
+   "name": "Elvish Shaman",
+   "race": "elf",
+   "hp": 26,
+   "damage": 4,
+   "frameWidth": 90,
+   "frameHeight": 90,
+   "feet": 72,
+   "tall": 48,
+   "anims": {
+    "stand-s": [
+     [
+      0,
+      1000
+     ]
+    ],
+    "breeze-s": [
+     [
+      1,
+      200
+     ],
+     [
+      2,
+      200
+     ],
+     [
+      3,
+      200
+     ],
+     [
+      4,
+      200
+     ],
+     [
+      5,
+      200
+     ],
+     [
+      6,
+      200
+     ],
+     [
+      6,
+      200
+     ],
+     [
+      5,
+      200
+     ],
+     [
+      4,
+      200
+     ],
+     [
+      3,
+      200
+     ]
+    ],
+    "attack-s": [
+     [
+      0,
+      225
+     ],
+     [
+      7,
+      225
+     ],
+     [
+      0,
+      100
+     ],
+     [
+      0,
+      50
+     ]
+    ],
+    "defend-s": [
+     [
+      0,
+      80
+     ],
+     [
+      8,
+      220
+     ],
+     [
+      0,
+      80
+     ]
+    ]
+   },
+   "image": "shaman.png"
+  },
+  "druid": {
+   "name": "Elvish Druid",
+   "race": "elf",
+   "hp": 36,
+   "damage": 6,
+   "frameWidth": 90,
+   "frameHeight": 90,
+   "feet": 75,
+   "tall": 52,
+   "anims": {
+    "stand-s": [
+     [
+      0,
+      1000
+     ]
+    ],
+    "attack-s": [
+     [
+      1,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      3,
+      75
+     ],
+     [
+      4,
+      75
+     ],
+     [
+      4,
+      75
+     ],
+     [
+      3,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      1,
+      75
+     ],
+     [
+      0,
+      50
+     ]
+    ],
+    "defend-s": [
+     [
+      5,
+      80
+     ],
+     [
+      6,
+      220
+     ],
+     [
+      5,
+      80
+     ]
+    ]
+   },
+   "image": "druid.png"
+  },
+  "enchantress": {
+   "name": "Elvish Enchantress",
+   "race": "elf",
+   "hp": 50,
+   "damage": 10,
+   "frameWidth": 90,
+   "frameHeight": 90,
+   "feet": 75,
+   "tall": 65,
+   "anims": {
+    "stand-s": [
+     [
+      0,
+      1000
+     ]
+    ],
+    "attack-s": [
+     [
+      1,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      2,
+      75
+     ],
+     [
+      1,
+      75
+     ],
+     [
+      0,
+      50
+     ]
+    ],
+    "defend-s": [
+     [
+      3,
+      80
+     ],
+     [
+      4,
+      220
+     ],
+     [
+      3,
+      80
+     ]
+    ]
+   },
+   "image": "enchantress.png"
+  },
+  "shyde": {
+   "name": "Elvish Shyde",
+   "race": "elf",
+   "hp": 46,
+   "damage": 8,
+   "frameWidth": 90,
+   "frameHeight": 90,
+   "feet": 74,
+   "tall": 53,
+   "anims": {
+    "stand-s": [
+     [
+      0,
+      1000
+     ]
+    ],
+    "attack-s": [
+     [
+      1,
+      600
+     ],
+     [
+      0,
+      50
+     ]
+    ],
+    "defend-s": [
+     [
+      0,
+      80
+     ],
+     [
+      2,
+      220
+     ],
+     [
+      0,
+      80
+     ]
+    ]
+   },
+   "image": "shyde.png"
+  },
+  "sylph": {
+   "name": "Elvish Sylph",
+   "race": "elf",
+   "hp": 60,
+   "damage": 10,
+   "frameWidth": 100,
+   "frameHeight": 100,
+   "feet": 85,
+   "tall": 81,
+   "anims": {
+    "stand-s": [
+     [
+      0,
+      1000
+     ]
+    ],
+    "attack-s": [
+     [
+      0,
+      525
+     ]
+    ],
+    "defend-s": [
+     [
+      0,
+      80
+     ],
+     [
+      0,
+      220
+     ],
+     [
+      0,
+      80
+     ]
+    ]
+   },
+   "image": "sylph.png"
+  },
   "snowchaser": {
    "name": "Snowchaser",
    "race": "beast",

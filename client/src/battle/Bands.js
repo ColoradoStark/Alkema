@@ -8,6 +8,7 @@
 import { loadFoe, forgetFoe } from './Foe.js';
 import { DEMON_KINDS } from './Demons.js';
 import GUARDS from './guards.json';
+import HEART from './heart.json';
 
 // A unit's Wesnoth level: how many of its zone's hero's blows it takes, and how much of their hit points its blow
 const LEVEL_HITS = [2.5, 4, 7, 12, 20, 32];
@@ -35,6 +36,14 @@ export const BAND_KINDS = {
     // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
     // (turning at once, no paper turn: the user's, November 2026, they'd rather the elves didn't)
     sorceress: shooter(2, { speed: 140, missile: null, tint: 0x9fe8ff, race: 'elf', paper: false }),
+    // The wood's own beyond them (zone 33's heart, docs/WORLD.md's Southern Forest): its casters, slower than you, so
+    // a run to the chest at its heart can be made, every one of their shots dodged (the user's: a death run)
+    shaman: shooter(1, { speed: 62, missile: null, tint: 0x9cff8a, race: 'elf', paper: false }),
+    druid: shooter(2, { speed: 66, missile: null, tint: 0x7ee08a, race: 'elf', paper: false }),
+    enchantress: shooter(3, { speed: 72, missile: null, tint: 0xd6a8ff, race: 'elf', paper: false }),
+    shyde: shooter(3, { speed: 80, missile: null, tint: 0xb8ffe8, race: 'elf', paper: false }),
+    // (the chest's keeper, a boss: grown, named; she leaves none of her own, the chest's beside her)
+    sylph: shooter(4, { speed: 76, missile: null, tint: 0xfff3a8, race: 'elf', paper: false, boss: true, scale: 1.6, label: 'Elvish Sylph' }),
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
 export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));
@@ -68,8 +77,22 @@ const GUARD_GROUP = 5;
     (BANDS[`guards-${Math.floor(i / GUARD_GROUP)}`] ??= []).push({ at: g.at, band: ['sorceress'], woods: g.woods, step: GUARD_STEP, guard: true });
 });
 
-/** The climb a band's foes are made on (ZONES in zones.js): a zone's own, the guards' the Point's. */
-export const climbOf = (family) => (family.startsWith('guards') ? 'z35' : family);
+// Past the guards, the wood's heart (the user's, November 2026: slip past them, and its middle's packs kill you; a
+// chest at its heart for the quick): where zonegen.py says (heart.json), each pack its own band, made only within
+// `HEART_NEAR` (there are dozens: the zone's usual reach would make a hundred at once), deeper ones stronger
+export const HEART_STEP = GUARD_STEP + 2;
+export const { chest: HEART_CHEST } = HEART;
+const HEART_NEAR = 10 * 32, HEART_FAR = 13 * 32;     // (just past the screen's edge: at 12, thirty bodies about the chest)
+const HEART_BANDS = [['shaman', 'shaman', 'druid'], ['druid', 'shaman', 'shaman'], ['sorceress', 'shaman', 'druid'],
+    ['enchantress', 'druid', 'shaman'], ['shyde', 'druid', 'sorceress']];
+const HEART_RING = [['sylph', 'enchantress', 'shyde'], ['enchantress', 'shyde', 'druid'], ['shyde', 'enchantress', 'druid']];
+HEART.packs.forEach((p, i) => {
+    const band = p.ring ? HEART_RING[i % HEART_RING.length] : HEART_BANDS[i % HEART_BANDS.length];
+    BANDS[`heart-${i}`] = [{ at: p.at, band, woods: true, step: HEART_STEP + (p.ring ? 2 : 0), near: HEART_NEAR, far: HEART_FAR }];
+});
+
+/** The climb a band's foes are made on (ZONES in zones.js): a zone's own, the guards' and the wood's heart's the Point's. */
+export const climbOf = (family) => (family.startsWith('guards') || family.startsWith('heart') ? 'z35' : family);
 
 const sheetsOf = (zone) => [...new Set(BANDS[zone].flatMap(p => p.band))];
 
