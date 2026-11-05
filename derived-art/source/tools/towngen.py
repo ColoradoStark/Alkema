@@ -1411,7 +1411,7 @@ def riverhold():
     t.lane([(17, 16), (17, 9), (16, 6)], half=1)          # the alley behind the smithy
     t.lane([(39, 17), (39, 22)], half=1)                  # the armourer's door to the road
     t.lane([(34, 16), (35, 6), (40, 5)], half=1)          # round the armourer to the graves
-    t.lane([(4, 19), (4, 23)], half=1)                    # the healer's door, by the gate
+    t.lane([(5, 18), (5, 23)], half=1)                    # the healer's door, by the gate
     t.lane([(17, 28), (17, 37), (40, 37)], half=1)        # the riverside walk behind the shops
     t.lane([(26, 28), (26, 30)], half=1)
     t.lane([(34, 28), (34, 37)], half=1)
@@ -1429,9 +1429,11 @@ def riverhold():
                         sign="THE FERRYMAN'S REST", icon='inn', inside=dict(name='inn', kind='inn', size=(19, 12))))
     t.torch(24.6, 14.5)     # torches either side of the inn door, lit at dusk
     t.torch(27.4, 14.5)
-    # The healer's, just inside the gate (the user's: you come into town to be healed, and shouldn't have to cross it)
-    healer = b(1, 10, dict(w=7, roof=4, storeys=[('stone', 3), ('stone', 2)], roof_kind='slate',
-                           doors=[dict(at=3.5, kind='arched')], windows=[1.5, 5.5], sign='HEALER',
+    # The healer's, just inside the gate (the user's: you come into town to be healed, and shouldn't have to cross it),
+    # where the armourer's stood and its size (the user's, November 2026: bigger and nearer the gate, it and its wall
+    # seemed all the town there was; smaller, the weaponsmith's beside it showed there was more to see)
+    healer = b(1, 12, dict(w=6, roof=3, storeys=[('stone', 3)], roof_kind='slate',
+                           doors=[dict(at=4, kind='arched')], windows=[1.5], sign='HEALER',
                            styles=('posts', 'plain', 'posts'), inside=dict(name='healer', kind='healer', size=(12, 9))))
     smith = b(8, 9, dict(w=7, roof=3, storeys=[('tan', 3)], roof_kind='red', doors=[dict(at=3.5)],
                          windows=[1.5, 5.5], sign='WEAPONSMITH', icon='sword', inside=dict(name='weapons', kind='weapons', size=(9, 8))))
@@ -1476,7 +1478,7 @@ def riverhold():
     p('notice', 28.5, 16.3)
     # Around the buildings
     p('anvil', 14.2, 16.2)
-    p('woodpile', 15.6, 13.2)
+    p('woodpile', 7, 14.9)
     p('hay', 2.2, 32)
     p('hay_bales', 4.5, 35.5)
     p('cart', 8.5, 35)
@@ -1513,7 +1515,7 @@ def riverhold():
         trees.append(('pine', W - 1.2, y + 1.5))
     for x, y in ((51.8, 16), (57, 18), (52.5, 25.5), (58, 26), (57.5, 39), (51.6, 36), (44.2, 12),
                  (44.5, 33.5), (30.5, 1.2), (33.5, 2), (10.6, 39.3), (5.2, 39.3),
-                 (42.6, 21), (34, 31.5), (8.6, 38.2)):
+                 (42.6, 21), (34, 31.5), (2.3, 9.6), (8.6, 38.2)):
         trees.append(('oak' if int(x + y) % 3 else 'tree', x, y))
     for kind, x, y in trees:
         p(kind, x, y)
