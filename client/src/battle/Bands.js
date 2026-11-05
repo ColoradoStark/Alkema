@@ -31,9 +31,8 @@ export const BAND_KINDS = {
     rouser: { ...DEMON_KINDS.brute, speed: 74, reach: 50, windup: 700, recover: 900, anim: 'attack', race: 'goblin', level: 1,
         boss: true, scale: 1.75, label: 'Goblin Rouser', chest: true },
     // The Southern Forest's guards round the first area (its wood keeps anyone off the road out of it: the user's,
-    // block the first area off till the story says where the journey goes): an elder wose, grown, and a sorceress
-    // throwing faerie fire, both a little quicker than you (the user walked past slower wardens)
-    elderwose: { ...DEMON_KINDS.brute, speed: 140, reach: 54, windup: 700, recover: 900, presses: true, anim: 'attack', race: 'wose', level: 2, scale: 1.3 },
+    // block the first area off till the story says where the journey goes): an elvish sorceress throwing faerie fire,
+    // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
     sorceress: shooter(2, { speed: 140, missile: null, tint: 0x9fe8ff, race: 'elf' }),
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
@@ -58,15 +57,14 @@ export const BANDS = {
 };
 
 // The guards: where tools/zonegen.py says (guards.json: one within a few tiles of every way out of the first area),
-// an elder wose and a sorceress by turns (one each: a pair at all 33 posts was 66 bodies held from the start, on a weak
-// phone), made far up the Point's climb (`GUARD_STEP`: ten packs past its last, as the wardens were), and keeping to
+// a sorceress at each (one each: a pair at all 33 posts was 66 bodies held from the start, on a weak phone), made far up the Point's climb (`GUARD_STEP`: ten packs past its last, as the wardens were), and keeping to
 // the trees where they stand in them by the road (`woods`: on the road you're out of their reach)
 // They come in groups of neighbours down the road (`GUARD_GROUP` posts each, `guards-0`, `guards-1`...), each made
 // only while you're near it, as a zone's band is: all at once, the start had every one of them about it.
 export const GUARD_STEP = 16;
 const GUARD_GROUP = 5;
 [...GUARDS].sort((a, b) => a.at[1] - b.at[1] || a.at[0] - b.at[0]).forEach((g, i) => {
-    (BANDS[`guards-${Math.floor(i / GUARD_GROUP)}`] ??= []).push({ at: g.at, band: [i % 2 ? 'sorceress' : 'elderwose'], woods: g.woods, step: GUARD_STEP, guard: true });
+    (BANDS[`guards-${Math.floor(i / GUARD_GROUP)}`] ??= []).push({ at: g.at, band: ['sorceress'], woods: g.woods, step: GUARD_STEP, guard: true });
 });
 
 /** The climb a band's foes are made on (ZONES in zones.js): a zone's own, the guards' the Point's. */

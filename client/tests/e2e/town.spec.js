@@ -28,11 +28,15 @@ async function enterWorld(page) {
 // Hold a direction for ms of the game's own time (a busy machine runs the game slower than the clock on the wall)
 const hold = (page, dir, ms) => page.evaluate(async ([dir, ms]) => {
     const keys = window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys;
-    const clock = window.__PHASER_GAME.scene.getScene('GameScene').time;
-    const start = clock.now;
+    // (timed by the physics steps that move you: under load the clock ran ahead of them, and you came up short of the gate)
+    const world = window.__PHASER_GAME.scene.getScene('GameScene').physics.world;
+    let t = 0;
+    const step = () => { t += 1000 / world.fps; };
+    world.on('worldstep', step);
     keys[dir] = true;
-    while (clock.now - start < ms) await new Promise(r => setTimeout(r, 16));
+    while (t < ms) await new Promise(r => setTimeout(r, 16));
     keys[dir] = false;
+    world.off('worldstep', step);
 }, [dir, ms]);
 
 const where = (page) => page.evaluate(() => {
@@ -566,6 +570,68 @@ test.describe('Riverhold', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.clip.muted ? 'silent' : 'voiced')).toBe('voiced');
     });
 
+    test("Riverhold's healer has her voice the first time you go in to her from the street (as an iPhone allows), the line she's saying fetched first and alone (the user heard only her second line: all four coming at once on a phone, the first was late)", async ({ page }) => {
+        test.setTimeout(150000);
+        await page.addInitScript(() => {
+            let tapping = false;
+            for (const e of ['touchend', 'click', 'keydown']) {
+                window.addEventListener(e, (ev) => { if (ev.isTrusted) tapping = true; }, true);
+                window.addEventListener(e, () => setTimeout(() => { tapping = false; }), false);
+            }
+            const play = HTMLMediaElement.prototype.play;
+            HTMLMediaElement.prototype.play = function () {
+                if (tapping) this.__tapped = true;
+                if (!this.muted && !this.__tapped) return Promise.reject(new DOMException('no tap', 'NotAllowedError'));
+                return play.call(this);
+            };
+        });
+        // (a phone's slow line: each of her clips a while coming, so all four at once kept the first from her mouth till you'd tapped on)
+        const asked = [];
+        let came = Infinity;        // when her first line's clip came
+        await page.route(/\/portraits\/talk\/riverhold-healer-/, async (route) => {
+            const line = route.request().url().match(/healer-(\d+)/)[1];
+            asked.push({ line, at: Date.now() });
+            await new Promise(r => setTimeout(r, 1500));
+            await route.continue();
+            if (line === '01') came = Math.min(came, Date.now());
+        });
+        await enterWorld(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'wren')?.sprite),
+            { timeout: 60000 }).toBe(true);
+        const clip = () => page.evaluate(() => {
+            const c = window.__PHASER_GAME.scene.getScene('UIScene').dialogue.clip;
+            return c && !c.paused && c.currentTime > 0 ? (c.muted ? 'silent' : 'voiced') : 'not yet';
+        });
+        // A word with Wren in the street, tapped through and closed
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === 'wren'));
+        });
+        await expect.poll(clip, { timeout: 30000, intervals: [50] }).not.toBe('not yet');
+        for (let i = 0; i < 4; i++) {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(200);
+        }
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').dialogue.close());
+        // In through her door (walked: no tap), and up to her
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { arrive } = await (await fetch('/towns/riverhold-healer.json')).json();
+            await gs.changeMap('riverhold-healer', arrive, 'up');
+        });
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').town?.folk.find(f => f.plan.id === 'healer')?.sprite),
+            { timeout: 60000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            ui._lastTalk = null;
+            ui.talkTo(gs.town.folk.find(f => f.plan.id === 'healer'));
+        });
+        await expect.poll(clip, { timeout: 30000, intervals: [50] }).not.toBe('not yet');
+        expect(await clip()).toBe('voiced');
+        expect(asked.filter(a => a.at < came).map(a => a.line), 'her first line fetched alone, before the rest').toEqual(['01']);
+    });
+
     test("Riverhold's healer asks if she should see to your wounds, mends you on a yes for her price (the user's), and asks again next time", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
@@ -848,12 +914,20 @@ test.describe('Doors', () => {
             await gs.enterPlace(WORLD.places.find(p => p.name === 'Fernwick'));
         });
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
+        // (arrived and settled: the fade in done, its folk dressed; their sheets coming in held the game at a few frames a second)
+        await expect.poll(() => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return !gs.cameras.main.fadeEffect.isRunning && gs.town.folk.every(f => !f.sprite || f.sprite.ready !== false) && gs.game.loop.actualFps > 20;
+        }), { timeout: 30000 }).toBe(true);
         const exit = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const { audio } = await import('/src/audio/audio.js');
             window.__played = [];
+            window.__at = {};       // (when each came, in the page: the test's own looks are slow under load)
             const play = audio.play.bind(audio);
-            audio.play = (name, opts) => { window.__played.push(name); return play(name, opts); };
+            audio.play = (name, opts) => { window.__played.push(name); window.__at[name] ??= performance.now(); return play(name, opts); };
+            const cam = gs.cameras.main, fadeOut = cam.fadeOut.bind(cam);
+            cam.fadeOut = (...a) => { window.__at.fade ??= performance.now(); return fadeOut(...a); };
             const room = gs._room.bind(gs);
             gs._room = (where) => new Promise(r => setTimeout(() => r(room(where)), 2000));     // a slow server
             const exit = gs.town.data.exits.find(e => e.to === 'fernwick-cottage');
@@ -862,13 +936,16 @@ test.describe('Doors', () => {
             me.body.reset(me.x, me.y);
             return exit;
         });
-        const t0 = Date.now();
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = true; });
+        await page.evaluate(() => { window.__at.go = performance.now(); window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = true; });
         await expect.poll(() => page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return window.__played.some(n => n.startsWith('door')) && gs.cameras.main.fadeEffect.isRunning;
-        }), { timeout: 1500, intervals: [16] }).toBe(true);
-        expect(Date.now() - t0).toBeLessThan(1200);
+            // (the fade going out, or gone out already: it's a quarter of a second, and under load a look takes longer)
+            const fade = gs.cameras.main.fadeEffect;
+            return window.__played.some(n => n.startsWith('door')) && fade.direction && (fade.isRunning || fade.isComplete);
+        }), { timeout: 5000, intervals: [16] }).toBe(true);
+        const at = await page.evaluate(() => window.__at);
+        expect(at.door - at.go, 'the door heard').toBeLessThan(1200);
+        expect(at.fade - at.go, 'the fade begun').toBeLessThan(1200);
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.movementKeys.up = false; });
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick-cottage');
 

@@ -540,7 +540,7 @@ mountain &= ~river
 for m in (forest, desert):
     m &= ~river
 # Keep the river banks clear of trees and rock
-forest &= ~(dist_to(river) <= 2)
+forest &= ~(dist_to(river) <= 5)       # (the user's: a bank to walk and fight on, as wide as the shore path below the Point; at 2 it was too narrow)
 mountain &= dist_to(river) > 3
 
 

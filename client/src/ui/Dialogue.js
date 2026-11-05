@@ -295,7 +295,7 @@ export class Dialogue {
         this.pages = this._script(folk, night);
         this.page = 0;
         this.seen = 0;
-        this.clips = clipsOf(this.scene, id, night);
+        this.clips = clipsOf(this.scene, id, night, this.pages[0]?.line);
         if (img?.naturalWidth) this._showPainted(img);
         else {
             this._portrait(folk);
@@ -388,6 +388,7 @@ export class Dialogue {
         if (clip && clip === this.clip && page.more && clip.currentTime < this._saidBy(this.page + 1)) return;   // saying it now
         this._stopClip();
         if (!clip || !this.painting || this.showing !== this.painting.src) return;
+        if (!clip.firstChild) give(clip);       // (tapped on before the rest were fetched)
         this.clip = clip;
         clip.wanted = true;
         clip.currentTime = page.more ? Math.max(0, (clip.said[page.word] ?? 0) - 0.15) : 0;    // back to a later page: from its words
@@ -677,6 +678,17 @@ function pages(lines) {
     });
 }
 
+/** Put a line's clip on its player, and fetch it. */
+function give(v) {
+    for (const [ext, type] of CLIP_FORMATS) {
+        const src = document.createElement('source');
+        src.src = `/portraits/talk/${v.file}.${ext}`;
+        src.type = type;
+        v.appendChild(src);
+    }
+    v.load();
+}
+
 /** Let go of someone's clips. */
 function dropClips(id) {
     for (const v of voiced.get(id)?.values() || []) {
@@ -694,31 +706,38 @@ function dropClips(id) {
 /**
  * Someone's clips, line by line (an empty Map if they have none): by night each
  * line's night clip where it has one. A line said only by day has `night: null`,
- * one said only after dark no clip of its own: neither is held out of its hour. Made once for the hour, and fetched as soon as
- * they're made; the other hour's are let go.
+ * one said only after dark no clip of its own: neither is held out of its hour. Made once for the hour, the line
+ * they'll say first fetched at once and the rest after it; the other hour's are let go.
  */
-function clipsOf(scene, id, night = false) {
+function clipsOf(scene, id, night = false, first = null) {
     const listed = id && scene.cache.json.get('talk')?.[id];
     if (!listed) return new Map();
     if (voiced.get(id)?.night !== night) {
         dropClips(id);
+        // The line they'll say first is fetched first and alone, the rest once it's come (the user heard Riverhold's
+        // healer only from her second line: all four at once on a phone, the first was still coming as they tapped on)
+        const now = first in listed ? first : Object.keys(listed)[0];
         const ofHour = (said) => (night && 'night' in said ? said.night : said);
         const set = new Map(Object.entries(listed).filter(([, said]) => ofHour(said)?.clip).map(([line, said]) => {
             const { clip: file, at } = ofHour(said);
             const v = spare.pop() || player();
             v.said = at || [];        // when each word of the line is said (s)
             v.dataset.line = line;
-            for (const [ext, type] of CLIP_FORMATS) {
-                const src = document.createElement('source');
-                src.src = `/portraits/talk/${file}.${ext}`;
-                src.type = type;
-                v.appendChild(src);
-            }
-            v.load();
+            v.file = file;
+            if (line === now) give(v);
             return [line, v];
         }));
         set.night = night;
         voiced.set(id, set);
+        const rest = () => {
+            if (voiced.get(id) !== set) return;         // (let go meanwhile)
+            for (const v of set.values()) if (!v.firstChild) give(v);
+        };
+        const lead = set.get(now);
+        if (lead) {
+            lead.addEventListener('canplaythrough', rest, { once: true });
+            setTimeout(rest, 8000);         // (and in any case, a while after)
+        } else rest();
     }
     return voiced.get(id);
 }

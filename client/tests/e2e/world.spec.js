@@ -157,9 +157,16 @@ test.describe('Living world', () => {
             const me = gs.localPlayer.sprite;
             me.setPosition(x, y - 23);
             me.body.reset(x, y - 23);
-            // (two seconds of the game's clock, which the dark closes in by: under load the wall's ran ahead of it)
-            const t0 = gs.time.now;
-            while (gs.time.now - t0 < 2000) await new Promise(r => setTimeout(r, 50));
+            // (till the dark's settled, closing in frame by frame: under load a long frame counts for at most 200 ms,
+            // so two seconds of the clock weren't two of the dark's; at least two, at most ten)
+            const t0 = gs.time.now, { forest } = gs.world;
+            let last = -1;
+            while (gs.time.now - t0 < 10000) {
+                await new Promise(r => setTimeout(r, 250));
+                const now = forest.gloom.visible ? forest.gloom.alpha : 0;
+                if (gs.time.now - t0 >= 2000 && Math.abs(now - last) < 0.002) break;
+                last = now;
+            }
             const { gloom } = gs.world.forest;
             const label = gs.world.labels.find(l => l.getData('hidden'));
             const minimap = window.__PHASER_GAME.scene.getScene('UIScene').minimap.dark.alpha;

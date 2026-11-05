@@ -107,6 +107,7 @@ export class GameScene extends Scene {
         this.chests = new Chests(this);
         // Foes on the coast and the roads, fought where they stand (the game's one way of fighting)
         this.fieldDemons = new FieldDemons(this);
+        this.overworld.blocker = (x, y, px, py) => this.fieldDemons.blocks(x, y, px, py);     // (a guard warning you off is walked into as a wall is)
         // Boats going up and down the rivers round Riverhold (scenery)
         this.riverBoats = new RiverBoats(this);
         // Ships going by off the coasts (scenery)

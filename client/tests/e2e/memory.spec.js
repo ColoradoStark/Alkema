@@ -219,7 +219,7 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
     });
 
-    test("the first area's guards: a stretch of the road's, its elder woses and sorceresses, under budget, and let go when you leave it", async ({ page }) => {
+    test("the first area's guards: a stretch of the road's, its elvish sorceresses, under budget, and let go when you leave it", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await keepUp(page);
@@ -252,7 +252,8 @@ test.describe('Memory', () => {
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         const after = await settled(page);
         console.log("the first area's guards", +(there.mb - base.mb).toFixed(2), 'MB', near.join(' '), sheets.join(' '));
-        expect(sheets).toEqual(expect.arrayContaining(['foe-elderwose', 'foe-sorceress']));
+        expect(sheets).toEqual(expect.arrayContaining(['foe-sorceress']));
+        expect(sheets, 'no woses (the user\'s)').not.toContain('foe-elderwose');
         expect(near.filter(f => f.startsWith('guards')).length).toBeLessThan(5);     // (not every group about the road: only those near)
         expect(there.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);

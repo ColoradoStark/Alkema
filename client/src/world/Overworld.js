@@ -207,9 +207,11 @@ export class Overworld {
         const step = () => {
             if (!walking || !body.enable) return;
             const { position: pos, prev, width: w, height: h } = body;
-            if (!this.boxBlocked(pos.x, pos.y, w, h)) return;
-            if (!this.boxBlocked(pos.x, prev.y, w, h)) pos.y = prev.y;
-            else if (!this.boxBlocked(prev.x, pos.y, w, h)) pos.x = prev.x;
+            // (and anyone standing in your way that won't be walked through, `blocker`: a guard warning you off)
+            const no = (x, y) => this.boxBlocked(x, y, w, h) || !!this.blocker?.(x + w / 2, y + h / 2, prev.x + w / 2, prev.y + h / 2);
+            if (!no(pos.x, pos.y)) return;
+            if (!no(pos.x, prev.y)) pos.y = prev.y;
+            else if (!no(prev.x, pos.y)) pos.x = prev.x;
             else pos.set(prev.x, prev.y);
             body.updateCenter();
         };

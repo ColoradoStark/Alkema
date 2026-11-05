@@ -85,9 +85,9 @@ const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, y
 export const BAR_DEEP = 4;
 export const NOTICE_DEEP = 2;
 const BAR = 1.3 * TILE;          // it stands this far before you
+const BAR_PRESS = 20;            // ...and walking on in, this near: inside its body's reach, so you're put back
 const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
 const BAR_WORDS = {
-    elderwose: 'An Elder Wose blocks your way: "Turn back, little one. None walk the old wood without the Wardens\' leave, and you have not earned it."',
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
 };
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
@@ -933,10 +933,21 @@ export class FieldDemons {
         return this._deep(f, you) <= BAR_DEEP;
     }
 
-    /** A guard comes and stands before you, facing you, and warns you off: no blow. */
+    /**
+     * A guard comes and stands before you, facing you, and warns you off: no blow. It keeps itself in your way further in
+     * (the user's: a block as well as words; quicker than you, it's not walked round; walking back out, it lets you go),
+     * a wall you can't pass through (`_apart`).
+     */
     _bar(f, you, d, dt, delta) {
         const { foe } = f;
-        if (d > BAR) this._step(f, (you.x - foe.x) / d, (you.y - foe.y) / d, dt, 1, you);
+        // (walking further in, across your way; else toward its post)
+        const v = this.scene.localPlayer?.sprite?.body?.velocity, sp = v ? Math.hypot(v.x, v.y) : 0;
+        const ahead = sp > 20 && { x: you.x + v.x / sp * 2 * TILE, y: you.y + v.y / sp * 2 * TILE };
+        const pressing = ahead && this._deep(f, ahead) > this._deep(f, you);
+        const [px, py] = pressing ? [v.x / sp, v.y / sp] : [f.post.x - you.x, f.post.y - you.y];
+        const pd = Math.hypot(px, py) || 1, at = pressing ? BAR_PRESS : BAR;      // (pressing on: right up against you, so you're put back)
+        const tx = you.x + px / pd * at, ty = you.y + py / pd * at, g = Math.hypot(tx - foe.x, ty - foe.y);
+        if (g > 3 && (pressing || d > BAR)) this._step(f, (tx - foe.x) / g, (ty - foe.y) / g, dt, Math.min(1, g / (f.spec.speed * dt || 1)), you);
         else this._step(f, 0, 0, dt, 1, you);
         if (!f.barring || (f.barT -= delta) <= 0) {
             this.say(BAR_WORDS[f.kind] ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
@@ -1130,10 +1141,25 @@ export class FieldDemons {
         return !this.scene.overworld.boxBlocked(x - 9, y - 5, 18, 10);
     }
 
+    /**
+     * Does a guard warning you off stand in the way of your feet going from (px, py) to (x, y)? Asked by the world
+     * each physics step as walls are (`Overworld.blocker`), so it holds at any frame rate: once a fight's step, a slow
+     * phone's long frame carried you through it.
+     */
+    blocks(x, y, px, py) {
+        for (const f of this.foes) {
+            if (f.hp <= 0 || !f.barring) continue;
+            const r = BODY * (f.foe.scale || 1) + BODY / 2, d = Math.hypot(f.foe.x - x, f.foe.y - y);
+            if (d < r && d < Math.hypot(f.foe.x - px, f.foe.y - py)) return true;
+        }
+        return false;
+    }
+
     /** No two on one spot (you're moved least). */
     _apart() {
         const me = this.scene.localPlayer?.sprite;
-        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, w: 1, r: BODY / 2 * (f.foe.scale || 1) }));
+        // (a guard warning you off stands its ground, a wall you can't walk through: the user's, a block as well as words)
+        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, w: f.barring ? 0 : 1, r: BODY / 2 * (f.foe.scale || 1) * (f.barring ? 2 : 1) }));
         if (me && !this.fallen) all.push({ s: me, w: 0.15, r: BODY / 2 });
         for (let i = 0; i < all.length; i++) {
             for (let j = i + 1; j < all.length; j++) {
@@ -1141,7 +1167,9 @@ export class FieldDemons {
                 const body = all[i].r + all[j].r;
                 if (d >= body) continue;
                 const push = (body - d) / 2, ux = d ? dx / d : 1, uy = d ? dy / d : 0;
-                for (const [s, k] of [[a, -push * all[i].w], [b, push * all[j].w]]) {
+                // (one that won't move: the other's put out of it altogether)
+                const wa = all[j].w ? all[i].w : 2, wb = all[i].w ? all[j].w : 2;
+                for (const [s, k] of [[a, -push * wa], [b, push * wb]]) {
                     if (this._open(s.x + ux * k, s.y + uy * k + FEET)) s.setPosition(s.x + ux * k, s.y + uy * k);
                 }
             }
