@@ -35,6 +35,7 @@ export const MUSIC = {
     sea: [{ id: 'three-sheets' }, { id: 'wanderer' }],
     north: [{ id: 'legends-of-the-north' }, { id: 'over-the-northern-mountains' }],
     battle: [{ id: 'frantic' }],
+    boss: [{ id: 'battle-epic' }],       // a boss fight's (the user's: the music should change)
 };
 
 class Audio {

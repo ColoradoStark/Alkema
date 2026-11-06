@@ -1880,6 +1880,9 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             return { bar: ui.bossBar.shown, name: ui.bossBar.name.text, card: !!ui._bossCard?.active };
         }), { timeout: 10000 }).toEqual({ bar: true, name: 'GOBLIN ROUSER', card: true });
+        // ...and his own music, a boss's (the user's: the music should change)
+        const mood = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene')._mood);
+        await expect.poll(mood, { timeout: 3000 }).toBe('boss');
         // His bar follows his health
         const frac = await page.evaluate((i) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
@@ -1938,6 +1941,7 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         }, boss.i);
         expect(reset).toEqual({ hp: true, met: false, horned: false, called: 0 });
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 5000 }).toBe(false);
+        await expect.poll(mood, { timeout: 10000 }).not.toBe('boss');
         // Felled: his bar empties and goes, and his chest; the card's darkening let go
         await standAt(page, near.x, near.y);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 10000 }).toBe(true);
@@ -1952,5 +1956,6 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             return { bar: ui.bossBar.shown, dark: ui.textures.exists('boss-dark') };
         }), { timeout: 8000 }).toEqual({ bar: false, dark: false });
+        await expect.poll(mood, { timeout: 10000 }).not.toBe('boss');
     });
 });

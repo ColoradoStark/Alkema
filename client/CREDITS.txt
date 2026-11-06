@@ -39,6 +39,7 @@ Music
     "Legends of the North", "Over the Northern Mountains" by Mattias
       Westlund (the far north)
     "Frantic" by Stephen Rozanc (TreizeCouleurs) (battles)
+    "Battle Epic" by Doug Kaufman (http://dougkaufman.net/) (boss fights)
     License: GPL v2 or later
     https://github.com/wesnoth/wesnoth/tree/master/data/core/music
   "Three Sheets to the Wind" by Scott Buckley (at sea), as shipped with

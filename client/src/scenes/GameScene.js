@@ -236,8 +236,9 @@ export class GameScene extends Scene {
         const lost = this.town ? 0 : this.overworld.forest.lost;
         // (in a place, in town coordinates: its place on the map says)
         const at = this.town ? this._townPlace : this.world ? feet : null;
-        // (foes after you, the user's)
-        if (!this.town && this.fieldDemons?.engaged) mood = 'battle';
+        // (foes after you, the user's; a boss, his own, the user's)
+        if (!this.town && this.fieldDemons?.boss) mood = 'boss';
+        else if (!this.town && this.fieldDemons?.engaged) mood = 'battle';
         else if (this.localPlayer?.sailing) mood = 'sea';
         else if (lost > (this._mood === 'forest' ? 0.2 : 0.6)) mood = 'forest';
         else if (at && this.overworld.isSnowy(at.x, at.y)) mood = 'north';
@@ -247,7 +248,7 @@ export class GameScene extends Scene {
         }
         this._moodFor += delta;
         // A fight's music starts with the fight, and lets go as any other place's does (chased off and on again, it doesn't flap)
-        const now = mood === 'battle';
+        const now = mood === 'battle' || mood === 'boss';
         if (mood !== this._mood && (now || this._moodFor >= MOOD_SETTLE_MS)) {
             this._mood = mood;
             audio.playMusic(mood);

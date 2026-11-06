@@ -284,6 +284,7 @@ export class FieldDemons {
         this._bars();
         // A boss after you: his bar along the bottom of the screen (the user's), not over his head
         const boss = this.foes.find(f => f.spec.boss && f.met && f.hp > 0 && f.state !== 'home' && f.state !== 'post');
+        this.boss = boss || null;       // (his music while he's after you: GameScene.updateMusic)
         this.scene.scene.get('UIScene')?.bossBar?.set(boss ? boss.spec.label : null, boss ? boss.hp / boss.maxHp : 0, delta);
     }
 
@@ -429,6 +430,7 @@ export class FieldDemons {
     release() {
         this._warned?.clear();
         this.scene.scene.get('UIScene')?.bossBar?.hide();
+        this.boss = null;
         this.provoked = false;      // (gone into a place: the guards forget you)
         this._unmark();
         for (const fam of [...this._up]) this._dismiss(fam);
