@@ -229,7 +229,7 @@ test.describe('Memory', () => {
             me.body.reset(x, y);
         }, [x, y]);
         // (measured by Castle Dunmere's drawbridge, far from every band and guard)
-        await go(10928, 10224);
+        await go(10960, 10192);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         const base = await settled(page);
         // On the road by a guard group's stretch (not in the trees, where they'd fell you): its guards come
@@ -248,7 +248,7 @@ test.describe('Memory', () => {
         const near = await page.evaluate(() => [...new Set(window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.map(f => f.family))].sort());
         const there = await settled(page);
         const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
-        await go(10928, 10224);
+        await go(10960, 10192);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         const after = await settled(page);
         console.log("the first area's guards", +(there.mb - base.mb).toFixed(2), 'MB', near.join(' '), sheets.join(' '));
@@ -274,7 +274,7 @@ test.describe('Memory', () => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, update = fd.update.bind(fd);
             fd.update = (delta, feet) => { for (const f of fd.foes) f.calm = 1e9; return update(delta, feet); };
         });
-        await go(10928, 10224);
+        await go(10960, 10192);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         const base = await settled(page);
         const [cx, cy] = await page.evaluate(async () => (await import('/src/battle/Bands.js')).HEART_CHEST);
@@ -283,7 +283,7 @@ test.describe('Memory', () => {
             return fd.foes.some(f => f.kind === 'sylph') && fd.foes.every(f => f.foe.ready) && window.__PHASER_GAME.textures.exists('elven-glow'); }, null, { timeout: 30000 });
         const there = await settled(page);
         const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
-        await go(10928, 10224);
+        await go(10960, 10192);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         // (the gleam's picture goes a while after it's out of sight)
         await page.waitForFunction(() => !window.__PHASER_GAME.textures.exists('elven-glow'), null, { timeout: 30000 });
@@ -305,7 +305,7 @@ test.describe('Memory', () => {
             me.body.reset(x, y);
         }, [x, y]);
         const boats = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').riverBoats.loaded);
-        await go(10928, 10224);            // Castle Dunmere's drawbridge, far from any river
+        await go(10960, 10192);            // Castle Dunmere's drawbridge, far from any river
         await expect.poll(boats).toBe(false);
         const base = await settled(page);
         await go(6320, 11120);             // the road below Riverhold, by the river
@@ -315,7 +315,7 @@ test.describe('Memory', () => {
             const s = window.__PHASER_GAME.textures.get('river-boats').source[0];
             return s.width * s.height * 4 / 2 ** 20;
         });
-        await go(10928, 10224);
+        await go(10960, 10192);
         await expect.poll(boats).toBe(false);
         const after = await settled(page);
         console.log('the river boats', +own.toFixed(2), 'MB');
@@ -379,7 +379,7 @@ test.describe('Memory', () => {
         await go(6320, 11120);             // the road below Riverhold, far from the sea
         await expect.poll(ships).toBe(false);
         const base = await settled(page);
-        await go(10928, 10224);            // Castle Dunmere's drawbridge, by the sea
+        await go(10960, 10192);            // Castle Dunmere's drawbridge, by the sea
         await expect.poll(ships, { timeout: 15000 }).toBe(true);
         const own = await page.evaluate(() => {
             const s = window.__PHASER_GAME.textures.get('sea-ships').source[0];

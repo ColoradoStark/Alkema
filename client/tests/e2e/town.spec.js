@@ -1106,7 +1106,7 @@ test.describe('Wanderers keep off thin paths', () => {
         await enterWorld(page);
         await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            await gs.enterPlace({ name: 'Castle Dunmere', x: 10928, y: 10220 });
+            await gs.enterPlace({ name: 'Castle Dunmere', x: 10960, y: 10188 });
         });
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key), { timeout: 20000 }).toBe('dunmere');
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.folk.filter(f => f.plan.wander).length),

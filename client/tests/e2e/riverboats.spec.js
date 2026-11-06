@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test';
 
 const RIVERSIDE = [6320, 11120];      // the road below Riverhold, by the river
-const FAR_OFF = [10920, 10224];       // Castle Dunmere's drawbridge, far from any river
+const FAR_OFF = [10952, 10192];       // Castle Dunmere's drawbridge, far from any river
 
 async function enterWorld(page) {
     await page.goto('/');

@@ -1,7 +1,9 @@
 // The elven spear's glow (the user's, November 2026: the treasure at the wood's heart, an LPC spear sparkling with
 // Wesnoth's elf magic, a look and nothing more): whoever carries it, you or another hero about, has the faerie fire's
-// little stars twinkling up off it (tools/elven_glow.py's sheet). Its picture is loaded only while someone carrying it is
-// about, and let go `FORGET_MS` after the last of them (the user's weak phones), every emitter with it.
+// little stars twinkling up off it as it's swung (tools/elven_glow.py's sheet; the user's: sparkling all the while,
+// walking about, got annoying), and a column of them rises off the wood's heart's chest that holds it, to find it by.
+// Its picture is loaded only while someone carrying it is about, and let go `FORGET_MS` after the last of them (the
+// user's weak phones), every emitter with it.
 
 const KEY = 'elven-glow';
 const ANIM = 'elven-glow-twinkle';
@@ -46,7 +48,7 @@ export class ElvenGlow {
             if (!em) this.lit.set(p.id, em = this._emitter());
             const s = p.sprite;
             em.setPosition(s.x, s.y).setDepth(SPOT_DEPTH);      // (its own light, as magic is: over the night and the wood's gloom)
-            em.emitting = s.visible && !p.sailing;
+            em.emitting = s.visible && !p.sailing && !!p.isAttacking;     // (swung or cast with, not walked about with)
         }
         for (const spot of spots) {
             let em = this.lit.get(spot.id);
@@ -70,7 +72,7 @@ export class ElvenGlow {
             speedY: { min: -26, max: -10 }, speedX: { min: -6, max: 6 },
             scale: { start: 0.5, end: 0.1 }, alpha: { start: 0.95, end: 0 },
             tint: TINTS, blendMode: 'ADD',
-            lifespan: { min: 500, max: 900 }, frequency: 90, quantity: 1,
+            lifespan: { min: 500, max: 900 }, frequency: 40, quantity: 1,      // (thick, for the moment of a swing)
         });
     }
 

@@ -49,6 +49,26 @@ const field = (page) => page.evaluate(() => {
 // (the Point's: its packs and places come first in PACKS and PLACES, so their numbers are the same)
 const places = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES.filter(p => p.family === 'z35'), PACKS: m.PACKS.filter(p => p.family === 'z35') })));
 
+/**
+ * The elven spear carried sparkles only as it's swung (the user's: always sparkling, walking about, got annoying;
+ * the column over its chest that led them there they liked, and it stays): none walking, stars as it's swung, and
+ * none again once the swing's done.
+ */
+async function sparklesAsSwung(page) {
+    const glow = () => page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), em = gs.elvenGlow.lit.get(gs.localPlayer.id);
+        return em ? { emitting: em.emitting, alive: em.getAliveParticleCount() } : null;
+    });
+    await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('elven-glow')), { timeout: 30000 }).toBe(true);
+    await page.keyboard.down('ArrowLeft');
+    await page.waitForTimeout(1200);
+    expect(await glow(), 'walking, no stars').toEqual({ emitting: false, alive: 0 });
+    await page.keyboard.up('ArrowLeft');
+    await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playAttack());
+    await expect.poll(() => glow().then(g => g?.alive || 0), { timeout: 2000 }).toBeGreaterThan(0);
+    await expect.poll(glow, { timeout: 5000 }).toEqual({ emitting: false, alive: 0 });
+}
+
 /** At the Point, every pack of it come and drawn. */
 async function atThePoint(page) {
     const { PLACES } = await places(page);
@@ -824,7 +844,7 @@ test.describe('Falling out on the world', () => {
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, hp = gs.scene.get('UIScene').hp;
             fd._hurt(fd.you, hp.max * 10, { x: 0, y: 0 });
-            gs.enterPlace({ name: 'Castle Dunmere', x: 10928, y: 10220 });
+            gs.enterPlace({ name: 'Castle Dunmere', x: 10960, y: 10188 });
         });
         await page.waitForTimeout(5000);
         const r = await page.evaluate(() => {
@@ -1615,12 +1635,9 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
         await page.waitForTimeout(500);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.chests.length), 'no second chest').toBe(0);
 
-        // Carried, it sparkles: the faerie fire's stars coming off it
+        // Carried, it sparkles as it's swung: the faerie fire's stars coming off it
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip('elven-spear'));
-        await expect.poll(() => page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), em = gs.elvenGlow.lit.get(gs.localPlayer.id);
-            return !!em && em.emitting && em.getAliveParticleCount() > 0;
-        }), { timeout: 30000 }).toBe(true);
+        await sparklesAsSwung(page);
         const stats = await page.evaluate(() => { const inv = window.__PHASER_GAME.scene.getScene('UIScene').inventory; return { spear: inv.item('spear').attack, elven: inv.item('elven-spear').attack }; });
         expect(stats.elven, 'a look and nothing more (the user\'s)').toBe(stats.spear);
         // Put away: the glow goes, and its picture with it
@@ -1728,10 +1745,7 @@ test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and
         await page.keyboard.up('ArrowRight');
         expect(await field(page).then(f => f.count), 'nothing came out').toBe(0);
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip('elven-spear'));
-        await expect.poll(() => page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), em = gs.elvenGlow.lit.get(gs.localPlayer.id);
-            return !!em && em.getAliveParticleCount() > 0;
-        }), { timeout: 30000 }).toBe(true);
+        await sparklesAsSwung(page);
         expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current?.data?.flags?.['heart-spear']), 'not kept: the real run is still to do').toBeFalsy();
     });
 });

@@ -440,12 +440,16 @@ mountain = (mountain_range(GREAT_RANGE, 9 * S)
             | mountain_range(ISLE_RIDGE, 4 * S)
             | mountain_range(NORTH_FELLS, 4 * S))
 mountain &= ~mountain_range([tall((PASS_L[0], 58)), (PASS[0] - 3 * S, PASS[1]), tall((PASS_L[0] + 1, 102))], 2.2 * S)   # the pass, end to end
-mountain &= land & (coast > 2 * S) & (watch_d > 5 * S)   # a walk along every shore; the Watch is open moorland to its tip
+# Every shore has a walk along it as wide as the river bank below Riverhold, or wider (the user's, November 2026:
+# the coast up to Seacombe was too narrow to fight a way along; the bank, trees 5 back, is the width): no rock, no
+# wood and none of a range's foot pines within SHORE tiles of the sea (a tile of it beach)
+SHORE = 3 * S
+mountain &= land & (coast > SHORE) & (watch_d > 5 * S)   # a walk along every shore; the Watch is open moorland to its tip
 # Three places stand on the strips of shore between the ranges and the sea,
 # each in a notch the cliffs leave for it: (target, how far the rock stands back)
 SHORE_SITES = {'Seacombe': (at((17, 122)), 5), 'Ashby': (at((20, 86)), 5), 'Castle Dunmere': (at((173, 158)), 6)}
 for name, (target, r) in SHORE_SITES.items():
-    ys, xs = np.nonzero(land & (coast == 2 * S + 1) & (dist_to(mountain) <= 2))   # the foot of the cliffs
+    ys, xs = np.nonzero(land & (coast == SHORE + 1) & (dist_to(mountain) <= 2))   # the foot of the cliffs
     k = int(np.argmin((xs - target[0]) ** 2 + (ys - target[1]) ** 2))
     site = (int(xs[k]), int(ys[k]))
     mountain &= np.hypot(XX - site[0], YY - site[1]) > r * S
@@ -540,8 +544,11 @@ mountain &= ~river
 for m in (forest, desert):
     m &= ~river
 # Keep the river banks clear of trees and rock
-forest &= ~(dist_to(river) <= 5)       # (the user's: a bank to walk and fight on, as wide as the shore path below the Point; at 2 it was too narrow)
-mountain &= dist_to(river) > 3
+BANK = 5
+forest &= ~(dist_to(river) <= BANK)    # (the user's: a bank to walk and fight on, as wide as the shore path below the Point; at 2 it was too narrow)
+mountain &= dist_to(river) > BANK      # (...and every bank as wide, a range's too)
+shore = dist_to(~land)                 # tiles in from the sea, the estuary's mouth now part of it
+forest &= shore > SHORE
 
 
 def no_diagonals(mask):
@@ -1253,11 +1260,11 @@ lay('village', V[3], at((92, 21)), open_ground, radius=12, margin=0, require=wat
 lay('village', V[4], at((194, 86)), open_ground & (watch_d < 3 * S), radius=10, margin=0, require=waterfront)   # fishing in the bay of the Watch's hook
 
 
-CAVES = [tall(p) for p in [(46, 104), (78, 96), (126, 96)]] + [at((53, 30))] + [tall(p) for p in [(36, 176), (156, 180)]]
+CAVES = [tall(p) for p in [(46, 104), (78, 96), (126, 96)]] + [at((59, 29))] + [tall(p) for p in [(36, 176), (156, 180)]]
 for i, (name, target) in enumerate(zip(D[:6], CAVES)):
     lay('dungeon', name, target, cave_ground, margin=0, require=cliff_foot)   # caves in the mountain walls (one up in the snowbound northern fells)
     if i == 3:
-        PLACES[-1]['wooded'] = True     # the fells' cave stands behind the snowy forest: no trail out to it
+        PLACES[-1]['wooded'] = True     # the fells' cave stands behind the snowy forest: no trail out to it (off the bay: the shore's walk took the rock between)
 lay('dungeon', D[6], at((218, 58)), cave_ground & big_island, margin=0, require=cliff_foot)
 cave_isle = lab == lab[at(ISLES[0][0][0][:2])[::-1]]
 ys, xs = np.nonzero(cave_isle & dry)
@@ -1484,7 +1491,8 @@ for y in range(N):
 # Mountain woods: thick at the foot of a range, thinning out over a few tiles,
 # and pines dotted up its lower slopes
 foot = dist_to(mountain_tile)
-for y, x in zip(*np.nonzero((foot >= 1) & (foot <= 4) & open_ground & ~occupied & ~approach & ~woods)):
+for y, x in zip(*np.nonzero((foot >= 1) & (foot <= 4) & open_ground & ~occupied & ~approach & ~woods
+                             & (shore > SHORE) & (dist_to(river) > BANK))):     # (the shore's walk and the banks kept clear)
     if rng.random() < 0.95 - 0.2 * foot[y, x]:
         TREES.append((x * T + rng.randrange(T), y * T + rng.randrange(T), tree_frame('pine' if rng.random() < 0.8 else 'broadleaf', snow[y, x])))
 for y, x in zip(*np.nonzero(mountain_tile & (inland <= 2) & ~occupied)):

@@ -77,11 +77,11 @@ export const WORLD = {
   {
    "name": "Castle Dunmere",
    "type": "castle",
-   "x": 10928,
-   "y": 10220,
+   "x": 10960,
+   "y": 10188,
    "rect": [
-    10816,
-    9952,
+    10848,
+    9920,
     224,
     256
    ]
@@ -282,10 +282,10 @@ export const WORLD = {
   {
    "name": "Shadowmaw",
    "type": "dungeon",
-   "x": 3344,
+   "x": 3792,
    "y": 1932,
    "rect": [
-    3296,
+    3744,
     1824,
     96,
     96
@@ -294,11 +294,11 @@ export const WORLD = {
   {
    "name": "Saltcliff Hollow",
    "type": "dungeon",
-   "x": 2416,
-   "y": 11980,
+   "x": 2448,
+   "y": 11948,
    "rect": [
-    2368,
-    11872,
+    2400,
+    11840,
     96,
     96
    ]
@@ -307,10 +307,10 @@ export const WORLD = {
    "name": "Gloomwater Grotto",
    "type": "dungeon",
    "x": 9712,
-   "y": 12140,
+   "y": 12076,
    "rect": [
     9664,
-    12032,
+    11968,
     96,
     96
    ]
