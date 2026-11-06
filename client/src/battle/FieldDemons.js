@@ -91,10 +91,12 @@ const BAR_PRESS = 20;            // ...and walking on in, this near: inside its 
 const BAR_HOLD_MS = 700;         // ...and stays so, this long after you last pressed on
 const BAR_TURN = 16;             // it turns to you only once you're this far round it, side to side
 const SHADOW = 2.5 * TILE;       // in the trees by its post, it keeps level with you this far either way of it
-const RUSH = 1.5;                // ...keeping level with you or in your way, half again its pace
-const GLANCE_MS = 350;           // ...where you'll cross its line, judged this often
+const RUSH = 1.5;                // ...keeping level with you, half again its pace, so it's before you as you come in
+const BAR_RUSH = 1.3;            // ...and in your way, a third again
+const GLANCE_MS = 500;           // ...where you'll cross its line, or where to keep across your way, judged this often
 const BAR_WALL = 1.25 * TILE;    // barring, it stands in the way in this far either side of it
 const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
+const BAR_HANDOFF = TILE / 2;    // another guard bars you in one's stead only this much nearer you
 const BAR_WORDS = {
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
 };
@@ -292,7 +294,11 @@ export class FieldDemons {
         if (yours !== null && yours !== this._entry?.zone) this._entry = { zone: yours, x: feet.x, y: feet.y };       // (where you crossed into it: a guard's ground is reckoned from there)
         for (const f of this.foes) {
             if (f.hp <= 0) continue;
-            const gone = yours !== null && !this._mine(f, feet.x, feet.y);
+            // (a guard you've struck keeps after you out of its trees, shooting from them: `_think`)
+            // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
+            // trees, each put you back over into the other's and they took turns, flashing; the user saw it)
+            const gone = yours !== null && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked))
+                && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE);
             this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
@@ -409,6 +415,7 @@ export class FieldDemons {
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
         this._warned?.clear();
+        this.provoked = false;      // (gone into a place: the guards forget you)
         this._unmark();
         for (const fam of [...this._up]) this._dismiss(fam);
         if (this._freeze > 0) this.scene.anims.resumeAll();        // (a hit-stop never outlives them)
@@ -494,6 +501,8 @@ export class FieldDemons {
         if (f.mark > 0) damage = Math.round(damage * (1 + f.markMore));      // Hunter's Mark
         f.hp = Math.max(0, f.hp - damage);
         if (f.state === 'post' || f.state === 'home') this._roused(f);
+        // (a guard struck, they're all after you now: no more warnings, the road no refuge from their shots; the user's)
+        if (f.guard) this.provoked = true;
         audio.play('hit_blade', { volume: 0.8 });
         fx.impact('metal', foe.x, foe.y - 22, foe.y);
         fx.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
@@ -528,6 +537,7 @@ export class FieldDemons {
     /** After you: it comes on a while before it first looks how far off you are (struck from further off, it gave up there and then, and was mended). */
     _roused(f) {
         f.state = 'chase';
+        f.barring = false;      // (a guard warning you off, struck: no wall now, a fight)
         f.lookT = LOOK_MS[1];
         f.lost = false;
         f.clearT = 0;
@@ -692,12 +702,14 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
-            if (you && f.guard && f.woods && this._deep(f, you) < NOTICE_DEEP) {
+            // (barring you already, it lets you go only once you're back out of the trees: where the gloom begins, put back
+            // a step it stood off, came on again, and warned you again, flashing; the user saw it)
+            if (you && f.guard && !this.provoked && f.woods && this._deep(f, you) < (f.barring ? 1 : NOTICE_DEEP)) {
                 if (d <= AGGRO && this._deep(f, you) > 0) return this._shadow(f, you, dt, delta);
                 f.shadowK = null;
                 return this._home(f, dt, fromPost, delta);
             }
-            if (d <= AGGRO && f.guard && this._shallow(f, you)) return this._bar(f, you, d, dt, delta);
+            if (d <= AGGRO && f.guard && !this.provoked && this._shallow(f, you)) return this._bar(f, you, d, dt, delta);
             f.barring = false;
             if (d <= AGGRO && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
@@ -731,6 +743,16 @@ export class FieldDemons {
             f.t -= delta;
             if (f.t <= 0) f.state = 'chase';
             return this._step(f, 0, 0, dt);
+        }
+        // (a guard you struck, you out of its trees: it comes to their edge and shoots from there, no way round to you)
+        if (f.guard && f.woods && !this._mine(f, you.x, you.y)) {
+            if (d > (f.spec.keep || 0)) this._step(f, dx / u, dy / u, dt);
+            else {
+                this._step(f, 0, 0, dt);
+                foe.face(you.x, you.y);
+            }
+            if (f.spec.ranged && f.cd <= 0 && d < SHOT_REACH + 60) this._windup(f);
+            return;
         }
         // Rock or water between it and you: round by the map (no way at all, or getting nowhere a long while: home)
         const way = this._way(f, you, delta, dt);
@@ -1017,7 +1039,8 @@ export class FieldDemons {
         const { foe } = f;
         // (one at a time, the nearest: the next post's, barring you too, walked into you from behind and shoved you
         // round the first; another stands and watches)
-        if (this.foes.some(o => o !== f && o.barring && o.hp > 0 && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d)) {
+        // (and one barring you already keeps on till another's well nearer you than it: the two took turns, flashing)
+        if (this.foes.some(o => o !== f && o.barring && o.hp > 0 && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (f.barring ? -BAR_HANDOFF : BAR_HANDOFF))) {
             f.barring = false;
             this._step(f, 0, 0, dt, 1, you);
             if (!foe.striking && Math.abs(you.x - foe.x) > BAR_TURN) foe.face?.(you.x, foe.y);
@@ -1039,17 +1062,26 @@ export class FieldDemons {
         // spot just ahead of you as you were put back, it went back and forth)
         const rx = foe.x - you.x, ry = foe.y - you.y, along = (rx * px + ry * py) / pd;
         const inWay = pressing && along > 0 && along < BODY * (foe.scale || 1) + BODY;
-        const [wx, wy] = inWay ? [you.x + px / pd * along, you.y + py / pd * along] : [tx, ty], w = Math.hypot(wx - foe.x, wy - foe.y);
+        // (where it keeps across to, judged at a glance now and then as it is coming in: you slide along it and cut
+        // round its end, quick, and you're past; the user's: at every frame it was a wall no one could get round)
+        if (!inWay) f.across = null;
+        else if (!f.across || (f.acrossT -= delta) <= 0) {
+            f.across = { x: you.x + px / pd * along, y: you.y + py / pd * along };
+            f.acrossT = GLANCE_MS;
+        }
+        const [wx, wy] = inWay ? [f.across.x, f.across.y] : [tx, ty], w = Math.hypot(wx - foe.x, wy - foe.y);
         // (facing you side-on, turning only once you're well round it: straight above or below, it flipped to and fro)
         const left = Math.abs(rx) > BAR_TURN ? rx > 0 : foe.left ?? rx > 0, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
-        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(RUSH, w / (f.spec.speed * dt || 1)), facing);
+        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(BAR_RUSH, w / (f.spec.speed * dt || 1)), facing);
         else {
             this._step(f, 0, 0, dt, 1, you);
             if (!foe.striking) foe.face?.(facing.x, facing.y);
         }
-        if (!f.barring || (f.barT -= delta) <= 0) {
+        // (said again only after a while, whoever bars you: said each time one took over, it flashed)
+        const now = this.scene.time.now;
+        if (!(now - this._barSaid < BAR_SAY_MS)) {
             this.say(BAR_WORDS[f.kind] ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
-            f.barT = BAR_SAY_MS;
+            this._barSaid = now;
         }
         f.barring = true;
     }
@@ -1241,6 +1273,7 @@ export class FieldDemons {
     /** You've come to elsewhere: they forget you. */
     forgive() {
         this.fallen = false;
+        this.provoked = false;
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post') {
             if (f.state === 'windup') f.foe.tint(null);
             f.state = 'home';
@@ -1265,9 +1298,9 @@ export class FieldDemons {
 
     /** Can feet stand at (x, y) on the world's map? */
     /** Is (x, y) in the zone `f` keeps to (or the sea, or anywhere for one that keeps to none)? */
-    _mine(f, x, y) {
+    _mine(f, x, y, trees = true) {
         // (one that keeps to the trees, the first area's guards: off the road, out of the wood, isn't its)
-        if (f.woods && !(this.scene.overworld?.forest?.depthAt(x, y) > 0)) return false;
+        if (trees && f.woods && !(this.scene.overworld?.forest?.depthAt(x, y) > 0)) return false;
         if (f.zone === null) return true;
         const z = this.scene.overworld?.zoneAt?.(x, y);
         return !z || z.id === f.zone;

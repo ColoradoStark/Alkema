@@ -1382,6 +1382,102 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/home|post/);
     });
 
+    test("walking on in where the wood darkens, the guard warns you once and holds her ground, not flickering between warning you and stepping back (the user's: they were still flashing)", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        // The first few posts by the road out of Riverhold, each with the road a few tiles off it
+        const spots = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), depth = (x, y) => ow.forest.depthAt(x, y);
+            const out = [];
+            for (const p of PACKS.filter(p => p.guard && p.woods)) {
+                const [gx, gy] = p.at;
+                let road = null;
+                for (let r = 64; r <= 192 && !road; r += 16) for (let a = 0; a < 16 && !road; a++) {
+                    const x = gx + Math.cos(a * Math.PI / 8) * r, y = gy + Math.sin(a * Math.PI / 8) * r;
+                    if (open(x, y) && !(depth(x, y) > 0)) road = { x, y };
+                }
+                if (road) out.push({ at: { x: gx, y: gy }, road });
+                if (out.length === 4) break;
+            }
+            return out;
+        });
+        expect(spots.length).toBe(4);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            const log = window.__flick = { bars: [], said: 0 };
+            const say = ui.notice.bind(ui);
+            ui.notice = (text, ms) => { if (/blocks your way/.test(text)) log.said++; return say(text, ms); };
+            window.__flickRec = () => log.bars.push(gs.fieldDemons.foes.some(f => f.barring) ? 1 : 0);
+        });
+        const runs = [];
+        for (const spot of spots) {
+            await standAt(page, spot.road.x, spot.road.y);
+            await expect.poll(() => guard(page, spot.at).then(g => g?.ready), { timeout: 30000 }).toBe(true);
+            await page.waitForTimeout(1500);
+            await page.evaluate(() => {
+                Object.assign(window.__flick, { bars: [], said: 0 });
+                window.__PHASER_GAME.scene.getScene('GameScene').events.on('postupdate', window.__flickRec);
+            });
+            // Straight from the road at her post, and on (the keys nearest the way)
+            const dx = spot.at.x - spot.road.x, dy = spot.at.y - spot.road.y, d = Math.hypot(dx, dy);
+            const keys = [dx / d > 0.38 ? 'ArrowRight' : dx / d < -0.38 ? 'ArrowLeft' : null, dy / d > 0.38 ? 'ArrowDown' : dy / d < -0.38 ? 'ArrowUp' : null].filter(Boolean);
+            for (const k of keys) await page.keyboard.down(k);
+            await page.waitForTimeout(3000);
+            for (const k of keys) await page.keyboard.up(k);
+            runs.push(await page.evaluate(() => {
+                window.__PHASER_GAME.scene.getScene('GameScene').events.off('postupdate', window.__flickRec);
+                const { bars, said } = window.__flick;
+                return { said, barred: bars.filter(Boolean).length, toggles: bars.filter((b, i) => i && b !== bars[i - 1]).length, bars: bars.join('') };
+            }));
+        }
+        for (const run of runs) {
+            expect(run.barred, `she bars your way: ${JSON.stringify(runs)}`).toBeGreaterThan(10);
+            expect(run.toggles, `barring, then not, then barring again: ${JSON.stringify(runs)}`).toBeLessThanOrEqual(2);
+            // (once at most: by Riverhold's north gate the next zone's guard holds the road, and has warned you already)
+            expect(run.said, `warned once, not again and again: ${JSON.stringify(runs)}`).toBeLessThanOrEqual(1);
+        }
+    });
+
+    test("struck, the guards stay hostile: the one you hit keeps after you, shooting from the trees as you stand on the road, and the others fight you too rather than warn you off, till you fall or go into a place (the user's: it fired back once and calmed down)", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        // (her shots are far up the climb: hit points enough for a few)
+        await page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
+            Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 1e15 }, configurable: true, writable: true });
+            ui.hp.max = ui.hp.now = 1e15;
+        });
+        const spot = await roadside(page);
+        await standAt(page, spot.dim.x, spot.dim.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g?.barring), { timeout: 30000 }).toBe(true);
+        // You strike her
+        await page.evaluate(({ x, y }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            const f = fd.foes.find(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48);
+            fd._strikeFoe(f, 1, { x: me.x, y: me.y + 23 });
+        }, spot.at);
+        // Back out on the road, she keeps after you, never stepping out of the trees, and shoots
+        await standAt(page, spot.road.x, spot.road.y);
+        const hurt0 = await hurt(page);
+        for (let k = 0; k < 30; k++) {
+            const g = await guard(page, spot.at);
+            expect(g.state, 'still after you').toMatch(/chase|windup|recover/);
+            expect(g.onRoad, 'never on the road').toBe(false);
+            await page.waitForTimeout(200);
+        }
+        expect(await hurt(page), 'she shot you from the trees').toBeGreaterThan(hurt0);
+        // Every guard's hostile now: back where the wood darkens, none warns you off, she fights
+        await standAt(page, spot.dim.x, spot.dim.y);
+        await page.waitForTimeout(2000);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.barring)), 'no warning now').toBe(false);
+        // Fallen and come to, they forgive you: they warn again
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.forgive());
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.provoked)).toBe(false);
+    });
+
     test("dashing into the wood between two posts, a guard is there before you (the user's: they ran between them, past, to the wood's middle; harder now, not impossible)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
@@ -1617,5 +1713,25 @@ test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and
             return account.current?.data?.gold;
         });
         expect(gold).not.toBe(123456);
+    });
+
+    test("the wood's heart's chest is there to be had, no guard or elf on the way, so the elven spear can be tried on (the user's: they wanted to see it); and like everything there it isn't kept", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page, '/?explore');
+        const chest = await page.evaluate(() => import('/src/battle/Bands.js').then(m => m.HEART_CHEST));
+        // (from where heroes start it's east, about 26 tiles, into the wood)
+        expect(Math.round((chest[0] - START.x) / 32)).toBe(26);
+        await standAt(page, chest[0] - 80, chest[1]);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.hoards.length), { timeout: 10000 }).toBe(1);
+        await page.keyboard.down('ArrowRight');
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.bag.includes('elven-spear')), { timeout: 5000 }).toBe(true);
+        await page.keyboard.up('ArrowRight');
+        expect(await field(page).then(f => f.count), 'nothing came out').toBe(0);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip('elven-spear'));
+        await expect.poll(() => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), em = gs.elvenGlow.lit.get(gs.localPlayer.id);
+            return !!em && em.getAliveParticleCount() > 0;
+        }), { timeout: 30000 }).toBe(true);
+        expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current?.data?.flags?.['heart-spear']), 'not kept: the real run is still to do').toBeFalsy();
     });
 });
