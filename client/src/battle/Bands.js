@@ -13,7 +13,7 @@ import HEART from './heart.json';
 // A unit's Wesnoth level: how many of its zone's hero's blows it takes, and how much of their hit points its blow
 const LEVEL_HITS = [2.5, 4, 7, 12, 20, 32];
 const LEVEL_HURTS = [0.09, 0.14, 0.2, 0.28, 0.36, 0.45];
-const BOSS_HITS = 22, BOSS_HURTS = 0.22;     // a zone's leader (and so the climb's: at its pack's step)
+const BOSS_HITS = 30, BOSS_HURTS = 0.22;     // a zone's leader (and so the climb's: at its pack's step); fought alone, a little more than 22 with his band about him
 
 /** One unit: how it fights (DEMON_KINDS' melee and caster parts, at its own pace) and its level. */
 const melee = (level, extra = {}) => ({ ...DEMON_KINDS.fury, speed: 70, anim: 'attack', level, ...extra });
@@ -34,8 +34,14 @@ export const BAND_KINDS = {
     poacher: shooter(1, { race: 'human' }),
     impaler: melee(1, { speed: 66, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'goblin', scale: 1.3 }),     // (a big one: the user's, some a little bigger than you)
     // (its leader, a boss: grown, named, a chest; nearly a rat's pace, the climb's stressful moment)
+    // Fought alone on his own ground once the rest of the Point is beaten (the user's, November 2026: a real boss
+    // fight, after the RPG makers' advice: not a sack of health, his moves from who he is, few and readable): every
+    // third blow a slam, the ground under him marked red as he raises it, struck all round (`slam`); at half his
+    // health he blows his war horn and goblins come ashore to him (`horn`: he's a rouser)
     rouser: { ...DEMON_KINDS.brute, speed: 74, reach: 50, windup: 700, recover: 900, anim: 'attack', race: 'goblin', level: 1,
-        boss: true, scale: 1.75, label: 'Goblin Rouser', chest: true },
+        boss: true, scale: 1.75, label: 'Goblin Rouser', title: 'Chief of the Shore Raiders', chest: true,
+        slam: { every: 3, windup: 1100, radius: 72, hurt: 1.5 },
+        horn: { at: 0.5, call: ['spearman', 'spearman', 'impaler'] } },
     // The Southern Forest's guards round the first area (its wood keeps anyone off the road out of it: the user's,
     // block the first area off till the story says where the journey goes): an elvish sorceress throwing faerie fire,
     // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
@@ -57,7 +63,8 @@ export const BAND_PAY = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s
 /**
  * Each zone's packs, its climb, first to last: where each stands (feet, px) and who's in it. The Point's from where the
  * river road comes in (Riverhold's watch keeps the road itself) south to its tip, L0 first, the Rouser's band last
- * (worked out from the world map's walking layer: open grass, eight tiles apart).
+ * (worked out from the world map's walking layer: open grass, eight tiles apart), and the Rouser himself beyond them,
+ * a boss's ground (`lair`: he waits, not to be struck, till every pack before him is beaten).
  */
 export const BANDS = {
     z35: [
@@ -67,7 +74,9 @@ export const BANDS = {
         { at: [6584, 12968], band: ['footpad', 'ruffian', 'poacher', 'footpad'] },
         { at: [6584, 13224], band: ['impaler', 'spearman', 'spearman', 'impaler'] },
         { at: [6424, 13432], band: ['footpad', 'poacher', 'poacher', 'footpad', 'ruffian'] },
-        { at: [6712, 13448], band: ['rouser', 'impaler', 'impaler', 'spearman', 'spearman', 'poacher'] },
+        { at: [6712, 13448], band: ['impaler', 'impaler', 'spearman', 'spearman', 'poacher'] },
+        // the Rouser, on his own ground at the Point's tip: a step with his band's, waiting till the rest are beaten (`lair`)
+        { at: [6450, 13580], band: ['rouser'], step: 6, lair: true },
     ],
 };
 

@@ -5,6 +5,7 @@ import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
 import { EnterPrompt } from '../ui/EnterPrompt.js';
+import { BossBar } from '../ui/BossBar.js';
 import { Dialogue, portraitUrl, nightNow } from '../ui/Dialogue.js';
 import { GearScreen } from '../ui/gear/GearScreen.js';
 import { Inventory } from '../inventory/Inventory.js';
@@ -43,6 +44,8 @@ export class UIScene extends Scene {
 
         // Asks before taking you into a city, village, castle or dungeon
         this.enterPrompt = new EnterPrompt(this, this.scale.width / 2, 32 + 448 - 70);   // low, clear of the hero
+        // A boss's health, along the bottom of the map just above the pad (FieldDemons sets it)
+        this.bossBar = new BossBar(this, 32 + 448 - 14);
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
         // In a fight, the blue button asks which spell (or skill)
@@ -210,6 +213,39 @@ export class UIScene extends Scene {
         card.zone = zone.name;
         this.tweens.add({ targets: card, alpha: 1, duration: 300 });
         this.tweens.add({ targets: card, alpha: 0, delay: ZONE_CARD_MS, duration: 600, onComplete: () => card.destroy() });
+    }
+
+    /**
+     * A boss steps up (FieldDemons, the user's: a boss fight should feel like one): the map's edges darken, its name
+     * and title come up large in the middle of the map a moment, and fade.
+     */
+    bossCard(name, title = '') {
+        this._bossCard?.destroy();
+        const W = this.scale.width, Y = 32 + 448 * 0.3;
+        if (!this.textures.exists('boss-dark')) {
+            const H = 448, tex = this.textures.createCanvas('boss-dark', W, H), ctx = tex.getContext();
+            ctx.save();
+            ctx.translate(W / 2, H / 2);
+            ctx.scale(1, H / W);
+            const r = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.75);
+            r.addColorStop(0.45, 'rgba(10, 4, 4, 0)');
+            r.addColorStop(1, 'rgba(10, 4, 4, 0.7)');
+            ctx.fillStyle = r;
+            ctx.fillRect(-W, -W, W * 2, W * 2);
+            ctx.restore();
+            tex.refresh();
+        }
+        const bits = [
+            this.add.image(0, 32, 'boss-dark').setOrigin(0, 0),
+            this.add.text(W / 2, Y, name.toUpperCase(), { fontFamily: 'Alagard', fontSize: '28px', color: '#f6e6b4', stroke: '#1d131e', strokeThickness: 5, align: 'center', wordWrap: { width: W - 32 } }).setOrigin(0.5),
+            this.add.rectangle(W / 2, Y + 20, W * 0.6, 1, 0xc99a3e).setOrigin(0.5),
+        ];
+        if (title) bits.push(this.add.text(W / 2, Y + 32, title, { fontFamily: 'Romulus', fontSize: '15px', color: '#e8cf97', stroke: '#1d131e', strokeThickness: 3 }).setOrigin(0.5));
+        const card = this._bossCard = this.add.container(0, 0, bits).setDepth(57).setAlpha(0);
+        this.tweens.add({ targets: card, alpha: 1, duration: 400 });
+        // (its darkening let go with it: a canvas the map's size is most of a megabyte)
+        card.once('destroy', () => this._bossCard === card && this.textures.exists('boss-dark') && this.textures.remove('boss-dark'));
+        this.tweens.add({ targets: card, alpha: 0, delay: 2200, duration: 700, onComplete: () => card.destroy() });
     }
 
     /**

@@ -79,6 +79,8 @@ const RING = 64;                // a flanker makes for this far off you, on the 
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
+const BOSS_WAITS_MS = 8000;     // a boss waiting on his ground says so (his band not all beaten) at most this often
+const CALL_RING = 110;          // px from a boss that the foes his horn calls come ashore
 const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
 const SKULL_BOB = 2;            // px it bobs, up and down
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
@@ -130,6 +132,7 @@ const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];  
 export const PLACES = PACKS.flatMap((p, pack) => p.band.map((kind, k) => ({
     x: p.at[0] + AROUND[k][0], y: p.at[1] + AROUND[k][1], kind, family: p.family, pack, tier: p.tier, step: p.step ?? 0,
     role: KINDS[kind].ranged ? 'caster' : ROLES[p.band.slice(0, k).filter(o => !KINDS[o].ranged).length % ROLES.length],
+    lair: !!p.lair,
 }))).map((p, i) => ({ ...p, i }));
 
 /**
@@ -220,7 +223,7 @@ export class FieldDemons {
     get standing() {
         const me = this._you();
         if (!me) return [];
-        return this.foes.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
+        return this.foes.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT && !this._sealed(f));
     }
 
     /** Sheets on their way? */
@@ -280,6 +283,9 @@ export class FieldDemons {
         this._warn(feet);
         this._skulls();
         this._bars();
+        // A boss after you: his bar along the bottom of the screen (the user's), not over his head
+        const boss = this.foes.find(f => f.spec.boss && f.met && f.hp > 0 && f.state !== 'home' && f.state !== 'post');
+        this.scene.scene.get('UIScene')?.bossBar?.set(boss ? boss.spec.label : null, boss ? boss.hp / boss.maxHp : 0, delta);
     }
 
     /** The fight moved on `delta` ms (at most STEP_MS). */
@@ -295,6 +301,7 @@ export class FieldDemons {
         const yours = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id ?? null;
         if (yours !== null && yours !== this._entry?.zone) this._entry = { zone: yours, x: feet.x, y: feet.y };       // (where you crossed into it: a guard's ground is reckoned from there)
         for (const f of this.foes) {
+            if (f.ring && (f.state !== 'windup' || f.hp <= 0)) this._unslam(f);       // (a slam put off: its mark goes)
             if (f.hp <= 0) continue;
             // (a guard you've struck keeps after you out of its trees, shooting from them: `_think`)
             // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
@@ -344,20 +351,7 @@ export class FieldDemons {
             }
             const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i));
             if (!left.length) return;
-            const make = (p) => {
-                const spec = KINDS[p.kind];
-                const at = this._clear(p);
-                const foe = band.make(this.scene, at.x, at.y, p.kind, spec);
-                foe.grow(FOE_SCALE * (spec.scale || 1));
-                if (spec.paper === false) foe.paper = false;
-                if (spec.label) foe.labelColour('#ff8a7a');
-                foe.setDepthAt();
-                const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
-                // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
-                // home and was mended at once; none known, it goes where it likes)
-                const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-                return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
-            };
+            const make = (p) => this._body(fam, p);
             // One of each sheet first (not a fetch of it for every one wearing it)
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
             const mine = firsts.map(make);
@@ -378,11 +372,29 @@ export class FieldDemons {
         }
     }
 
+    /** One of a band made, at its place `p` (or `at`): its body and its numbers. */
+    _body(fam, p, at = this._clear(p)) {
+        const band = FAMILIES[fam], spec = KINDS[p.kind];
+        const foe = band.make(this.scene, at.x, at.y, p.kind, spec);
+        foe.grow(FOE_SCALE * (spec.scale || 1));
+        if (spec.paper === false) foe.paper = false;
+        if (spec.label) foe.labelColour('#ff8a7a');
+        foe.setDepthAt();
+        const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
+        // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
+        // home and was mended at once; none known, it goes where it likes)
+        const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
+        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+    }
+
     /** A band goes (you've left its stretch of coast), and its sheets; its slain stay down. */
     _dismiss(fam) {
         this._up.delete(fam);
         // (one sheet between many: destroyed together, the first lets it go)
-        for (const f of this.foes) if (f.family === fam) f.foe.destroy();
+        for (const f of this.foes) if (f.family === fam) {
+            this._unslam(f);
+            f.foe.destroy();
+        }
         this.foes = this.foes.filter(f => f.family !== fam);
         this._skulls();         // (theirs go with them)
         this._forget(fam);
@@ -417,6 +429,7 @@ export class FieldDemons {
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
         this._warned?.clear();
+        this.scene.scene.get('UIScene')?.bossBar?.hide();
         this.provoked = false;      // (gone into a place: the guards forget you)
         this._unmark();
         for (const fam of [...this._up]) this._dismiss(fam);
@@ -498,10 +511,12 @@ export class FieldDemons {
 
     /** A blow on a demon, from `from` (feet): the number, a flash, a knock back, its wind-up stopped; struck, it's after you. */
     _strikeFoe(f, damage, from, { words = null, colour = '#fff2a8' } = {}) {
-        if (f.hp <= 0) return;
+        if (f.hp <= 0 || this._sealed(f)) return;
         const { foe } = f, fx = this.scene.effects;
         if (f.mark > 0) damage = Math.round(damage * (1 + f.markMore));      // Hunter's Mark
         f.hp = Math.max(0, f.hp - damage);
+        const horn = f.spec.horn;
+        if (horn && f.met && !f.horned && f.hp > 0 && f.hp <= f.maxHp * horn.at) this.scene.time.delayedCall(300, () => this._horn(f));
         if (f.state === 'post' || f.state === 'home') this._roused(f);
         // (a guard struck, they're all after you now: no more warnings, the road no refuge from their shots; the user's)
         if (f.guard) this.provoked = true;
@@ -538,6 +553,7 @@ export class FieldDemons {
 
     /** After you: it comes on a while before it first looks how far off you are (struck from further off, it gave up there and then, and was mended). */
     _roused(f) {
+        if (f.spec.boss && !f.met && PACKS[f.pack]?.lair) this._bossBegins(f);
         f.state = 'chase';
         f.barring = false;      // (a guard warning you off, struck: no wall now, a fight)
         f.lookT = LOOK_MS[1];
@@ -549,9 +565,11 @@ export class FieldDemons {
     _slay(f) {
         audio.play('foe_down');
         f.state = 'dead';
-        this.slain.add(f.i);
+        if (!f.called) this.slain.add(f.i);         // (one his horn called isn't one of the zone's places)
+        this._unslam(f);
         f.foe.die();
         this._reward(f);
+        if (f.spec.boss && f.met) this._bossFalls(f);
         // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
         if (ZONES[f.family]?.climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
@@ -570,7 +588,7 @@ export class FieldDemons {
     _warn(feet) {
         this._warned ??= new Set();
         for (const [pack, p] of PACKS.entries()) {
-            if (!ZONES[p.family]?.climb || !p.step || p.guard || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
+            if (!ZONES[p.family]?.climb || !p.step || p.guard || p.lair || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
             if (PLACES.every(q => q.pack !== pack || this.slain.has(q.i))) continue;
             // (a pack below it still standing and nearer you is the one you're at: the packs stand about eight tiles
             // apart, and fighting one, the user was told the one beyond it was too strong, just after upgrading)
@@ -654,7 +672,7 @@ export class FieldDemons {
         const now = this.scene.time.now;
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
-        const { x, y } = f.foe, worth = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, PLACES[f.i], this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
+        const { x, y } = f.foe, worth = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, PLACES[f.i] ?? f, this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
         // Its essence, all it's worth, for the Upgrade page (the user's: gold is for town), and a little gold
         inv?.gather(worth);
         this._sparkle(x, y - f.foe.tall / 2, 0xb884ff, 14);
@@ -704,6 +722,13 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
+            if (this._sealed(f)) {          // a boss waits on his ground till his band's all beaten
+                if (d <= AGGRO && !((f.waitT -= delta) > 0)) {
+                    f.waitT = BOSS_WAITS_MS;
+                    this.scene.scene.get('UIScene')?.notice?.(`The ${f.spec.label} waits. Beat his raiders first.`, 3000);
+                }
+                return this._home(f, dt, fromPost, delta);
+            }
             // (barring you already, it lets you go only once you're back out of the trees: where the gloom begins, put back
             // a step it stood off, came on again, and warned you again, flashing; the user saw it)
             if (you && f.guard && !this.provoked && f.woods && this._deep(f, you) < (f.barring ? 1 : NOTICE_DEEP)) {
@@ -734,6 +759,7 @@ export class FieldDemons {
         }
         const dx = you.x - foe.x, dy = you.y - foe.y, u = d || 1;
         if (f.state === 'windup') {
+            if (f.slam) this._slamMark(f);
             if (f.spec.presses && d > f.spec.reach * 0.6) this._step(f, dx / u, dy / u, dt, 1, you);     // (a warden: no walking out of its reach)
             foe.face(you.x, you.y);
             f.t -= delta;
@@ -1134,6 +1160,7 @@ export class FieldDemons {
                 f.hp = Math.max(f.hp, f.maxHp);     // home again, mended
                 f.idle = null;
                 f.foe.rest();
+                if (f.spec.boss && f.met) this._bossResets(f);
             }
             return this._step(f, 0, 0, dt);
         }
@@ -1190,12 +1217,19 @@ export class FieldDemons {
     _windup(f) {
         f.state = 'windup';
         f.t = f.spec.windup;
+        const slam = f.spec.slam;
+        if (slam && f.met && (f.swings = (f.swings || 0) + 1) % slam.every === 0) {      // (on his own ground's fight)
+            f.slam = true;
+            f.t = slam.windup;
+            audio.play('foe_orc', { volume: 0.8, rate: 0.75 });
+        }
         f.foe.walking = false;
         f.foe.halt();
     }
 
     /** Its blow: it lunges, and lands on you if you're still in reach (a warlock's fire flies where you stood). */
     _foeSwing(f) {
+        if (f.slam) return this._slam(f);
         const { foe, spec } = f, you = this._you();
         foe.tint(null);
         f.state = 'recover';
@@ -1362,7 +1396,7 @@ export class FieldDemons {
         if (!g) return;
         g.clear();
         for (const f of this.foes) {
-            if (f.hp <= 0 || f.hp >= f.maxHp) continue;
+            if (f.hp <= 0 || f.hp >= f.maxHp || (f.spec.boss && f.met)) continue;      // (a boss's is along the bottom)
             const w = f.spec.scale ? 44 : 28, x = f.foe.x - w / 2, y = f.foe.y - f.foe.tall - 6;
             g.fillStyle(0x1d131e, 0.9).fillRect(x - 1, y - 1, w + 2, 5);
             g.fillStyle(0xd04648, 1).fillRect(x, y, w * f.hp / f.maxHp, 3);
@@ -1561,6 +1595,128 @@ export class FieldDemons {
     }
 
     /** A foe stops its wind-up (staggered, lost its quarry). */
+    // ------------------------------------------------ a boss fight
+
+    /** A boss on his own ground, waiting while any of his zone's other foes still stand (not to be struck meanwhile). */
+    _sealed(f) {
+        return !!PACKS[f.pack]?.lair && PLACES.some(p => p.family === f.family && !p.lair && !this.slain.has(p.i));
+    }
+
+    /** A boss comes for you: his name and title come up, the map darkens at its edges, and his bar along the bottom. */
+    _bossBegins(f) {
+        f.met = true;
+        f.swings = 0;
+        this.scene.scene.get('UIScene')?.bossCard?.(f.spec.label, f.spec.title);
+        audio.play('reveal', { volume: 0.8 });
+        audio.play('foe_orc', { volume: 0.9, rate: 0.7 });
+        this.scene.cameras.main.shake(260, 0.004);
+        f.foe.nameText?.setAlpha(0);        // (his name's on his bar now)
+    }
+
+    /** He's beaten: his bar empties, and a fanfare. */
+    _bossFalls(f) {
+        const ui = this.scene.scene.get('UIScene');
+        ui?.bossBar?.hide(true);
+        this.scene.cameras.main.shake(300, 0.006);
+        this.scene.time.delayedCall(700, () => {
+            audio.play('victory');
+            ui?.notice?.(`The ${f.spec.label} is defeated!`, 3600);
+        });
+    }
+
+    /** Back home and mended (you fell, or got away): the fight begins afresh next time, those his horn called gone. */
+    _bossResets(f) {
+        f.met = f.horned = false;
+        f.swings = 0;
+        f.foe.nameText?.setAlpha(1);
+        for (const o of this.foes) if (o.called && o.pack === f.pack) {
+            this._unslam(o);
+            o.foe.destroy();
+        }
+        this.foes = this.foes.filter(o => !(o.called && o.pack === f.pack));
+    }
+
+    /** At half his health he blows his war horn (he's a rouser), and goblins come ashore to him. */
+    _horn(f) {
+        if (f.hp <= 0 || f.horned || !this.foes.includes(f)) return;
+        f.horned = true;
+        f.stun = Math.max(f.stun, 700);         // (blowing it)
+        if (f.state === 'windup') this._calm(f);
+        this.scene.scene.get('UIScene')?.notice?.(`The ${f.spec.label} blows his war horn! Goblins come ashore.`, 3200);
+        audio.play('summon', { volume: 0.9 });
+        this.scene.cameras.main.shake(400, 0.003);
+        const kinds = f.spec.horn.call, me = this._you() || f.foe;
+        // (they come from the far side of him from you, so you see them come)
+        const away = Math.atan2(f.foe.y - me.y, f.foe.x - me.x);
+        kinds.forEach((kind, k) => {
+            const p = { kind, family: f.family, pack: f.pack, tier: f.tier, step: f.step, i: -1, role: ROLES[k % ROLES.length] };
+            let at = null;
+            for (const r of [CALL_RING, CALL_RING * 0.7, CALL_RING * 0.45]) {
+                for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.3, -1.3]) {
+                    const a = away + (k - (kinds.length - 1) / 2) * 0.7 + da;
+                    const x = f.foe.x + Math.cos(a) * r, y = f.foe.y + Math.sin(a) * r;
+                    if (this._open(x, y)) {
+                        at = { x, y };
+                        break;
+                    }
+                }
+                if (at) break;
+            }
+            at ??= { x: f.foe.x, y: f.foe.y };
+            const o = this._body(f.family, p, at);
+            o.called = true;
+            this.foes.push(o);
+            this._roused(o);
+            this.scene.effects?.smash?.(at.x, at.y - 10, at.y, 'pot');      // (a burst of dust as each comes)
+        });
+        audio.play('appear', { volume: 0.6 });
+    }
+
+    /** The ground he'll strike, marked red as he raises his weapon: deeper as the blow comes. */
+    _slamMark(f) {
+        const r = f.spec.slam.radius, k = 1 - Math.max(0, f.t) / f.spec.slam.windup;
+        const g = f.ring ??= this.scene.add.graphics();
+        g.setDepth(f.foe.sprite.depth - 0.5);
+        g.clear();
+        g.fillStyle(0xd02a1a, 0.12 + 0.28 * k).fillCircle(f.foe.x, f.foe.y, r);
+        g.fillStyle(0xff4a2a, 0.25 + 0.3 * k).fillCircle(f.foe.x, f.foe.y, r * k);
+        g.lineStyle(2, 0xff6a4a, 0.8).strokeCircle(f.foe.x, f.foe.y, r);
+    }
+
+    /** A slam's mark goes. */
+    _unslam(f) {
+        f.ring?.destroy();
+        f.ring = null;
+        if (f.state !== 'windup') f.slam = false;
+    }
+
+    /** His slam comes down: all about him struck, the ground shaking; out of the red, you're clear of it. */
+    _slam(f) {
+        const { foe, spec } = f, you = this._you();
+        f.slam = false;
+        this._unslam(f);
+        foe.tint(null);
+        f.state = 'recover';
+        f.t = spec.recover;
+        f.cd = spec.recover * 1.4;
+        if (!you) return;
+        foe.strike(spec.anim, dirOf(you.x - foe.x, you.y - foe.y), () => f.hp > 0);
+        audio.play('swing', { volume: 0.8, rate: 0.7 });
+        this.scene.time.delayedCall(200, () => {
+            if (f.hp <= 0 || !this.foes.includes(f)) return;
+            audio.play('rock', { volume: 1 });
+            this.scene.cameras.main.shake(240, 0.012);
+            this.scene.effects?.smash?.(foe.x, foe.y - 6, foe.y, 'pot');
+            this._hitStop(90);
+            const now = this._you();
+            if (!now) return;
+            if (Math.hypot(now.x - foe.x, now.y - foe.y) <= spec.slam.radius && !(this.you.hidden > 0)) {
+                this._hurt(this.you, Math.round(f.damage * spec.slam.hurt), { x: foe.x, y: foe.y });
+                if (!this.fallen) this._knock(this.scene.localPlayer, { x: foe.x, y: foe.y }, KNOCK * 2);
+            } else this.scene.effects.floatText(now.x, now.y - 52, 'Dodged', '#c4b59f', 14);
+        });
+    }
+
     _calm(f) {
         f.state = 'recover';
         f.t = 300;

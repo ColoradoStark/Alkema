@@ -1,6 +1,7 @@
 // Foes on the overworld itself, fought where they stand (the user's): The Battle for Wesnoth's units, zone by zone
 // (Bands.js, docs/WORLD.md); for now the Saltmere Point's (zone 35, below Riverhold where heroes start): its rats, the
-// river's outlaws and the goblins come ashore, seven packs up a climb, the Goblin Rouser's last. Within five tiles one
+// river's outlaws and the goblins come ashore, seven packs up a climb, the Goblin Rouser beyond them, a boss fought
+// alone on his own ground once they're all beaten. Within five tiles one
 // comes for you, winds up (flashing red) and swings; your swing strikes it; far enough off it goes home.
 import { test, expect } from '@playwright/test';
 
@@ -94,6 +95,12 @@ async function atThePoint(page) {
     await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
 }
 
+/** The rest of the Point counted beaten (where each stands, still drawn): the Rouser on his own ground may be fought. */
+const unseal = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PLACES }) => {
+    const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+    for (const p of PLACES) if (p.family === 'z35' && !p.lair) fd.slain.add(p.i);
+}));
+
 /** A hero far stronger than the Point is made for, and kept standing. */
 const mighty = (page) => page.evaluate(() => {
     const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats;
@@ -184,7 +191,7 @@ test.describe("The Saltmere Point's foes", () => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PLACES, PACKS } = await places(page);
-        expect(PACKS.every(p => p.family === 'z35' && p.band.length >= 3 && p.band.length <= 6)).toBe(true);
+        expect(PACKS.every(p => p.family === 'z35' && (p.lair ? p.band.length === 1 : p.band.length >= 3 && p.band.length <= 6))).toBe(true);
         // Where heroes start: nothing
         await page.waitForTimeout(1500);
         expect(await field(page).then(f => f.count)).toBe(0);
@@ -269,7 +276,7 @@ test.describe("The Saltmere Point's foes", () => {
         await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 30000 }).toBe('post');
     });
 
-    test("how powerful each is goes by its Wesnoth level (the user's): an L0 takes about two and a half of its zone's hero's blows, an L1 four, the boss twenty-two; each foe is made for its zone and its pack's step up the climb; kills close together pay a combo", async ({ page }) => {
+    test("how powerful each is goes by its Wesnoth level (the user's): an L0 takes about two and a half of its zone's hero's blows, an L1 four, the boss thirty (alone on his ground); each foe is made for its zone and its pack's step up the climb; kills close together pay a combo", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
@@ -283,7 +290,7 @@ test.describe("The Saltmere Point's foes", () => {
         });
         for (const b of r.l0) expect(b).toBeCloseTo(2.5, 0);
         for (const b of r.l1) expect(b).toBeCloseTo(4, 0);
-        expect(r.boss).toBeCloseTo(22, 0);
+        expect(r.boss).toBeCloseTo(30, 0);
         expect(r.hurts[0]).toBeLessThan(r.hurts[1]);        // (an L1 hits harder than an L0; the boss harder still)
         expect(r.hurts[1]).toBeLessThan(r.hurts[2]);
         expect(r.combo).toEqual([25, 31, 50, 75]);      // a quarter more for each in the combo, up to three times
@@ -325,6 +332,7 @@ test.describe("The Saltmere Point's foes", () => {
         }, w.i);
         expect(keptBack).toBeGreaterThan(60);
         // The boss struck mid wind-up swings on; an impaler struck mid wind-up is staggered out of it
+        await unseal(page);
         const struck = await page.evaluate(() => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             const out = {};
@@ -344,7 +352,7 @@ test.describe("The Saltmere Point's foes", () => {
             const got = [inv.essence];
             for (const f of rats) { fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 }); got.push(inv.essence); }
             const chests = gs.chests.chests.length;
-            const boss = fd.foes.find(f => f.kind === 'rouser'), kin = fd.foes.find(f => f.kind === 'impaler' && f.pack === boss.pack);
+            const boss = fd.foes.find(f => f.kind === 'rouser'), kin = fd.foes.find(f => f.kind === 'impaler');
             const grown = { boss: boss.foe.scale, kin: kin.foe.scale };
             fd._strikeFoe(boss, boss.hp, { x: boss.foe.x, y: boss.foe.y + 30 });
             return { first: got[1] - got[0], second: got[2] - got[1], chests: gs.chests.chests.length - chests, label: boss.foe.nameText.text, grown };
@@ -441,7 +449,7 @@ test.describe("The Saltmere Point's foes", () => {
 });
 
 test.describe('A fight you can lose', () => {
-    test('a blow hurts (an L0 an eighth of the hit points of the hero its zone is made for, an L1 a fifth, the boss nearly a third); the boss is nearly a rat\'s pace and well escorted; a shooter shoots while two others are at you', async ({ page }) => {
+    test('a blow hurts (an L0 an eighth of the hit points of the hero its zone is made for, an L1 a fifth, the boss nearly a third); the boss is nearly a rat\'s pace, his band well manned; a shooter shoots while two others are at you', async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
@@ -449,7 +457,7 @@ test.describe('A fight you can lose', () => {
             const hero = { attack: 6, hp: 40, defence: 2 };
             const share = (kind) => (numbers(kind, 1, hero).damage - Math.floor(hero.defence / 2)) / hero.hp;
             const boss = PACKS.find(p => p.band.includes('rouser'));
-            return { l0: share('rat'), l1: share('impaler'), boss: share('rouser'), escort: boss.band.length - 1 };
+            return { l0: share('rat'), l1: share('impaler'), boss: share('rouser'), escort: PACKS[PACKS.indexOf(boss) - 1].band.length };
         });
         expect(r.l0).toBeGreaterThanOrEqual(0.11);
         expect(r.l0).toBeLessThanOrEqual(0.14);
@@ -616,7 +624,7 @@ test.describe('The zone, not your hero, says how hard its foes are', () => {
 });
 
 test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
-    test("the Point has seven packs up the climb, each foe made for its pack (2.5 times the health a pack): its balance against the Upgrade page is tests/unit/zones.test.js's", async ({ page }) => {
+    test("the Point has seven packs up the climb and the Rouser beyond them, each foe made for its pack (2.5 times the health a pack): its balance against the Upgrade page is tests/unit/zones.test.js's", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         const r = await page.evaluate(async () => {
@@ -625,7 +633,7 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
             return { steps: PACKS.filter(p => p.family === 'z35').map(p => p.step), ratio: numbers('rouser', 1, z, 3).hp / numbers('rouser', 1, z, 0).hp,
                 places: PLACES.every(p => p.step === PACKS[p.pack].step), boss: PACKS.filter(p => p.family === 'z35').at(-1).band[0] };
         });
-        expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6]);
+        expect(r.steps).toEqual([0, 1, 2, 3, 4, 5, 6, 6]);        // (the Rouser's ground a step with his band's)
         expect(r.ratio / 2.5 ** 3).toBeCloseTo(1, 1);
         expect(r.places).toBe(true);
         expect(r.boss).toBe('rouser');          // (its boss's band last)
@@ -1844,5 +1852,105 @@ test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip('elven-spear'));
         await sparklesAsSwung(page);
         expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current?.data?.flags?.['heart-spear']), 'not kept: the real run is still to do').toBeFalsy();
+    });
+});
+
+test.describe('The Goblin Rouser, a boss fight', () => {
+    test("he waits alone at the Point's tip till the rest are beaten; then his name comes up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; mended at home it begins afresh; felled, a chest (the user's, November 2026)", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page);
+        await atThePoint(page);
+        await keepUp(page);
+        // Alone on his ground, and not to be struck or roused while the Point's packs stand
+        const boss = await page.evaluate(async () => {
+            const { PACKS } = await import('/src/battle/FieldDemons.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.kind === 'rouser');
+            const hp = f.hp;
+            fd._strikeFoe(f, 5, { x: f.foe.x, y: f.foe.y + 30 });
+            return { i: f.i, alone: PACKS[f.pack].band.length, lair: !!PACKS[f.pack].lair, struck: hp - f.hp, state: f.state, standing: fd.standing.includes(f) };
+        });
+        expect(boss).toMatchObject({ alone: 1, lair: true, struck: 0, state: 'post', standing: false });
+        const near = await offFoe(page, boss.i, 120);
+        await standAt(page, near.x, near.y);
+        await page.waitForTimeout(800);
+        expect(await page.evaluate((i) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i).state, boss.i)).toBe('post');
+        // The rest beaten: he comes for you, his name up large, his bar along the bottom (none over his head)
+        await unseal(page);
+        await expect.poll(() => page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return { bar: ui.bossBar.shown, name: ui.bossBar.name.text, card: !!ui._bossCard?.active };
+        }), { timeout: 10000 }).toEqual({ bar: true, name: 'GOBLIN ROUSER', card: true });
+        // His bar follows his health
+        const frac = await page.evaluate((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
+            f.stun = 1e9;           // (held, so only what's asked of him happens)
+            fd._strikeFoe(f, Math.round(f.maxHp * 0.2), { x: f.foe.x, y: f.foe.y + 30 });
+            return f.hp / f.maxHp;
+        }, boss.i);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.frac), { timeout: 3000 }).toBeCloseTo(frac, 2);
+        // His slam: the ground marked red as he raises it; struck within it, dodged out of it
+        const slam = async (r) => {
+            await page.evaluate(([i, r]) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
+                gs.tweens.killTweensOf(me);
+                me.setPosition(f.foe.x + r, f.foe.y - fd.FEET);
+                me.body.reset(me.x, me.y);
+                f.swings = f.spec.slam.every - 1;
+                fd._windup(f);
+                fd._slamMark(f);
+                window.__slam = { slam: f.slam, marked: !!f.ring, hp: gs.scene.get('UIScene').hp.now };
+                fd.you.guard = 0;
+                fd._slam(f);
+            }, [boss.i, r]);
+            await page.waitForTimeout(600);
+            return page.evaluate((i) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), f = gs.fieldDemons.foes.find(f => f.i === i);
+                const was = window.__slam, hp = gs.scene.get('UIScene').hp;
+                const out = { slam: was.slam, marked: was.marked, hurt: was.hp - hp.now, gone: !f.ring };
+                hp.now = hp.max;
+                return out;
+            }, boss.i);
+        };
+        const inside = await slam(30), outside = await slam(140);
+        expect(inside).toMatchObject({ slam: true, marked: true, gone: true });
+        expect(inside.hurt).toBeGreaterThan(0);
+        expect(outside.hurt).toBe(0);
+        // At half his health, his war horn: three come ashore and come for you
+        const called = await page.evaluate((i) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+            fd._strikeFoe(f, f.hp - Math.floor(f.maxHp * 0.45), { x: f.foe.x, y: f.foe.y + 30 });
+            return f.hp / f.maxHp;
+        }, boss.i);
+        expect(called).toBeLessThan(0.5);
+        await expect.poll(() => page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return fd.foes.filter(f => f.called && f.hp > 0 && f.state !== 'post').map(f => f.kind).sort();
+        }), { timeout: 3000 }).toEqual(['impaler', 'spearman', 'spearman']);
+        // You get away (or fall): home and mended, his horn's goblins gone, his bar gone; it begins afresh next time
+        await standAt(page, POINT.x, POINT.y);
+        const reset = await page.evaluate((i) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+            fd.forgive();
+            f.foe.sprite.setPosition(f.post.x, f.post.y - fd.FEET);
+            f.stun = 0;
+            fd._home(f, 0.016, 0);
+            return { hp: f.hp === f.maxHp, met: f.met, horned: f.horned, called: fd.foes.filter(o => o.called).length };
+        }, boss.i);
+        expect(reset).toEqual({ hp: true, met: false, horned: false, called: 0 });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 5000 }).toBe(false);
+        // Felled: his bar empties and goes, and his chest; the card's darkening let go
+        await standAt(page, near.x, near.y);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 10000 }).toBe(true);
+        const chests = await page.evaluate((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
+            const before = gs.chests.chests.length;
+            fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+            return gs.chests.chests.length - before;
+        }, boss.i);
+        expect(chests).toBe(1);
+        await expect.poll(() => page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return { bar: ui.bossBar.shown, dark: ui.textures.exists('boss-dark') };
+        }), { timeout: 8000 }).toEqual({ bar: false, dark: false });
     });
 });

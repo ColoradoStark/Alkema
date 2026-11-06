@@ -21,11 +21,11 @@ describe('Zones', () => {
         expect(new Set(map.zones.map(z => z.name)).size).toBe(36);
     });
 
-    test('heroes start below Riverhold, in its wood (33), and the Saltmere Point (35) is the home zone, all seven of its packs in it', () => {
+    test('heroes start below Riverhold, in its wood (33), and the Saltmere Point (35) is the home zone, all seven of its packs and the Rouser\'s ground in it', () => {
         expect(map.home).toBe(HOME);
         expect(HOME).toBe(35);
         expect(map.at(START.x, START.y).id).toBe(33);
-        expect(ZONE_PACKS).toHaveLength(7);
+        expect(ZONE_PACKS).toHaveLength(8);
         for (const at of ZONE_PACKS) expect(map.at(...at)?.id).toBe(HOME);
     });
 
