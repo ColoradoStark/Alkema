@@ -64,9 +64,18 @@ async function sparklesAsSwung(page) {
     await page.waitForTimeout(1200);
     expect(await glow(), 'walking, no stars').toEqual({ emitting: false, alive: 0 });
     await page.keyboard.up('ArrowLeft');
+    // (and the elves' own magic, Wesnoth's, as they cast it: faerie fire's starburst as it's swung, the nature glow as it's cast with)
+    const casting = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').children.list
+        .filter(o => o.active && o.anims?.isPlaying && /^elven-cast/.test(o.anims.currentAnim.key)).map(o => o.anims.currentAnim.key).sort());
+    expect(await casting(), 'walking, no magic').toEqual([]);
     await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playAttack());
+    await expect.poll(casting, { timeout: 2000 }).toEqual(['elven-cast-faerie', 'elven-cast-glow']);
     await expect.poll(() => glow().then(g => g?.alive || 0), { timeout: 2000 }).toBeGreaterThan(0);
     await expect.poll(glow, { timeout: 5000 }).toEqual({ emitting: false, alive: 0 });
+    expect(await casting(), 'gone once swung').toEqual([]);
+    await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playCast());
+    await expect.poll(casting, { timeout: 2000 }).toEqual(['elven-cast-nature']);
+    await expect.poll(casting, { timeout: 5000 }).toEqual([]);
 }
 
 /** At the Point, every pack of it come and drawn. */
@@ -1642,8 +1651,87 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
         expect(stats.elven, 'a look and nothing more (the user\'s)').toBe(stats.spear);
         // Put away: the glow goes, and its picture with it
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.unequip('weapon'));
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('elven-glow')), { timeout: 30000 }).toBe(false);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('elven-glow') || window.__PHASER_GAME.textures.exists('elven-cast')), { timeout: 30000 }).toBe(false);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').elvenGlow.lit.size)).toBe(0);
+    });
+
+    test("zzlook", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const chest = await page.evaluate(async () => (await import('/src/battle/Bands.js')).HEART_CHEST);
+        await standAt(page, chest[0] + 40, chest[1] + 40);
+        await expect.poll(() => page.evaluate(() => new Set(window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).map(f => f.kind)).size), { timeout: 30000 }).toBeGreaterThanOrEqual(3);
+        const kinds = await page.evaluate(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const f of fd.foes) f.stun = 1e9; return [...new Set(fd.foes.filter(f => f.foe.ready).map(f => f.kind))]; });
+        for (const kind of kinds) {
+            await page.evaluate((kind) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = window.__PHASER_GAME.scene.getScene('UIScene');
+                ui.hp.now = ui.hp.max;
+                const me = gs.localPlayer.sprite;
+                const f = fd.foes.filter(o => o.kind === kind && o.foe.ready).sort((a, b) => Math.hypot(a.foe.x - me.x, a.foe.y - me.y) - Math.hypot(b.foe.x - me.x, b.foe.y - me.y))[0];
+                if (!f) return;
+                f.foe.sprite.x = me.x - 110; f.foe.sprite.y = me.y - 10;
+                fd._foeSwing(f);
+            }, kind);
+            await page.waitForTimeout(200); await page.screenshot({ path: `tests/zzshots/zz-${kind}-a.png` });
+            await page.waitForTimeout(180); await page.screenshot({ path: `tests/zzshots/zz-${kind}-b.png` });
+            await page.waitForTimeout(1500);
+        }
+        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.fieldDemons.only = () => false; for (const f of gs.fieldDemons.foes) f.foe.sprite.visible = false; });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.bag.push('elven-spear'));
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').inventory.equip('elven-spear'));
+        await page.waitForTimeout(6000);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playAttack());
+        for (const t of [80, 200, 350]) { await page.waitForTimeout(t === 80 ? 80 : 130); await page.screenshot({ path: `tests/zzshots/zz-spear-${t}.png` }); }
+        await page.waitForTimeout(1500);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playCast());
+        for (const t of [150, 350]) { await page.waitForTimeout(t === 150 ? 150 : 200); await page.screenshot({ path: `tests/zzshots/zz-cast-${t}.png` }); }
+    });
+
+    test("the elves cast Wesnoth's own elf magic, seen only as they cast (the user's): faerie fire's starburst about the caster and its icy bolt, the nature glow and entangling vines or thorns; nothing about them between", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const chest = await page.evaluate(async () => (await import('/src/battle/Bands.js')).HEART_CHEST);
+        await standAt(page, chest[0] + 40, chest[1] + 40);
+        await expect.poll(() => page.evaluate(() => new Set(window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).map(f => f.kind)).size), { timeout: 30000 }).toBeGreaterThanOrEqual(3);
+        // Wesnoth's own (data/core/units/elves): its halo about her as she casts, the bolt she throws
+        const WESNOTH = { sorceress: ['faerie-halo', 'ice-missile'], enchantress: ['faerie-halo', 'ice-missile'], sylph: ['faerie-halo', 'ice-missile'],
+                          shaman: ['nature-halo', 'entangle'], druid: ['nature-halo', 'thorns'], shyde: ['nature-halo', 'thorns'] };
+        const seen = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            for (const f of fd.foes) { f.stun = 1e9; f.damage = 0; }          // (held: each cast by hand; harmless, as a bolt far up the climb fells you and the band goes)
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            const playing = () => gs.children.list.filter(o => o.active && o.anims?.currentAnim).map(o => o.anims.currentAnim.key);
+            const out = {};
+            // (each bolt seen as it's launched, on the game's clock, however loaded the browser)
+            let shot = null;
+            const launch = fd._launch.bind(fd);
+            fd._launch = (...args) => { launch(...args); const s = fd.shots[fd.shots.length - 1]; shot ??= { kind: s.kind, flying: s.sprite.anims?.currentAnim?.key ?? s.sprite.frame.name }; };
+            for (const kind of [...new Set(fd.foes.filter(f => f.foe.ready).map(f => f.kind))]) {
+                shot = null;
+                const f = fd.foes.find(o => o.kind === kind && o.foe.ready);
+                ui.hp.now = ui.hp.max;
+                const before = playing().filter(k => /halo/.test(k));
+                fd._foeSwing(f);
+                const casting = playing().filter(k => /halo/.test(k));
+                for (let t = 0; t < 100 && !shot; t++) await new Promise(r => setTimeout(r, 50));
+                out[kind] = { before, casting, shot: shot?.kind, flying: shot?.flying };
+                for (const s of fd.shots) { s.sprite.destroy(); s.glow?.destroy(); s.done = true; }
+                fd.shots = [];
+                await new Promise(r => setTimeout(r, 1500));
+                out[kind].after = playing().filter(k => /halo/.test(k));
+            }
+            return out;
+        });
+        for (const [kind, s] of Object.entries(seen)) {
+            const [halo, bolt] = WESNOTH[kind];
+            expect(s.before, `${kind}: nothing about her before she casts`).toEqual([]);
+            expect(s.casting, `${kind}: Wesnoth's halo as she casts`).toContain(`spell-fx-${halo}`);
+            expect(s.shot, `${kind}: Wesnoth's own bolt`).toBe(bolt);
+            expect(s.flying, `${kind}: drawn as it`).toMatch(new RegExp(bolt));
+            expect(s.after, `${kind}: and it's gone once she's cast`).toEqual([]);
+        }
     });
 });
 

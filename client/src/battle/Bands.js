@@ -18,6 +18,11 @@ const BOSS_HITS = 22, BOSS_HURTS = 0.22;     // a zone's leader (and so the clim
 /** One unit: how it fights (DEMON_KINDS' melee and caster parts, at its own pace) and its level. */
 const melee = (level, extra = {}) => ({ ...DEMON_KINDS.fury, speed: 70, anim: 'attack', level, ...extra });
 const shooter = (level, extra = {}) => ({ ...DEMON_KINDS.warlock, speed: 54, keep: 150, windup: 700, recover: 1400, missile: 'arrow', anim: 'attack', level, ...extra });
+// The elves' magic is Wesnoth's own for each (data/core/units/elves; the user's, November 2026: it was its fireball,
+// tinted): a halo about her as she casts, seen only then, and the bolt she throws (tools/spellgen.py's fx)
+const FAERIE_FIRE = { missile: 'ice-missile', halo: 'faerie-halo' };
+const ENTANGLE = { missile: 'entangle', halo: 'nature-halo' };
+const THORNS = { missile: 'thorns', halo: 'nature-halo' };
 
 // The Saltmere Point (zone 35, tier 1): the wharf rats, the river's outlaws and the goblins come ashore
 export const BAND_KINDS = {
@@ -35,15 +40,15 @@ export const BAND_KINDS = {
     // block the first area off till the story says where the journey goes): an elvish sorceress throwing faerie fire,
     // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
     // (turning at once, no paper turn: the user's, November 2026, they'd rather the elves didn't)
-    sorceress: shooter(2, { speed: 140, missile: null, tint: 0x9fe8ff, race: 'elf', paper: false }),
+    sorceress: shooter(2, { speed: 140, ...FAERIE_FIRE, race: 'elf', paper: false }),
     // The wood's own beyond them (zone 33's heart, docs/WORLD.md's Southern Forest): its casters, slower than you, so
     // a run to the chest at its heart can be made, every one of their shots dodged (the user's: a death run)
-    shaman: shooter(1, { speed: 62, missile: null, tint: 0x9cff8a, race: 'elf', paper: false }),
-    druid: shooter(2, { speed: 66, missile: null, tint: 0x7ee08a, race: 'elf', paper: false }),
-    enchantress: shooter(3, { speed: 72, missile: null, tint: 0xd6a8ff, race: 'elf', paper: false }),
-    shyde: shooter(3, { speed: 80, missile: null, tint: 0xb8ffe8, race: 'elf', paper: false }),
+    shaman: shooter(1, { speed: 62, ...ENTANGLE, race: 'elf', paper: false }),
+    druid: shooter(2, { speed: 66, ...THORNS, race: 'elf', paper: false }),
+    enchantress: shooter(3, { speed: 72, ...FAERIE_FIRE, race: 'elf', paper: false }),
+    shyde: shooter(3, { speed: 80, ...THORNS, race: 'elf', paper: false }),
     // (the chest's keeper, a boss: grown, named; she leaves none of her own, the chest's beside her)
-    sylph: shooter(4, { speed: 76, missile: null, tint: 0xfff3a8, race: 'elf', paper: false, boss: true, scale: 1.6, label: 'Elvish Sylph' }),
+    sylph: shooter(4, { speed: 76, ...FAERIE_FIRE, race: 'elf', paper: false, boss: true, scale: 1.6, label: 'Elvish Sylph' }),
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
 export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));

@@ -34,6 +34,8 @@ import { ZONES, packEssence, strengthFor, tooStrong } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
+const ELF_BOLTS = new Set(['ice-missile', 'entangle', 'thorns']);      // the elves' own magic (Bands.js), Wesnoth's
+const ELF_FX = 1.25;            // grown as Wesnoth's units are (battlegen.py)
 // How each fights out here, how many of its zone's hero's blows it takes and how much of their hit points its blow
 // (Bands.js, by its Wesnoth level), and what it's worth (`bounty`, off a climb)
 const KINDS = BAND_KINDS, HITS = BAND_HITS, HURTS = BAND_HURTS, PAY = BAND_PAY;
@@ -424,7 +426,7 @@ export class FieldDemons {
         this.combo = 0;
         this.bars?.destroy();
         this.bars = null;
-        this.shots.forEach(s => s.sprite.destroy());
+        this.shots.forEach(s => { s.sprite.destroy(); s.glow?.destroy(); });
         this.shots = [];
         for (const e of [this.sparks, this.motes, this.glints]) e?.destroy();
         this.sparks = this.motes = this.glints = null;
@@ -1203,9 +1205,12 @@ export class FieldDemons {
         if (!you) return;
         foe.strike(spec.anim, dirOf(you.x - foe.x, you.y - foe.y), () => f.hp > 0);
         if (spec.ranged) {          // a warlock's fire, an archer's arrow (its bow's own twang)
-            if (!spec.missile) audio.play('cast', { volume: 0.5 });
+            if (spec.missile !== 'arrow') audio.play('cast', { volume: 0.5 });
+            // (an elf's halo about her as she casts, Wesnoth's: faerie fire's about her head, nature's lower)
+            const size = spec.scale || 1;
+            if (spec.halo) this._fx(spec.halo, foe.x, foe.y - (spec.halo === 'faerie-halo' ? 40 : 26) * size, { scale: ELF_FX * size });
             this.scene.time.delayedCall(250, () => {
-                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage, { tint: spec.tint });
+                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage, { tint: spec.tint, scale: spec.halo ? ELF_FX : 1 });
             });
             f.t = 600;
             return;
@@ -1434,11 +1439,18 @@ export class FieldDemons {
     _launch(from, to, kind, side, damage, { scale = 1, trail = null, reach = SHOT_REACH + 80, speed = null, onHit = null, tint = null, home = null } = {}) {
         const a = Math.atan2(to.y - from.y, to.x - from.x);
         speed ??= kind === 'arrow' ? ARROW_SPEED : BOLT_SPEED;
-        let sprite;
+        let sprite, glow = null;
         if (kind === 'arrow' && this.scene.textures.exists('arrow-projectile')) {
             sprite = this.scene.add.sprite(from.x, from.y, 'arrow-projectile', 3 * 13 + 5).setRotation(a);
             // (a foe's twang; yours played as you drew, and twice a shot grated, the user's)
             if (side !== 'party') audio.play('bow', { volume: 0.5 });
+        } else if (ELF_BOLTS.has(kind)) {           // an elf's, Wesnoth's own: faerie fire's bolt pointing its way in its glow, vines and thorns as they're drawn
+            sprite = this.scene.add.sprite(from.x, from.y, 'spell-fx').play(`spell-fx-${kind}`).setScale(scale);
+            if (kind === 'ice-missile') {
+                sprite.setRotation(a + Math.PI / 2);
+                glow = this.scene.add.sprite(from.x, from.y, 'spell-fx').play('spell-fx-ice-halo').setScale(scale * 0.6).setDepth(32);
+            }
+            audio.play('zap', { volume: 0.5 });
         } else {
             const anim = kind === 'fire-missile' ? 'spell-fx-fire-missile' : 'spell-fx-fireball';
             sprite = this.scene.add.sprite(from.x, from.y, 'spell-fx').play(anim).setRotation(a + Math.PI / 2).setScale(scale);
@@ -1447,7 +1459,7 @@ export class FieldDemons {
         }
         sprite.setDepth(32);
         if (tint) sprite.setTint(tint);
-        this.shots.push({ sprite, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit, home, speed, tint });
+        this.shots.push({ sprite, glow, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, left: reach, side, damage, kind, trail, onHit, home, speed, tint });
     }
 
     _fly(dt) {
@@ -1464,6 +1476,7 @@ export class FieldDemons {
             const step = Math.hypot(s.vx, s.vy) * dt;
             s.sprite.x += s.vx * dt;
             s.sprite.y += s.vy * dt;
+            s.glow?.setPosition(s.sprite.x, s.sprite.y);
             s.left -= step;
             if (s.trail) {          // a spell's fire trails sparks
                 this.sparks.setParticleTint(s.trail);
@@ -1485,12 +1498,16 @@ export class FieldDemons {
                 const m = this.fighting.find(o => near(o.who.sprite.x, o.who.sprite.y + FEET));
                 if (m) {
                     s.done = true;
-                    if (s.kind !== 'arrow') this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75, tint: s.tint });      // (a water elemental's bursts in water's colour)
+                    if (s.kind === 'ice-missile') this._fx('ice-burst', s.sprite.x, s.sprite.y, { scale: s.sprite.scale });       // (faerie fire bursts; Wesnoth's vines and thorns just strike)
+                    else if (s.kind !== 'arrow' && !ELF_BOLTS.has(s.kind)) this._fx('fireball-impact', m.who.sprite.x, m.who.sprite.y + FEET, { origin: 0.75, tint: s.tint });      // (a water elemental's bursts in water's colour)
                     this._hurt(m, s.damage, { x: s.sprite.x - s.vx * 0.1, y: s.sprite.y + 18 - s.vy * 0.1 });
                 }
             }
             if (s.left <= 0 || s.sprite.x < -20 || s.sprite.x > this.width + 20 || s.sprite.y < -20 || s.sprite.y > this.height + 20) s.done = true;
-            if (s.done) s.sprite.destroy();
+            if (s.done) {
+                s.sprite.destroy();
+                s.glow?.destroy();
+            }
         }
         this.shots = this.shots.filter(s => !s.done);
     }

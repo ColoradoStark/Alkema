@@ -13,7 +13,7 @@ each of those icons and one other colour of each (a spell's tiers on the Magic t
 Spell effects: The Battle for Wesnoth (https://www.wesnoth.org)
 wesnoth-fx/ holds frames taken unchanged from data/core/images/projectiles and
 data/core/images/halo (fireball and its impact, fire bursts, flame burst, the
-fire missile, druid healing, leadership flare, teleport, dark magic, the lightning bolts and the white missile's impact; the faerie fire halo, for the elven glow: tools/elven_glow.py) in
+fire missile, druid healing, leadership flare, teleport, dark magic, the lightning bolts and the white missile's impact; the elves' own magic: the faerie fire, ice and nature halos, the ice missile, entangle and thorns, also for the elven spear: tools/elven_glow.py) in
 https://github.com/wesnoth/wesnoth, by the Wesnoth artists (the full list of
 contributors is in data/core/about.cfg).
 License: GNU GPL version 2 or later.

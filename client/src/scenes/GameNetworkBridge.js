@@ -105,6 +105,7 @@ export class GameNetworkBridge {
         player.playAttackSound(data.attackType);
         player.isAttacking = true;
         player._attackId = (player._attackId || 0) + 1;
+        player.lastAttackTime = Date.now();         // (a swing, not a cast: ElvenGlow tells them apart by it)
         const attackId = player._attackId;
 
         // Spawn projectile visual for ranged weapons

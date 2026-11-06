@@ -286,13 +286,13 @@ test.describe('Memory', () => {
         await go(10960, 10192);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         // (the gleam's picture goes a while after it's out of sight)
-        await page.waitForFunction(() => !window.__PHASER_GAME.textures.exists('elven-glow'), null, { timeout: 30000 });
+        await page.waitForFunction(() => !window.__PHASER_GAME.textures.exists('elven-glow') && !window.__PHASER_GAME.textures.exists('elven-cast'), null, { timeout: 30000 });
         const after = await settled(page);
         console.log("the wood's heart", +(there.mb - base.mb).toFixed(2), 'MB', sheets.join(' '));
         expect(sheets).toEqual(expect.arrayContaining(['foe-sylph', 'foe-enchantress', 'foe-shyde']));
         expect(there.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
-        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx' || k === 'elven-glow'))).toEqual([]);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx' || k.startsWith('elven-')))).toEqual([]);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.chests.length), 'its chest gone too').toBe(0);
     });
 

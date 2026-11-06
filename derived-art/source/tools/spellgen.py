@@ -47,6 +47,14 @@ EFFECTS = {
     'lightning-2': {'frames': 'lightning-bolt-2-{}', 'count': 4, 'rate': 12},
     'lightning-3': {'frames': 'lightning-bolt-3-{}', 'count': 4, 'rate': 12},
     'white-impact': {'frames': 'whitemissile-impact-{}', 'count': 8, 'rate': 20},
+    # The elves' own (Wesnoth's data/core/units/elves): about the caster as she casts, and what she throws
+    'faerie-halo': {'frames': 'faerie-fire-halo{}', 'count': 7, 'rate': 14},
+    'nature-halo': {'frames': 'nature-halo{}', 'count': 8, 'rate': 13},
+    'ice-missile': {'frames': 'icemissile-n-{}', 'count': 3, 'rate': 7, 'loop': True},      # faerie fire, in flight
+    'ice-burst': {'frames': 'icemissile-n-{}', 'count': 4, 'from': 4, 'rate': 20},           # ...and striking
+    'ice-halo': {'frames': 'ice-halo{}', 'count': 9, 'rate': 14, 'loop': True},              # its glow about it
+    'entangle': {'frames': 'entangle', 'count': 0, 'rate': 1, 'loop': True},
+    'thorns': {'frames': 'thorns', 'count': 0, 'rate': 1, 'loop': True},
 }
 
 
@@ -95,7 +103,8 @@ def fx():
     """Trim every frame, shelf-pack them, and write Phaser's JSON hash with each frame's place in its original."""
     frames = []
     for name, e in EFFECTS.items():
-        files = [e['frames']] if not e['count'] else [e['frames'].format(i) for i in range(1, e['count'] + 1)]
+        first = e.get('from', 1)
+        files = [e['frames']] if not e['count'] else [e['frames'].format(i) for i in range(first, first + e['count'])]
         for i, f in enumerate(files):
             im = Image.open(os.path.join(FX, f + '.png')).convert('RGBA')
             box = im.getbbox() or (0, 0, 1, 1)

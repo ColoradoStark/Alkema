@@ -24,3 +24,4 @@ client/assets/folk/*.png client/assets/goddesses.png,"Each sheet as its layers' 
 client/assets/folk/*.png (castle jesters),CC-BY-SA-3.0 or GPL-3.0,tools/jester_cap.py,"LPC Christmas hat (hat_holiday_christmas), solid cape (cape_solid)","bluecarrot16, JaidynReiman; the cape's artists (generator CREDITS.csv)","The hat repainted as a two-pointed jester's cap with a bell on each point; the cape cut short"
 client/assets/fx/campfire.png torch.png flames.png,GPL-3.0,by hand,LPC fire art (client/CREDITS.txt),"Lanea Zimmerman (Sharm), William Thompson, HughSpectrum",Background made transparent; frames re-laid
 client/assets/fx/elven-glow.png,GPL-3.0,tools/elven_glow.py,Wesnoth faerie fire halo (tools/spell-sources/wesnoth-fx),Wesnoth artists,Shrunk to 48 px and laid in a row
+client/assets/fx/elven-cast.png,GPL-3.0,tools/elven_glow.py,"Wesnoth faerie fire, ice and nature halos (tools/spell-sources/wesnoth-fx)",Wesnoth artists,Laid in rows of 96 px cells
