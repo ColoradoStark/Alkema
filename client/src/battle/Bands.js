@@ -76,9 +76,10 @@ export const BANDS = {
         { at: [6424, 13432], band: ['footpad', 'poacher', 'poacher', 'footpad', 'ruffian'] },
         { at: [6712, 13448], band: ['impaler', 'impaler', 'spearman', 'spearman', 'poacher'] },
         // the Rouser, on his own ground at the Point's tip: a step with his band's, waiting till the rest are beaten (`lair`)
-        // (his fight's ground the Point's clearing, the user's: walled off at the river road's corridor north, the
-        // shore's east, and the wood: his zone's ground within [x0, y0, x1, y1])
-        { at: [6450, 13580], band: ['rouser'], step: 6, lair: true, arena: [6100, 12570, 6840, 13720] },
+        // (his fight's ground the Point's clearing, the user's: walled off by the shore's corridor east and the wood's
+        // curve, his zone's ground within [x0, y0, x1, y1]; the river road north shut off altogether by a straight line
+        // from the wood's low point to the river, the user's: `arenaCut` isn't his)
+        { at: [6450, 13580], band: ['rouser'], step: 6, lair: true, arena: [6100, 12570, 6840, 13720], arenaCut: [6100, 12500, 6306, 12736] },
     ],
 };
 

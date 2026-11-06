@@ -1697,7 +1697,10 @@ export class FieldDemons {
     _inArena(pack, x, y) {
         const ow = this.scene.overworld, box = pack.arena;
         if (box && (x < box[0] || y < box[1] || x > box[2] || y > box[3])) return false;
+        const cut = pack.arenaCut;
+        if (cut && x >= cut[0] && y >= cut[1] && x <= cut[2] && y <= cut[3]) return false;
         const z = ow?.zoneAt?.(x, y)?.id;
+        if (box && !(ow?.forest?.depthAt?.(x, y) > 0)) return true;        // (within its box, open ground out of the wood is his, whoever's zone: its lines clean)
         return z !== undefined && z === ow.zoneAt(...pack.at)?.id;
     }
 

@@ -1936,14 +1936,14 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         // ...and his own music, a boss's (the user's: the music should change)
         const mood = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene')._mood);
         await expect.poll(mood, { timeout: 3000 }).toBe('boss');
-        // Mist walls off the whole clearing (the corridors north and east, the wood), and there's no walking out of it
+        // Mist walls off the whole clearing (the river road north shut off by a straight line from the wood's low point, the user's; the wood's curve; the corridor east), and there's no walking out of it
         // (the user's: no getting away, and the whole clearing his ground)
         const held = await page.evaluate(() => new Promise(done => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ring = fd._arena, me = gs.localPlayer.sprite;
             const puffs = ring?.puffs.map(p => [p.x, p.y]) || [];
             const walled = (x0, y0, x1, y1) => puffs.some(([x, y]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
-            const walls = { north: walled(6100, 12540, 6260, 12620), east: walled(6800, 13200, 6880, 13520), wood: walled(6700, 12600, 6880, 13100) };
-            const tries = [[6172, 12500], [6900, 13350], [6900, 12900]], back = [];
+            const walls = { north: [6160, 6230, 6290].every(x => walled(x - 20, 12700, x + 20, 12770)) && walled(6420, 12560, 6700, 12640), east: walled(6800, 13200, 6880, 13520), wood: walled(6700, 12600, 6880, 13100) };
+            const tries = [[6180, 12600], [6900, 13350], [6900, 12900]], back = [];
             const step = (k) => {
                 if (k === tries.length) return done({ walls, back, mist: gs.textures.exists('boss-mist') });
                 me.setPosition(tries[k][0], tries[k][1] - fd.FEET);        // (a step out past a wall)
