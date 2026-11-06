@@ -71,6 +71,15 @@ async function sparklesAsSwung(page) {
     await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playAttack());
     await expect.poll(casting, { timeout: 2000 }).toEqual(['elven-cast-faerie', 'elven-cast-glow']);
     await expect.poll(() => glow().then(g => g?.alive || 0), { timeout: 2000 }).toBeGreaterThan(0);
+    // ...at the spearhead and a little past it, not all along the spear and over the body (the user's): facing left, the
+    // spear thrust out left, every star and the flash well out to the left of the hero
+    const atTip = await page.evaluate(() => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite, em = gs.elvenGlow.lit.get(gs.localPlayer.id);
+        const flash = gs.children.list.find(o => o.active && o.anims?.currentAnim?.key === 'elven-cast-faerie');
+        return { stars: em.alive.map(q => [q.x - me.x, q.y - me.y]), flash: flash && [flash.x - me.x, flash.y - me.y] };
+    });
+    expect(atTip.flash[0], `the flash at the spearhead: ${JSON.stringify(atTip.flash)}`).toBeLessThan(-14);
+    for (const [x, y] of atTip.stars) expect(x, `a star out by the spearhead, not over the body: ${JSON.stringify(atTip.stars)}`).toBeLessThan(-10);
     await expect.poll(glow, { timeout: 5000 }).toEqual({ emitting: false, alive: 0 });
     expect(await casting(), 'gone once swung').toEqual([]);
     await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.playCast());
