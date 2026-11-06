@@ -13,7 +13,6 @@ import { Spellbook } from '../magic/Spellbook.js';
 import { Upgrades, lifeAfter, lifeAtStart } from '../upgrades/Upgrades.js';
 
 const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often (hit points come back only at a healer, the user's)
-const HEAL_SHARE = 0.5;       // a healer mends you from nothing for this much of the cheapest upgrade you could buy next
 const TOO_POOR = ["You haven't the gold, I'm afraid. Come back when you have it."];
 import { account } from '../account/account.js';
 import { EXPLORE } from '../explore.js';
@@ -136,11 +135,11 @@ export class UIScene extends Scene {
         });
     }
 
-    /** What a healer asks to mend you (the user's: they charged nothing): a share of your next upgrade, as much as you're hurt. */
+    /** What a healer asks to mend you (Upgrades.healPrice): as much as you're hurt. */
     healPrice() {
         const hp = this.hp;
         if (!hp?.max || hp.now >= hp.max) return 0;
-        return Math.max(1, Math.ceil(HEAL_SHARE * (this.upgrades?.cheapest() ?? 20) * (hp.max - hp.now) / hp.max));
+        return this.upgrades?.healPrice((hp.max - hp.now) / hp.max) ?? 1;
     }
 
     /** A healer you said yes to: paid, mended; short of their price, what they say instead. */

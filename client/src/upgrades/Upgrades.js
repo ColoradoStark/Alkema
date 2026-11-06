@@ -9,6 +9,7 @@
 // Your class's spells come as they're maxed (`rewards`, REWARD_AT). Kept in the hero's save as `upgrades`
 // ({ hero id: level, spell id: its level }).
 
+import { GOLD_SHARE } from '../battle/zones.js';
 import { account } from '../account/account.js';
 
 export const RANKS = [1, 10, 25];            // a spell's level at which each of its ranks is learned
@@ -19,6 +20,9 @@ export const MAX = 10;
 // a big step, and each 1.4 times dearer as what a pack pays grows 1.5 times: one or two a pack, the numbers in the
 // tens and hundreds up the road, not the millions, the user's, November 2026)
 export const PATH_BASE = 20, PATH_GROW = 1.4;
+// A healer mends you from nothing for this much of the next upgrade's price, in gold as fights pay it (a share of their
+// essence, GOLD_SHARE): priced in essence it was four times that, the user's 2,200 gold short after a few upgrades
+const HEAL_SHARE = 0.5;
 export const TIMES = 3.4;
 
 /** Your own three, before the goddesses: Strength of Arm (your blows), Vigour (your hit points), Focus (your spells). */
@@ -238,6 +242,12 @@ export class Upgrades {
     /** What the next upgrade costs (what the field's essence and the healers' price are reckoned in). */
     cheapest() {
         return this.price();
+    }
+
+    /** What a healer asks to mend you, `hurt` the share of your hit points gone (the user's: they charged nothing). */
+    healPrice(hurt) {
+        if (!(hurt > 0)) return 0;
+        return Math.max(1, Math.ceil(HEAL_SHARE * GOLD_SHARE * this.price() * hurt));
     }
 
     /** Your stats with one more level of `id`: what buying it does. */

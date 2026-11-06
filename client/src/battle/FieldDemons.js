@@ -30,7 +30,7 @@ import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, packEssence, strengthFor, tooStrong } from './zones.js';
+import { ZONES, GOLD_SHARE, packEssence, strengthFor, tooStrong } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -41,7 +41,6 @@ const ELF_FX = 1.25;            // grown as Wesnoth's units are (battlegen.py)
 const KINDS = BAND_KINDS, HITS = BAND_HITS, HURTS = BAND_HURTS, PAY = BAND_PAY;
 // (the user never fell below 80% at a third of HURTS, October 2026: a fight on the road should be one you can lose)
 const SOFTER = 1.4;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder), then twice that (the user's, November 2026: they didn't hurt enough)
-const GOLD_SHARE = 0.25;        // a felled foe's gold, a share of its essence (what pays a healer)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
 const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first

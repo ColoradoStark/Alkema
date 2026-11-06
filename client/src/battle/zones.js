@@ -15,6 +15,9 @@ export const ZONES = {
     z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 50, more: 1.5 } },
 };
 
+/** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */
+export const GOLD_SHARE = 0.25;
+
 /** The home zone: the Saltmere Point, the first loop (the user's: clear one zone, then grow). */
 export const HOME = 35;
 

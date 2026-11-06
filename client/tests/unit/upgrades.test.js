@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, test, expect, beforeEach } from 'vitest';
 import { Upgrades, HEROES, MAX, lifeAfter, lifeAtStart } from '../../src/upgrades/Upgrades.js';
+import { packEssence, GOLD_SHARE } from '../../src/battle/zones.js';
 import { Spellbook } from '../../src/magic/Spellbook.js';
 import { account } from '../../src/account/account.js';
 
@@ -140,5 +141,18 @@ describe('Hit points', () => {
         expect(lifeAtStart(null, 68)).toEqual({ now: 68, max: 68 });
         expect(lifeAtStart('x', 68)).toEqual({ now: 68, max: 68 });
         expect(lifeAtStart(0, 68)).toEqual({ now: 1, max: 68 });       // (fallen as you left: you come to with one)
+    });
+
+    test("a healer's price is always within what the fight before paid (the user's: 2,200 gold and a few upgrades, and she said they hadn't the gold): every pack up the climb, all its essence spent, the gold it paid mends you from nothing", () => {
+        const { u, inventory } = hero('warrior', 0);
+        for (let step = 0; step < 14; step++) {
+            const essence = packEssence('z35', step);
+            inventory.essence += essence;
+            while (u.current && u.buy(u.current.id).ok);
+            const gold = Math.floor(essence * GOLD_SHARE);
+            expect(u.healPrice(1), `after pack ${step + 1}: ${gold} gold paid`).toBeLessThanOrEqual(gold);
+            expect(u.healPrice(0.5)).toBeLessThan(u.healPrice(1));
+        }
+        expect(u.healPrice(0)).toBe(0);
     });
 });
