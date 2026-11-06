@@ -79,6 +79,8 @@ const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rathe
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
 const CALL_RING = 110;
+const ARENA = 9 * TILE;         // a boss fight's ring of mist, about you both: no way out of it till one of you falls
+const MIST_PUFFS = 56;          // ...the mist drawn as this many soft puffs round it
 const BOSS_IN = [290, 250, 210, 170];   // px off you a boss comes into the world, nearest first that's just out of sight          // px from a boss that the foes his horn calls come ashore
 const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
 const SKULL_BOB = 2;            // px it bobs, up and down
@@ -247,6 +249,8 @@ export class FieldDemons {
         if (this.bars && this._shown !== this.scene.scene.get('UIScene')?.spellbook?.equipped) this._showSpell();
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
+        this._bossCall(feet);
+        this._hold();
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
@@ -307,7 +311,7 @@ export class FieldDemons {
             // (a guard you've struck keeps after you out of its trees, shooting from them: `_think`)
             // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
             // trees, each put you back over into the other's and they took turns, flashing; the user saw it)
-            const gone = yours !== null && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked))
+            const gone = yours !== null && this._arena?.boss !== f && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked))
                 && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE);
             this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
@@ -350,8 +354,8 @@ export class FieldDemons {
                 if (!this._up.size && !this.bars) this._unload();      // (and the spells' effects that came with them)
                 return;
             }
-            // (a zone's boss isn't there till the rest of it is beaten: `_comeAshore`)
-            const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i) && !(p.lair && this._sealed(fam)));
+            // (a zone's boss isn't made with them: he comes to you once the rest of it is beaten, `_bossCall`)
+            const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i) && !p.lair);
             if (!left.length) return;
             const make = (p) => this._body(fam, p);
             // One of each sheet first (not a fetch of it for every one wearing it)
@@ -431,6 +435,7 @@ export class FieldDemons {
 
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
+        this._arenaDown();
         this._warned?.clear();
         this.scene.scene.get('UIScene')?.bossBar?.hide();
         this.boss = null;
@@ -576,7 +581,6 @@ export class FieldDemons {
         f.foe.die();
         this._reward(f);
         if (f.spec.boss && f.met) this._bossFalls(f);
-        if (!f.called && !PLACES[f.i]?.lair && !this._sealed(f.family)) this._comeAshore(f.family);
         // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
         if (ZONES[f.family]?.climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
@@ -746,7 +750,7 @@ export class FieldDemons {
         // Now and then, chasing, it looks how far off you've got
         if ((f.lookT = (f.lookT ?? 0) - delta) <= 0) {
             f.lookT = LOOK_MS[0] + Math.random() * (LOOK_MS[1] - LOOK_MS[0]);
-            f.lost = d > Math.max(LEASH, (f.spec.keep || 0) + 80);     // (a caster's own distance kept is no getting away)
+            f.lost = d > Math.max(LEASH, (f.spec.keep || 0) + 80) && this._arena?.boss !== f;     // (a caster's own distance kept is no getting away; nor is a boss's ring)
         }
         if (!you || f.lost) {
             f.lost = false;
@@ -784,7 +788,7 @@ export class FieldDemons {
         }
         // Rock or water between it and you: round by the map (no way at all, or getting nowhere a long while: home)
         const way = this._way(f, you, delta, dt);
-        if (way === 'none' || this._idle(f, d, delta)) {
+        if ((way === 'none' || this._idle(f, d, delta)) && this._arena?.boss !== f) {
             f.lookT = LOOK_MS[1];      // (not looked at again, and found near enough, before it's turned for home)
             f.lost = true;
             f.calm = GIVE_UP_MS / 2;        // (and isn't roused again at once, there being no way to you)
@@ -1313,6 +1317,16 @@ export class FieldDemons {
     forgive() {
         this.fallen = false;
         this.provoked = false;
+        // (felled in a boss's ring: he's gone, mended, and comes to you again next time you're in his zone)
+        const boss = this._arena?.boss;
+        if (boss) {
+            this._arenaDown();
+            this._bossResets(boss);
+            this._unslam(boss);
+            boss.foe.destroy();
+            this.foes = this.foes.filter(f => f !== boss);
+            this.scene.scene.get('UIScene')?.bossBar?.hide();
+        }
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post') {
             if (f.state === 'windup') f.foe.tint(null);
             f.state = 'home';
@@ -1644,8 +1658,13 @@ export class FieldDemons {
      * loaded only now). Where he came in is his post: got away from, he goes back there and is mended.
      */
     async _comeAshore(fam) {
-        if (!this._up.has(fam)) return;
-        await FAMILIES[fam].load(this.scene, true);
+        if (!this._up.has(fam) || this._bossComing?.has(fam)) return;
+        (this._bossComing ??= new Set()).add(fam);
+        try {
+            await FAMILIES[fam].load(this.scene, true);
+        } finally {
+            this._bossComing.delete(fam);
+        }
         if (!this._up.has(fam)) return;         // (let go meanwhile: `forget` lets his sheet go too)
         const me = this.scene.localPlayer?.sprite, feet = me && { x: me.x, y: me.y + 23 };
         const came = [];
@@ -1659,6 +1678,87 @@ export class FieldDemons {
         audio.play('summon', { volume: 0.9 });
         await new Promise(done => { const ready = () => (came.every(f => f.foe.ready || f.state === 'dead') || !this._up.has(fam) ? done() : this.scene.time.delayedCall(100, ready)); ready(); });
         for (const f of came) if (this._up.has(fam) && f.state === 'post' && f.hp > 0) this._roused(f);
+    }
+
+    /**
+     * A zone's boss isn't anywhere on the map waiting (the user's, November 2026: they went looking and he wasn't
+     * where he should be): once the rest of his zone is beaten, while he stands and you're in his zone, he comes to you.
+     */
+    _bossCall(feet) {
+        if (this.fallen) return;
+        const here = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id;
+        for (const fam of this._up) {
+            if (this._coming.has(fam) || this._bossComing?.has(fam) || this._sealed(fam)) continue;
+            const lair = PLACES.find(p => p.family === fam && p.lair && !this.slain.has(p.i) && !this.foes.some(f => f.i === p.i));
+            if (lair && here !== undefined && here === this.scene.overworld.zoneAt(...PACKS[lair.pack].at)?.id) this._comeAshore(fam);
+        }
+    }
+
+    /**
+     * A boss's ring (the user's, November 2026: no getting away from a boss fight): mist closes round you both as he
+     * comes for you, and holds you in it till one of you falls. Its puff a canvas of its own, let go with it.
+     */
+    _arenaUp(f) {
+        this._arenaDown();
+        const me = this.scene.localPlayer?.sprite;
+        if (!me) return;
+        const feet = { x: me.x, y: me.y + FEET };
+        const cx = (feet.x + f.foe.x) / 2, cy = (feet.y + f.foe.y) / 2;
+        const key = 'boss-mist';
+        if (!this.scene.textures.exists(key)) {
+            const n = 64, tex = this.scene.textures.createCanvas(key, n, n), ctx = tex.getContext();
+            const g = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+            g.addColorStop(0, 'rgba(225, 230, 240, 0.7)');
+            g.addColorStop(0.5, 'rgba(205, 212, 228, 0.32)');
+            g.addColorStop(1, 'rgba(190, 200, 220, 0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, n, n);
+            tex.refresh();
+        }
+        const puffs = [];
+        for (let k = 0; k < MIST_PUFFS; k++) {
+            const a = k / MIST_PUFFS * Math.PI * 2;
+            const puff = this.scene.add.image(cx + Math.cos(a) * ARENA, cy + Math.sin(a) * ARENA, key)
+                .setDepth(FX_DEPTH).setAlpha(0).setScale(1.6 + Math.random() * 0.8);
+            this.scene.tweens.add({ targets: puff, alpha: 0.75 + Math.random() * 0.2, duration: 700, delay: Math.random() * 400 });
+            this.scene.tweens.add({ targets: puff, scale: puff.scale * 1.25, duration: 1600 + Math.random() * 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 700 });
+            puffs.push({ puff, a });
+        }
+        audio.play('summon', { volume: 0.6, rate: 0.6 });
+        this._arena = { cx, cy, r: ARENA, boss: f, puffs, last: feet, t: 0 };
+    }
+
+    /** The ring lets you go (`fell`: he's beaten, and it thins away). */
+    _arenaDown(fell = false) {
+        const ring = this._arena;
+        if (!ring) return;
+        this._arena = null;
+        for (const { puff } of ring.puffs) {
+            this.scene.tweens.killTweensOf(puff);
+            if (fell) this.scene.tweens.add({ targets: puff, alpha: 0, scale: puff.scale * 1.6, duration: 1400, onComplete: () => puff.destroy() });
+            else puff.destroy();
+        }
+        const free = () => { if (!this._arena && this.scene.textures.exists('boss-mist')) this.scene.textures.remove('boss-mist'); };
+        if (fell) this.scene.time.delayedCall(1500, free);
+        else free();
+    }
+
+    /** In a boss's ring, you can't walk out of it: at its edge you're held where you were. Its mist drifts round. */
+    _hold() {
+        const ring = this._arena, me = this.scene.localPlayer?.sprite;
+        if (!ring) return;
+        ring.t += 1;
+        for (const p of ring.puffs) {
+            const a = p.a + ring.t * 0.0015, r = ring.r + Math.sin(ring.t * 0.02 + p.a * 5) * 6;
+            p.puff.setPosition(ring.cx + Math.cos(a) * r, ring.cy + Math.sin(a) * r);
+        }
+        if (!me || this.fallen) return;
+        const feet = { x: me.x, y: me.y + FEET };
+        if (Math.hypot(feet.x - ring.cx, feet.y - ring.cy) <= ring.r - 14) ring.last = feet;
+        else {
+            me.setPosition(ring.last.x, ring.last.y - FEET);
+            me.body?.reset(me.x, me.y);
+        }
     }
 
     /** Somewhere just out of sight of `feet`, open and in his zone, nearest the way to his own ground `p`. */
@@ -1683,10 +1783,12 @@ export class FieldDemons {
         audio.play('foe_orc', { volume: 0.9, rate: 0.7 });
         this.scene.cameras.main.shake(260, 0.004);
         f.foe.nameText?.setAlpha(0);        // (his name's on his bar now)
+        this._arenaUp(f);
     }
 
     /** He's beaten: his bar empties, and a fanfare. */
     _bossFalls(f) {
+        this._arenaDown(true);
         const ui = this.scene.scene.get('UIScene');
         ui?.bossBar?.hide(true);
         this.scene.cameras.main.shake(300, 0.006);

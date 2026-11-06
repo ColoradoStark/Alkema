@@ -1894,7 +1894,7 @@ test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and
 });
 
 test.describe('The Goblin Rouser, a boss fight', () => {
-    test("he isn't there till the rest of the Point is beaten, then comes into the world just out of sight and comes for you, his name up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; mended at home it begins afresh; felled, a chest (the user's, November 2026)", async ({ page }) => {
+    test("he isn't there till the rest of the Point is beaten, then comes into the world just out of sight and comes for you, a ring of mist closing round you both with no way out, his name up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; you fall and he's gone, to come for you again; felled, the mist lifts and a chest (the user's, November 2026)", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);
         await atThePoint(page);
@@ -1927,6 +1927,16 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         // ...and his own music, a boss's (the user's: the music should change)
         const mood = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene')._mood);
         await expect.poll(mood, { timeout: 3000 }).toBe('boss');
+        // A ring of mist closes round you both, and there's no walking out of it (the user's: no getting away)
+        const held = await page.evaluate(() => new Promise(done => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ring = fd._arena, me = gs.localPlayer.sprite;
+            const puffs = ring?.puffs.length;
+            me.setPosition(ring.cx + ring.r + 40, ring.cy - fd.FEET);        // (a step out past its edge)
+            me.body.reset(me.x, me.y);
+            requestAnimationFrame(() => requestAnimationFrame(() => done({ puffs, inside: Math.hypot(me.x - ring.cx, me.y + fd.FEET - ring.cy) < ring.r,
+                mist: gs.textures.exists('boss-mist') })));
+        }));
+        expect(held).toEqual({ puffs: 56, inside: true, mist: true });
         // His bar follows his health
         const frac = await page.evaluate((i) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
@@ -1975,20 +1985,17 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         }), { timeout: 3000 }).toEqual(['impaler', 'spearman', 'spearman']);
         // You get away (or fall): home and mended, his horn's goblins gone, his bar gone; it begins afresh next time
         await standAt(page, POINT.x, POINT.y);
+        // You fall: the ring lets you go and he's gone, mended; back in his zone, he comes for you again
         const reset = await page.evaluate((i) => {
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
-            fd.forgive();
-            f.foe.sprite.setPosition(f.post.x, f.post.y - fd.FEET);
-            f.stun = 0;
-            fd._home(f, 0.016, 0);
-            return { hp: f.hp === f.maxHp, met: f.met, horned: f.horned, called: fd.foes.filter(o => o.called).length };
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            fd.forgive();           // (as coming to after a fall does)
+            return { there: fd.foes.some(f => f.i === i), ring: !!fd._arena, mist: gs.textures.exists('boss-mist'), called: fd.foes.filter(o => o.called).length };
         }, boss.i);
-        expect(reset).toEqual({ hp: true, met: false, horned: false, called: 0 });
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 5000 }).toBe(false);
-        await expect.poll(mood, { timeout: 10000 }).not.toBe('boss');
-        // Felled: his bar empties and goes, and his chest; the card's darkening let go
-        const near = await offFoe(page, boss.i, 120);
-        await standAt(page, near.x, near.y);
+        expect(reset).toEqual({ there: false, ring: false, mist: false, called: 0 });
+        await expect.poll(() => page.evaluate((i) => {
+            const f = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i);
+            return f && { hp: f.hp === f.maxHp, met: !!f.met };
+        }, boss.i), { timeout: 15000 }).toEqual({ hp: true, met: true });
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 10000 }).toBe(true);
         const chests = await page.evaluate((i) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
@@ -1999,8 +2006,9 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         expect(chests).toBe(1);
         await expect.poll(() => page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            return { bar: ui.bossBar.shown, dark: ui.textures.exists('boss-dark') };
-        }), { timeout: 8000 }).toEqual({ bar: false, dark: false });
+            return { bar: ui.bossBar.shown, dark: ui.textures.exists('boss-dark'), ring: !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._arena,
+                mist: ui.textures.exists('boss-mist') };
+        }), { timeout: 8000 }).toEqual({ bar: false, dark: false, ring: false, mist: false });
         await expect.poll(mood, { timeout: 10000 }).not.toBe('boss');
     });
 });
