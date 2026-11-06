@@ -78,7 +78,8 @@ const RING = 64;                // a flanker makes for this far off you, on the 
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
-const CALL_RING = 110;          // px from a boss that the foes his horn calls come ashore
+const CALL_RING = 110;
+const BOSS_IN = [290, 250, 210, 170];   // px off you a boss comes into the world, nearest first that's just out of sight          // px from a boss that the foes his horn calls come ashore
 const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
 const SKULL_BOB = 2;            // px it bobs, up and down
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
@@ -1637,22 +1638,40 @@ export class FieldDemons {
         }
     }
 
-    /** The rest of his zone beaten, its boss comes ashore on his own ground (his sheet loaded only now). */
+    /**
+     * The rest of his zone beaten, its boss comes into the world just out of sight and comes for you (the user's,
+     * November 2026: waiting at the Point's tip was weird), from his own ground's side of you where it can (his sheet
+     * loaded only now). Where he came in is his post: got away from, he goes back there and is mended.
+     */
     async _comeAshore(fam) {
         if (!this._up.has(fam)) return;
         await FAMILIES[fam].load(this.scene, true);
         if (!this._up.has(fam)) return;         // (let go meanwhile: `forget` lets his sheet go too)
-        let came = null;
+        const me = this.scene.localPlayer?.sprite, feet = me && { x: me.x, y: me.y + 23 };
+        const came = [];
         for (const p of PLACES) {
             if (p.family !== fam || !p.lair || this.slain.has(p.i) || this.foes.some(f => f.i === p.i)) continue;
-            const f = this._body(fam, p);
+            const f = this._body(fam, p, (feet && this._offView(p, feet)) || this._clear(p));
             this.foes.push(f);
-            this.scene.effects?.smash?.(f.post.x, f.post.y - 10, f.post.y, 'pot');
-            came = f;
+            came.push(f);
         }
-        if (!came) return;
+        if (!came.length) return;
         audio.play('summon', { volume: 0.9 });
-        this.scene.time.delayedCall(900, () => this.scene.scene.get('UIScene')?.notice?.(`All his raiders beaten, the ${came.spec.label} comes ashore at the Point's tip!`, 4200));
+        await new Promise(done => { const ready = () => (came.every(f => f.foe.ready || f.state === 'dead') || !this._up.has(fam) ? done() : this.scene.time.delayedCall(100, ready)); ready(); });
+        for (const f of came) if (this._up.has(fam) && f.state === 'post' && f.hp > 0) this._roused(f);
+    }
+
+    /** Somewhere just out of sight of `feet`, open and in his zone, nearest the way to his own ground `p`. */
+    _offView(p, feet) {
+        const [hx, hy] = PACKS[p.pack].at, toward = Math.atan2(hy - feet.y, hx - feet.x);
+        const zone = this.scene.overworld?.zoneAt?.(hx, hy)?.id;
+        for (let turn = 0; turn <= Math.PI; turn += Math.PI / 12) for (const side of turn ? [1, -1] : [1]) {
+            for (const r of BOSS_IN) {
+                const a = toward + turn * side, x = feet.x + Math.cos(a) * r, y = feet.y + Math.sin(a) * r;
+                if (this._open(x, y) && (zone === undefined || this.scene.overworld.zoneAt(x, y)?.id === zone)) return { x, y };
+            }
+        }
+        return null;
     }
 
     /** A boss comes for you: his name and title come up, the map darkens at its edges, and his bar along the bottom. */

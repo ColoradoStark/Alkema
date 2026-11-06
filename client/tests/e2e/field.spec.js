@@ -1894,7 +1894,7 @@ test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and
 });
 
 test.describe('The Goblin Rouser, a boss fight', () => {
-    test("he isn't there till the rest of the Point is beaten, then comes ashore alone at its tip; stepping up, his name comes up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; mended at home it begins afresh; felled, a chest (the user's, November 2026)", async ({ page }) => {
+    test("he isn't there till the rest of the Point is beaten, then comes into the world just out of sight and comes for you, his name up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; mended at home it begins afresh; felled, a chest (the user's, November 2026)", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);
         await atThePoint(page);
@@ -1911,17 +1911,15 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             last.stun = 1e9;
             fd._strikeFoe(last, 1e12, { x: last.foe.x, y: last.foe.y + 30 });
             const sheet = window.__PHASER_GAME.textures.exists('foe-rouser');        // (not loaded till he comes)
-            for (let t = 0; t < 150 && !fd.foes.find(f => f.kind === 'rouser'); t++) await new Promise(r => setTimeout(r, 100));
-            const f = fd.foes.find(f => f.kind === 'rouser');
-            return { before, stillOne, sheet, i: f?.i, alone: PACKS[f.pack].band.length, lair: !!PACKS[f.pack].lair, state: f.state,
-                at: Math.hypot(f.foe.x - PACKS[f.pack].at[0], f.foe.y - PACKS[f.pack].at[1]) < 40 };
+            for (let t = 0; t < 150 && !fd.foes.find(f => f.kind === 'rouser' && f.foe.ready && f.state !== 'post'); t++) await new Promise(r => setTimeout(r, 100));
+            const f = fd.foes.find(f => f.kind === 'rouser'), me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            const cam = window.__PHASER_GAME.scene.getScene('GameScene').cameras.main.worldView;
+            return { before, stillOne, sheet, i: f?.i, alone: PACKS[f.pack].band.length, lair: !!PACKS[f.pack].lair, after: f.state !== 'post',
+                off: Math.hypot(f.post.x - me.x, f.post.y - me.y - 23), unseen: !cam.contains(f.post.x, f.post.y), zone: window.__PHASER_GAME.scene.getScene('GameScene').overworld.zoneAt(f.post.x, f.post.y)?.id };
         });
-        expect(boss).toMatchObject({ before: false, stillOne: false, sheet: false, alone: 1, lair: true, state: 'post', at: true });
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text || ''), { timeout: 5000 }).toMatch(/comes ashore/);
-        await expect.poll(() => page.evaluate((i) => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i)?.foe.ready, boss.i), { timeout: 15000 }).toBe(true);
-        // Stepping up: he comes for you, his name up large, his bar along the bottom (none over his head)
-        const near = await offFoe(page, boss.i, 120);
-        await standAt(page, near.x, near.y);
+        expect(boss).toMatchObject({ before: false, stillOne: false, sheet: false, alone: 1, lair: true, after: true, unseen: true, zone: 35 });
+        expect(boss.off).toBeLessThan(320);         // (within his leash: he doesn't give up at once)
+        // He comes for you: his name up large, his bar along the bottom (none over his head)
         await expect.poll(() => page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             return { bar: ui.bossBar.shown, name: ui.bossBar.name.text, card: !!ui._bossCard?.active };
@@ -1989,6 +1987,7 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 5000 }).toBe(false);
         await expect.poll(mood, { timeout: 10000 }).not.toBe('boss');
         // Felled: his bar empties and goes, and his chest; the card's darkening let go
+        const near = await offFoe(page, boss.i, 120);
         await standAt(page, near.x, near.y);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown), { timeout: 10000 }).toBe(true);
         const chests = await page.evaluate((i) => {
