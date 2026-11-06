@@ -243,6 +243,8 @@ export class AccountMenu {
             body.append(note);
         }
 
+        if (account.full) body.append(el('p', 'acct-error', { role: 'alert', text: 'Every slot is full. Delete a hero (✕) to make room for a new one.' }));
+
         const list = el('div', 'acct-saves');
         if (!account.saves.length) list.append(el('p', 'acct-empty', { text: 'Your heroes appear here once you press Play.' }));
         for (const save of account.saves) list.append(this._saveRow(save));

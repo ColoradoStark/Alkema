@@ -17,7 +17,7 @@ import { Showcase } from '../creator/Showcase.js';
 import { StageBackdrop } from '../creator/StageBackdrop.js';
 import { StageEffects } from '../creator/StageEffects.js';
 import { audio } from '../audio/audio.js';
-import { account } from '../account/account.js';
+import { account, MAX_SAVES } from '../account/account.js';
 import { AccountMenu } from '../account/AccountMenu.js';
 
 const FIGURE_Y = 160;
@@ -248,6 +248,7 @@ export class CreateScene extends Scene {
         else if (account.loginResult === 'failed') this.panel.toast("That sign-in didn't work. Try again, or keep playing as a guest.");
         else if (this._enterFailed()) this.panel.toast('Something went wrong on the way in. Press Play to try again.', 5000);
         else if (last?.data?.hero) this.panel.toast(`Welcome back, ${this.state.name}.`);
+        else if (account.full) this.panel.toast(`All ${MAX_SAVES} hero slots are full: delete one in My heroes to make a new hero.`, 5000);
         account.loginResult = null;
 
         this._onKey = (e) => {
@@ -386,8 +387,21 @@ export class CreateScene extends Scene {
 
     async _play() {
         if (this._joining) return;
+        // Every slot full: a new hero is never played unsaved (the user's, November 2026: theirs played on and were
+        // gone on the next visit), so they're asked to delete one first, My heroes open for it
+        if (account.full) return this._slotsFull();
         this._joining = true;
         this.panel?.setJoining(true);
+        // Save this hero (a new slot, or the one they loaded) before setting off; the server may count its slots full
+        const saved = await account.saveHero({
+            hero: this.state.heroData(),
+            summary: this.state.summary(),
+        }).catch(() => undefined);
+        if (saved === null) {
+            this._joining = false;
+            this.panel?.setJoining(false);
+            return this._slotsFull();
+        }
 
         let res = null;
         try {
@@ -409,15 +423,15 @@ export class CreateScene extends Scene {
         }
         // Their starting kit, what they're wearing and their stats, for the inventory
         if (res?.kit) this.game.registry.set('gear', { kit: res.kit, equipped: res.equipped, stats: res.stats });
-        // Save this hero (a new slot, or the one they loaded) before setting off
-        const saved = await account.saveHero({
-            hero: this.state.heroData(),
-            summary: this.state.summary(),
-        }).catch(() => undefined);
-        if (saved === null) this.accountMenu.toast('All 10 hero slots are full. Free one in My heroes to save this hero.');
         // The world loads behind the creator: usually in by now, else Entering… waits for it
         await worldLoaded(this.game);
         this._enterWorld();
+    }
+
+    _slotsFull() {
+        audio.play('error');
+        this.accountMenu.openSaves();
+        this.panel?.toast(`All ${MAX_SAVES} hero slots are full. Delete a hero to make room for this one.`, 5000);
     }
 
     _enterWorld() {

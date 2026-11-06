@@ -188,19 +188,23 @@ class Account {
         } catch { /* no storage */ }
     }
 
+    /** A new hero has no slot to go in: every one holds a hero, and the one on the stage isn't among them. */
+    get full() {
+        return !this.current && this.saves.length >= MAX_SAVES;
+    }
+
     /**
-     * Save the hero being played (creating a slot for a new hero). When all
-     * slots are full, a hero with no progress yet makes way; otherwise nothing
-     * is saved and this resolves to null.
+     * Save the hero being played (creating a slot for a new hero). With every
+     * slot full (here, or as the server counts them) nothing is saved and this
+     * resolves to null: the player deletes a hero first. No hero already saved
+     * is let go to make room (the user's, November 2026: one with no gold or
+     * quests yet made way, and heroes went missing).
      */
     async saveHero(fields) {
         let save = this.current;
-        if (!save) {
-            if (this.saves.length >= MAX_SAVES) {
-                const spare = [...this.saves].reverse().find(s => !hasProgress(s.data));
-                if (!spare) return null;
-                await this.deleteSave(spare.id);
-            }
+        const fresh = !save;
+        if (fresh) {
+            if (this.full) return null;
             // (its own clock: a new hero starts in the morning, the user's)
             save = { id: newId(), data: { quests: { index: 0, progress: 0 }, gold: 0, clock: morningClock() }, updated_at: '' };
             this.saves.unshift(save);
@@ -210,7 +214,17 @@ class Account {
         // played again with a new look, theirs began at night)
         save.data.clock ??= morningClock();
         this.markPlayed(save.id);
-        await this._write(save, { now: true });
+        try {
+            await this._write(save, { now: true });
+        } catch (err) {
+            // The server's slots full though this list wasn't (it failed to load, or another device made one): a new
+            // hero isn't played unsaved, to be gone on the next visit. (Out of reach, it plays on: the next write saves it.)
+            if (!(fresh && err.status === 409)) return save;
+            this.saves = this.saves.filter(s => s.id !== save.id);
+            this.markPlayed(null);
+            this._emit();
+            return null;
+        }
         return save;
     }
 
@@ -243,10 +257,10 @@ class Account {
         clearTimeout(this._pending.get(save.id));
         const send = () => {
             this._pending.delete(save.id);
-            return api(`/saves/${save.id}`, { method: 'PUT', body: { data: save.data } }).catch(() => {});
+            return api(`/saves/${save.id}`, { method: 'PUT', body: { data: save.data } });
         };
         if (now) await send();
-        else this._pending.set(save.id, setTimeout(send, 1500));
+        else this._pending.set(save.id, setTimeout(() => send().catch(() => {}), 1500));
     }
 
     async _flush() {
@@ -267,10 +281,6 @@ class Account {
     _emit() {
         this._listeners.forEach(fn => fn(this));
     }
-}
-
-export function hasProgress(data) {
-    return Boolean(data?.gold) || Boolean(data?.quests?.index) || Boolean(data?.quests?.progress);
 }
 
 export const account = new Account();
