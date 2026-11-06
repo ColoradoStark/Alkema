@@ -34,6 +34,8 @@ const standAt = (page, x, y) => page.evaluate(([x, y]) => {
 const POINT = { x: 6192, y: 12480 };
 // Where heroes start, below Riverhold's gate: far from every pack
 const START = { x: 6320, y: 11143 };
+// In the Point's clearing, the Rouser's fighting ground
+const CLEARING = { x: 6450, y: 13000 };
 const KINDS = ['footpad', 'impaler', 'poacher', 'rat', 'rouser', 'ruffian', 'spearman', 'woodsman'];
 const SHOOTERS = ['woodsman', 'poacher'];
 
@@ -100,8 +102,8 @@ async function bossOut(page) {
     await page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PLACES }) => {
         const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
         for (const p of PLACES) if (p.family === 'z35' && !p.lair) fd.slain.add(p.i);
-        fd._comeAshore('z35');
     }));
+    await standAt(page, CLEARING.x, CLEARING.y);          // (he comes as you're in his clearing)
     await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === 'rouser')?.foe.ready), { timeout: 15000 }).toBe(true);
 }
 
@@ -277,6 +279,9 @@ test.describe("The Saltmere Point's foes", () => {
         await keepUp(page);
         await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.tweens.killTweensOf(gs.localPlayer.sprite); });     // (a knock back from its last blow, still going, would carry you back to it)
         await standAt(page, away.x, away.y);
+        // (it looks now: left to its own next look, up to two seconds off, it had run most of the way back to you on a
+        // busy machine, and found you inside its ten again)
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === 0).lookT = 0; });
         await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 2600 }).toBe('home');
         await expect.poll(() => field(page).then(f => f.states[0]), { timeout: 30000 }).toBe('post');
     });
@@ -1906,19 +1911,23 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             const before = !!fd.foes.find(f => f.kind === 'rouser');
             const rest = PLACES.filter(p => p.family === 'z35' && !p.lair);
             for (const p of rest.slice(1)) fd.slain.add(p.i);
-            const stillOne = !!fd.foes.find(f => f.kind === 'rouser');
             const last = fd.foes.find(f => f.i === rest[0].i);
             last.stun = 1e9;
+            const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            me.setPosition(6450, 13000 - 23);       // (in his clearing)
+            me.body.reset(me.x, me.y);
+            await new Promise(r => setTimeout(r, 300));
+            const stillOne = !!fd.foes.find(f => f.kind === 'rouser');
             fd._strikeFoe(last, 1e12, { x: last.foe.x, y: last.foe.y + 30 });
             const sheet = window.__PHASER_GAME.textures.exists('foe-rouser');        // (not loaded till he comes)
             for (let t = 0; t < 150 && !fd.foes.find(f => f.kind === 'rouser' && f.foe.ready && f.state !== 'post'); t++) await new Promise(r => setTimeout(r, 100));
-            const f = fd.foes.find(f => f.kind === 'rouser'), me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
+            const f = fd.foes.find(f => f.kind === 'rouser');
             const cam = window.__PHASER_GAME.scene.getScene('GameScene').cameras.main.worldView;
             return { before, stillOne, sheet, i: f?.i, alone: PACKS[f.pack].band.length, lair: !!PACKS[f.pack].lair, after: f.state !== 'post',
                 off: Math.hypot(f.post.x - me.x, f.post.y - me.y - 23), unseen: !cam.contains(f.post.x, f.post.y), zone: window.__PHASER_GAME.scene.getScene('GameScene').overworld.zoneAt(f.post.x, f.post.y)?.id };
         });
         expect(boss).toMatchObject({ before: false, stillOne: false, sheet: false, alone: 1, lair: true, after: true, unseen: true, zone: 35 });
-        expect(boss.off).toBeLessThan(320);         // (within his leash: he doesn't give up at once)
+        expect(boss.off).toBeGreaterThanOrEqual(300);       // (well off: the user's, just out of sight he was on them too fast)
         // He comes for you: his name up large, his bar along the bottom (none over his head)
         await expect.poll(() => page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
@@ -1927,16 +1936,23 @@ test.describe('The Goblin Rouser, a boss fight', () => {
         // ...and his own music, a boss's (the user's: the music should change)
         const mood = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene')._mood);
         await expect.poll(mood, { timeout: 3000 }).toBe('boss');
-        // A ring of mist closes round you both, and there's no walking out of it (the user's: no getting away)
+        // Mist walls off the whole clearing (the corridors north and east, the wood), and there's no walking out of it
+        // (the user's: no getting away, and the whole clearing his ground)
         const held = await page.evaluate(() => new Promise(done => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ring = fd._arena, me = gs.localPlayer.sprite;
-            const puffs = ring?.puffs.length;
-            me.setPosition(ring.cx + ring.r + 40, ring.cy - fd.FEET);        // (a step out past its edge)
-            me.body.reset(me.x, me.y);
-            requestAnimationFrame(() => requestAnimationFrame(() => done({ puffs, inside: Math.hypot(me.x - ring.cx, me.y + fd.FEET - ring.cy) < ring.r,
-                mist: gs.textures.exists('boss-mist') })));
+            const puffs = ring?.puffs.map(p => [p.x, p.y]) || [];
+            const walled = (x0, y0, x1, y1) => puffs.some(([x, y]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
+            const walls = { north: walled(6100, 12540, 6260, 12620), east: walled(6800, 13200, 6880, 13520), wood: walled(6700, 12600, 6880, 13100) };
+            const tries = [[6172, 12500], [6900, 13350], [6900, 12900]], back = [];
+            const step = (k) => {
+                if (k === tries.length) return done({ walls, back, mist: gs.textures.exists('boss-mist') });
+                me.setPosition(tries[k][0], tries[k][1] - fd.FEET);        // (a step out past a wall)
+                me.body.reset(me.x, me.y);
+                requestAnimationFrame(() => requestAnimationFrame(() => { back.push(fd._inArena(ring.pack, me.x, me.y + fd.FEET)); step(k + 1); }));
+            };
+            step(0);
         }));
-        expect(held).toEqual({ puffs: 56, inside: true, mist: true });
+        expect(held).toEqual({ walls: { north: true, east: true, wood: true }, back: [true, true, true], mist: true });
         // His bar follows his health
         const frac = await page.evaluate((i) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);

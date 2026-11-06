@@ -79,9 +79,9 @@ const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rathe
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
 const CALL_RING = 110;
-const ARENA = 9 * TILE;         // a boss fight's ring of mist, about you both: no way out of it till one of you falls
-const MIST_PUFFS = 56;          // ...the mist drawn as this many soft puffs round it
-const BOSS_IN = [290, 250, 210, 170];   // px off you a boss comes into the world, nearest first that's just out of sight          // px from a boss that the foes his horn calls come ashore
+const MIST_APART = 26;          // a boss's walls of mist drawn as soft puffs this far apart along them
+const MIST_CELL = 16;           // ...found on a grid this fine
+const BOSS_IN = [560, 500, 440, 380, 320];   // px off you a boss comes into the world (the user's: just out of sight he was on them too fast), furthest first          // px from a boss that the foes his horn calls come ashore
 const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
 const SKULL_BOB = 2;            // px it bobs, up and down
 const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
@@ -1686,49 +1686,68 @@ export class FieldDemons {
      */
     _bossCall(feet) {
         if (this.fallen) return;
-        const here = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id;
         for (const fam of this._up) {
             if (this._coming.has(fam) || this._bossComing?.has(fam) || this._sealed(fam)) continue;
             const lair = PLACES.find(p => p.family === fam && p.lair && !this.slain.has(p.i) && !this.foes.some(f => f.i === p.i));
-            if (lair && here !== undefined && here === this.scene.overworld.zoneAt(...PACKS[lair.pack].at)?.id) this._comeAshore(fam);
+            if (lair && this._inArena(PACKS[lair.pack], feet.x, feet.y)) this._comeAshore(fam);
         }
     }
 
+    /** In a boss's fighting ground (`arena` on his pack: his zone's ground within its box; none, all his zone)? */
+    _inArena(pack, x, y) {
+        const ow = this.scene.overworld, box = pack.arena;
+        if (box && (x < box[0] || y < box[1] || x > box[2] || y > box[3])) return false;
+        const z = ow?.zoneAt?.(x, y)?.id;
+        return z !== undefined && z === ow.zoneAt(...pack.at)?.id;
+    }
+
     /**
-     * A boss's ring (the user's, November 2026: no getting away from a boss fight): mist closes round you both as he
-     * comes for you, and holds you in it till one of you falls. Its puff a canvas of its own, let go with it.
+     * A boss fight's walls (the user's, November 2026: no getting away from a boss fight, and his ground the whole
+     * clearing, not a little ring): mist rises wherever his ground meets open ground beyond it (the corridors out, the
+     * wood's edge), and holds you in till one of you falls. Its puff a canvas of its own, let go with it.
      */
     _arenaUp(f) {
         this._arenaDown();
-        const me = this.scene.localPlayer?.sprite;
+        const me = this.scene.localPlayer?.sprite, pack = PACKS[f.pack];
         if (!me) return;
         const feet = { x: me.x, y: me.y + FEET };
-        const cx = (feet.x + f.foe.x) / 2, cy = (feet.y + f.foe.y) / 2;
+        if (!this._inArena(pack, feet.x, feet.y)) return;
         const key = 'boss-mist';
         if (!this.scene.textures.exists(key)) {
             const n = 64, tex = this.scene.textures.createCanvas(key, n, n), ctx = tex.getContext();
             const g = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
-            g.addColorStop(0, 'rgba(225, 230, 240, 0.7)');
-            g.addColorStop(0.5, 'rgba(205, 212, 228, 0.32)');
+            g.addColorStop(0, 'rgba(228, 232, 242, 0.8)');
+            g.addColorStop(0.5, 'rgba(208, 214, 230, 0.38)');
             g.addColorStop(1, 'rgba(190, 200, 220, 0)');
             ctx.fillStyle = g;
             ctx.fillRect(0, 0, n, n);
             tex.refresh();
         }
         const puffs = [];
-        for (let k = 0; k < MIST_PUFFS; k++) {
-            const a = k / MIST_PUFFS * Math.PI * 2;
-            const puff = this.scene.add.image(cx + Math.cos(a) * ARENA, cy + Math.sin(a) * ARENA, key)
-                .setDepth(FX_DEPTH).setAlpha(0).setScale(1.6 + Math.random() * 0.8);
-            this.scene.tweens.add({ targets: puff, alpha: 0.75 + Math.random() * 0.2, duration: 700, delay: Math.random() * 400 });
+        for (const [x, y] of this._walls(pack)) {
+            const puff = this.scene.add.image(x, y, key).setDepth(FX_DEPTH).setAlpha(0).setScale(1.5 + Math.random() * 0.7);
+            this.scene.tweens.add({ targets: puff, alpha: 0.8 + Math.random() * 0.15, duration: 700, delay: Math.random() * 500 });
             this.scene.tweens.add({ targets: puff, scale: puff.scale * 1.25, duration: 1600 + Math.random() * 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 700 });
-            puffs.push({ puff, a });
+            puffs.push({ puff, x, y, a: Math.random() * Math.PI * 2 });
         }
         audio.play('summon', { volume: 0.6, rate: 0.6 });
-        this._arena = { cx, cy, r: ARENA, boss: f, puffs, last: feet, t: 0 };
+        this._arena = { pack, boss: f, puffs, last: feet, t: 0 };
     }
 
-    /** The ring lets you go (`fell`: he's beaten, and it thins away). */
+    /** Where a boss's ground meets open ground outside it, MIST_APART apart: its walls. */
+    _walls(pack) {
+        const [x0, y0, x1, y1] = pack.arena || [pack.at[0] - 40 * TILE, pack.at[1] - 40 * TILE, pack.at[0] + 40 * TILE, pack.at[1] + 40 * TILE];
+        const C = MIST_CELL, out = [];
+        const inside = (x, y) => this._inArena(pack, x, y);
+        for (let y = y0 - C; y <= y1 + C; y += C) for (let x = x0 - C; x <= x1 + C; x += C) {
+            if (!inside(x, y) || !this._open(x, y)) continue;
+            const edge = [[C, 0], [-C, 0], [0, C], [0, -C]].some(([dx, dy]) => !inside(x + dx, y + dy) && this._open(x + dx, y + dy));
+            if (edge && out.every(([ox, oy]) => Math.hypot(ox - x, oy - y) >= MIST_APART)) out.push([x, y]);
+        }
+        return out;
+    }
+
+    /** The walls let you go (`fell`: he's beaten, and they thin away). */
     _arenaDown(fell = false) {
         const ring = this._arena;
         if (!ring) return;
@@ -1743,33 +1762,27 @@ export class FieldDemons {
         else free();
     }
 
-    /** In a boss's ring, you can't walk out of it: at its edge you're held where you were. Its mist drifts round. */
+    /** In a boss's ground, you can't walk out of it: at its walls you're held where you were. Its mist drifts. */
     _hold() {
         const ring = this._arena, me = this.scene.localPlayer?.sprite;
         if (!ring) return;
         ring.t += 1;
-        for (const p of ring.puffs) {
-            const a = p.a + ring.t * 0.0015, r = ring.r + Math.sin(ring.t * 0.02 + p.a * 5) * 6;
-            p.puff.setPosition(ring.cx + Math.cos(a) * r, ring.cy + Math.sin(a) * r);
-        }
+        for (const p of ring.puffs) p.puff.setPosition(p.x + Math.sin(ring.t * 0.015 + p.a) * 5, p.y + Math.cos(ring.t * 0.012 + p.a) * 3);
         if (!me || this.fallen) return;
         const feet = { x: me.x, y: me.y + FEET };
-        if (Math.hypot(feet.x - ring.cx, feet.y - ring.cy) <= ring.r - 14) ring.last = feet;
+        if (this._inArena(ring.pack, feet.x, feet.y)) ring.last = feet;
         else {
             me.setPosition(ring.last.x, ring.last.y - FEET);
             me.body?.reset(me.x, me.y);
         }
     }
 
-    /** Somewhere just out of sight of `feet`, open and in his zone, nearest the way to his own ground `p`. */
+    /** Somewhere well off `feet` in his fighting ground, open, as far as BOSS_IN allows, nearest the way to his own spot `p`. */
     _offView(p, feet) {
-        const [hx, hy] = PACKS[p.pack].at, toward = Math.atan2(hy - feet.y, hx - feet.x);
-        const zone = this.scene.overworld?.zoneAt?.(hx, hy)?.id;
-        for (let turn = 0; turn <= Math.PI; turn += Math.PI / 12) for (const side of turn ? [1, -1] : [1]) {
-            for (const r of BOSS_IN) {
-                const a = toward + turn * side, x = feet.x + Math.cos(a) * r, y = feet.y + Math.sin(a) * r;
-                if (this._open(x, y) && (zone === undefined || this.scene.overworld.zoneAt(x, y)?.id === zone)) return { x, y };
-            }
+        const pack = PACKS[p.pack], [hx, hy] = pack.at, toward = Math.atan2(hy - feet.y, hx - feet.x);
+        for (const r of BOSS_IN) for (let turn = 0; turn <= Math.PI; turn += Math.PI / 12) for (const side of turn ? [1, -1] : [1]) {
+            const a = toward + turn * side, x = feet.x + Math.cos(a) * r, y = feet.y + Math.sin(a) * r;
+            if (this._open(x, y) && this._inArena(pack, x, y)) return { x, y };
         }
         return null;
     }

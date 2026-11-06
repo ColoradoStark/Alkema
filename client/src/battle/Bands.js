@@ -76,7 +76,9 @@ export const BANDS = {
         { at: [6424, 13432], band: ['footpad', 'poacher', 'poacher', 'footpad', 'ruffian'] },
         { at: [6712, 13448], band: ['impaler', 'impaler', 'spearman', 'spearman', 'poacher'] },
         // the Rouser, on his own ground at the Point's tip: a step with his band's, waiting till the rest are beaten (`lair`)
-        { at: [6450, 13580], band: ['rouser'], step: 6, lair: true },
+        // (his fight's ground the Point's clearing, the user's: walled off at the river road's corridor north, the
+        // shore's east, and the wood: his zone's ground within [x0, y0, x1, y1])
+        { at: [6450, 13580], band: ['rouser'], step: 6, lair: true, arena: [6100, 12570, 6840, 13720] },
     ],
 };
 
