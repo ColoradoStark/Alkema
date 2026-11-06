@@ -122,3 +122,30 @@ test("pushing the stick off straight up by more than 15 degrees faces you sidewa
     expect(walked.whole).toBeLessThan(132);         // (128 a second, less the easing in)
     expect(walked.early).toBeLessThan(0.75 * 128);  // the first tenth of a second slower
 });
+
+test("a thief has no magic bar (their skills cost none: an empty one looked like magic run out, the user's); a mage has hers", async ({ page }) => {
+    test.setTimeout(120000);
+    const bar = async (cls) => {
+        await page.goto('/');
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME?.scene.getScene('CreateScene');
+            return s?.figure?.visible && !s._inFlight;
+        }, null, { timeout: 60000 });
+        await page.locator(`.cc-tile[data-id="${cls}"]`).click();
+        await page.waitForFunction((cls) => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            return s.state?.character?.character_class === cls && s.figure?.visible && !s._inFlight;
+        }, cls, { timeout: 60000 });
+        await page.locator('#cc-play').click();
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('GameScene')?.localPlayer?.sprite?.sprite, null, { timeout: 30000 });
+        await page.waitForTimeout(300);
+        return page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return { max: ui.mp.max, shown: ui.topBar.mpBar.visible && ui.topBar.mpBg.visible };
+        });
+    };
+    expect(await bar('thief')).toEqual({ max: 0, shown: false });
+    const mage = await bar('mage');
+    expect(mage.max).toBeGreaterThan(0);
+    expect(mage.shown).toBe(true);
+});

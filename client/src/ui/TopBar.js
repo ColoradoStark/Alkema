@@ -48,8 +48,9 @@ export class TopBar {
         this.hpBar.fillRoundedRect(20, 12, 100, 8, 2);
         this.container.add(this.hpBar);
 
-        // Mana bar
-        const mpBg = s.add.graphics();
+        // Mana bar (none for a hero with no magic: a warrior's and a thief's skills cost none, and an empty bar
+        // looked like magic run out, the user's)
+        const mpBg = this.mpBg = s.add.graphics();
         mpBg.fillStyle(0x00004a, 1);
         mpBg.fillRoundedRect(130, 12, 80, 8, 2);
         this.container.add(mpBg);
@@ -83,6 +84,8 @@ export class TopBar {
         };
         draw(this.hpBar, 0xff3333, 20, 100, hpMax ? hp / hpMax : 0);
         draw(this.mpBar, 0x3366ff, 130, 80, mpMax ? mp / mpMax : 0);
+        this.mpBg.setVisible(mpMax > 0);
+        this.mpBar.setVisible(mpMax > 0);
     }
 
     setConnected(connected) {
