@@ -78,7 +78,6 @@ const RING = 64;                // a flanker makes for this far off you, on the 
 const SKITTISH = 4 * TILE;      // a wanderer, this near, drifts about you rather than closing in...
 const DART = 0.35;              // ...and darts in this often a second, given its turn
 const FALL_MS = 1600;
-const BOSS_WAITS_MS = 8000;     // a boss waiting on his ground says so (his band not all beaten) at most this often
 const CALL_RING = 110;          // px from a boss that the foes his horn calls come ashore
 const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
 const SKULL_BOB = 2;            // px it bobs, up and down
@@ -119,7 +118,7 @@ export const PACKS = Object.entries(BANDS).flatMap(([family, packs]) =>
 
 /** Each zone's bodies: its sheets loaded and let go, and one made (feet at x, y). */
 const FAMILIES = Object.fromEntries(Object.keys(BANDS).map(zone => [zone, {
-    load: (scene) => loadBand(scene, zone),
+    load: (scene, boss) => loadBand(scene, zone, boss),
     forget: (scene) => forgetBand(scene, zone),
     make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
     sheet: (kind) => kind,
@@ -175,6 +174,7 @@ export class FieldDemons {
         this.scene = scene;
         this.foes = [];           // { foe: Demon, kind, spec, pack, tier, post, hp, maxHp, damage, state, t, cd, stun, and what spells leave on it }
         this.slain = new Set();   // places whose demon is down (for good, this visit to the game)
+        this.order = new Map();   // a climb's pack => the step up it it was given, as you took it on (this visit)
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
         this.shots = [];          // arrows and spells in flight (_launch, _fly)
@@ -222,7 +222,7 @@ export class FieldDemons {
     get standing() {
         const me = this._you();
         if (!me) return [];
-        return this.foes.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT && !this._sealed(f));
+        return this.foes.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
     }
 
     /** Sheets on their way? */
@@ -341,7 +341,7 @@ export class FieldDemons {
         this._up.add(fam);
         this._coming.add(fam);
         try {
-            await Promise.all([band.load(this.scene), loadSpellFx(this.scene)]);
+            await Promise.all([band.load(this.scene, !this._sealed(fam)), loadSpellFx(this.scene)]);
             // gone from their coast while they came: make none of them
             if (!this._up.has(fam) || !this._near.has(fam)) {
                 this._up.delete(fam);
@@ -349,7 +349,8 @@ export class FieldDemons {
                 if (!this._up.size && !this.bars) this._unload();      // (and the spells' effects that came with them)
                 return;
             }
-            const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i));
+            // (a zone's boss isn't there till the rest of it is beaten: `_comeAshore`)
+            const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i) && !(p.lair && this._sealed(fam)));
             if (!left.length) return;
             const make = (p) => this._body(fam, p);
             // One of each sheet first (not a fetch of it for every one wearing it)
@@ -380,11 +381,12 @@ export class FieldDemons {
         if (spec.paper === false) foe.paper = false;
         if (spec.label) foe.labelColour('#ff8a7a');
         foe.setDepthAt();
-        const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], p.step);
+        const step = this._stepOf(p.pack);
+        const { hp, damage } = numbers(p.kind, p.tier, ZONES[band.climb || fam], step);
         // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
         // home and was mended at once; none known, it goes where it likes)
         const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step: p.step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
     }
 
     /** A band goes (you've left its stretch of coast), and its sheets; its slain stay down. */
@@ -512,7 +514,8 @@ export class FieldDemons {
 
     /** A blow on a demon, from `from` (feet): the number, a flash, a knock back, its wind-up stopped; struck, it's after you. */
     _strikeFoe(f, damage, from, { words = null, colour = '#fff2a8' } = {}) {
-        if (f.hp <= 0 || this._sealed(f)) return;
+        if (f.hp <= 0) return;
+        this._takeOn(f.pack);           // (its step up the climb, before the blow lands)
         const { foe } = f, fx = this.scene.effects;
         if (f.mark > 0) damage = Math.round(damage * (1 + f.markMore));      // Hunter's Mark
         f.hp = Math.max(0, f.hp - damage);
@@ -549,6 +552,7 @@ export class FieldDemons {
 
     /** One of a pack is after you: they all are. */
     _rouse(pack) {
+        this._takeOn(pack);
         for (const o of this.foes) if (o.pack === pack && o.hp > 0 && (o.state === 'post' || o.state === 'home')) this._roused(o);
     }
 
@@ -571,6 +575,7 @@ export class FieldDemons {
         f.foe.die();
         this._reward(f);
         if (f.spec.boss && f.met) this._bossFalls(f);
+        if (!f.called && !PLACES[f.i]?.lair && !this._sealed(f.family)) this._comeAshore(f.family);
         // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
         if (ZONES[f.family]?.climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
@@ -589,15 +594,15 @@ export class FieldDemons {
     _warn(feet) {
         this._warned ??= new Set();
         for (const [pack, p] of PACKS.entries()) {
-            if (!ZONES[p.family]?.climb || !p.step || p.guard || p.lair || this._warned.has(pack) || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
-            if (PLACES.every(q => q.pack !== pack || this.slain.has(q.i))) continue;
-            // (a pack below it still standing and nearer you is the one you're at: the packs stand about eight tiles
-            // apart, and fighting one, the user was told the one beyond it was too strong, just after upgrading)
-            const far = Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y);
-            if (PACKS.some((o, k) => o.family === p.family && o.step < p.step && Math.hypot(o.at[0] - feet.x, o.at[1] - feet.y) < far
-                && PLACES.some(q => q.pack === k && !this.slain.has(q.i)))) continue;
-            this._warned.add(pack);
-            if (!tooStrong(p.family, p.step, this._strength())) continue;
+            if (!ZONES[p.family]?.climb || p.guard || p.lair || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
+            const step = this._stepOf(pack), seen = `${pack}:${step}`;
+            if (!step || this._warned.has(seen)) continue;
+            if (this._beaten(pack)) continue;
+            // (one you've taken on still standing is the one you're at: fighting one, the user was told the one beyond
+            // it was too strong, just after upgrading)
+            if ([...this.order.keys()].some(k => PACKS[k].family === p.family && !this._beaten(k))) continue;
+            this._warned.add(seen);
+            if (!tooStrong(p.family, step, this._strength())) continue;
             const ui = this.scene.scene.get('UIScene');
             const words = 'These foes are too strong for you. Upgrade first!';
             audio.play('error', { volume: 0.5 });
@@ -617,7 +622,7 @@ export class FieldDemons {
         if (this.scene.textures.exists('danger-skull')) {
             const strength = this._strength(), bob = Math.sin(this.scene.time.now / 380) * SKULL_BOB;
             for (const [k, p] of PACKS.entries()) {
-                if (!this._up.has(p.family) || p.guard || !ZONES[climbOf(p.family)]?.climb || !tooStrong(climbOf(p.family), p.step, strength)) continue;      // (the wood's heart's too: its climb's the Point's)
+                if (!this._up.has(p.family) || p.guard || !ZONES[climbOf(p.family)]?.climb || !tooStrong(climbOf(p.family), this._stepOf(k), strength)) continue;      // (the wood's heart's too: its climb's the Point's)
                 const mine = this.foes.filter(f => f.pack === k && f.hp > 0);
                 if (!mine.length || mine.some(f => f.state !== 'post' || !f.foe.ready)) continue;
                 want.add(k);
@@ -673,7 +678,7 @@ export class FieldDemons {
         const now = this.scene.time.now;
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
-        const { x, y } = f.foe, worth = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, PLACES[f.i] ?? f, this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
+        const { x, y } = f.foe, worth = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, { ...(PLACES[f.i] ?? f), step: f.step }, this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
         // Its essence, all it's worth, for the Upgrade page (the user's: gold is for town), and a little gold
         inv?.gather(worth);
         this._sparkle(x, y - f.foe.tall / 2, 0xb884ff, 14);
@@ -723,13 +728,6 @@ export class FieldDemons {
         const d = you ? Math.hypot(you.x - foe.x, you.y - foe.y) : Infinity;
         // At its post, it waits for you to come within five tiles; got away from it, it goes back
         if (f.state === 'post' || f.state === 'home') {
-            if (this._sealed(f)) {          // a boss waits on his ground till his band's all beaten
-                if (d <= AGGRO && !((f.waitT -= delta) > 0)) {
-                    f.waitT = BOSS_WAITS_MS;
-                    this.scene.scene.get('UIScene')?.notice?.(`The ${f.spec.label} waits. Beat his raiders first.`, 3000);
-                }
-                return this._home(f, dt, fromPost, delta);
-            }
             // (barring you already, it lets you go only once you're back out of the trees: where the gloom begins, put back
             // a step it stood off, came on again, and warned you again, flashing; the user saw it)
             if (you && f.guard && !this.provoked && f.woods && this._deep(f, you) < (f.barring ? 1 : NOTICE_DEEP)) {
@@ -1598,9 +1596,63 @@ export class FieldDemons {
     /** A foe stops its wind-up (staggered, lost its quarry). */
     // ------------------------------------------------ a boss fight
 
-    /** A boss on his own ground, waiting while any of his zone's other foes still stand (not to be struck meanwhile). */
-    _sealed(f) {
-        return !!PACKS[f.pack]?.lair && PLACES.some(p => p.family === f.family && !p.lair && !this.slain.has(p.i));
+    /** Does any of a zone's foes (but its boss) still stand? Its boss isn't there till none does. */
+    _sealed(fam) {
+        return PLACES.some(p => p.family === fam && !p.lair && !this.slain.has(p.i));
+    }
+
+    /** Every one of a pack felled? */
+    _beaten(pack) {
+        return PLACES.every(p => p.pack !== pack || this.slain.has(p.i));
+    }
+
+    /**
+     * A climb's packs are its steps in the order you take them on, wherever they stand (the user's, November 2026:
+     * whichever way you go, the next pack you meet is the next one up, never one far up it for going the wrong way):
+     * who's in a pack is its own, how strong it is the step it's given as you first rouse or strike it. A zone's boss,
+     * the guards and the wood's heart keep their own.
+     */
+    _ordered(pack) {
+        const p = PACKS[pack];
+        return !!ZONES[p?.family]?.climb && !p.guard && !p.lair;
+    }
+
+    /** The step a pack is on: the one it was given, or the one it would be taken on at now. */
+    _stepOf(pack) {
+        if (!this._ordered(pack)) return PACKS[pack].step;
+        if (this.order.has(pack)) return this.order.get(pack);
+        const fam = PACKS[pack].family;
+        return PACKS.filter((o, k) => o.family === fam && this._ordered(k) && (this.order.has(k) || this._beaten(k))).length;
+    }
+
+    /** A climb's pack taken on: its step given, and its foes made for it. */
+    _takeOn(pack) {
+        if (!this._ordered(pack) || this.order.has(pack)) return;
+        const step = this._stepOf(pack);
+        this.order.set(pack, step);
+        const zone = ZONES[FAMILIES[PACKS[pack].family].climb || PACKS[pack].family];
+        for (const f of this.foes) if (f.pack === pack && f.hp > 0 && f.step !== step) {
+            const { hp, damage } = numbers(f.kind, f.tier, zone, step);
+            Object.assign(f, { step, hp: Math.round(hp * f.hp / f.maxHp), maxHp: hp, damage });
+        }
+    }
+
+    /** The rest of his zone beaten, its boss comes ashore on his own ground (his sheet loaded only now). */
+    async _comeAshore(fam) {
+        if (!this._up.has(fam)) return;
+        await FAMILIES[fam].load(this.scene, true);
+        if (!this._up.has(fam)) return;         // (let go meanwhile: `forget` lets his sheet go too)
+        let came = null;
+        for (const p of PLACES) {
+            if (p.family !== fam || !p.lair || this.slain.has(p.i) || this.foes.some(f => f.i === p.i)) continue;
+            const f = this._body(fam, p);
+            this.foes.push(f);
+            this.scene.effects?.smash?.(f.post.x, f.post.y - 10, f.post.y, 'pot');
+            came = f;
+        }
+        if (!came) return;
+        audio.play('summon', { volume: 0.9 });
+        this.scene.time.delayedCall(900, () => this.scene.scene.get('UIScene')?.notice?.(`All his raiders beaten, the ${came.spec.label} comes ashore at the Point's tip!`, 4200));
     }
 
     /** A boss comes for you: his name and title come up, the map darkens at its edges, and his bar along the bottom. */

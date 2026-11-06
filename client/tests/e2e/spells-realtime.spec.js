@@ -35,7 +35,7 @@ async function fight(page) {
         me.setPosition(6192, 12480 - 23);       // (where the river road comes in: they come)
         me.body.reset(me.x, me.y);
     });
-    const n = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => m.PLACES.filter(p => p.family === 'z35').length));
+    const n = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => m.PLACES.filter(p => p.family === 'z35' && !p.lair).length));
     await expect.poll(() => page.evaluate(() => {
         const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
         return fd.foes.filter(f => f.foe.ready).length;

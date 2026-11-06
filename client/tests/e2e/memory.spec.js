@@ -188,7 +188,7 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')))).toEqual([]);
     });
 
-    test("the Saltmere Point's foes: its seven packs on their Wesnoth sheets, under budget, and let go when you leave the Point", async ({ page }) => {
+    test("the Saltmere Point's foes: its seven packs on their Wesnoth sheets (the Rouser's not till he comes), under budget, and let go when you leave the Point", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await keepUp(page);
@@ -205,14 +205,18 @@ test.describe('Memory', () => {
         const { PLACES } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES.filter(p => p.family === 'z35') })));
         // Where the river road comes into the Point: every pack of it comes, none roused
         await go(6192, 12480 - 23);
-        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.length, { timeout: 30000 });
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.filter(p => !p.lair).length, { timeout: 30000 });
         const point = await settled(page);
         const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
+        // The rest beaten, the Rouser comes ashore: his sheet comes only now, and goes with the rest
+        await page.evaluate((ids) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) fd.slain.add(i); fd._comeAshore('z35'); },
+            PLACES.filter(p => !p.lair).map(p => p.i));
+        await page.waitForFunction(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === 'rouser')?.foe.ready, null, { timeout: 15000 });
         await go(6320, 11120);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
         const after = await settled(page);
         console.log("the Saltmere Point's foes", +(point.mb - base.mb).toFixed(2), 'MB', sheets.join(' '));
-        expect(sheets).toEqual(['foe-footpad', 'foe-impaler', 'foe-poacher', 'foe-rat', 'foe-rouser', 'foe-ruffian', 'foe-spearman', 'foe-woodsman']);
+        expect(sheets).toEqual(['foe-footpad', 'foe-impaler', 'foe-poacher', 'foe-rat', 'foe-ruffian', 'foe-spearman', 'foe-woodsman']);
         expect(point.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         // Their sheets and the spells' effects all gone

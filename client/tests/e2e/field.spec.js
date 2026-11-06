@@ -1,7 +1,7 @@
 // Foes on the overworld itself, fought where they stand (the user's): The Battle for Wesnoth's units, zone by zone
 // (Bands.js, docs/WORLD.md); for now the Saltmere Point's (zone 35, below Riverhold where heroes start): its rats, the
-// river's outlaws and the goblins come ashore, seven packs up a climb, the Goblin Rouser beyond them, a boss fought
-// alone on his own ground once they're all beaten. Within five tiles one
+// river's outlaws and the goblins come ashore, seven packs up a climb in the order you take them on, and the Goblin
+// Rouser coming ashore once they're all beaten, a boss fought alone on his own ground. Within five tiles one
 // comes for you, winds up (flashing red) and swings; your swing strikes it; far enough off it goes home.
 import { test, expect } from '@playwright/test';
 
@@ -88,18 +88,22 @@ async function sparklesAsSwung(page) {
     await expect.poll(casting, { timeout: 5000 }).toEqual([]);
 }
 
-/** At the Point, every pack of it come and drawn. */
+/** At the Point, every pack of it come and drawn (its boss isn't there till they're beaten). */
 async function atThePoint(page) {
     const { PLACES } = await places(page);
     await standAt(page, POINT.x, POINT.y);
-    await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length);
+    await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(p => !p.lair).length);
 }
 
-/** The rest of the Point counted beaten (where each stands, still drawn): the Rouser on his own ground may be fought. */
-const unseal = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PLACES }) => {
-    const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-    for (const p of PLACES) if (p.family === 'z35' && !p.lair) fd.slain.add(p.i);
-}));
+/** The rest of the Point counted beaten (where each stands, still drawn), and the Rouser come ashore and drawn. */
+async function bossOut(page) {
+    await page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PLACES }) => {
+        const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+        for (const p of PLACES) if (p.family === 'z35' && !p.lair) fd.slain.add(p.i);
+        fd._comeAshore('z35');
+    }));
+    await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === 'rouser')?.foe.ready), { timeout: 15000 }).toBe(true);
+}
 
 /** A hero far stronger than the Point is made for, and kept standing. */
 const mighty = (page) => page.evaluate(() => {
@@ -198,8 +202,9 @@ test.describe("The Saltmere Point's foes", () => {
         // At the Point: every pack, on its own sheets, at its post
         await atThePoint(page);
         const all = await field(page);
-        expect(all.kinds).toEqual(KINDS);
-        expect(all.sheets).toEqual(KINDS.map(k => `foe-${k}`));
+        const there = KINDS.filter(k => k !== 'rouser');        // (he comes ashore once they're beaten)
+        expect(all.kinds).toEqual(there);
+        expect(all.sheets).toEqual(there.map(k => `foe-${k}`));
         expect(Object.values(all.states).every(s => s === 'post')).toBe(true);
         // Each stands on open ground, in the Point
         const placed = await page.evaluate(() => {
@@ -332,7 +337,7 @@ test.describe("The Saltmere Point's foes", () => {
         }, w.i);
         expect(keptBack).toBeGreaterThan(60);
         // The boss struck mid wind-up swings on; an impaler struck mid wind-up is staggered out of it
-        await unseal(page);
+        await bossOut(page);
         const struck = await page.evaluate(() => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             const out = {};
@@ -467,6 +472,7 @@ test.describe('A fight you can lose', () => {
         expect(r.boss).toBeLessThanOrEqual(0.33);
         expect(r.escort).toBeGreaterThanOrEqual(5);
         await atThePoint(page);
+        await bossOut(page);
         const busy = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
             const boss = fd.foes.find(f => f.kind === 'rouser'), rat = fd.foes.find(f => f.kind === 'rat');
@@ -602,7 +608,7 @@ test.describe('The zone, not your hero, says how hard its foes are', () => {
         // a blow's share of a new hero's hit points (less half their defence, as _hurt takes), and the blows a foe takes
         const look = () => page.evaluate(async (fresh) => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            return { first: fd.foes.filter(f => !f.step).map(f => ({ blows: f.maxHp / fresh.attack, hurt: (f.damage - Math.floor(fresh.defence / 2)) / fresh.hp })),
+            return { first: fd.foes.filter(f => f.pack === 0 && !f.step).map(f => ({ blows: f.maxHp / fresh.attack, hurt: (f.damage - Math.floor(fresh.defence / 2)) / fresh.hp })),
                 all: Object.fromEntries(fd.foes.map(f => [f.i, [f.maxHp, f.damage]])) };
         }, fresh);
         await atThePoint(page);
@@ -637,6 +643,41 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(r.ratio / 2.5 ** 3).toBeCloseTo(1, 1);
         expect(r.places).toBe(true);
         expect(r.boss).toBe('rouser');          // (its boss's band last)
+    });
+
+    test("whichever pack you take on first is the first step up the climb, the next you take on the next, wherever they stand (the user's: going straight down, they ran into a pack far up it): who's in a pack stays its own; a felled one pays for its step", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await keepUp(page);
+        await atThePoint(page);
+        const r = await page.evaluate(async () => {
+            const { numbers, ZONES } = await import('/src/battle/FieldDemons.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, z = ZONES.z35;
+            for (const f of fd.foes) f.stun = 1e9;          // (held: only what's asked happens)
+            const made = (pack) => fd.foes.filter(f => f.pack === pack).every(f => f.maxHp === numbers(f.kind, f.tier, z, f.step).hp);
+            const steps = (pack) => [...new Set(fd.foes.filter(f => f.pack === pack).map(f => f.step))];
+            // the last pack (the far end, impalers and a poacher) struck first: the first step
+            const last = Math.max(...fd.foes.map(f => f.pack)), one = fd.foes.find(f => f.pack === last);
+            const kinds = fd.foes.filter(f => f.pack === last).map(f => f.kind).sort();
+            fd._strikeFoe(one, 1, { x: one.foe.x, y: one.foe.y + 30 });
+            const first = { steps: steps(last), made: made(last), hurt: one.maxHp - one.hp };
+            // then the rats, roused: the next
+            fd._rouse(0);
+            const second = { steps: steps(0), made: made(0) };
+            // and one not taken on yet would be the one after
+            const third = fd._stepOf(3);
+            // felled, each pays for the step it was taken on at
+            const { packEssence } = await import('/src/battle/zones.js');
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene'), essence = ui.inventory.essence;
+            for (const f of fd.foes.filter(f => f.pack === last)) { f.hp = 0; fd._slay(f); fd._lastKill = -1e9; }
+            return { first, second, third, kinds, after: kinds.length === fd.foes.filter(f => f.pack === last).map(f => f.kind).length,
+                paid: ui.inventory.essence - essence, pays: packEssence('z35', 0) };
+        });
+        expect(r.first).toEqual({ steps: [0], made: true, hurt: 1 });
+        expect(r.second).toEqual({ steps: [1], made: true });
+        expect(r.third).toBe(2);
+        expect(r.kinds).toContain('impaler');
+        expect(Math.abs(r.paid - r.pays)).toBeLessThanOrEqual(5);        // (each share rounded)
     });
 
     test("the first time one ahead is too strong for you, you're told so and shown how: an arrow on Upgrade, one on a buy button; bought, it's done and never shown again (the user's: teach the system)", async ({ page }) => {
@@ -683,7 +724,7 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(await pointing()).toBe(null);
     });
 
-    test("a skull floats over every pack too strong for you, none over one you can beat; strong enough, or the pack roused, it goes; leaving, every skull goes (the user's, after The Witcher 3's)", async ({ page }) => {
+    test("a skull floats over every pack too strong for you, none over one you can beat (none at first: whichever you take on first is a fair fight); strong enough, or the pack roused, it goes; leaving, every skull goes (the user's, after The Witcher 3's)", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._think = () => {}; });     // (all at their posts)
@@ -692,14 +733,19 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
             const g = window.__PHASER_GAME, fd = g.scene.getScene('GameScene').fieldDemons;
             return { packs: [...(fd._marks?.keys() || [])].sort((a, b) => a - b), shown: g.scene.getScene('GameScene').children.list.filter(o => o.texture?.key === 'danger-skull').length };
         });
-        const { PACKS } = await places(page);
-        // a new hero: a skull over each pack too strong for them (the last ones, whatever their class), none over the first
-        const want = await page.evaluate(async (PACKS) => {
-            const { tooStrong } = await import('/src/battle/zones.js'), fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            return PACKS.map((p, k) => k).filter(k => tooStrong('z35', PACKS[k].step, fd._strength()));
-        }, PACKS);
-        expect(want).toContain(PACKS.length - 1);
-        expect(want).not.toContain(0);
+        const { PACKS, PLACES } = await places(page);
+        // a new hero: whichever pack they take on first is a fair fight, so none has a skull
+        await page.waitForTimeout(500);
+        expect((await marks()).packs).toEqual([]);
+        // the first beaten and not upgraded, each left is the next step up, too strong: a skull over every one
+        const want = await page.evaluate((firsts) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const i of firsts) fd.slain.add(i);
+            for (const f of fd.foes) if (firsts.includes(f.i)) f.hp = 0;
+            fd._strength = () => 3 * 16;
+            return [...new Set(fd.foes.filter(f => !firsts.includes(f.i)).map(f => f.pack))].sort((a, b) => a - b);
+        }, PLACES.filter(p => p.pack === 0).map(p => p.i));
+        expect(want.length).toBe(PACKS.filter(p => !p.lair).length - 1);
         await expect.poll(() => marks().then(m => m.packs), { timeout: 10000 }).toEqual(want);
         let m = await marks();
         expect(m.shown).toBe(want.length);
@@ -718,7 +764,7 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => 1e12; });
         await expect.poll(() => marks().then(m => m.shown), { timeout: 5000 }).toBe(0);
         // weak again, then away from the Point: they go with the band, and the skull's picture with them
-        await page.evaluate(() => { delete window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength; });
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => 3 * 16; });
         await expect.poll(() => marks().then(m => m.shown), { timeout: 5000 }).toBeGreaterThan(0);
         await standAt(page, START.x, START.y);
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('danger-skull')), { timeout: 30000 }).toBe(false);
@@ -729,40 +775,31 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         test.setTimeout(150000);
         await enterWorld(page);
         const { PACKS, PLACES } = await places(page);
-        // A pack up the climb (`k`) and a spot nearer it than any above it, within eight tiles of the next: the packs
-        // below it beaten, strong enough for it and not the next
-        const found = await page.evaluate(async (PACKS) => {
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            for (let k = 1; k < PACKS.length - 1; k++) {
-                const a = PACKS[k].at, b = PACKS[k + 1].at;
-                for (let r = 0; r < 8 * 32; r += 8) for (let n = 0; n < 24; n++) {
-                    const x = b[0] + Math.cos(n * Math.PI / 12) * r, y = b[1] + Math.sin(n * Math.PI / 12) * r;
-                    const da = Math.hypot(a[0] - x, a[1] - y);
-                    if (fd._open(x, y) && PACKS.slice(k + 1).every(p => Math.hypot(p.at[0] - x, p.at[1] - y) > da)) return { k, x, y };
-                }
-            }
-            return null;
-        }, PACKS);
-        expect(found).not.toBe(null);
-        const below = PLACES.filter(p => p.step < found.k).map(p => p.i), mine = PLACES.filter(p => p.step === found.k).map(p => p.i);
-        await page.evaluate(async ([k, below]) => {
+        // Two packs beaten, a third taken on (still standing, the one you're at), standing by a fourth: strong
+        // enough for the third and not what comes after it
+        const spot = await page.evaluate(async ([PACKS, PLACES]) => {
             const { strengthFor } = await import('/src/battle/zones.js');
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            fd._strength = () => strengthFor('z35', k - 1) * 1.2;
-            for (const i of below) fd.slain.add(i);
-            // (held still: its foes, roused, felled this weak hero on a busy machine, who came to far away)
-            fd.__still = () => { for (const o of fd.foes) o.stun = 1e9; };
-            fd.__still();
-        }, [found.k, below]);
-        await standAt(page, found.x, found.y);
+            fd._think = () => {};          // (nothing roused by your nearness: only what's asked)
+            fd._strength = () => strengthFor('z35', 1) * 1.2;
+            for (const p of PLACES) if (p.pack < 2) fd.slain.add(p.i);
+            fd._takeOn(2);
+            const [x, y] = PACKS[3].at;
+            for (let r = 32; r < 4 * 32; r += 8) for (let n = 0; n < 24; n++) {
+                const px = x + Math.cos(n * Math.PI / 12) * r, py = y + Math.sin(n * Math.PI / 12) * r;
+                if (fd._open(px, py)) return { x: px, y: py, step: fd._stepOf(2), next: fd._stepOf(3) };
+            }
+            return null;
+        }, [PACKS, PLACES]);
+        expect(spot).toMatchObject({ step: 2, next: 3 });
+        await standAt(page, spot.x, spot.y);
         await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBeGreaterThan(0);
-        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.__still());     // (any made since)
         const notice = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text || '');
         const frames = (n) => page.evaluate((n) => new Promise(done => { let k = 0; const tick = () => (++k >= n ? done() : requestAnimationFrame(tick)); tick(); }), n);
         await frames(30);
         expect(await notice()).not.toMatch(/too strong/i);
         // that pack beaten, and not upgraded: now the next is too strong, and you're told
-        await page.evaluate((ids) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) fd.slain.add(i); }, mine);
+        await page.evaluate((ids) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) fd.slain.add(i); }, PLACES.filter(p => p.pack === 2).map(p => p.i));
         await expect.poll(notice, { timeout: 10000 }).toMatch(/too strong/i);
     });
 
@@ -889,12 +926,12 @@ test.describe('Falling out on the world', () => {
         const gone = await page.evaluate(() => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             const two = fd.foes.slice(0, 2);
-            for (const f of two) fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+            for (const f of two) fd._strikeFoe(f, 1e12, { x: f.foe.x, y: f.foe.y + 30 });       // (each made for its step as it's taken on)
             fd.release();           // (as going into a place does)
             return two.map(f => f.i);
         });
         expect(await field(page).then(f => f.count)).toBe(0);
-        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.length - 2);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBe(PLACES.filter(p => !p.lair).length - 2);
         const back = await page.evaluate((gone) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => gone.includes(f.i)).length, gone);
         expect(back).toBe(0);
     });
@@ -1176,6 +1213,7 @@ test.describe('Never stuck', () => {
         test.setTimeout(300000);
         await enterWorld(page);
         await atThePoint(page);
+        await bossOut(page);
         // (the game held, each foe's mind run by hand, 50 ms a turn: from about you, toward you; then home, to its own post)
         const stuck = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
@@ -1184,7 +1222,7 @@ test.describe('Never stuck', () => {
             const rnd = () => ((r = (r * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
             const out = [];
             for (const kind of ['rouser', 'impaler']) {
-                const f = fd.foes.find(o => o.kind === kind), post = { ...f.post };
+                const f = fd.foes.find(o => o.kind === kind), post = { ...f.post };     // (the Rouser come ashore: bossOut)
                 for (const o of fd.foes) if (o !== f) { o.stun = 1e12; o.foe.sprite.setPosition(0, 0); }
                 // (in its zone: it never leaves it, and out of it you're out of its reach)
                 const mine = (x, y) => fd._open(x, y) && gs.overworld.zoneAt(x, y)?.id === f.zone;
@@ -1856,26 +1894,34 @@ test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and
 });
 
 test.describe('The Goblin Rouser, a boss fight', () => {
-    test("he waits alone at the Point's tip till the rest are beaten; then his name comes up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; mended at home it begins afresh; felled, a chest (the user's, November 2026)", async ({ page }) => {
+    test("he isn't there till the rest of the Point is beaten, then comes ashore alone at its tip; stepping up, his name comes up, his bar along the bottom; his slam strikes all round him and is dodged out of the red; at half he blows his horn and goblins come; mended at home it begins afresh; felled, a chest (the user's, November 2026)", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page);
         await atThePoint(page);
         await keepUp(page);
-        // Alone on his ground, and not to be struck or roused while the Point's packs stand
+        // Not there while any of the Point stands; the last of it felled, he comes ashore, alone on his ground
         const boss = await page.evaluate(async () => {
-            const { PACKS } = await import('/src/battle/FieldDemons.js');
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.kind === 'rouser');
-            const hp = f.hp;
-            fd._strikeFoe(f, 5, { x: f.foe.x, y: f.foe.y + 30 });
-            return { i: f.i, alone: PACKS[f.pack].band.length, lair: !!PACKS[f.pack].lair, struck: hp - f.hp, state: f.state, standing: fd.standing.includes(f) };
+            const { PACKS, PLACES } = await import('/src/battle/FieldDemons.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            const before = !!fd.foes.find(f => f.kind === 'rouser');
+            const rest = PLACES.filter(p => p.family === 'z35' && !p.lair);
+            for (const p of rest.slice(1)) fd.slain.add(p.i);
+            const stillOne = !!fd.foes.find(f => f.kind === 'rouser');
+            const last = fd.foes.find(f => f.i === rest[0].i);
+            last.stun = 1e9;
+            fd._strikeFoe(last, 1e12, { x: last.foe.x, y: last.foe.y + 30 });
+            const sheet = window.__PHASER_GAME.textures.exists('foe-rouser');        // (not loaded till he comes)
+            for (let t = 0; t < 150 && !fd.foes.find(f => f.kind === 'rouser'); t++) await new Promise(r => setTimeout(r, 100));
+            const f = fd.foes.find(f => f.kind === 'rouser');
+            return { before, stillOne, sheet, i: f?.i, alone: PACKS[f.pack].band.length, lair: !!PACKS[f.pack].lair, state: f.state,
+                at: Math.hypot(f.foe.x - PACKS[f.pack].at[0], f.foe.y - PACKS[f.pack].at[1]) < 40 };
         });
-        expect(boss).toMatchObject({ alone: 1, lair: true, struck: 0, state: 'post', standing: false });
+        expect(boss).toMatchObject({ before: false, stillOne: false, sheet: false, alone: 1, lair: true, state: 'post', at: true });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text || ''), { timeout: 5000 }).toMatch(/comes ashore/);
+        await expect.poll(() => page.evaluate((i) => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i)?.foe.ready, boss.i), { timeout: 15000 }).toBe(true);
+        // Stepping up: he comes for you, his name up large, his bar along the bottom (none over his head)
         const near = await offFoe(page, boss.i, 120);
         await standAt(page, near.x, near.y);
-        await page.waitForTimeout(800);
-        expect(await page.evaluate((i) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.i === i).state, boss.i)).toBe('post');
-        // The rest beaten: he comes for you, his name up large, his bar along the bottom (none over his head)
-        await unseal(page);
         await expect.poll(() => page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             return { bar: ui.bossBar.shown, name: ui.bossBar.name.text, card: !!ui._bossCard?.active };

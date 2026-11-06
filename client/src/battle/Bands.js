@@ -108,10 +108,13 @@ HEART.packs.forEach((p, i) => {
 /** The climb a band's foes are made on (ZONES in zones.js): a zone's own, the guards' and the wood's heart's the Point's. */
 export const climbOf = (family) => (family.startsWith('guards') || family.startsWith('heart') ? 'z35' : family);
 
-const sheetsOf = (zone) => [...new Set(BANDS[zone].flatMap(p => p.band))];
+const sheetsOf = (zone, boss = true) => [...new Set(BANDS[zone].filter(p => boss || !p.lair).flatMap(p => p.band))];
 
-/** A zone's sheets, loaded as you near it (each held by its zone: another zone wearing one doesn't take it away). */
-export const loadBand = (scene, zone) => Promise.all(sheetsOf(zone).map(kind => loadFoe(scene, kind, zone)));
+/**
+ * A zone's sheets, loaded as you near it (each held by its zone: another zone wearing one doesn't take it away); its
+ * boss's not till he comes (`boss`: FieldDemons._comeAshore).
+ */
+export const loadBand = (scene, zone, boss = false) => Promise.all(sheetsOf(zone, boss).map(kind => loadFoe(scene, kind, zone)));
 
 export function forgetBand(scene, zone) {
     for (const kind of sheetsOf(zone)) forgetFoe(scene, kind, zone);
