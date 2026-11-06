@@ -4,6 +4,7 @@ import { TopBar } from '../ui/TopBar.js';
 import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
+import { wayTo } from '../world/questWay.js';
 import { EnterPrompt } from '../ui/EnterPrompt.js';
 import { BossBar } from '../ui/BossBar.js';
 import { Dialogue, portraitUrl, nightNow } from '../ui/Dialogue.js';
@@ -471,14 +472,32 @@ export class UIScene extends Scene {
 
         const others = [];
         for (const p of gameScene.players.values()) if (p !== gameScene.localPlayer && p.sprite) others.push(p.sprite);
-        // In town the overworld's minimap and quests wait for you outside
-        const outside = !gameScene.town;
-        this.minimap.setVisible(outside);
-        if (!outside) return;
+        // The minimap is the map you're in, the world's or a town's (the user's), pointing the way the quest says
+        const town = gameScene.town;
+        this.minimap.setVisible(true);
+        this.minimap.setTown(town);
+        if (this.hp?.max) this.quests.setHealth(this.hp.now / this.hp.max, town ? gameScene._townPlace : me);
         const quest = this.quests.current;
-        this.minimap.update(me, others, quest?.kind === 'visit' ? quest : null);
-        this.minimap.setLost(gameScene.world?.forest?.lost ?? 0);
-        this.quests.updatePosition(me.x, me.y);
+        this.minimap.update(me, others, this.questTarget(quest, gameScene));
+        this.minimap.setLost(town ? 0 : gameScene.world?.forest?.lost ?? 0);
+        if (!town) this.quests.updatePosition(me.x, me.y);
+    }
+
+    /** Where the quest points you, in the map you're in: a place on the world, or someone to find (questWay.js). */
+    questTarget(quest, gameScene) {
+        const town = gameScene.town;
+        if (quest?.kind === 'visit') return town ? null : quest;
+        if (quest?.kind !== 'seek') return null;
+        return wayTo(quest, town && {
+            key: town.key,
+            exits: town.data.exits,
+            find: id => {
+                const f = town.folk.find(o => o.plan.id === id);
+                if (f) return { x: f.sprite.x, y: f.sprite.y };
+                const plan = town.data.folk.find(o => o.id === id);
+                return plan?.post ? { x: plan.post[0], y: plan.post[1] } : null;
+            },
+        });
     }
 
     /** Story mode with someone you walked into (unless you've only just finished talking). */
@@ -489,6 +508,7 @@ export class UIScene extends Scene {
         this.bottomControls.container.setVisible(false);     // the story box takes their place
         this.bottomControls.release();
         this.dialogue.open(folk);
+        this.quests.met(folk.plan.id, this.scene.get('GameScene')?.town?.key);
     }
 
     handleAttack() {

@@ -55,6 +55,7 @@ export const LAMPS = {
     carried: { radius: 96, colour: 0xffd890, strength: 1.2, flicker: 0.06, dark: true, lift: 22 },     // a lantern in someone's hand
     candle: { radius: 56, colour: 0xffd27a, strength: 1.2, flicker: 0.1 },
     glow: { radius: 78, colour: 0x7fe8c8, strength: 1.1, flicker: 0.03 },      // cave mushrooms, a font of clear water
+    quest: { radius: 70, colour: 0xfbf236, strength: 1.3, flicker: 0.03, lift: 10 },     // about someone a quest sends you to (QuestMarks.js)
     hero: { radius: 150, colour: 0xfff0d8, strength: 0.9, flicker: 0, dark: true },      // your own light
 };
 

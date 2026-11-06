@@ -8,6 +8,7 @@ import { audio } from '../audio/audio.js';
 import { WORLD } from '../world/places.js';
 import { wrapDelta } from '../world/Overworld.js';
 import { walkingFrom } from '../world/walking.js';
+import { nearestHealer } from '../world/questWay.js';
 
 function distance(a, b) {
     return Math.hypot(wrapDelta(a.x, b.x), wrapDelta(a.y, b.y));
@@ -39,6 +40,19 @@ export const QUESTS = [
     { id: 'dungeon', kind: 'visit', radius: 100, among: ofType('dungeon'), says: p => `Find the mouth of ${p.name}` },
 ];
 
+/**
+ * Quests that come before the list (the user's, November 2026): someone to find (`seek`: in the map `room` of the town
+ * `town`, by their id `who`), done once you've talked to them. Wren, once you've learnt the controls; shown till met.
+ */
+export const WREN = { id: 'wren', kind: 'seek', text: 'Find Wren in Riverhold', town: 'riverhold', room: 'riverhold', who: 'wren', after: 2 };
+export const LOW_HP = 0.3;      // hurt this badly (of your most), a quest to the nearest healer comes before any other
+
+/** The quest to be healed, at the healer nearest `at` (a point on the world). */
+export function healQuest(at) {
+    const h = nearestHealer(at);
+    return h && { id: 'heal', kind: 'seek', text: `You're badly hurt: get healed in ${h.name}`, town: h.town, room: h.room, who: h.who };
+}
+
 /** Give each visit its place: the nearest of its kind you can walk to from the starting town. */
 export function placeQuests(world) {
     if (QUESTS.every(q => q.kind !== 'visit' || q.x !== undefined)) return;
@@ -69,6 +83,8 @@ export class QuestTracker {
         placeQuests(scene.cache.json.get('world'));
         this.index = Math.max(0, Math.min(QUESTS.length, saved?.index || 0));
         this.progress = saved?.progress || 0;
+        this.done = new Set(saved?.done || []);        // the quests before the list that are done (Wren)
+        this.heal = null;                              // hurt badly: the quest to the healer
         this.onChange = onChange;
 
         this.container = scene.add.container(CARD.x, CARD.y).setDepth(20);
@@ -87,40 +103,84 @@ export class QuestTracker {
         this._render();
     }
 
-    /** The quest being worked on, or null when all are done. */
+    /** The quest shown: the healer's when you're badly hurt, someone to find, then the list's; null when all are done. */
     get current() {
+        return this.heal || this.seeking || this.listed;
+    }
+
+    /** The list's quest being worked on (it goes on underneath the others). */
+    get listed() {
         return QUESTS[this.index] || null;
     }
 
-    /** Count an action ('attack', 'cast') toward the current quest. */
+    /** Someone to find, not yet found. */
+    get seeking() {
+        return this.index >= WREN.after && !this.done.has(WREN.id) ? WREN : null;
+    }
+
+    /**
+     * How hurt you are (hit points over your most), each frame, and where you are on the world: at `LOW_HP` or below
+     * the healer's quest is shown till you're mended, and mended to full it's done.
+     */
+    setHealth(ratio, at) {
+        if (ratio <= LOW_HP && at) {
+            const was = this.heal;
+            this.heal = healQuest(at);
+            if (was?.town !== this.heal?.town) this._render();
+        } else if (this.heal) {
+            const done = this.heal;
+            this.heal = null;
+            if (ratio >= 1) this._flourish(done);
+            else this._render();
+        }
+    }
+
+    /** You've talked to someone (their id, the map they're in): found, if a quest sought them. */
+    met(who, key) {
+        const q = this.seeking;
+        if (!q || q.who !== who || q.room !== key) return;
+        this.done.add(q.id);
+        this._save();
+        this._flourish(q);
+    }
+
+    _save() {
+        this.onChange({ index: this.index, progress: this.progress, done: [...this.done] });
+    }
+
+    /** Count an action ('attack', 'cast') toward the list's quest. */
     record(event) {
-        const q = this.current;
+        const q = this.listed;
         if (q?.kind !== 'count' || q.event !== event) return;
         this.progress++;
         if (this.progress >= q.goal) {
             this._complete();
             return;
         }
-        this.onChange({ index: this.index, progress: this.progress });
+        this._save();
         this._render();
     }
 
-    /** Check the player's position against the current visit quest. */
+    /** Check the player's position against the list's visit quest. */
     updatePosition(x, y) {
-        const q = this.current;
+        const q = this.listed;
         if (q?.kind !== 'visit') return;
         if (distance({ x, y }, q) <= q.radius) this._complete();
     }
 
     _complete() {
-        const done = this.current;
+        const done = this.listed;
+        this.index++;
+        this.progress = 0;
+        this._save();
+        this._flourish(done);
+    }
+
+    /** A quest done: the fanfare, and it's shown ticked off for a moment, then the next one. */
+    _flourish(done) {
         audio.duck(1400);
         audio.play('victory', { drift: 0 });
         this.scene.time.delayedCall(250, () => audio.play('coins'));
-        this.index++;
-        this.progress = 0;
-        this.onChange({ index: this.index, progress: this.progress });
-        // Show the finished quest ticked off for a moment, then the next one
         this._render({ finished: done });
         this.scene.time.delayedCall(1800, () => this._render());
     }
@@ -128,6 +188,7 @@ export class QuestTracker {
     _render({ finished } = {}) {
         const q = finished || this.current;
         const goal = q?.kind === 'count' ? q.goal : 1;
+        const progress = q === this.listed ? this.progress : 0;
         if (finished) {
             this.title.setText('Quest complete!');
             this.line.setText(finished.text);
@@ -135,7 +196,7 @@ export class QuestTracker {
         } else if (q) {
             this.title.setText('Quest');
             this.line.setText(q.text);
-            this.count.setText(`${this.progress}/${goal}`).setColor('#eec39a');
+            this.count.setText(`${progress}/${goal}`).setColor('#eec39a');
         } else {
             this.title.setText('Quests done');
             this.line.setText('More adventures soon');

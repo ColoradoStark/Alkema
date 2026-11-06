@@ -718,7 +718,7 @@ test.describe('Riverhold', () => {
             return { far: Math.hypot(wren.sprite.x - x, wren.sprite.y - y), name: wren.name,
                 legs: wren.sprite.characterData.selections.find(s => s.type === 'legs').item };
         });
-        expect(near.far).toBeLessThan(200);
+        expect(near.far).toBeLessThan(240);         // (beside the healer's path, not on it: questWay.test.js)
         expect(near).toMatchObject({ name: 'Wren', legs: 'legs_skirts_slit' });
 
         const ui = () => page.evaluate(() => {
@@ -780,6 +780,78 @@ test.describe('Riverhold', () => {
         await expect.poll(() => ui().then(u => u.open)).toBe(false);
         expect(await ui()).toMatchObject({ clip: undefined });
         expect(await page.locator('.story-clip').isVisible()).toBe(false);
+    });
+
+    test('Find Wren: the quest points you to Riverhold, the minimap there shows where she is, she glows, and talking to her finds her', async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const quest = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            const q = ui.quests.current, t = ui.questTarget(q, gs), mm = ui.minimap;
+            const wren = gs.town?.folk.find(f => f.plan.id === 'wren');
+            const mark = wren && gs.questMarks.marks.get(wren.sprite);
+            return { id: q?.id, text: ui.quests.line.text, target: t && { x: Math.round(t.x), y: Math.round(t.y) },
+                minimap: mm.town?.key ?? null, shown: mm.town ? mm.town.image.visible : mm.map.visible,
+                wren: wren && { x: Math.round(wren.sprite.x), y: Math.round(wren.sprite.y) },
+                glow: mark ? { x: Math.round(mark.glow.x), y: Math.round(mark.glow.y), drawn: mark.glow.visible && mark.arrow.visible } : null,
+                held: ['quest-glow', 'minimap-town'].filter(k => gs.textures.exists(k)) };
+        });
+        // Swinging and casting learnt, she's the next to find, and out on the world the way points to Riverhold
+        await page.evaluate(() => { const q = window.__PHASER_GAME.scene.getScene('UIScene').quests; q.index = 2; q._render(); });
+        await expect.poll(quest).toMatchObject({ id: 'wren', text: 'Find Wren in Riverhold', target: { x: 6320, y: 11116 }, minimap: null, shown: true, held: [] });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await expect.poll(() => quest().then(q => !!q.glow), { timeout: 120000, intervals: [1000] }).toBe(true);
+        // In Riverhold the minimap is Riverhold's, pointing to her, and she's ringed with the glow at her feet
+        const there = await quest();
+        expect(there).toMatchObject({ id: 'wren', minimap: 'riverhold', shown: true, held: ['quest-glow', 'minimap-town'] });
+        expect(there.target).toEqual(there.wren);
+        expect(there.glow.drawn).toBe(true);
+        expect(Math.abs(there.glow.x - there.wren.x)).toBeLessThan(2);
+        expect(there.glow.y - there.wren.y).toBeGreaterThan(10);
+        // Talking to her finds her: the quest's done (kept with the hero), the list's comes back, the glow goes
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === 'wren'));
+        });
+        await expect.poll(quest).toMatchObject({ id: 'fernwick', glow: null, held: ['minimap-town'] });
+        expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current.data.quests.done)).toEqual(['wren']);
+        // Out of town the town's map is let go, the world's back
+        await page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            if (ui.dialogue.visible) ui.dialogue.close();
+        });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await expect.poll(quest, { timeout: 15000 }).toMatchObject({ minimap: null, shown: true, held: [] });
+    });
+
+    test("badly hurt, a quest to the nearest healer comes first: to Riverhold, her door, and her, ringed; mended, it's done", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page);
+        const quest = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            const q = ui.quests.current, t = ui.questTarget(q, gs);
+            const healer = gs.town?.folk.find(f => f.plan.id === 'healer');
+            return { id: q?.id, text: q?.text, target: t && { x: Math.round(t.x), y: Math.round(t.y) }, key: gs.town?.key ?? null,
+                healer: healer && { x: Math.round(healer.sprite.x), y: Math.round(healer.sprite.y) },
+                marked: !!healer && gs.questMarks.marks.has(healer.sprite) };
+        });
+        expect((await quest()).id).toBe('swing');
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').hp.now = 1; });
+        await expect.poll(quest).toMatchObject({ id: 'heal', text: "You're badly hurt: get healed in Riverhold", target: { x: 6320, y: 11116 } });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        const door = await page.evaluate(async () => (await (await fetch('/towns/riverhold.json')).json()).exits.find(e => e.to === 'riverhold-healer').rect);
+        await expect.poll(quest, { timeout: 30000 }).toMatchObject({ key: 'riverhold', target: { x: door[0] + door[2] / 2, y: door[1] + door[3] / 2 } });
+        await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            const { arrive } = await (await fetch('/towns/riverhold-healer.json')).json();
+            await gs.changeMap('riverhold-healer', arrive, 'up');
+        });
+        await expect.poll(() => quest().then(q => q.marked), { timeout: 60000 }).toBe(true);
+        const room = await quest();
+        expect(room.target).toEqual(room.healer);
+        // Mended (as she does on a yes): the quest's done, and the list's comes back
+        await page.evaluate(() => { const ui = window.__PHASER_GAME.scene.getScene('UIScene'); ui.hp.now = ui.hp.max; });
+        await expect.poll(quest).toMatchObject({ id: 'swing', marked: false });
     });
 });
 

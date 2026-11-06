@@ -129,6 +129,20 @@ test.describe('Memory', () => {
         }
     });
 
+    test("Riverhold with Wren to find: its minimap and her quest glow are held while you're there, and let go as you leave", async ({ page }) => {
+        test.setTimeout(240000);
+        await enterWorld(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').quests.index = 2; });      // (Wren's quest next)
+        const base = await settled(page);
+        await visit(page, () => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        await page.waitForFunction(() => ['quest-glow', 'minimap-town'].every(k => window.__PHASER_GAME.textures.exists(k)), null, { timeout: 30000 });
+        expect((await held(page)).mb - base.mb).toBeLessThan(BUDGET_MB);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
+        await page.waitForFunction(() => !['quest-glow', 'minimap-town'].some(k => window.__PHASER_GAME.textures.exists(k)), null, { timeout: 15000 });
+        expect((await settled(page)).mb - base.mb).toBeLessThan(SLACK_MB);
+    });
+
     test("by night the taverns fill (everyone in from the cold in Tumbledown's longhall): still under budget, and let go on leaving", async ({ page }) => {
         test.setTimeout(240000);
         await enterWorld(page);

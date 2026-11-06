@@ -46,6 +46,9 @@ test.describe('Living world', () => {
         expect(await quest(page)).toEqual({ id: 'cast', progress: 0 });
 
         await page.keyboard.press('KeyE');
+        // (then Wren to find, in Riverhold, before the villages: town.spec.js "Find Wren")
+        expect(await quest(page)).toEqual({ id: 'wren', progress: 0 });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').quests.met('wren', 'riverhold'));
         expect(await quest(page)).toEqual({ id: 'fernwick', progress: 0 });
 
         // Coming back as the same hero picks up where they left off...
@@ -66,7 +69,7 @@ test.describe('Living world', () => {
 
     test('walking to a landmark completes its quest', async ({ page }) => {
         await enterWorld(page);
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').quests.index = 2; });
+        await page.evaluate(() => { const q = window.__PHASER_GAME.scene.getScene('UIScene').quests; q.index = 2; q.done.add('wren'); });
         expect((await quest(page)).id).toBe('fernwick');
         await page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');

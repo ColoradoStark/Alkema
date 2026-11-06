@@ -379,6 +379,7 @@ test.describe('Character creator', () => {
     });
 
     test('after playing a hero, coming back shows that hero; the dice still rolls a new one', async ({ page }) => {
+        test.setTimeout(60000);     // (three looks made by the sprite generator: under a full run's load they ran past the default 30 s, still Summoning)
         await page.goto('/');
         await page.locator('.cc-tile[data-id="thief"]').click({ timeout: 20000 });
         const played = await waitForPreview(page, "c.character_class === 'thief'");

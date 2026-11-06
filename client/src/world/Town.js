@@ -11,6 +11,7 @@ import { CompositeCharacter } from '../sprites/CompositeCharacter.js';
 import { ANIM_ROWS } from '../sprites/AnimationFactory.js';
 import { FIRE_ART } from './DayNight.js';
 import { audio } from '../audio/audio.js';
+import { TOWNS } from './towns.js';
 
 const FEET = 23;               // from a character's centre down to their feet (Ship.BELOW_HERO)
 const TALK_REACH = 64;         // stand this close to someone and they speak
@@ -61,12 +62,7 @@ function hereAt(plan, night) {
 }
 const WATER_FRAME_MS = 260;
 
-/** The places on the overworld you can go into, and their maps. */
-export const TOWNS = {
-    Riverhold: 'riverhold', Seacombe: 'seacombe', Fernwick: 'fernwick', Ashby: 'ashby',
-    Tumbledown: 'tumbledown', "Gull's Rest": 'gulls_rest', 'Castle Dunmere': 'dunmere',
-    'Castle Grimhold': 'grimhold', 'Gloomwater Grotto': 'gloomwater-1',
-};
+export { TOWNS };      // (the places on the overworld you can go into, and their maps: towns.js)
 
 const TOUCH = 44;               // a dungeon's gate, chest, lock or font: walk up against it and you work it (its solid edge, cell-rounded, holds you this far off)
 

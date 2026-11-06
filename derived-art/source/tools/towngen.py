@@ -1554,9 +1554,10 @@ def riverhold():
     F(guard(9, 'Watchman', wander=[3, 22, 44, 24.5], says='Keep the peace, and the peace keeps you.'))
     F(guard(10, 'Watchman', wander=[18.5, 17.5, 33.5, 28.5], says='Mind your purse in the square. Not everyone here is honest.'))
     F(guard(11, 'Watchman', wander=[17, 36.5, 40, 38.5], says='Seen anything odd up the river? Tell the warden at the gate.'))
-    # Wren, just inside the gate: dressed by hand rather than rolled, and with a favour to ask
+    # Wren, just inside the gate: dressed by hand rather than rolled, and with a favour to ask; on the grass beside
+    # the healer's path, not on it (the user's, November 2026: running in for a heal they bumped into her)
     F(dict(id='wren', name='Wren', role='Thief', race='elf', cls='thief', body='female', outfit=WREN,
-           post=(6.4, 19.9), facing='down', says=[
+           post=(8.2, 19.4), facing='down', says=[
                "Oh! You startled me. Sorry. I'm Wren.",
                "I've been sitting by this gate three days now, watching who comes and goes.",
                "There's work waiting for me in Stonebridge, a few days down the river road. Honest work. Mostly.",

@@ -1,6 +1,8 @@
 // Round minimap in the top-right of the map view: the land around you, you at
 // the centre, other players as dots, and a marker toward the current quest.
-// The map wraps like the world does.
+// The map wraps like the world does. In a town or a room it's that map's (the user's, November 2026: to see where the
+// one a quest sends you to is in Riverhold), drawn as you come in from its own pictures, `TOWN_PX` pixels a cell, and
+// let go as you leave it.
 
 import { WORLD } from '../world/places.js';
 import { wrapDelta } from '../world/Overworld.js';
@@ -8,6 +10,8 @@ import { wrapDelta } from '../world/Overworld.js';
 const RADIUS = 38;
 const SCALE = 1 / WORLD.tileSize; // world px → minimap px (minimap.png is a pixel per tile)
 const INK = 0x222034;
+const TOWN_KEY = 'minimap-town';
+const TOWN_PX = 2;          // a town's cell (16 px), this many minimap pixels: closer than the world's, as the town is seen
 
 export class Minimap {
     /**
@@ -24,7 +28,10 @@ export class Minimap {
             .setOrigin(0, 0).setDepth(20);
         const shape = scene.make.graphics({ x: 0, y: 0 }, false);
         shape.fillStyle(0xffffff).fillCircle(cx, cy, RADIUS);
-        this.map.setMask(shape.createGeometryMask());
+        this.mask = shape.createGeometryMask();
+        this.map.setMask(this.mask);
+        this.scale = SCALE;
+        this.town = null;           // the town map shown ({ key, image }), or null out on the world
 
         this.dots = scene.add.graphics().setDepth(21);
         // Lost in the woods, the map is no help: it darkens with the forest
@@ -60,11 +67,50 @@ export class Minimap {
     }
 
     setVisible(on) {
-        [this.map, this.dots, this.dark, this.rim, this.north].forEach(o => o.setVisible(on));
+        [this.dots, this.dark, this.rim, this.north].forEach(o => o.setVisible(on));
+        this.map.setVisible(on && !this.town);
+        this.town?.image.setVisible(on);
+        this.town?.backdrop.setVisible(on);
+    }
+
+    /** The map you're in: a Town (its own map drawn small) or null (the world's). */
+    setTown(town) {
+        if ((town?.key ?? null) === (this.town?.key ?? null)) return;
+        if (this.town) {
+            this.town.image.destroy();
+            this.town.backdrop.destroy();
+            this.scene.textures.remove(TOWN_KEY);
+            this.town = null;
+        }
+        this.scale = SCALE;
+        this.map.setVisible(!town);
+        if (!town) return;
+        const textures = this.scene.textures;
+        const ground = textures.get(`town-${town.key}`).getSourceImage();
+        const things = textures.get(`town-${town.key}-things`).getSourceImage();
+        const k = TOWN_PX / town.cell;
+        const w = Math.ceil(town.width * k), h = Math.ceil(town.height * k);
+        const tex = textures.createCanvas(TOWN_KEY, w, h);
+        const ctx = tex.getContext();
+        ctx.imageSmoothingEnabled = true;
+        const outside = town.indoors || town.data.dark ? 0x0c080e : 0x1d5d8c;     // (round it, as the map's own background)
+        ctx.drawImage(ground, 0, 0, town.width, town.height, 0, 0, w, h);
+        for (const [frame, left, top] of town.data.things) {
+            const [fx, fy, fw, fh] = town.data.frames[frame];
+            ctx.drawImage(things, fx, fy, fw, fh, left * k, top * k, fw * k, fh * k);
+        }
+        tex.refresh();
+        const backdrop = this.scene.add.graphics().setDepth(20).fillStyle(outside).fillCircle(this.cx, this.cy, RADIUS);
+        const image = this.scene.add.image(0, 0, TOWN_KEY).setOrigin(0, 0).setDepth(20).setMask(this.mask);
+        this.town = { key: town.key, image, backdrop };
+        this.scale = k;
+        this.dark.setAlpha(0);
     }
 
     update(me, others, target) {
-        this.map.setTilePosition(Math.round(me.x * SCALE) - RADIUS, Math.round(me.y * SCALE) - RADIUS);
+        const SCALE = this.scale;
+        if (this.town) this.town.image.setPosition(Math.round(this.cx - me.x * SCALE), Math.round(this.cy - me.y * SCALE));
+        else this.map.setTilePosition(Math.round(me.x * SCALE) - RADIUS, Math.round(me.y * SCALE) - RADIUS);
 
         const g = this.dots;
         g.clear();
