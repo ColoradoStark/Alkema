@@ -113,16 +113,20 @@ describe('Upgrades', () => {
 });
 
 // Hit points come back only at a healer (the user's, November 2026: buying a level of Vigour or a goddess healed you
-// by as much as it raised your most), and they're kept with the hero, so coming back to the game doesn't fill them.
+// by as much as it raised your most), and they're kept with the hero, so coming back to the game doesn't fill them. A
+// level's new hit points come with it, though (the user's, November 2026: with only the most raised, upgrading looked
+// like losing health, and you went on to the next pack with none of what you'd bought): you're as hurt as you were.
 describe('Hit points', () => {
-    test("a level bought (or gear put on) raises your most hit points, not the ones you have", () => {
-        expect(lifeAfter({ now: 5, max: 20 }, 68)).toEqual({ now: 5, max: 68 });
-        expect(lifeAfter({ now: 20, max: 20 }, 68)).toEqual({ now: 20, max: 68 });
+    test("a level bought (or gear put on) adds its hit points to the ones you have: full stays full, hurt stays as hurt", () => {
+        expect(lifeAfter({ now: 20, max: 20 }, 68)).toEqual({ now: 68, max: 68 });
+        expect(lifeAfter({ now: 5, max: 20 }, 68)).toEqual({ now: 53, max: 68 });
     });
 
-    test('your most lowered (gear taken off), what you have is held to it', () => {
-        expect(lifeAfter({ now: 60, max: 68 }, 20)).toEqual({ now: 20, max: 20 });
-        expect(lifeAfter({ now: 5, max: 68 }, 20)).toEqual({ now: 5, max: 20 });
+    test('your most lowered (gear taken off), you lose as many as it took: no healing by taking gear off and on', () => {
+        expect(lifeAfter({ now: 60, max: 68 }, 20)).toEqual({ now: 12, max: 20 });
+        const on = lifeAfter({ now: 5, max: 20 }, 68);
+        expect(lifeAfter(on, 20)).toEqual({ now: 5, max: 20 });
+        expect(lifeAfter({ now: 5, max: 68 }, 20)).toEqual({ now: 1, max: 20 });      // (never felled by it)
     });
 
     test('buying a level (Strength of Arm gives hit points too) leaves you as hurt as you were', () => {
@@ -130,7 +134,8 @@ describe('Hit points', () => {
         const before = u.apply(BASE).hp.max;
         const hp = { now: 3, max: before };
         expect(u.buy('might').ok).toBe(true);
-        expect(lifeAfter(hp, u.apply(BASE).hp.max)).toEqual({ now: 3, max: u.apply(BASE).hp.max });
+        const after = u.apply(BASE).hp.max;
+        expect(lifeAfter(hp, after)).toEqual({ now: 3 + after - before, max: after });
         expect(u.apply(BASE).hp.max).toBeGreaterThan(before);
     });
 

@@ -91,7 +91,7 @@ test.describe('Upgrades', () => {
         await expect(vigour.locator('.gear-up-level')).toHaveText('1/10');
     });
 
-    test("buying a level doesn't mend you, and coming back you're as hurt as you left (the user's: the only way to heal is the healer)", async ({ page }) => {
+    test("buying a level adds its hit points to yours but mends no wound (the user's: upgrading looked like losing health; and the only way to heal is the healer), and coming back you're as hurt as you left", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await asMage(page, 1e9);
@@ -100,12 +100,13 @@ test.describe('Upgrades', () => {
         const before = await ui(page, (ui) => ui.hp.max);
         await page.locator('.gear-up[data-up="might"] .gear-up-buy').click();
         await expect.poll(() => ui(page, (ui) => ui.hp.max)).toBeGreaterThan(before);
-        expect(await ui(page, (ui) => ui.hp.now)).toBe(3);
+        const { now, max } = await ui(page, (ui) => ({ now: ui.hp.now, max: ui.hp.max }));
+        expect(now).toBe(3 + max - before);         // (as many short of full as before)
         // Kept with the hero, and back next time as it was
-        await expect.poll(() => page.evaluate(async () => (await import('/src/account/account.js')).account.current.data.hp)).toBe(3);
+        await expect.poll(() => page.evaluate(async () => (await import('/src/account/account.js')).account.current.data.hp)).toBe(now);
         await page.reload();
         await enterWorld(page);
-        await expect.poll(() => ui(page, (ui) => ui.hp?.now), { timeout: 30000 }).toBe(3);
+        await expect.poll(() => ui(page, (ui) => ui.hp?.now), { timeout: 30000 }).toBe(now);
     });
 
     test("the one you're on holds all it says inside its frame, on a phone (the user's: its words spilled out over the gold border, squeezed by the list)", async ({ page }) => {

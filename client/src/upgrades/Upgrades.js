@@ -145,12 +145,13 @@ export function rankAt(level) {
 }
 
 /**
- * Your hit points as your most changes (a level bought, gear put on or taken off): raised, you're as hurt as you
- * were, lowered, held to it (the user's, November 2026: a level bought healed you by as much as it raised your
- * most, and the only way to heal is the healer).
+ * Your hit points as your most changes (a level bought, gear put on or taken off): you're as hurt as you were, the
+ * hit points it adds or takes added to or taken from the ones you have (the user's, November 2026: with only the most
+ * raised, upgrading looked like losing health, and the next pack was fought with none of it), never below one. No
+ * wound is mended by it: only the healer heals (the user's, earlier in November: a level healed you).
  */
 export function lifeAfter(hp, max) {
-    return { now: Math.min(hp.now, max), max };
+    return { now: Math.max(1, Math.min(max, hp.now + max - hp.max)), max };
 }
 
 /**
