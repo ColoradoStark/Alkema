@@ -9,6 +9,8 @@ import { loadFoe, forgetFoe } from './Foe.js';
 import { DEMON_KINDS } from './Demons.js';
 import GUARDS from './guards.json';
 import HEART from './heart.json';
+import MARKET from './market.json';
+import { BOSS_STEP } from './zones.js';
 
 // A unit's Wesnoth level: how many of its zone's hero's blows it takes, and how much of their hit points its blow
 const LEVEL_HITS = [2.5, 4, 7, 12, 20, 32];
@@ -42,6 +44,24 @@ export const BAND_KINDS = {
         boss: true, scale: 1.75, label: 'Goblin Rouser', title: 'Chief of the Shore Raiders', chest: true,
         slam: { every: 3, windup: 1100, radius: 72, hurt: 1.5 },
         horn: { at: 0.5, call: ['spearman', 'spearman', 'impaler'] } },
+    // The Market Fields (zone 28, tier 2): the Duke's patrols on the market road to Highmarket, who take any armed
+    // stranger for a raider (docs/WORLD.md). Fencers dart in and out; cavalrymen are a horse's weight, a blow doesn't
+    // stagger them; horsemen charge (`charge`: they stop, a red lane marks where they'll ride, and they gallop down it,
+    // so step out of it; winded after, they're yours a moment)
+    fencer: melee(1, { speed: 88, reach: 36, windup: 380, recover: 560, lunge: 24, race: 'human' }),
+    cavalryman: { ...DEMON_KINDS.brute, speed: 92, reach: 46, windup: 620, recover: 860, anim: 'attack', race: 'human', level: 1 },
+    horseman: melee(1, { speed: 96, reach: 44, windup: 560, recover: 800, lunge: 18, race: 'human',
+        charge: { every: 3200, from: 90, length: 260, windup: 950, speed: 430, width: 30, hurt: 1.5, recover: 1300 } }),
+    // (its leader, a boss: a knight of the Duke's, his captain on the market road; the user's, November 2026: a stronger
+    // boss and a more interesting fight than the Rouser's, one you grind a little for. His moves are a knight's: his
+    // sword close, his lance charge across the field when you're off him (longer, faster, harder than a horseman's); at
+    // 60% of his health he sounds the rally and his riders come to him (`rally`); at 30% he's in a fury (`fury`): his
+    // charges come one on another, wheeling round between, and his blows quicker)
+    knight: { ...DEMON_KINDS.brute, speed: 96, reach: 52, windup: 650, recover: 850, anim: 'attack', race: 'human', level: 2,
+        boss: true, scale: 1.5, label: 'Sir Aldous', title: "Captain of the Duke's Riders", chest: true,
+        charge: { every: 4200, from: 100, length: 360, windup: 1050, speed: 520, width: 38, hurt: 1.8, recover: 1500 },
+        rally: { at: 0.6, call: ['horseman', 'cavalryman', 'horseman'], words: 'sounds the rally! His riders come.' },
+        fury: { at: 0.3, again: 2, quicker: 0.75, words: 'is in a fury!' } },
     // The Southern Forest's guards round the first area (its wood keeps anyone off the road out of it: the user's,
     // block the first area off till the story says where the journey goes): an elvish sorceress throwing faerie fire,
     // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
@@ -79,9 +99,34 @@ export const BANDS = {
         // (his fight's ground the Point's clearing, the user's: walled off by the shore's corridor east and the wood's
         // curve, his zone's ground within [x0, y0, x1, y1]; the river road north shut off altogether by a straight line
         // from the wood's low point to the river, the user's: `arenaCut` isn't his)
-        { at: [6450, 13580], band: ['rouser'], step: 6, lair: true, arena: [6100, 12570, 6840, 13720], arenaCut: [6100, 12500, 6306, 12736] },
+        { at: [6450, 13580], band: ['rouser'], step: BOSS_STEP.z35, lair: true, arena: [6100, 12570, 6840, 13720], arenaCut: [6100, 12500, 6306, 12736] },
     ],
 };
+
+// The Market Fields' packs: where tools/zonegen.py says (market.json: up the river road and about the bridge by
+// Highmarket, the land route to Stonebridge, blocking the way; nearest the way in first), more of them and more in each
+// up its climb: 62 foes, twice the Point's and more (the user's); its knight at the bridge's near end once they're
+// beaten, his fight's ground a box about it taking in the bridge
+const MARKET_BANDS = [
+    ['fencer', 'fencer', 'fencer'],
+    ['cavalryman', 'fencer', 'fencer'],
+    ['horseman', 'fencer', 'fencer', 'fencer'],
+    ['cavalryman', 'cavalryman', 'fencer', 'fencer'],
+    ['horseman', 'horseman', 'fencer', 'fencer'],
+    ['cavalryman', 'horseman', 'fencer', 'fencer', 'fencer'],
+    ['fencer', 'fencer', 'fencer', 'fencer', 'cavalryman'],
+    ['horseman', 'cavalryman', 'cavalryman', 'fencer'],
+    ['horseman', 'horseman', 'cavalryman', 'fencer', 'fencer'],
+    ['cavalryman', 'cavalryman', 'cavalryman', 'fencer', 'fencer'],
+    ['horseman', 'horseman', 'horseman', 'fencer'],
+    ['cavalryman', 'cavalryman', 'horseman', 'fencer', 'fencer'],
+    ['horseman', 'horseman', 'cavalryman', 'cavalryman', 'fencer'],
+    ['horseman', 'horseman', 'cavalryman', 'cavalryman', 'fencer', 'fencer'],
+];
+BANDS.z28 = [
+    ...MARKET.packs.map((p, k) => ({ at: p.at, band: MARKET_BANDS[k] })),
+    { at: MARKET.lair, band: ['knight'], step: BOSS_STEP.z28, lair: true, arena: MARKET.arena },
+];
 
 // The guards: where tools/zonegen.py says (guards.json: one within a few tiles of every way out of the first area),
 // a sorceress at each (one each: a pair at all 33 posts was 66 bodies held from the start, on a weak phone), made far up the Point's climb (`GUARD_STEP`: ten packs past its last, as the wardens were), and keeping to

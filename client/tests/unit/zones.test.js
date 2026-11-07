@@ -3,7 +3,7 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, packEssence, strengthFor, tooStrong } from '../../src/battle/zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong, farTooStrong, BOSS_STEP } from '../../src/battle/zones.js';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
 
@@ -73,5 +73,59 @@ describe('The climb up the Saltmere Point', () => {
         expect(tooStrong('z35', 1, strengthFor('z35', 0) - 1)).toBe(true);
         expect(tooStrong('z35', 2, 8 * 17)).toBe(true);
         expect(tooStrong('z35', 0, 1)).toBe(false);       // (the first is for anyone)
+    });
+});
+
+describe('The Market Fields, the next zone north of Riverhold', () => {
+    const MARKET = 14;      // its packs (field.spec.js checks the zone has them)
+    /** A new hero up the Point, its Rouser and all, then `packs` of the Market Fields: what each spent, and how they stood. */
+    function road(a, h, packs = MARKET) {
+        const { u, inventory, strength } = fresh(a, h);
+        const short = [];
+        for (let step = 0; step < PACKS; step++) {
+            inventory.essence += packEssence('z35', step);
+            while (u.buy(u.current.id).ok);
+        }
+        inventory.essence += packEssence('z35', BOSS_STEP.z35);        // (the Rouser, a band of his own)
+        while (u.buy(u.current.id).ok);
+        for (let step = 0; step < packs; step++) {
+            if (strength() < strengthFor('z28', step)) short.push(`${a}/${h} short for pack ${step + 1} (${(strength() / strengthFor('z28', step)).toFixed(2)})`);
+            inventory.essence += packEssence('z28', step);
+            while (u.buy(u.current.id).ok);
+        }
+        return { u, inventory, strength, short };
+    }
+
+    test("its climb takes up where the Point's leaves off: its first pack is the Point's eighth", () => {
+        expect(strengthFor('z28', 0)).toBeCloseTo(strengthFor('z35', 7));
+        expect(packEssence('z28', 0)).toBeCloseTo(packEssence('z35', 7));
+    });
+
+    test('every new hero who beat the Point is strong enough for each of its packs in turn, spending what the last paid', () => {
+        expect(HEROES.flatMap(([a, h]) => road(a, h).short)).toEqual([]);
+    });
+
+    test("its boss is a wall (the user's: killing every foe leaves him really hard; grind a little and he's easier): cleared, no hero is strong enough for him, and every one is after a few more rounds of its top packs", () => {
+        const boss = strengthFor('z28', BOSS_STEP.z28), cleared = [], rounds = [];
+        for (const [a, h] of HEROES) {
+            const { u, inventory, strength } = road(a, h);
+            cleared.push(strength() / boss);
+            let n = 0;
+            while (strength() < boss && n < 10) {       // (a round: its top two packs again, as they regrow)
+                inventory.essence += packEssence('z28', MARKET - 1) + packEssence('z28', MARKET - 2);
+                while (u.buy(u.current.id).ok);
+                n++;
+            }
+            rounds.push(n);
+        }
+        expect(Math.max(...cleared)).toBeLessThan(0.75);
+        expect(Math.min(...rounds)).toBeGreaterThanOrEqual(1);
+        expect(Math.max(...rounds)).toBeLessThanOrEqual(3);
+    });
+
+    test('a new hero is told its foes are far too strong; one who beat the Point is not', () => {
+        expect(farTooStrong('z28', 5 * 16)).toBe(true);
+        const { strength } = road(5, 19, 0);
+        expect(farTooStrong('z28', strength())).toBe(false);
     });
 });

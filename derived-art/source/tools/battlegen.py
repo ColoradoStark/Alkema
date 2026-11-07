@@ -252,6 +252,52 @@ FOES = {
             'attack-n': [('rouser-ne', 25), ('rouser-attack1', 50), ('rouser-attack-ne', 150), ('rouser-attack3', 50), ('rouser-ne', 25)],
             'defend-s': hit(['rouser', 'rouser-defend']), 'defend-n': hit(['rouser-ne', 'rouser-ne-defend']),
         }},
+    # The Market Fields (zone 28, docs/WORLD.md): the market road to Highmarket, ridden by the Duke's patrols, all in
+    # Dunmere's navy (its castle guard's). The fencer is on foot and doesn't walk; the horseman and the knight gallop
+    # (Wesnoth's run), the cavalryman doesn't. The knight, the zone's boss, charges with his lance (his strongest blow)
+    'fencer': {
+        'name': 'Fencer', 'race': 'human', 'hp': 28, 'damage': 4, 'folder': 'wesnoth-fencer', 'cloth': 'navy',
+        'anims': {
+            'stand-s': [('fencer', 1000)],
+            'breeze-s': seq('fencer-idle-', [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1], 100),
+            'attack-s': seq('fencer-attack-', [1, 2, 3, 4, 5, 6, 7, 8, 9, 1], 50),
+            'defend-s': hit(['fencer', 'fencer-defend']),
+            'die-s': seq('fencer-die', range(1, 6), 100),
+        }},
+    'cavalryman': {
+        'name': 'Cavalryman', 'race': 'human', 'hp': 34, 'damage': 6, 'folder': 'wesnoth-cavalryman', 'cloth': 'navy',
+        'anims': {
+            'stand-s': [('cavalryman', 1000)],
+            'breeze-s': [('cavalryman', 250)] + seq('cavalryman-breeze', [1, 2, 3, 2, 1], 250),
+            'attack-s': [('cavalryman-attack1', 80)] + seq('cavalryman-attack', range(2, 7), [70, 100, 100, 150, 150]) + [('cavalryman', 25)],
+            'defend-s': hit(['cavalryman-defend1', 'cavalryman-defend2']),
+        }},
+    'horseman': {
+        'name': 'Horseman', 'race': 'human', 'hp': 38, 'damage': 9, 'folder': 'wesnoth-horseman', 'cloth': 'navy',
+        'anims': {
+            'stand-s': [('horseman', 1000)], 'stand-n': [('horseman-ne-breeze-1', 1000)],
+            'breeze-s': seq('horseman-breeze-', [1, 2, 3, 4, 2, 5], [200, 300, 300, 300, 200, 200]),
+            'breeze-n': seq('horseman-ne-breeze-', [1, 2, 3, 4, 2, 5], [200, 300, 300, 300, 200, 200]),
+            'move-s': seq('horseman-se-run', range(1, 9), 50), 'move-n': seq('horseman-ne-run', range(1, 9), 50),
+            'attack-s': seq('horseman-se-attack', range(1, 13), [100] * 3 + [70] * 9),
+            'attack-n': seq('horseman-ne-attack', range(1, 13), [100] * 3 + [70] * 9),
+            'defend-s': hit(['horseman-se-defend1', 'horseman-se-defend2']),
+            'defend-n': hit(['horseman-ne-defend1', 'horseman-ne-defend2']),
+            'die-s': seq('horseman-se-die', range(1, 6), 100), 'die-n': seq('horseman-ne-die', range(1, 6), 100),
+        }},
+    'knight': {
+        'name': 'Knight', 'race': 'human', 'hp': 58, 'damage': 14, 'folder': 'wesnoth-knight', 'cloth': 'navy',
+        'anims': {
+            'stand-s': [('knight', 1000)], 'stand-n': [('knight-ne-breeze-1', 1000)],
+            'breeze-s': seq('knight-breeze-', [1, 2, 3, 4, 2, 5], [200, 300, 300, 300, 200, 200]),
+            'breeze-n': seq('knight-ne-breeze-', [1, 2, 3, 4, 2, 5], [200, 300, 300, 300, 200, 200]),
+            'move-s': seq('knight-se-run', range(1, 9), 50), 'move-n': seq('knight-ne-run', range(1, 9), 50),
+            'attack-s': seq('knight-se-attack', range(1, 13), [100] * 3 + [70] * 9),
+            'attack-n': seq('knight-ne-attack', range(1, 13), [100] * 3 + [70] * 9),
+            'defend-s': hit(['knight-se-defend1', 'knight-se-defend2']),
+            'defend-n': hit(['knight-ne-defend1', 'knight-ne-defend2']),
+            'die-s': seq('knight-se-die', range(1, 6), 100), 'die-n': seq('knight-ne-die', range(1, 6), 100),
+        }},
     # The Southern Forest's guards, round the first area (docs/WORLD.md): an elder wose, and a sorceress casting
     'elderwose': {
         'name': 'Elder Wose', 'race': 'wose', 'hp': 64, 'damage': 13, 'folder': 'wesnoth-elderwose', 'cloth': 'forest',

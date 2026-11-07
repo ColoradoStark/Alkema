@@ -101,7 +101,7 @@ async function atThePoint(page) {
 async function bossOut(page) {
     await page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PLACES }) => {
         const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-        for (const p of PLACES) if (p.family === 'z35' && !p.lair) fd.slain.add(p.i);
+        for (const p of PLACES) if (p.family === 'z35' && !p.lair) { fd.slain.add(p.i); fd.fell.add(p.i); }
     }));
     await standAt(page, CLEARING.x, CLEARING.y);          // (he comes as you're in his clearing)
     await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === 'rouser')?.foe.ready), { timeout: 15000 }).toBe(true);
@@ -1372,7 +1372,8 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
             }
             return null;
         };
-        for (const p of PACKS.filter(p => p.guard && p.woods)) {
+        // (one of Riverhold's wood's own, zone 33's: the Market Fields' wood has its elves too, by zone 33's edge)
+        for (const p of PACKS.filter(p => p.guard && p.woods && ow.zoneAt(...p.at)?.id === 33)) {
             const [gx, gy] = p.at;
             const road = near(gx, gy, d => !(d > 0), 64, 192), edge = near(gx, gy, d => d > 0 && d < NOTICE_DEEP),
                 dim = near(gx, gy, d => d === NOTICE_DEEP), deep = near(gx, gy, d => d > BAR_DEEP + 0.5);
@@ -1382,7 +1383,9 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
     });
     const guard = (page, at) => page.evaluate(({ x, y }) => {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
-        const f = gs.fieldDemons.foes.find(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48 && f.family.startsWith('guards'));
+        // (the one posted there: where two zones' woods meet, another's guard can stand a tile off)
+        const f = gs.fieldDemons.foes.filter(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48 && f.family.startsWith('guards'))
+            .sort((a, b) => Math.hypot(a.post.x - x, a.post.y - y) - Math.hypot(b.post.x - x, b.post.y - y))[0];
         return f && { state: f.state, kind: f.kind, hp: f.maxHp, barring: !!f.barring, off: Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23), onRoad: !(gs.overworld.forest.depthAt(f.foe.x, f.foe.y) > 0), ready: f.foe.ready };
     }, at);
     const notice = (page) => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '');
@@ -1910,7 +1913,7 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             const before = !!fd.foes.find(f => f.kind === 'rouser');
             const rest = PLACES.filter(p => p.family === 'z35' && !p.lair);
-            for (const p of rest.slice(1)) fd.slain.add(p.i);
+            for (const p of rest.slice(1)) { fd.slain.add(p.i); fd.fell.add(p.i); }
             const last = fd.foes.find(f => f.i === rest[0].i);
             last.stun = 1e9;
             const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite;
@@ -2026,5 +2029,235 @@ test.describe('The Goblin Rouser, a boss fight', () => {
                 mist: ui.textures.exists('boss-mist') };
         }), { timeout: 8000 }).toEqual({ bar: false, dark: false, ring: false, mist: false });
         await expect.poll(mood, { timeout: 10000 }).not.toBe('boss');
+    });
+});
+
+test.describe("The Market Fields, the next zone north of Riverhold (the user's, November 2026)", () => {
+    // Up the river road from Riverhold, just past where the elf once stood in the way: in the Market Fields
+    const WAY_IN = { x: 6632, y: 10264 };
+    const market = (page) => page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({
+        PLACES: m.PLACES.filter(p => p.family === 'z28'), PACKS: m.PACKS.map((p, k) => ({ ...p, k })).filter(p => p.family === 'z28') })));
+    /** The hero who beat the Point: strong enough for the Market Fields' first pack (its strength the Point's eighth's). */
+    const pastThePoint = (page) => page.evaluate(() => import('/src/battle/zones.js').then(({ strengthFor }) => {
+        const stats = window.__PHASER_GAME.scene.getScene('UIScene').inventory.stats, need = strengthFor('z28', 0);
+        Object.defineProperty(stats, 'attack', { value: Math.ceil(need / 2000), configurable: true, writable: true });
+        Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 2000, now: 2000 }, configurable: true, writable: true });
+        window.__PHASER_GAME.scene.getScene('UIScene').hp.max = window.__PHASER_GAME.scene.getScene('UIScene').hp.now = 2000;
+    }));
+    const card = (page) => page.evaluate(() => {
+        const c = window.__PHASER_GAME.scene.getScene('UIScene')._zoneCard;
+        return c?.active ? c.list.map(t => t.text) : null;
+    });
+
+    test("no guard stands in the way up the river road (its wood the elves' still); crossing in, its card names it, warning a new hero off and not one who beat the Point; fourteen packs, more than twice the Point's foes, on Wesnoth's riders, the first coming as you near; no knight till they're beaten", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        const { PLACES, PACKS } = await market(page);
+        expect(PACKS.filter(p => !p.lair)).toHaveLength(14);
+        const point = await places(page);
+        expect(PLACES.filter(p => !p.lair).length).toBeGreaterThanOrEqual(2 * point.PLACES.filter(p => !p.lair).length);
+        expect([...new Set(PLACES.map(p => p.kind))].sort()).toEqual(['cavalryman', 'fencer', 'horseman', 'knight']);
+        // (no guard on its open ground: those in it keep to its wood, the elves' still, the user's)
+        const guards = await page.evaluate(async () => {
+            const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
+            return PACKS.filter(p => p.guard && ow.zoneAt(...p.at)?.id === 28).map(p => p.woods);
+        });
+        expect(guards.length).toBeGreaterThan(0);
+        expect(guards.every(Boolean)).toBe(true);
+        // A new hero crossing in is told its foes are far too strong
+        await standAt(page, WAY_IN.x, WAY_IN.y + 200);
+        await page.waitForTimeout(500);
+        await standAt(page, WAY_IN.x, WAY_IN.y);
+        await expect.poll(() => card(page), { timeout: 10000 }).toEqual(['Kingdom of Dunmere', 'The Market Fields', 'Its foes are far too strong for you']);
+        // One who beat the Point isn't
+        await pastThePoint(page);
+        await standAt(page, WAY_IN.x, WAY_IN.y + 200);
+        await expect.poll(() => card(page).then(c => c?.[1]), { timeout: 10000 }).not.toBe('The Market Fields');
+        await standAt(page, WAY_IN.x, WAY_IN.y);
+        await expect.poll(() => card(page), { timeout: 10000 }).toEqual(['Kingdom of Dunmere', 'The Market Fields']);
+        // Its packs come as you near them, drawn on the riders' sheets; no guard comes, and no knight
+        const first = PACKS[0];
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBe(first.band.length);
+        const here = await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return { guards: fd.foes.filter(f => f.guard).length, knight: fd.foes.some(f => f.kind === 'knight'), sheets: window.__PHASER_GAME.textures.getTextureKeys().filter(k => /^foe-(fencer|cavalryman|horseman|knight)$/.test(k)).sort() };
+        });
+        expect(here.knight).toBe(false);
+        expect(here.sheets).not.toContain('foe-knight');
+        expect(here.sheets.length).toBeGreaterThan(0);
+    });
+
+    test("a horseman charges: he stops and marks his lane red, then gallops down it; caught in it you're run down, stepped out of it you're not; ridden, he's winded a moment", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'z28');
+        await pastThePoint(page);
+        await keepUp(page);
+        const { PACKS } = await market(page);
+        const pack = PACKS.find(p => p.band.includes('horseman') && !p.lair);
+        await standAt(page, pack.at[0], pack.at[1] + 300);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, pack.k), { timeout: 30000 }).toBe(pack.band.length);
+        const charge = (aside) => page.evaluate(async ([k, aside]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite, ui = gs.scene.get('UIScene');
+            const h = fd.foes.find(f => f.pack === k && f.kind === 'horseman' && f.hp > 0);
+            for (const o of fd.foes) if (o !== h) o.stun = 1e9;          // (only he moves)
+            fd._rouse(k);
+            gs.tweens.killTweensOf(me);
+            // You 150 px below him, on open ground
+            me.setPosition(h.foe.x, h.foe.y + 150 - fd.FEET);
+            me.body.reset(me.x, me.y);
+            h.chargeT = 0;
+            h.state = 'chase';
+            h.cd = 0;
+            fd.you.guard = 0;
+            const hp = ui.hp.now;
+            const seen = { lane: false, rode: false, winded: false, from: { x: h.foe.x, y: h.foe.y } };
+            for (let t = 0; t < 60 && !h.charging && h.state !== 'charge'; t++) await new Promise(r => setTimeout(r, 50));
+            seen.lane = !!h.charging && !!h.lane;
+            // Stepping out of the lane as it's marked
+            if (aside) {
+                me.setPosition(me.x + 80, me.y);
+                me.body.reset(me.x, me.y);
+            }
+            for (let t = 0; t < 80 && h.state !== 'charge'; t++) await new Promise(r => setTimeout(r, 25));
+            seen.rode = h.state === 'charge';
+            for (let t = 0; t < 80 && h.state === 'charge'; t++) await new Promise(r => setTimeout(r, 25));
+            seen.winded = h.state === 'recover' && !h.lane;
+            seen.went = Math.round(Math.hypot(h.foe.x - seen.from.x, h.foe.y - seen.from.y));
+            seen.hurt = hp - ui.hp.now;
+            ui.hp.now = ui.hp.max;
+            h.chargeT = 1e9;
+            return seen;
+        }, [pack.k, aside]);
+        const caught = await charge(false);
+        expect(caught).toMatchObject({ lane: true, rode: true, winded: true });
+        expect(caught.went).toBeGreaterThan(150);
+        expect(caught.hurt).toBeGreaterThan(0);
+        await page.waitForTimeout(1500);
+        const dodged = await charge(true);
+        expect(dodged).toMatchObject({ lane: true, rode: true, winded: true, hurt: 0 });
+    });
+
+    test("felled packs come back a while after, you away from them, on their own step (to grind for its boss: the user's); the knight comes once every pack has fallen once, whether they've come back or not", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'z28');
+        await pastThePoint(page);
+        await keepUp(page);
+        const { PACKS, PLACES } = await market(page);
+        const pack = PACKS[0];
+        await standAt(page, pack.at[0], pack.at[1] + 120);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, pack.k), { timeout: 30000 }).toBe(pack.band.length);
+        const step = await page.evaluate((k) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            fd._rouse(k);
+            for (const f of fd.foes.filter(f => f.pack === k)) fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+            return fd.order.get(k);
+        }, pack.k);
+        // Its time up but you by it: not yet. Away from it: back, on its step, full
+        await page.evaluate((k) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; fd.fellAt.set(k, -1e9); fd._regrowT = -1e9; }, pack.k);
+        await page.waitForTimeout(1500);
+        const standing = () => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.hp > 0).map(f => ({ step: f.step, full: f.hp === f.maxHp })), pack.k);
+        expect(await standing()).toEqual([]);
+        await standAt(page, pack.at[0] + 15 * 32, pack.at[1] - 3 * 32);
+        await expect.poll(standing, { timeout: 10000 }).toEqual(pack.band.map(() => ({ step, full: true })));
+        // Every pack felled once (this one back since): the knight comes as you step onto his ground
+        await page.evaluate((places) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const p of places) if (!p.lair) fd.fell.add(p.i);
+        }, PLACES);
+        const { lair, arena } = PACKS.find(p => p.lair);
+        await standAt(page, (arena[0] + arena[2]) / 2 - 200, (arena[1] + arena[3]) / 2 + 150);
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === 'knight')?.foe.ready), { timeout: 20000 }).toBe(true);
+        expect(lair).toBeTruthy();
+    });
+
+    test("Sir Aldous, the Captain of the Duke's Riders, is a harder fight than the Rouser: made for a hero three packs past its last, on the bridge to Stonebridge; his lance charge marked and ridden across the field; no stepping into Highmarket out of it; at 60% he sounds the rally and three riders come; at 30% he's in a fury, quicker, his charges one on another; felled, the mist lifts and a chest", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page, '/', 'z28');
+        await pastThePoint(page);
+        await keepUp(page);
+        const { PACKS, PLACES } = await market(page);
+        await page.evaluate((places) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const p of places) if (!p.lair) { fd.fell.add(p.i); fd.slain.add(p.i); }
+        }, PLACES);
+        const { arena } = PACKS.find(p => p.lair);
+        await standAt(page, (arena[0] + arena[2]) / 2 - 200, (arena[1] + arena[3]) / 2 + 150);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown && window.__PHASER_GAME.scene.getScene('UIScene').bossBar.name.text), { timeout: 20000 }).toBe('SIR ALDOUS');
+        const knight = await page.evaluate(async () => {
+            const { BOSS_STEP, strengthFor } = await import('/src/battle/zones.js');
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.kind === 'knight');
+            return { i: f.i, step: f.step, want: BOSS_STEP.z28, ring: !!fd._arena, harder: strengthFor('z28', f.step) > strengthFor('z35', BOSS_STEP.z35) };
+        });
+        expect(knight).toMatchObject({ step: 16, want: 16, ring: true, harder: true });
+        // His charge: marked, ridden
+        const rode = await page.evaluate(async (i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i), me = gs.localPlayer.sprite;
+            // (him in the middle of his ground, you off him across it, not to be struck: his lance would fell any hero short of him)
+            const [x0, y0, x1, y1] = fd._arena.pack.arena, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+            f.foe.sprite.setPosition(mx + 100, my - fd.FEET);
+            gs.tweens.killTweensOf(me);
+            me.setPosition(mx - 60, my - fd.FEET);
+            me.body.reset(me.x, me.y);
+            fd.you.guard = 1e9;
+            f.state = 'chase'; f.chargeT = 0; f.stun = 0;
+            const seen = {};
+            for (let t = 0; t < 80 && !f.lane; t++) await new Promise(r => setTimeout(r, 25));
+            seen.marked = !!f.lane && !!f.charging;
+            const log = [];
+            for (let t = 0; t < 120 && f.state !== 'charge'; t++) { log.push(`${f.state}:${Math.round(f.t)}`); await new Promise(r => setTimeout(r, 25)); }
+            seen.log = log.filter((x, k) => k % 6 === 0).join(' ');
+            seen.rode = f.state === 'charge';
+            for (let t = 0; t < 120 && f.state === 'charge'; t++) await new Promise(r => setTimeout(r, 25));
+            seen.winded = f.state === 'recover';
+            f.stun = 1e9;           // (held now, so only what's asked of him happens)
+            fd.you.guard = 0;
+            return seen;
+        }, knight.i);
+        expect(rode, rode.log).toMatchObject({ marked: true, rode: true, winded: true });
+        // Highmarket stands on his ground: its gate doesn't take you in out of his fight
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite, p = gs.world.places?.find?.(p => p.name === 'Highmarket');
+            const [x, y, w, h] = p ? p.rect : [243, 269, 7, 6];
+            gs.tweens.killTweensOf(me);
+            me.setPosition((x + w / 2) * 32, (y + h) * 32 - 8 - gs.fieldDemons.FEET);
+            me.body.reset(me.x, me.y);
+        });
+        await page.waitForTimeout(600);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.visible), 'no going into Highmarket mid-fight').toBe(false);
+        // At 60%, the rally: three riders come for you
+        await page.evaluate((i) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+            fd._strikeFoe(f, f.hp - Math.floor(f.maxHp * 0.55), { x: f.foe.x, y: f.foe.y + 30 });
+        }, knight.i);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.called && f.hp > 0).map(f => f.kind).sort()), { timeout: 5000 })
+            .toEqual(['cavalryman', 'horseman', 'horseman']);
+        // At 30%, a fury: quicker blows, and a charge ridden comes round again at once
+        const fury = await page.evaluate((i) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+            const calm = f.spec.windup;
+            fd._strikeFoe(f, f.hp - Math.floor(f.maxHp * 0.25), { x: f.foe.x, y: f.foe.y + 30 });
+            fd._windup(f);
+            const quicker = f.t < calm;
+            f.state = 'charge';
+            f.run = { dx: 1, dy: 0, x: f.foe.x, y: f.foe.y, len: 0, left: 0, hit: true, dust: 0 };
+            fd._ridden(f);
+            return { furious: !!f.furious, quicker, again: f.chargeT === 0 && f.t < 500 };
+        }, knight.i);
+        expect(fury).toEqual({ furious: true, quicker: true, again: true });
+        // Felled: a chest, the mist lifts, his bar goes
+        const chests = await page.evaluate((i) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
+            const before = gs.chests.chests.length;
+            fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+            return gs.chests.chests.length - before;
+        }, knight.i);
+        expect(chests).toBe(1);
+        // (his bar fades on the game's clock, which four browsers at once slow: 8 s of the wall's was too few)
+        await expect.poll(() => page.evaluate(() => ({ bar: window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown, ring: !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._arena })), { timeout: 20000 })
+            .toEqual({ bar: false, ring: false }).catch(async (e) => {
+                const why = await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, bb = gs.scene.get('UIScene').bossBar;
+                    return { fps: Math.round(window.__PHASER_GAME.loop.actualFps), uiActive: gs.scene.isActive('UIScene'), uiSleeping: gs.scene.isSleeping('UIScene'), who: bb.who, fading: !!bb._fading, prog: bb._fading?.progress, elapsed: bb._fading?.elapsed, dur: bb._fading?.duration, state: bb._fading?.state, alpha: bb.box.alpha, ts: gs.scene.get('UIScene').tweens.timeScale, paused: bb._fading?.isPaused?.(), boss: fd.boss?.kind, fallen: fd.fallen, foes: fd.foes.filter(f => f.hp > 0).map(f => `${f.kind}:${f.state}`) }; });
+                throw new Error('DEBUG ' + JSON.stringify(why));
+            });
     });
 });

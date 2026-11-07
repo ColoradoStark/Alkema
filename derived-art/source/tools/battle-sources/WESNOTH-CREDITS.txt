@@ -13,7 +13,10 @@ Orcish Grunt, Archer, Warrior and Warlord and the Goblin Spearman, for the coast
 Giant Rat, Ruffian, Woodsman, Footpad, Poacher, Goblin Impaler and Goblin Rouser for the Saltmere Point; the
 Elder Wose and Elvish Sorceress guarding the great wood round it. The Elvish Shaman, Druid, Enchantress, Shyde and Sylph
 (data/core/images/units/elves-wood, their timings from data/core/units/elves, commit
-bc78728314ea0403b0dbeecb488845fdc5822f55) for the Southern Forest. tools/battlegen.py recolours their team colour (to LPC cloth); the grunt's colours are all
+bc78728314ea0403b0dbeecb488845fdc5822f55) for the Southern Forest. The Fencer, Cavalryman, Horseman and Knight
+(data/core/images/units/human-loyalists, their timings from data/core/units/humans, commit
+eeea9ac0361a6e98f1f6e85b746f15bd65210586) for the Market Fields, in Dunmere's navy.
+tools/battlegen.py recolours their team colour (to LPC cloth); the grunt's colours are all
 mapped to the LPC character palettes (team colour to maroon cloth, iron to LPC iron and steel, leather to
 LPC leather), and its dropped sword is drawn into its last death frames.
 

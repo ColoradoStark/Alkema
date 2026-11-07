@@ -81,6 +81,7 @@ const FALL_MS = 1600;
 const CALL_RING = 110;
 const MIST_APART = 26;          // a boss's walls of mist drawn as soft puffs this far apart along them
 const MIST_CELL = 16;           // ...found on a grid this fine
+const REGROW_AWAY = 14 * TILE;   // a zone's felled pack comes back only with you this far from it (out of sight)
 const BOSS_IN = [560, 500, 440, 380, 320];   // px off you a boss comes into the world (the user's: just out of sight he was on them too fast), furthest first          // px from a boss that the foes his horn calls come ashore
 const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
 const SKULL_BOB = 2;            // px it bobs, up and down
@@ -176,7 +177,9 @@ export class FieldDemons {
     constructor(scene) {
         this.scene = scene;
         this.foes = [];           // { foe: Demon, kind, spec, pack, tier, post, hp, maxHp, damage, state, t, cd, stun, and what spells leave on it }
-        this.slain = new Set();   // places whose demon is down (for good, this visit to the game)
+        this.slain = new Set();   // places whose demon is down (for good, this visit to the game; a zone's that regrow, a while)
+        this.fell = new Set();    // places whose demon has been felled once (a zone's boss comes once every one has)
+        this.fellAt = new Map();  // a pack => when its last fell (a zone's that regrow: ZONES' `regrow`)
         this.order = new Map();   // a climb's pack => the step up it it was given, as you took it on (this visit)
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
@@ -248,6 +251,7 @@ export class FieldDemons {
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
         this._bossCall(feet);
+        this._regrow(feet);
         this._hold();
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
@@ -305,6 +309,7 @@ export class FieldDemons {
         if (yours !== null && yours !== this._entry?.zone) this._entry = { zone: yours, x: feet.x, y: feet.y };       // (where you crossed into it: a guard's ground is reckoned from there)
         for (const f of this.foes) {
             if (f.ring && (f.state !== 'windup' || f.hp <= 0)) this._unslam(f);       // (a slam put off: its mark goes)
+            if (f.lane && ((f.state !== 'windup' && f.state !== 'charge') || f.hp <= 0)) this._unlane(f);      // (a charge put off, or ridden)
             if (f.hp <= 0) continue;
             // (a guard you've struck keeps after you out of its trees, shooting from them: `_think`)
             // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
@@ -352,6 +357,12 @@ export class FieldDemons {
                 if (!this._up.size && !this.bars) this._unload();      // (and the spells' effects that came with them)
                 return;
             }
+            // (the fight's bars and particles, even with none of them left to make: its boss comes to you on them, and
+            // felled with none, the game stopped; every pack of a zone beaten, gone off and come back, his was)
+            if (!this.bars) {
+                Object.assign(this, spellParticles(this.scene));
+                this.bars = this.scene.add.graphics().setDepth(29);
+            }
             // (a zone's boss isn't made with them: he comes to you once the rest of it is beaten, `_bossCall`)
             const left = PLACES.filter(p => p.family === fam && !this.slain.has(p.i) && !p.lair);
             if (!left.length) return;
@@ -360,10 +371,6 @@ export class FieldDemons {
             const firsts = [...new Map(left.map(p => [band.sheet(p.kind), p])).values()];
             const mine = firsts.map(make);
             this.foes.push(...mine);
-            if (!this.bars) {
-                Object.assign(this, spellParticles(this.scene));
-                this.bars = this.scene.add.graphics().setDepth(29);
-            }
             await new Promise(resolve => {
                 const ready = () => (mine.every(f => f.foe.ready) || !this._up.has(fam) ? resolve() : this.scene.time.delayedCall(100, ready));
                 ready();
@@ -514,6 +521,10 @@ export class FieldDemons {
         f.hp = Math.max(0, f.hp - damage);
         const horn = f.spec.horn;
         if (horn && f.met && !f.horned && f.hp > 0 && f.hp <= f.maxHp * horn.at) this.scene.time.delayedCall(300, () => this._horn(f));
+        const rally = f.spec.rally;
+        if (rally && f.met && !f.rallied && f.hp > 0 && f.hp <= f.maxHp * rally.at) this.scene.time.delayedCall(300, () => this._horn(f, 'rally'));
+        const fury = f.spec.fury;
+        if (fury && f.met && !f.furious && f.hp > 0 && f.hp <= f.maxHp * fury.at) this._fury(f);
         if (f.state === 'post' || f.state === 'home') this._roused(f);
         // (a guard struck, they're all after you now: no more warnings, the road no refuge from their shots; the user's)
         if (f.guard) this.provoked = true;
@@ -563,7 +574,11 @@ export class FieldDemons {
     _slay(f) {
         audio.play('foe_down');
         f.state = 'dead';
-        if (!f.called) this.slain.add(f.i);         // (one his horn called isn't one of the zone's places)
+        if (!f.called) {        // (one his horn called isn't one of the zone's places)
+            this.slain.add(f.i);
+            this.fell.add(f.i);
+            this.fellAt.set(f.pack, this.scene.time.now);
+        }
         this._unslam(f);
         f.foe.die();
         this._reward(f);
@@ -700,6 +715,7 @@ export class FieldDemons {
         const { foe } = f;
         f.cd -= delta;
         f.steady -= delta;
+        if (f.state === 'charge') return this._gallop(f, dt);       // (a charge runs its course, whatever else)
         if (f.stun > 0) {
             f.stun -= delta;
             return;
@@ -749,6 +765,13 @@ export class FieldDemons {
             return this._home(f, dt, fromPost, delta);
         }
         const dx = you.x - foe.x, dy = you.y - foe.y, u = d || 1;
+        if (f.state === 'windup' && f.charging) {      // (its lane set: it rides where it marked, not where you've gone)
+            this._laneMark(f);
+            f.t -= delta;
+            foe.tint(Math.floor(f.t / 90) % 2 ? 0xff5050 : 0xffb0b0);
+            if (f.t <= 0) this._foeSwing(f);
+            return;
+        }
         if (f.state === 'windup') {
             if (f.slam) this._slamMark(f);
             if (f.spec.presses && d > f.spec.reach * 0.6) this._step(f, dx / u, dy / u, dt, 1, you);     // (a warden: no walking out of its reach)
@@ -785,6 +808,12 @@ export class FieldDemons {
         // (walking into rock on its way round to a side or a place of its role's: straight at you a while)
         if (this._stuck(f, delta)) this._corner(f);
         if (f.cornered > 0 && !f.spec.side) f.cornered -= delta;
+        // A rider off you, a clear run between: it charges (`charge`: it stops, marks its lane, and rides it)
+        const c = f.spec.charge;
+        if (c && (f.chargeT = (f.chargeT ?? c.every / 2) - delta) <= 0 && d >= c.from && d <= c.length - 60 && this._straight(foe, you, f)) {
+            if (this._runOf(f, dx / u, dy / u) >= d + 40) return this._aimCharge(f, you);
+            f.chargeT = 300;        // (no run past you from here: it looks again in a moment, not every frame)
+        }
         if (f.spec.ranged) {
             // A warlock keeps its distance, backing off facing you (turning to walk away and back to you
             // every frame, it flickered on the spot), and throws fire when it's ready, whoever else is at you
@@ -1207,7 +1236,7 @@ export class FieldDemons {
     /** It stops, and flashes red: its blow is coming. */
     _windup(f) {
         f.state = 'windup';
-        f.t = f.spec.windup;
+        f.t = f.spec.windup * (f.furious ? f.spec.fury.quicker : 1);
         const slam = f.spec.slam;
         if (slam && f.met && (f.swings = (f.swings || 0) + 1) % slam.every === 0) {      // (on his own ground's fight)
             f.slam = true;
@@ -1221,6 +1250,7 @@ export class FieldDemons {
     /** Its blow: it lunges, and lands on you if you're still in reach (a warlock's fire flies where you stood). */
     _foeSwing(f) {
         if (f.slam) return this._slam(f);
+        if (f.charging) return this._charge(f);
         const { foe, spec } = f, you = this._you();
         foe.tint(null);
         f.state = 'recover';
@@ -1600,7 +1630,7 @@ export class FieldDemons {
 
     /** Does any of a zone's foes (but its boss) still stand? Its boss isn't there till none does. */
     _sealed(fam) {
-        return PLACES.some(p => p.family === fam && !p.lair && !this.slain.has(p.i));
+        return PLACES.some(p => p.family === fam && !p.lair && !this.fell.has(p.i));
     }
 
     /** Every one of a pack felled? */
@@ -1797,14 +1827,17 @@ export class FieldDemons {
         this.scene.cameras.main.shake(300, 0.006);
         this.scene.time.delayedCall(700, () => {
             audio.play('victory');
-            ui?.notice?.(`The ${f.spec.label} is defeated!`, 3600);
+            ui?.notice?.(`${f.spec.label.startsWith('Sir ') ? f.spec.label : `The ${f.spec.label}`} is defeated!`, 3600);
         });
     }
 
     /** Back home and mended (you fell, or got away): the fight begins afresh next time, those his horn called gone. */
     _bossResets(f) {
-        f.met = f.horned = false;
-        f.swings = 0;
+        f.met = f.horned = f.rallied = f.furious = false;
+        f.swings = f.chain = 0;
+        f.chargeT = null;
+        if (f.state === 'charge') this._ridden(f);
+        if (f.charging) this._unlane(f);
         f.foe.nameText?.setAlpha(1);
         for (const o of this.foes) if (o.called && o.pack === f.pack) {
             this._unslam(o);
@@ -1813,16 +1846,22 @@ export class FieldDemons {
         this.foes = this.foes.filter(o => !(o.called && o.pack === f.pack));
     }
 
-    /** At half his health he blows his war horn (he's a rouser), and goblins come ashore to him. */
-    _horn(f) {
-        if (f.hp <= 0 || f.horned || !this.foes.includes(f)) return;
-        f.horned = true;
+    /**
+     * At half his health the Rouser blows his war horn (he's a rouser), and goblins come ashore to him; at 60% of his
+     * the Market Fields' knight sounds the rally (`which`: 'rally'), and his riders come.
+     */
+    _horn(f, which = 'horn') {
+        const flag = which === 'horn' ? 'horned' : 'rallied';
+        if (f.hp <= 0 || f[flag] || !this.foes.includes(f)) return;
+        f[flag] = true;
         f.stun = Math.max(f.stun, 700);         // (blowing it)
         if (f.state === 'windup') this._calm(f);
-        this.scene.scene.get('UIScene')?.notice?.(`The ${f.spec.label} blows his war horn! Goblins come ashore.`, 3200);
+        if (f.state === 'charge') this._ridden(f);
+        const label = f.spec.label.startsWith('Sir ') ? f.spec.label : `The ${f.spec.label}`;
+        this.scene.scene.get('UIScene')?.notice?.(`${label} ${f.spec[which].words || 'blows his war horn! Goblins come ashore.'}`, 3200);
         audio.play('summon', { volume: 0.9 });
         this.scene.cameras.main.shake(400, 0.003);
-        const kinds = f.spec.horn.call, me = this._you() || f.foe;
+        const kinds = f.spec[which].call, me = this._you() || f.foe;
         // (they come from the far side of him from you, so you see them come)
         const away = Math.atan2(f.foe.y - me.y, f.foe.x - me.x);
         kinds.forEach((kind, k) => {
@@ -1847,6 +1886,148 @@ export class FieldDemons {
             this.scene.effects?.smash?.(at.x, at.y - 10, at.y, 'pot');      // (a burst of dust as each comes)
         });
         audio.play('appear', { volume: 0.6 });
+    }
+
+    /** A rider stops and marks its lane: from it, through where you stand, its charge's length on (it rides it, not you). */
+    _aimCharge(f, you) {
+        const { foe } = f, c = f.spec.charge;
+        const dx = you.x - foe.x, dy = you.y - foe.y, d = Math.hypot(dx, dy) || 1;
+        f.state = 'windup';
+        f.t = c.windup * (f.furious ? f.spec.fury.quicker : 1);
+        f.charging = { dx: dx / d, dy: dy / d, x: foe.x, y: foe.y, len: this._runOf(f, dx / d, dy / d) };
+        foe.walking = false;
+        foe.halt();
+        foe.face(you.x, you.y);
+        audio.play('foe_orc', { volume: 0.5, rate: 1.3 });
+    }
+
+    /** How far a rider can ride from where it stands, this way (unit dx, dy), up to its charge's length: open ground, its own, a boss's within his. */
+    _runOf(f, dx, dy) {
+        const c = f.spec.charge, foe = f.foe, boss = this._arena?.boss === f;
+        let len = 0;
+        for (let r = 8; r <= c.length; r += 8) {
+            const x = foe.x + dx * r, y = foe.y + dy * r;
+            if (!this._open(x, y) || !this._mine(f, x, y) || (boss && !this._inArena(PACKS[f.pack], x, y))) break;
+            len = r;
+        }
+        return len;
+    }
+
+    /** Its lane, red on the ground, deeper as it comes. */
+    _laneMark(f) {
+        const c = f.spec.charge, r = f.charging, k = 1 - Math.max(0, f.t) / c.windup;
+        const g = f.lane ??= this.scene.add.graphics();
+        g.setDepth(f.foe.sprite.depth - 0.5);
+        g.clear();
+        const w = c.width / 2, nx = -r.dy * w, ny = r.dx * w, ex = r.x + r.dx * r.len, ey = r.y + r.dy * r.len;
+        const quad = (len, alpha, colour) => {
+            const fx = r.x + r.dx * len, fy = r.y + r.dy * len;
+            g.fillStyle(colour, alpha).fillPoints([{ x: r.x + nx, y: r.y + ny }, { x: fx + nx, y: fy + ny }, { x: fx - nx, y: fy - ny }, { x: r.x - nx, y: r.y - ny }], true);
+        };
+        quad(r.len, 0.12 + 0.25 * k, 0xd02a1a);
+        quad(r.len * k, 0.25 + 0.3 * k, 0xff4a2a);
+        g.lineStyle(2, 0xff6a4a, 0.8).strokePoints([{ x: r.x + nx, y: r.y + ny }, { x: ex + nx, y: ey + ny }, { x: ex - nx, y: ey - ny }, { x: r.x - nx, y: r.y - ny }], true);
+    }
+
+    _unlane(f) {
+        f.lane?.destroy();
+        f.lane = null;
+    }
+
+    /** It rides its lane. */
+    _charge(f) {
+        const r = f.charging;
+        f.charging = null;
+        f.state = 'charge';
+        f.run = { ...r, left: r.len, hit: false, dust: 0 };
+        f.foe.tint(null);
+        audio.play('swing', { volume: 0.8, rate: 0.6 });
+        this.scene.cameras.main.shake(160, 0.003);
+    }
+
+    /** Riding: on down its lane at a gallop, running down whoever's in it (once), till it's ridden it or meets what stops it. */
+    _gallop(f, dt) {
+        const c = f.spec.charge, r = f.run, foe = f.foe, s = foe.sprite;
+        const v = Math.min(r.left, c.speed * dt), x = s.x + r.dx * v, y = s.y + r.dy * v;
+        const boss = this._arena?.boss === f;
+        const stop = !v || !this._open(x, y + FEET) || !this._mine(f, x, y + FEET) || (boss && !this._inArena(PACKS[f.pack], x, y + FEET));
+        if (!stop) {
+            s.setPosition(x, y);
+            r.left -= v;
+            foe.walking = true;
+            foe.travel?.(v, r.dx);
+            if (!foe.striking) foe.walkAnim(f.dir = steadyDir(f.dir, r.dx, r.dy));
+            if ((r.dust += v) > 40) {
+                r.dust = 0;
+                this.scene.effects?.smash?.(foe.x, foe.y - 4, foe.y, 'pot');
+            }
+        }
+        const you = this._you();
+        if (you && !r.hit && !this.fallen && Math.hypot(you.x - foe.x, you.y - foe.y) <= c.width / 2 + BODY / 2 && !(this.you.hidden > 0)) {
+            r.hit = true;
+            this._hurt(this.you, Math.round(f.damage * c.hurt), { x: foe.x - r.dx * 24, y: foe.y - r.dy * 24 });
+            if (!this.fallen) this._knock(this.scene.localPlayer, { x: foe.x - r.dy * 30, y: foe.y + r.dx * 30 }, KNOCK * 2);
+            this._hitStop(80);
+        }
+        if (stop || r.left <= 0) this._ridden(f);
+    }
+
+    /** A charge ridden: it reins in, winded (yours a moment); in a fury, it wheels round and comes again. */
+    _ridden(f) {
+        const c = f.spec.charge;
+        this._unlane(f);
+        f.run = null;
+        f.state = 'recover';
+        f.foe.walking = false;
+        f.foe.halt();
+        const again = f.furious && (f.chain = (f.chain || 0) + 1) < f.spec.fury.again;
+        if (again) {
+            f.t = 350;
+            f.chargeT = 0;
+        } else {
+            f.chain = 0;
+            f.t = c.recover;
+            f.chargeT = c.every * (f.furious ? 0.6 : 1);
+        }
+        f.cd = Math.max(f.cd, 400);
+    }
+
+    /** At a third of his health the knight is in a fury: his blows quicker, his charges one on another. */
+    _fury(f) {
+        f.furious = true;
+        f.chargeT = Math.min(f.chargeT ?? 0, 600);
+        this.scene.scene.get('UIScene')?.notice?.(`${f.spec.label} ${f.spec.fury.words}`, 2800);
+        audio.play('foe_orc', { volume: 1, rate: 0.6 });
+        this.scene.cameras.main.shake(300, 0.005);
+        f.foe.tint(0xff8a5a);
+        this.scene.time.delayedCall(250, () => { if (f.hp > 0 && f.state !== 'windup') f.foe.tint(null); });
+    }
+
+    /**
+     * A zone's packs that regrow (ZONES' `regrow`): a pack felled comes back that long after, you away from it (out of
+     * sight of its post), on the step it was given, to be fought again for what it pays (the user's, November 2026:
+     * grind a little for the boss). Looked at once a second.
+     */
+    _regrow(feet) {
+        const now = this.scene.time.now;
+        if (now - (this._regrowT ?? -Infinity) < 1000) return;
+        this._regrowT = now;
+        for (const fam of this._up) {
+            const z = ZONES[FAMILIES[fam].climb || fam];
+            if (!z?.regrow || this._coming.has(fam)) continue;
+            PACKS.forEach((pack, k) => {
+                if (pack.family !== fam || pack.lair || pack.guard || !this.fellAt.has(k) || now - this.fellAt.get(k) < z.regrow) return;
+                const places = PLACES.filter(p => p.pack === k);
+                if (!places.every(p => this.slain.has(p.i)) || Math.hypot(pack.at[0] - feet.x, pack.at[1] - feet.y) < REGROW_AWAY) return;
+                this.fellAt.delete(k);
+                for (const f of this.foes) if (f.pack === k && f.state === 'dead') f.foe.destroy();
+                this.foes = this.foes.filter(f => !(f.pack === k && f.state === 'dead'));
+                for (const p of places) {
+                    this.slain.delete(p.i);
+                    this.foes.push(this._body(fam, p));
+                }
+            });
+        }
     }
 
     /** The ground he'll strike, marked red as he raises his weapon: deeper as the blow comes. */

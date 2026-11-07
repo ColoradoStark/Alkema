@@ -14,6 +14,22 @@ export const ZONES = {
     // fast, millions up one road), the upgrades' prices as slowly with it
     z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 50, more: 1.5 } },
 };
+// The Market Fields (28), north of Riverhold up the river road: the next zone (the user's, November 2026: bigger, at
+// least twice the foes, and a harder boss you grind a little for). Its climb takes up where the Point's leaves off
+// (its first pack made for a hero the Point's seventh pack past its last), fourteen packs a little gentler a step (2.3
+// times the health, 1.9 the blow; at the Point's 2.5 and 2 the weakest new hero fell short halfway up), paying as the
+// Point's do. Its packs come back a while after they fall (`regrow`, ms; you away from them): to grind, as Clicker
+// Heroes' zones are farmed, for its boss, made for the hero three packs past its last (`BOSS_STEP`): cleared, a hero is
+// a tenth to a half of what he's made for; a round or two more of its top two packs and they're there (tests/unit/zones.test.js).
+const POINT = ZONES.z35, ON = 7;
+ZONES.z28 = {
+    attack: POINT.attack * POINT.climb.hp ** ON, hp: POINT.hp * POINT.climb.hurt ** ON, defence: POINT.defence,
+    climb: { hp: 2.3, hurt: 1.9, essence: POINT.climb.essence * POINT.climb.more ** ON, more: 1.5 },
+    regrow: 90000,
+};
+
+/** The step a zone's boss is made for: the Point's at its last pack's, the Market Fields' three past its last (14 packs). */
+export const BOSS_STEP = { z35: 6, z28: 16 };
 
 /** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */
 export const GOLD_SHARE = 0.25;
@@ -43,4 +59,12 @@ export function strengthFor(fam, step) {
  */
 export function tooStrong(fam, step, strength) {
     return step > 0 && strength < strengthFor(fam, step - 1);
+}
+
+/**
+ * A zone's foes far too strong for a hero this strong (its card says so as you cross into it): short of even what its
+ * first pack would be one step down its climb (a new hero by the Market Fields; not one who's beaten the Point).
+ */
+export function farTooStrong(fam, strength) {
+    return !!ZONES[fam]?.climb && strength < strengthFor(fam, -1);
 }

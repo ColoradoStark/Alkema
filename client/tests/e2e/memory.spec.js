@@ -237,6 +237,44 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
     });
 
+    test("the Market Fields' foes: its fourteen packs of riders (its knight's sheet not till he comes, then his too), under budget, and let go when you leave", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await keepUp(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (family) => family === 'z28'; });
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        // (measured by Castle Dunmere's drawbridge, far from every band: the road's first pack is within a band's 40 tiles of where heroes start)
+        await go(10960, 10192);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+        const base = await settled(page);
+        const { PLACES, PACKS } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES.filter(p => p.family === 'z28'), PACKS: m.PACKS.filter(p => p.family === 'z28') })));
+        // Up the river road where it meets the field: every pack of it comes, none roused
+        const [x, y] = PACKS[3].at;
+        await go(x - 40, y + 220);
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.filter(p => !p.lair).length, { timeout: 45000 });
+        const fields = await settled(page);
+        const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
+        // The rest beaten, the knight comes: his sheet only now
+        await page.evaluate((ids) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) { fd.slain.add(i); fd.fell.add(i); } fd._comeAshore('z28'); },
+            PLACES.filter(p => !p.lair).map(p => p.i));
+        await page.waitForFunction(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === 'knight')?.foe.ready, null, { timeout: 15000 });
+        const knight = await settled(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.forgive());      // (his mist lets you go, as falling does)
+        await go(10960, 10192);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+        const after = await settled(page);
+        console.log("the Market Fields' foes", +(fields.mb - base.mb).toFixed(2), 'MB; with the knight', +(knight.mb - base.mb).toFixed(2), 'MB', sheets.join(' '));
+        expect(sheets).toEqual(['foe-cavalryman', 'foe-fencer', 'foe-horseman']);
+        expect(fields.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(knight.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
+    });
+
     test("the first area's guards: a stretch of the road's, its elvish sorceresses, under budget, and let go when you leave it", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
@@ -253,16 +291,19 @@ test.describe('Memory', () => {
         // On the road by a guard group's stretch (not in the trees, where they'd fell you): its guards come
         const road = await page.evaluate(async () => {
             const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
-            const [gx, gy] = (await import('/src/battle/Bands.js')).BANDS['guards-2'][2].at;
+            // (a group of the road's guards by Riverhold, in its wood: zone 33's)
+            const { BANDS } = await import('/src/battle/Bands.js');
+            const family = Object.keys(BANDS).find(k => k.startsWith('guards-') && BANDS[k].length >= 3 && BANDS[k].every(p => ow.zoneAt(...p.at)?.id === 33 && p.at[1] > 10500));
+            const [gx, gy] = BANDS[family][2].at;
             for (let r = 64; r <= 192; r += 16) for (let a = 0; a < 16; a++) {
                 const x = gx + Math.cos(a * Math.PI / 8) * r, y = gy + Math.sin(a * Math.PI / 8) * r;
-                if (!ow.boxBlocked(x - 9, y - 5, 18, 10) && !(ow.forest.depthAt(x, y) > 0) && ow.zoneAt(x, y)?.id === 33) return { x, y };
+                if (!ow.boxBlocked(x - 9, y - 5, 18, 10) && !(ow.forest.depthAt(x, y) > 0) && ow.zoneAt(x, y)?.id === 33) return { x, y, family };
             }
             return null;
         });
         await go(road.x, road.y - 23);
-        await page.waitForFunction(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            return fd.foes.some(f => f.family === 'guards-2') && fd.foes.every(f => f.foe.ready); }, null, { timeout: 30000 });
+        await page.waitForFunction((family) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            return fd.foes.some(f => f.family === family) && fd.foes.every(f => f.foe.ready); }, road.family, { timeout: 30000 });
         const near = await page.evaluate(() => [...new Set(window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.map(f => f.family))].sort());
         const there = await settled(page);
         const sheets = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
