@@ -46,6 +46,31 @@ const where = (page) => page.evaluate(() => {
 });
 
 test.describe('Riverhold', () => {
+    test('the blue button shows the spell you equipped out of a fight too, and in town (the user saw the old scroll there)', async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        const rows = await page.evaluate(() => fetch('/spells/icons.json').then(r => r.json()).then(j => j.rows));
+        const button = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.spellFrame);
+        const equipped = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook.equipped);
+        // (no foe near, never one met)
+        await expect.poll(button, { timeout: 10000 }).toBe(rows[await equipped()]);
+        await hold(page, 'up', 1200);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').enterPrompt.visible)).toBe(true);
+        await page.keyboard.press('y');
+        await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('riverhold');
+        await expect.poll(button, { timeout: 10000 }).toBe(rows[await equipped()]);
+        // Another equipped in town: it shows at once
+        const other = await page.evaluate((rows) => {
+            const book = window.__PHASER_GAME.scene.getScene('UIScene').spellbook;
+            const id = book.list.map(s => s.id).find(id => id !== book.equipped && rows[id] !== undefined);
+            book._equipped = id;
+            return rows[id];
+        }, rows);
+        await expect.poll(button, { timeout: 10000 }).toBe(other);
+        // The sheet it's drawn from isn't held (only the round painting on the button)
+        expect(await page.evaluate(() => ['spell-icons', 'button-icons'].filter(k => window.__PHASER_GAME.textures.exists(k)))).toEqual([]);
+    });
+
     test('enter Riverhold, meet the townsfolk, and walk out through the gate', async ({ page }) => {
         test.setTimeout(150000);   // the generator makes the townsfolk the first time
         await enterWorld(page);

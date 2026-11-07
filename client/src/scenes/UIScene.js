@@ -14,6 +14,8 @@ import { Spellbook } from '../magic/Spellbook.js';
 import { Upgrades, lifeAfter, lifeAtStart } from '../upgrades/Upgrades.js';
 
 const MP_BACK_MS = 6000;      // out of a fight, a magic point comes back this often (hit points come back only at a healer, the user's)
+const BUTTON_ICONS = 'button-icons';        // the spells' icons, for a moment, to paint the blue button (tools/spellgen.py)
+const BUTTON_INDEX = 'button-icons-index';
 const TOO_POOR = ["You haven't the gold, I'm afraid. Come back when you have it."];
 import { account } from '../account/account.js';
 import { EXPLORE } from '../explore.js';
@@ -411,6 +413,13 @@ export class UIScene extends Scene {
             this._carried = carried;
             this.bottomControls.showWeapon(weapon);
         }
+        // The blue button shows the spell you equipped, everywhere (the user's, November 2026: in town it was still the
+        // old scroll, the spell shown only with foes near)
+        const spell = this.spellbook?.equipped ?? null;
+        if (this.bottomControls && spell !== this._spellShown) {
+            this._spellShown = spell;
+            this._showSpell();
+        }
         // Hit points and magic in the top bar; magic comes back out of a fight
         const inFight = !!this.scene.get('GameScene')?.fieldDemons?.engaged;
         // Second Wind (an upgrade): magic comes back faster
@@ -523,6 +532,30 @@ export class UIScene extends Scene {
             if (!gameScene.fieldDemons?.attack()) gameScene.localPlayer.playAttack(() => gameScene.emitAttack());
             this.quests.record('attack');
         }
+    }
+
+    /**
+     * Paint the equipped spell on the blue button. Drawn from the fight's icons if they're loaded, else from a copy
+     * loaded for the moment and let go once it's painted (the button keeps only its own round painting).
+     */
+    _showSpell() {
+        const draw = (key, index) => {
+            const row = this.cache.json.get(index)?.rows?.[this._spellShown];
+            this.bottomControls.showSpell(row !== undefined ? key : null, row);
+        };
+        if (this._spellShown == null) return this.bottomControls.showSpell(null);
+        if (this.textures.exists('spell-icons') && this.cache.json.exists('spell-icons-index')) return draw('spell-icons', 'spell-icons-index');
+        if (this._iconsLoading) return;         // (it paints whatever's equipped once it's in)
+        this._iconsLoading = true;
+        this.load.spritesheet(BUTTON_ICONS, '/spells/icons.png', { frameWidth: 64, frameHeight: 64 });
+        if (!this.cache.json.exists(BUTTON_INDEX)) this.load.json(BUTTON_INDEX, '/spells/icons.json');
+        this.load.once('complete', () => {
+            this._iconsLoading = false;
+            if (!this.sys.isActive() || !this.textures.exists(BUTTON_ICONS)) return;
+            draw(BUTTON_ICONS, BUTTON_INDEX);
+            this.textures.remove(BUTTON_ICONS);
+        });
+        this.load.start();
     }
 
     handleAbility() {

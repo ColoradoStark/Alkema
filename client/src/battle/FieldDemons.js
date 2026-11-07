@@ -245,8 +245,6 @@ export class FieldDemons {
         // (and stays while one of it is after you, however far from its posts it's followed you)
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT && (!this.only || this.only(f.family))) this._near.add(f.family);
         if (!this._near.size) return this.release();
-        // A spell equipped meanwhile (Equip's Magic tab, the fight held): the blue button shows it at once
-        if (this.bars && this._shown !== this.scene.scene.get('UIScene')?.spellbook?.equipped) this._showSpell();
         for (const fam of this._up) if (!this._near.has(fam)) this._dismiss(fam);
         for (const fam of this._near) if (!this._up.has(fam)) this._summon(fam);
         this._bossCall(feet);
@@ -365,7 +363,6 @@ export class FieldDemons {
             if (!this.bars) {
                 Object.assign(this, spellParticles(this.scene));
                 this.bars = this.scene.add.graphics().setDepth(29);
-                this._showSpell();
             }
             await new Promise(resolve => {
                 const ready = () => (mine.every(f => f.foe.ready) || !this._up.has(fam) ? resolve() : this.scene.time.delayedCall(100, ready));
@@ -425,14 +422,6 @@ export class FieldDemons {
     }
 
     /** Your hero as the demons are matched to: attack, most hit points, defence. */
-    /** The blue button shows the spell you equipped (or, with null, the plain cast again). */
-    _showSpell() {
-        const ui = this.scene.scene.get('UIScene'), book = ui?.spellbook;
-        const row = this.scene.cache.json.get('spell-icons-index')?.rows?.[book?.equipped];
-        ui?.bottomControls?.showSpell?.(row !== undefined ? 'spell-icons' : null, row);
-        this._shown = book?.equipped;
-    }
-
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
         this._arenaDown();
@@ -461,7 +450,6 @@ export class FieldDemons {
         for (const k of ['ward', 'blocks', 'blockT', 'rage', 'hidden', 'ambush']) delete this.you[k];
         if (this.you.seeThrough) this.you.who?.sprite?.setAlpha(1);
         this.you.seeThrough = false;
-        this.scene.scene.get('UIScene')?.bottomControls?.showSpell?.(null);       // (before the icons go)
         this._unload();
         this.fallen = false;
     }
@@ -506,7 +494,6 @@ export class FieldDemons {
         }
         if (ui.mp) ui.mp.now -= at.mp || 0;
         ui.bottomControls.startCooldown(at.cd * 1000);
-        if (this._shown !== book.equipped) this._showSpell();
         if (m.who.isAttacking) this._queuedSpell = { spell, at };
         else this._castNow(m, spell, at, true);
         this.scene.emitCast();          // (others see you cast)
