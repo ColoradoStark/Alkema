@@ -237,7 +237,9 @@ export class FieldDemons {
     get standing() {
         const me = this._you();
         if (!me) return [];
-        return this.foes.filter(f => f.hp > 0 && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
+        // (a boss fight is him and his alone, the user's: an elf by his ground, even on it, isn't to be struck by mistake)
+        const fight = this._arena?.boss.family;
+        return this.foes.filter(f => f.hp > 0 && (!fight || f.family === fight) && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
     }
 
     /** Sheets on their way? */
@@ -1810,14 +1812,21 @@ export class FieldDemons {
         const ring = this._arena;
         if (!ring) return;
         this._arena = null;
+        // (its picture let go as the last puff drawn with it goes, never on a timer: a busy phone's tweens fall behind
+        // the scene's clock, and let go under puffs still thinning, the next frame froze the game for good)
+        const free = () => {
+            if (!this._arena && this.scene.textures.exists('boss-mist') && !this.scene.children.list.some(o => o.texture?.key === 'boss-mist')) this.scene.textures.remove('boss-mist');
+        };
         for (const { puff } of ring.puffs) {
             this.scene.tweens.killTweensOf(puff);
-            if (fell) this.scene.tweens.add({ targets: puff, alpha: 0, scale: puff.scale * 1.6, duration: 1400, onComplete: () => puff.destroy() });
-            else puff.destroy();
+            if (!fell) {
+                puff.destroy();
+                continue;
+            }
+            puff.once('destroy', () => this.scene.time.delayedCall(0, free));       // (once it's off the display list)
+            this.scene.tweens.add({ targets: puff, alpha: 0, scale: puff.scale * 1.6, duration: 1400, onComplete: () => puff.destroy() });
         }
-        const free = () => { if (!this._arena && this.scene.textures.exists('boss-mist')) this.scene.textures.remove('boss-mist'); };
-        if (fell) this.scene.time.delayedCall(1500, free);
-        else free();
+        if (!fell) free();
     }
 
     /** In a boss's ground, you can't walk out of it: at its walls you're held where you were. Its mist drifts. */

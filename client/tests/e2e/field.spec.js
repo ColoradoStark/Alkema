@@ -2161,7 +2161,8 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
             fd.you.guard = 0;
             const hp = ui.hp.now;
             const seen = { lane: false, rode: false, winded: false, from: { x: h.foe.x, y: h.foe.y } };
-            for (let t = 0; t < 60 && !h.charging && h.state !== 'charge'; t++) await new Promise(r => setTimeout(r, 50));
+            // (till he marks it, on the game's clock: four browsers at once slow every frame, and 3 s of the wall's wasn't enough)
+            for (let t = 0; t < 240 && !h.charging && h.state !== 'charge'; t++) await new Promise(r => setTimeout(r, 50));
             seen.lane = !!h.charging && !!h.lane;
             // Stepping out of the lane as it's marked
             if (aside) {
@@ -2328,5 +2329,77 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
                     return { fps: Math.round(window.__PHASER_GAME.loop.actualFps), uiActive: gs.scene.isActive('UIScene'), uiSleeping: gs.scene.isSleeping('UIScene'), who: bb.who, fading: !!bb._fading, prog: bb._fading?.progress, elapsed: bb._fading?.elapsed, dur: bb._fading?.duration, state: bb._fading?.state, alpha: bb.box.alpha, ts: gs.scene.get('UIScene').tweens.timeScale, paused: bb._fading?.isPaused?.(), boss: fd.boss?.kind, fallen: fd.fallen, foes: fd.foes.filter(f => f.hp > 0).map(f => `${f.kind}:${f.state}`) }; });
                 throw new Error('DEBUG ' + JSON.stringify(why));
             });
+    });
+
+    test("felled, his mist thins away and the game goes on, however far apart the game's clocks drift on a busy phone (the mist's picture let go as its last puff went, not on a timer: let go first, the next frame froze the game for good)", async ({ page }) => {
+        test.setTimeout(150000);
+        const errors = [];
+        page.on('pageerror', (e) => errors.push(e.message));
+        await enterWorld(page, '/', 'z28');
+        await pastThePoint(page);
+        await keepUp(page);
+        const { PACKS, PLACES } = await market(page);
+        await page.evaluate((places) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const p of places) if (!p.lair) { fd.fell.add(p.i); fd.slain.add(p.i); }
+        }, PLACES);
+        const { arena } = PACKS.find(p => p.lair);
+        await standAt(page, (arena[0] + arena[2]) / 2 - 200, (arena[1] + arena[3]) / 2 + 150);
+        await expect.poll(() => page.evaluate(() => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._arena), { timeout: 30000 }).toBe(true);
+        await standAt(page, (arena[0] + arena[2]) / 2, arena[1] + 96);         // (by his mist, in sight of it)
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').children.list.some(o => o.texture?.key === 'boss-mist' && o.alpha > 0.5)), { timeout: 15000 }).toBe(true);
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.kind === 'knight');
+            fd.you.guard = 1e12;
+            fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+            gs.tweens.pauseAll();           // (the mist's thinning held, as a busy phone's tweens fall behind the scene's clock)
+        });
+        await page.waitForTimeout(2500);
+        const held = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), puffs = gs.children.list.filter(o => o.texture?.key === 'boss-mist');
+            return { puffs: puffs.length > 0, drawn: puffs.some(p => p.alpha > 0), mist: gs.textures.exists('boss-mist') };
+        });
+        expect(held).toEqual({ puffs: true, drawn: true, mist: true });
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').tweens.resumeAll());
+        await page.waitForTimeout(3000);
+        const after = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return { mist: gs.textures.exists('boss-mist'), puffs: gs.children.list.filter(o => o.texture?.key === 'boss-mist').length, ticking: Date.now() - gs.tweens.prevTime < 1000 };
+        });
+        expect(errors).toEqual([]);
+        expect(after).toEqual({ mist: false, puffs: 0, ticking: true });
+    });
+
+    test("in a boss fight only he and his can be struck (the user's: the fight in the meadow, no hitting an elf by mistake and having them all on you): an elf by his ground, even on it, is no one's mark, a swing or a spell going past her", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, '/', 'all');
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (fam) => fam === 'z28' || fam.startsWith('guards'); });
+        await pastThePoint(page);
+        await keepUp(page);
+        const { PACKS, PLACES } = await market(page);
+        await page.evaluate((places) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const p of places) if (!p.lair) { fd.fell.add(p.i); fd.slain.add(p.i); }
+        }, PLACES);
+        const { arena } = PACKS.find(p => p.lair);
+        // (by the bridge, an elf of the far bank's post at its end, in his ground)
+        await standAt(page, 7760, 8800);
+        await expect.poll(() => page.evaluate(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; return !!fd._arena && fd.foes.some(f => f.guard && f.hp > 0); }), { timeout: 30000 }).toBe(true);
+        const seen = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            fd.you.guard = 1e12;
+            for (const f of fd.foes) f.stun = 1e12;
+            const knight = fd.foes.find(f => f.kind === 'knight'), elf = fd.foes.find(f => f.guard && f.hp > 0);
+            // (the elf right in front of you, the knight off across the field)
+            knight.foe.sprite.setPosition(me.x + 220, me.y + 120);
+            elf.foe.sprite.setPosition(me.x, me.y - 30);
+            me.sprite?.setDirection?.('up');
+            const aimed = fd._aim(fd.you, 999);
+            const before = elf.hp;
+            fd._swing(fd.you, true);
+            await new Promise(r => setTimeout(r, 1500));
+            return { standing: fd.standing.filter(f => f.guard).length, aimed: aimed?.kind, hit: elf.hp < before, provoked: !!fd.provoked, knightStands: fd.standing.includes(knight) };
+        });
+        expect(seen).toEqual({ standing: 0, aimed: 'knight', hit: false, provoked: false, knightStands: true });
     });
 });
