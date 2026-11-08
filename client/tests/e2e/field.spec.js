@@ -1796,6 +1796,48 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
             expect(s.after, `${kind}: and it's gone once she's cast`).toEqual([]);
         }
     });
+
+    test("past Highmarket the open ground's guards are its zones' own, not elves (the user's: the elves keep their forest): a White Mage in the Duskwood calls Wesnoth's beam of light down where you stood, its spot glowing as it gathers; stood in it you're struck, stepped out you're not", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const kinds = await page.evaluate(async () => { const B = await import('/src/battle/Bands.js'); return Object.values(B.BANDS).flat().filter(p => p.guard).map(p => ({ at: p.at, kind: p.band[0], woods: p.woods })); });
+        for (const p of kinds) if (p.woods) expect(p.kind, 'in the trees an elf').toBe('sorceress');
+        expect(kinds.filter(p => p.kind === 'whitemage').length, 'the Duskwood mages').toBeGreaterThan(0);
+        const post = kinds.find(p => p.kind === 'whitemage').at;
+        await standAt(page, post[0], post[1] + 120);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'whitemage' && f.foe.ready)), { timeout: 30000 }).toBe(true);
+        const out = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            const f = fd.foes.find(o => o.kind === 'whitemage' && o.foe.ready);
+            for (const o of fd.foes) o.stun = 1e9;
+            f.damage = 1;
+            const playing = () => gs.children.list.filter(o => o.active && o.anims?.currentAnim).map(o => o.anims.currentAnim.key);
+            const me = gs.localPlayer.sprite, wait = ms => new Promise(r => setTimeout(r, ms));
+            const res = {};
+            ui.hp.now = ui.hp.max;
+            let hp = ui.hp.now;
+            fd._foeSwing(f);
+            res.halo = playing().includes('spell-fx-holy-halo');
+            let beam = false;
+            for (let t = 0; t < 60 && !beam; t++) { await wait(25); beam = playing().includes('spell-fx-light-beam'); }
+            res.beam = beam;
+            await wait(100);
+            res.struck = ui.hp.now < hp;
+            await wait(1500);
+            hp = ui.hp.now = ui.hp.max;
+            f.state = 'stand'; f.cd = 0;
+            fd._foeSwing(f);
+            me.setPosition(me.x + 80, me.y); me.body?.reset(me.x, me.y);
+            await wait(1200);
+            res.dodged = ui.hp.now === hp;
+            return res;
+        });
+        expect(out.halo, 'the holy halo about her as she calls it').toBe(true);
+        expect(out.beam, 'the beam falls').toBe(true);
+        expect(out.struck, 'stood in it, struck').toBe(true);
+        expect(out.dodged, 'stepped out, clear').toBe(true);
+    });
 });
 
 test.describe("The world's zones (the user's: each like a level)", () => {

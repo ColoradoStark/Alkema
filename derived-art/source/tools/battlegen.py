@@ -353,6 +353,28 @@ FOES = {
             'attack-s': [('sylph', 525)],                                       # its faerie fire halo, 7 x 75
             'defend-s': hit(['sylph']),
         }},
+    # The guards on open ground past Highmarket, out of the elves' woods (the user's, November 2026: the elves keep only
+    # the forest where they live; what's north of Highmarket is its own zones' foes, docs/WORLD.md): the Duskwood's
+    # order of mages (zone 22), a White Mage calling a beam of light down from the heavens (data/core/units/humans/
+    # Mage_White.cfg; the beam is the game's, tools/spellgen.py's light-beam), in Duskmere's purple; and over the
+    # bridge into the Riverlands (zone 20), an Ogre, its blade (data/core/units/ogres/Ogre.cfg)
+    'whitemage': {
+        'name': 'White Mage', 'race': 'human', 'hp': 35, 'damage': 9, 'folder': 'wesnoth-whitemage', 'cloth': 'purple',
+        'anims': {
+            'stand-s': [('white-mage', 1000)],
+            'breeze-s': seq('white-mage-idle-', range(1, 19), 120),
+            'attack-s': seq('white-mage-magic-', [1, 2, 3, 2, 1], [75, 75, 350, 50, 50]),
+            'defend-s': hit(['white-mage', 'white-mage-defend']),
+            'die-s': seq('white-mage-die-', range(1, 5), 120),
+        }},
+    'ogre': {
+        'name': 'Ogre', 'race': 'ogre', 'hp': 68, 'damage': 15, 'folder': 'wesnoth-ogre', 'cloth': 'brown',
+        'anims': {
+            'stand-s': [('ogre', 1000)],
+            'breeze-s': [('ogre-idle-1', 100), ('ogre-idle-2', 1000), ('ogre-idle-1', 100)],
+            'attack-s': seq('ogre-attack', range(1, 6), [75, 100, 75, 175, 100]),
+            'defend-s': hit(['ogre', 'ogre-defend']),
+        }},
 }
 
 # Wesnoth's team colour: these magenta shades, darkest to lightest (data/core/team-colors)

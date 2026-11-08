@@ -55,6 +55,8 @@ EFFECTS = {
     'ice-halo': {'frames': 'ice-halo{}', 'count': 9, 'rate': 14, 'loop': True},              # its glow about it
     'entangle': {'frames': 'entangle', 'count': 0, 'rate': 1, 'loop': True},
     'thorns': {'frames': 'thorns', 'count': 0, 'rate': 1, 'loop': True},
+    'light-beam': {'frames': 'light-beam-{}', 'count': 7, 'rate': 20},      # the White Mage's, from the heavens
+    'holy-halo': {'frames': 'holy-halo{}', 'count': 6, 'rate': 14},        # ...and about her as she calls it
 }
 
 

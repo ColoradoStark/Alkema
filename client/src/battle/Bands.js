@@ -78,6 +78,12 @@ export const BAND_KINDS = {
     shyde: shooter(3, { speed: 80, ...THORNS, race: 'elf', ...ELF }),
     // (the chest's keeper, a boss: grown, named; she leaves none of her own, the chest's beside her)
     sylph: shooter(4, { speed: 76, ...FAERIE_FIRE, race: 'elf', ...ELF, boss: true, scale: 1.6 * ELF.scale, label: 'Elvish Sylph' }),
+    // The guards on open ground past Highmarket (the user's, November 2026: the elves keep only the forest where they
+    // live; north of Highmarket it's other foes): each zone's own (docs/WORLD.md), as quick as the elves on guard.
+    // The Duskwood's (zone 22) White Mage calls Wesnoth's beam of light down from the heavens on where you stood, its
+    // spot glowing gold as it gathers (`beam`: out of it you're clear); the Riverlands' (zone 20) Ogre swings close
+    whitemage: shooter(2, { speed: 140, halo: 'holy-halo', beam: { delay: 650, radius: 26 }, race: 'human' }),
+    ogre: { ...DEMON_KINDS.brute, speed: 140, reach: 48, windup: 640, recover: 900, anim: 'attack', race: 'ogre', level: 2 },
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
 export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));
@@ -136,10 +142,14 @@ BANDS.z28 = [
 // the trees where they stand in them by the road (`woods`: on the road you're out of their reach)
 // They come in groups of neighbours down the road (`GUARD_GROUP` posts each, `guards-0`, `guards-1`...), each made
 // only while you're near it, as a zone's band is: all at once, the start had every one of them about it.
+// The elves keep only the woods (the user's, November 2026): a post on open ground in a zone with foes of its own is
+// theirs (`OPEN_GUARDS`, by zone: docs/WORLD.md's), north of Highmarket; any other an elf's (the Darkwood's elvish too)
 export const GUARD_STEP = 16;
 const GUARD_GROUP = 5;
+export const OPEN_GUARDS = { 22: 'whitemage', 20: 'ogre' };
+export const guardOf = (g) => (!g.woods && OPEN_GUARDS[g.zone]) || 'sorceress';
 [...GUARDS].sort((a, b) => a.at[1] - b.at[1] || a.at[0] - b.at[0]).forEach((g, i) => {
-    (BANDS[`guards-${Math.floor(i / GUARD_GROUP)}`] ??= []).push({ at: g.at, band: ['sorceress'], woods: g.woods, step: GUARD_STEP, guard: true });
+    (BANDS[`guards-${Math.floor(i / GUARD_GROUP)}`] ??= []).push({ at: g.at, band: [guardOf(g)], woods: g.woods, step: GUARD_STEP, guard: true });
 });
 
 // Past the guards, the wood's heart (the user's, November 2026: slip past them, and its middle's packs kill you; a

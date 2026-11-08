@@ -105,6 +105,8 @@ const BAR_WALL = 1.25 * TILE;    // barring, it stands in the way in this far ei
 const BAR_SAY_MS = 6000;         // its warning, again this often while you stand there
 const BAR_HANDOFF = TILE / 2;    // another guard bars you in one's stead only this much nearer you
 const BAR_WORDS = {
+    whitemage: 'A White Mage blocks your way: "The Duskwood is the Order\'s, and closed to the unproven. Turn back, before the light finds you."',
+    ogre: 'An Ogre blocks your way, its blade lowered: "Valley is ours. Little one goes back. Now."',
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
 };
 // A zone barred to you (zones.js `barred`: the one before it not cleared), its nearest foe within LOCK_REACH comes to
@@ -1301,7 +1303,12 @@ export class FieldDemons {
             if (spec.missile !== 'arrow') audio.play('cast', { volume: 0.5 });
             // (an elf's halo about her as she casts, Wesnoth's: faerie fire's about her head, nature's lower)
             const size = spec.scale || 1;
-            if (spec.halo) this._fx(spec.halo, foe.x, foe.y - (spec.halo === 'faerie-halo' ? 40 : 26) * size, { scale: ELF_FX * size });
+            if (spec.halo) this._fx(spec.halo, foe.x, foe.y - (spec.halo === 'nature-halo' ? 26 : 40) * size, { scale: ELF_FX * size });
+            if (spec.beam) {
+                this._beam(f, { x: you.x, y: you.y });
+                f.t = 600;
+                return;
+            }
             this.scene.time.delayedCall(250, () => {
                 if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage, { tint: spec.tint, scale: spec.halo ? ELF_FX : 1 });
             });
@@ -2094,6 +2101,32 @@ export class FieldDemons {
         f.ring?.destroy();
         f.ring = null;
         if (f.state !== 'windup') f.slam = false;
+    }
+
+    /**
+     * A White Mage's beam of light (Wesnoth's, from the heavens): where you stood glows gold as it gathers, then it
+     * falls there, striking you if you're still within its `radius`; stepped out, you're clear of it.
+     */
+    _beam(f, at) {
+        const { radius, delay } = f.spec.beam;
+        const g = this._live(this.scene.add.graphics().setDepth(FX_DEPTH - 1));
+        this.scene.tweens.addCounter({ from: 0, to: 1, duration: delay, onUpdate: tw => {
+            if (!g.active) return;
+            const k = tw.getValue();
+            g.clear();
+            g.fillStyle(0xffe680, 0.1 + 0.25 * k).fillEllipse(at.x, at.y, radius * 2, radius * 1.2);
+            g.lineStyle(2, 0xfff2b0, 0.4 + 0.5 * k).strokeEllipse(at.x, at.y, radius * 2, radius * 1.2);
+        } });
+        this.scene.time.delayedCall(delay, () => {
+            g.destroy();
+            if (f.hp <= 0 || !this.foes.includes(f) || this.fallen) return;
+            this._fx('light-beam', at.x, at.y + 6, { origin: 1, scale: 0.6 });
+            audio.play('zap', { volume: 0.6, rate: 0.8 });
+            const now = this._you();
+            if (!now) return;
+            if (Math.hypot(now.x - at.x, (now.y - at.y) * 1.6) <= radius && !(this.you.hidden > 0)) this._hurt(this.you, f.damage, at);
+            else this.scene.effects.floatText(now.x, now.y - 52, 'Dodged', '#c4b59f', 14);
+        });
     }
 
     /** His slam comes down: all about him struck, the ground shaking; out of the red, you're clear of it. */
