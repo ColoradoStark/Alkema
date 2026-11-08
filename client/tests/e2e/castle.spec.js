@@ -457,7 +457,7 @@ test.describe('Castle Dunmere', () => {
         });
         await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
             window.__played = [];
             const play = audio.play.bind(audio);
             audio.play = (name, opts) => { window.__played.push([name, opts?.rate]); return play(name, opts); };

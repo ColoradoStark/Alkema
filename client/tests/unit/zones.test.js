@@ -3,7 +3,7 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, packEssence, strengthFor, tooStrong, farTooStrong, BOSS_STEP } from '../../src/battle/zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong, farTooStrong, BOSS_STEP, barred, cleared } from '../../src/battle/zones.js';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
 
@@ -77,6 +77,13 @@ describe('The climb up the Saltmere Point', () => {
 });
 
 describe('The Market Fields, the next zone north of Riverhold', () => {
+    test("barred till the Point's cleared (the user's: an uncleared zone's way on always warns and blocks): a new hero is, one who felled the Rouser isn't, nor one as strong as he's made for (felled before it was kept)", () => {
+        for (const [a, h] of HEROES) expect(barred('z28', {}, a * h)).toBe(true);
+        expect(barred('z28', { 'cleared-z35': true }, 80)).toBe(false);
+        expect(barred('z28', {}, strengthFor('z35', BOSS_STEP.z35))).toBe(false);
+        expect(barred('z35', {}, 80)).toBe(false);          // (the home zone: nothing before it)
+        expect(cleared('z28', {}, 80)).toBe(false);
+    });
     const MARKET = 14;      // its packs (field.spec.js checks the zone has them)
     /** A new hero up the Point, its Rouser and all, then `packs` of the Market Fields: what each spent, and how they stood. */
     function road(a, h, packs = MARKET) {

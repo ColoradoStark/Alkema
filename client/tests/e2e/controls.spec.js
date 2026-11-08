@@ -52,7 +52,9 @@ test('drag the thumb any way and you walk that way, attack with another finger a
     const a = await at(page);
     await touch('touchStart', [{ x: centre.x, y: centre.y, id: 1 }]);
     await touch('touchMove', [{ x: ne.x, y: ne.y, id: 1 }]);
-    await page.waitForTimeout(500);
+    // (held till you've gone a way, not a set time: as the test browser's frames slowed, Phaser stepped the game a
+    // 60th of a second a frame a while, and half a second walked you 12 px, one run in four)
+    await expect.poll(() => at(page).then(p => p.x - a.x), { timeout: 10000 }).toBeGreaterThan(24);
     // ...and a second finger on attack while the first steers
     await touch('touchStart', [{ x: ne.x, y: ne.y, id: 1 }, { x: sword.x, y: sword.y, id: 2 }]);
     await touch('touchEnd', [{ x: ne.x, y: ne.y, id: 1 }]);
@@ -73,7 +75,7 @@ test('drag the thumb any way and you walk that way, attack with another finger a
     // A finger held on the down arrow: straight down
     const down = await onPage(page, 64, 60 + 35);
     await touch('touchStart', [{ x: down.x, y: down.y, id: 3 }]);
-    await page.waitForTimeout(500);
+    await expect.poll(() => at(page).then(p => p.y - c.y), { timeout: 10000 }).toBeGreaterThan(24);
     await touch('touchEnd', []);
     const d = await at(page);
     expect(d.y - c.y).toBeGreaterThan(20);

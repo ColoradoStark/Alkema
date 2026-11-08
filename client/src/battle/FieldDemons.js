@@ -30,7 +30,7 @@ import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, GOLD_SHARE, packEssence, strengthFor, tooStrong } from './zones.js';
+import { ZONES, GOLD_SHARE, packEssence, strengthFor, tooStrong, barred } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -106,6 +106,13 @@ const BAR_HANDOFF = TILE / 2;    // another guard bars you in one's stead only t
 const BAR_WORDS = {
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
 };
+// A zone barred to you (zones.js `barred`: the one before it not cleared), its nearest foe within LOCK_REACH comes to
+// the way in and bars you as a guard does (the user's: always the same for an uncleared zone); deeper, or struck, the
+// zone fights
+const LOCK_REACH = 16 * TILE;
+const LOCK_WORDS = {
+    z28: 'One of the Duke\'s men blocks the road: "None pass to Stonebridge who haven\'t beaten the Goblin Rouser at the Saltmere Point. Turn back."',
+};
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
 const ROUTE_CELL = 16, ROUTE_REACH = 16 * TILE;       // with rock between, it finds a way round on a grid this fine, this far about
@@ -177,6 +184,7 @@ export class FieldDemons {
     constructor(scene) {
         this.scene = scene;
         this.foes = [];           // { foe: Demon, kind, spec, pack, tier, post, hp, maxHp, damage, state, t, cd, stun, and what spells leave on it }
+        this.dared = new Set();   // barred zones you've struck a foe of: they fight, as a struck guard's do (till you fall or go into a place)
         this.slain = new Set();   // places whose demon is down (for good, this visit to the game; a zone's that regrow, a while)
         this.fell = new Set();    // places whose demon has been felled once (a zone's boss comes once every one has)
         this.fellAt = new Map();  // a pack => when its last fell (a zone's that regrow: ZONES' `regrow`)
@@ -436,6 +444,7 @@ export class FieldDemons {
         this.scene.scene.get('UIScene')?.bossBar?.hide();
         this.boss = null;
         this.provoked = false;      // (gone into a place: the guards forget you)
+        this.dared.clear();
         this._unmark();
         for (const fam of [...this._up]) this._dismiss(fam);
         if (this._freeze > 0) this.scene.anims.resumeAll();        // (a hit-stop never outlives them)
@@ -528,6 +537,7 @@ export class FieldDemons {
         if (f.state === 'post' || f.state === 'home') this._roused(f);
         // (a guard struck, they're all after you now: no more warnings, the road no refuge from their shots; the user's)
         if (f.guard) this.provoked = true;
+        if (this._locked(f.family)) this.dared.add(f.family);      // (a barred zone struck: it fights, all of it)
         audio.play('hit_blade', { volume: 0.8 });
         fx.impact('metal', foe.x, foe.y - 22, foe.y);
         fx.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
@@ -588,6 +598,11 @@ export class FieldDemons {
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
     }
 
+    /** A zone barred to you (zones.js `barred`), its foes warning you off and in your way, not yet struck. */
+    _locked(fam) {
+        return !this.dared.has(fam) && barred(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength());
+    }
+
     /** How strong you are (attack times hit points), as a climb weighs it. */
     _strength() {
         const ui = this.scene.scene.get('UIScene');
@@ -603,7 +618,7 @@ export class FieldDemons {
         for (const [pack, p] of PACKS.entries()) {
             if (!ZONES[p.family]?.climb || p.guard || p.lair || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
             const step = this._stepOf(pack), seen = `${pack}:${step}`;
-            if (!step || this._warned.has(seen)) continue;
+            if (!step || this._warned.has(seen) || this._locked(p.family)) continue;      // (a barred zone's foes say so themselves)
             if (this._beaten(pack)) continue;
             // (one you've taken on still standing is the one you're at: fighting one, the user was told the one beyond
             // it was too strong, just after upgrading)
@@ -739,11 +754,27 @@ export class FieldDemons {
             // (barring you already, it lets you go only once you're back out of the trees: where the gloom begins, put back
             // a step it stood off, came on again, and warned you again, flashing; the user saw it)
             if (you && f.guard && !this.provoked && f.woods && this._deep(f, you) < (f.barring ? 1 : NOTICE_DEEP)) {
+                // (put back out of the trees, a moment more before it lets you go: let go at once, your thumb still on
+                // the way in took you straight back, past it as the next post's came, field.spec.js "dashing into the wood")
+                if (f.barring && d <= AGGRO && (f.outT = (f.outT || 0) + delta) < BAR_HOLD_MS) return this._bar(f, you, d, dt, delta);
+                f.outT = 0;
                 if (d <= AGGRO && this._deep(f, you) > 0) return this._shadow(f, you, dt, delta);
                 f.shadowK = null;
                 return this._home(f, dt, fromPost, delta);
             }
-            if (d <= AGGRO && f.guard && !this.provoked && this._shallow(f, you)) return this._bar(f, you, d, dt, delta);
+            if (d <= AGGRO && f.guard && !this.provoked && this._shallow(f, you)) {
+                f.outT = 0;
+                return this._bar(f, you, d, dt, delta);
+            }
+            if (you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._shallow(f, you) && this._locked(f.family)) {
+                // (only the nearest of its zone's comes: the rest stay home; one barring keeps on till another's well nearer)
+                const rival = this.foes.some(o => o !== f && o.hp > 0 && o.zone === f.zone && !o.guard && !o.spec.boss && (o.state === 'post' || o.state === 'home')
+                    && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (o.barring ? BAR_HANDOFF : f.barring ? -BAR_HANDOFF : 0));
+                // (the wood's its guards' to bar: two barring you at once shoved you past the elf)
+                if (!rival && !(this.scene.overworld?.forest?.depthAt(you.x, you.y) > 0)) return this._bar(f, you, d, dt, delta, LOCK_WORDS[f.family]);
+                f.barring = false;
+                return this._home(f, dt, fromPost, delta);
+            }
             f.barring = false;
             if (d <= AGGRO && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
@@ -1083,12 +1114,14 @@ export class FieldDemons {
      * (the user's: a block as well as words; quicker than you, it's not walked round; walking back out, it lets you go),
      * a wall you can't pass through (`_apart`).
      */
-    _bar(f, you, d, dt, delta) {
+    _bar(f, you, d, dt, delta, words = BAR_WORDS[f.kind]) {
         const { foe } = f;
         // (one at a time, the nearest: the next post's, barring you too, walked into you from behind and shoved you
         // round the first; another stands and watches)
         // (and one barring you already keeps on till another's well nearer you than it: the two took turns, flashing)
-        if (this.foes.some(o => o !== f && o.barring && o.hp > 0 && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (f.barring ? -BAR_HANDOFF : BAR_HANDOFF))) {
+        // (both barring and about as near, the one that began later gives way: neither did, and pushed from both sides
+        // you were squeezed between them past them, field.spec.js "dashing into the wood" one time in three)
+        if (this.foes.some(o => o !== f && o.barring && o.hp > 0 && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (!f.barring ? BAR_HANDOFF : o.barSince < f.barSince ? BAR_HANDOFF : -BAR_HANDOFF))) {
             f.barring = false;
             this._step(f, 0, 0, dt, 1, you);
             if (!foe.striking && Math.abs(you.x - foe.x) > BAR_TURN) foe.face?.(you.x, foe.y);
@@ -1128,9 +1161,10 @@ export class FieldDemons {
         // (said again only after a while, whoever bars you: said each time one took over, it flashed)
         const now = this.scene.time.now;
         if (!(now - this._barSaid < BAR_SAY_MS)) {
-            this.say(BAR_WORDS[f.kind] ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
+            this.say(words ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
             this._barSaid = now;
         }
+        if (!f.barring) f.barSince = now;
         f.barring = true;
     }
 
@@ -1334,6 +1368,7 @@ export class FieldDemons {
     forgive() {
         this.fallen = false;
         this.provoked = false;
+        this.dared.clear();
         // (felled in a boss's ring: he's gone, mended, and comes to you again next time you're in his zone)
         const boss = this._arena?.boss;
         if (boss) {
@@ -1716,8 +1751,9 @@ export class FieldDemons {
         if (box && (x < box[0] || y < box[1] || x > box[2] || y > box[3])) return false;
         const cut = pack.arenaCut;
         if (cut && x >= cut[0] && y >= cut[1] && x <= cut[2] && y <= cut[3]) return false;
-        const z = ow?.zoneAt?.(x, y)?.id;
-        if (box && !(ow?.forest?.depthAt?.(x, y) > 0)) return true;        // (within its box, open ground out of the wood is his, whoever's zone: its lines clean)
+        const z = ow?.zoneAt?.(x, y)?.id, wood = ow?.forest?.depthAt?.(x, y) > 0;
+        if (box && !wood) return true;        // (within its box, open ground out of the wood is his, whoever's zone: its lines clean)
+        if (pack.openOnly) return false;      // (a clearing his ground, the wood about it the elves': the Market Fields')
         return z !== undefined && z === ow.zoneAt(...pack.at)?.id;
     }
 
@@ -1822,6 +1858,7 @@ export class FieldDemons {
     /** He's beaten: his bar empties, and a fanfare. */
     _bossFalls(f) {
         this._arenaDown(true);
+        this.scene.setFlag?.(`cleared-${f.family}`);       // (the zone after it is open to you: zones.js `barred`)
         const ui = this.scene.scene.get('UIScene');
         ui?.bossBar?.hide(true);
         this.scene.cameras.main.shake(300, 0.006);
@@ -2010,7 +2047,7 @@ export class FieldDemons {
      */
     _regrow(feet) {
         const now = this.scene.time.now;
-        if (now - (this._regrowT ?? -Infinity) < 1000) return;
+        if (now - (this._regrowT ?? -Infinity) < 1000 || this._arena) return;      // (none in a boss's fight: his ground's the whole clearing, its packs' places in it)
         this._regrowT = now;
         for (const fam of this._up) {
             const z = ZONES[FAMILIES[fam].climb || fam];

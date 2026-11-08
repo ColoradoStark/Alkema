@@ -135,7 +135,7 @@ test.describe('Wildlife and the sounds of the world', () => {
         expect((await held()).textures).toEqual(['wild-doe', 'wild-gull']);
         // The world's sounds are made out here (where there's Web Audio), the sea's among them by the coast
         const sound = () => page.evaluate(async () => {
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
             const a = window.__PHASER_GAME.scene.getScene('GameScene').ambience;
             return { made: !!a.nodes === !!audio.sound?.context, waves: a.mix?.beds.waves ?? 0 };
         });

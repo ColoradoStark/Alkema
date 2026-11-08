@@ -35,7 +35,7 @@ const swingAt = (page, i, from, roll) => page.evaluate(async ([i, from, roll]) =
     me.body.reset(me.x, me.y);
     me.setDirection(from === 'right' ? 'left' : 'up');
     const played = [];
-    const { audio } = await import('/src/audio/audio.js');
+    const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
     const play = audio.play.bind(audio);
     audio.play = (name, ...rest) => { played.push(name); return play(name, ...rest); };
     if (roll !== null) { let k = 0; gs.town.rand = () => (k++ === 0 ? roll : 0.5); }
@@ -114,7 +114,14 @@ test.describe('Barrels', () => {
             await gs.changeMap('gloomwater-2', arrive, 'down');
         });
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town?.key), { timeout: 15000 }).toBe('gloomwater-2');
-        const pot = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').town.breaks.findIndex(b => b.kind === 'pot'));
+        // (one with no chest or switch by where you stand to swing at it: standing below the first, you opened its chest, 60 gold)
+        const pot = await page.evaluate(() => {
+            const town = window.__PHASER_GAME.scene.getScene('GameScene').town;
+            return town.breaks.findIndex(b => {
+                const [x0, , x1, y1] = b.solid[0];
+                return b.kind === 'pot' && town.switches.every(s => Math.hypot(s.x - (x0 + x1) / 2, s.y - (y1 + 12)) > 96);
+            });
+        });
         expect(pot).toBeGreaterThanOrEqual(0);
         expect(await swingAt(page, pot, 'below', 0.99)).toMatchObject({ broken: true, smash: true, gold: 0 });
     });

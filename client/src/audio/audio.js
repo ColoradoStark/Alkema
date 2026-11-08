@@ -14,6 +14,7 @@ const MUSIC_VOLUME = 0.6;
 const SFX_VOLUME = 1.0;
 const MASTER_VOLUME = 1.25; // the mix measures ~-19 LUFS with peaks well under 0 dBFS
 const FADE_MS = 1600;
+const STREAMS = 3; // music players (`_stream`)
 const HEARING_RANGE = 520; // world px beyond which other players' fights are silent
 
 /**
@@ -69,11 +70,26 @@ class Audio {
         const wake = () => {
             const ctx = this.sound?.context;
             if (ctx && !this.sound.locked && ctx.state !== 'running') ctx.resume().catch(() => {});
+            // (and the music's players started in the tap, so iOS lets them play: `_stream`)
+            if (this.mode !== 'all') return;
+            this._tapping = true;
+            const players = (this._players ||= []);
+            while (players.length < STREAMS) players.push(this._player());
+            players.forEach(p => this._bless(p));
+            this._tapping = false;
         };
         for (const type of ['pointerdown', 'touchend', 'click', 'keydown']) {
             document.addEventListener(type, wake, true);
         }
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+        document.addEventListener('visibilitychange', () => {
+            // (the music held while the game's away, as Phaser holds its sounds)
+            for (const p of this._players || []) {
+                if (!p.key) continue;
+                if (document.hidden) p.el.pause();
+                else p.el.play().catch(() => {});
+            }
+            if (!document.hidden) wake();
+        });
         this._ramps = new Map(); // sound -> { from, to, ms, t, done }
         game.events.on('step', (_time, delta) => this._tickRamps(delta));
     }
@@ -87,7 +103,7 @@ class Audio {
         for (const [sound, r] of this._ramps) {
             r.t += delta;
             const k = Math.min(1, r.t / r.ms);
-            if (sound.pendingRemove || !sound.manager) {
+            if (!sound.key) {
                 this._ramps.delete(sound);
                 continue;
             }
@@ -208,36 +224,19 @@ class Audio {
         if (!music) return;
         const list = MUSIC[music.mood];
         const entry = list[music.index % list.length];
-        const key = `music-${entry.id}`;
-        this._ensureLoaded(entry.id, () => {
-            if (this.music !== music) return;
-            const sound = this.sound.add(key, { loop: Boolean(entry.loop), volume: 0 });
-            music.sound = sound;
-            music.playsLeft = entry.plays || 1;
-            sound.play();
-            this._fadeIn(sound);
-            if (!entry.loop) {
-                sound.on('complete', () => {
-                    if (this.music !== music || music.sound !== sound) return;
-                    music.playsLeft--;
-                    if (music.playsLeft > 0) {
-                        sound.play();
-                    } else {
-                        this._nextTrack(music, sound);
-                    }
-                });
-            }
-            // Fetch the next track shortly before it's needed (decoded music is
-            // large; don't hold two tracks in memory for long)
-            const next = list[(music.index + 1) % list.length];
-            if (!entry.loop && next.id !== entry.id) {
-                const lead = Math.max(0, sound.duration * music.playsLeft - 25) * 1000;
-                clearTimeout(this._preloadTimer);
-                this._preloadTimer = setTimeout(() => {
-                    if (this.music === music) this._ensureLoaded(next.id, () => {});
-                }, lead);
-            }
-        });
+        const sound = this._stream(entry);
+        if (!sound) return;
+        music.sound = sound;
+        music.playsLeft = entry.plays || 1;
+        sound.el.loop = Boolean(entry.loop);
+        sound.el.onended = () => {
+            if (this.music !== music || music.sound !== sound) return;
+            music.playsLeft--;
+            if (music.playsLeft > 0) sound.el.play().catch(() => {});
+            else this._nextTrack(music, sound);
+        };
+        sound.el.play().catch(() => {});
+        this._fadeIn(sound);
     }
 
     _nextTrack(music, sound) {
@@ -247,66 +246,76 @@ class Audio {
     }
 
     /**
-     * Destroy a music sound and free decoded music (tens of MB a track) no longer
-     * wanted: anything not playing that isn't this mood's next track (a mood left
-     * behind may have fetched its next one already).
+     * A music player streaming a track (`music-<id>`, its key): music is played from the file as it goes, never
+     * decoded whole (the user's weak phones: a track decoded was 12-62 MB, and each fight changed the music and
+     * back, decoding it again; a phone reloaded the game grinding the Market Fields). Its players are a few
+     * <audio> kept for good, each through a gain into the game's mix, started by a tap so iOS lets them play
+     * (`_bless`); one playing, one fading out, a third for a change of mood mid-fade.
      */
-    _release(sound) {
-        sound.destroy();
-        const list = this.music ? MUSIC[this.music.mood] : [];
-        const upcoming = this.music ? list[(this.music.index + 1) % list.length] : null;
-        const current = this.music ? list[this.music.index % list.length] : null;
-        for (const key of this.game.cache.audio.getKeys()) {
-            if (!key.startsWith('music-')) continue;
-            // (a destroyed sound stays on the manager's list till its next update)
-            const inUse = this.sound.sounds.some(s => s.key === key && s !== sound && !s.pendingRemove)
-                || [upcoming, current].some(t => t && `music-${t.id}` === key);
-            if (!inUse) this.game.cache.audio.remove(key);
+    _stream(entry) {
+        const players = (this._players ||= []);
+        let p = players.find(q => !q.key);
+        if (!p && players.length < STREAMS) players.push(p = this._player());
+        if (!p) {       // (all busy: the one fading out longest goes now)
+            p = players.find(q => q !== this.music?.sound) || players[0];
+            this._release(p);
+        }
+        if (!p) return null;
+        const ext = this.game.device.audio.ogg ? 'ogg' : 'mp3';
+        p.key = `music-${entry.id}`;
+        p.el.src = `/audio/music/${entry.id}.${ext}`;
+        p.setVolume(0);
+        return p;
+    }
+
+    _player() {
+        const el = document.createElement('audio');
+        el.preload = 'auto';
+        const p = { el, key: null, volume: 0, gain: null };
+        const ctx = this.sound?.context;
+        if (ctx?.createMediaElementSource) {
+            p.gain = ctx.createGain();
+            ctx.createMediaElementSource(el).connect(p.gain).connect(this.sound.destination || ctx.destination);
+        }
+        // (no Web Audio: the element's own volume, scaled as the mix is)
+        p.setVolume = (v) => {
+            p.volume = v;
+            if (p.gain) p.gain.gain.value = v;
+            else el.volume = Math.min(1, v * MASTER_VOLUME);
+        };
+        this._bless(p);
+        return p;
+    }
+
+    /** Started in a tap, a player may play later on iOS, its source changed or not (as Dialogue's clips' players). */
+    _bless(p) {
+        if (p.blessed || !this._tapping) return;
+        p.blessed = true;
+        if (!p.key) {       // (nothing to play: loaded in the tap, as WebKit counts it, as Howler unlocks its players)
+            p.el.load();
+            p.el.play().catch(() => {});
+        } else if (p.el.paused) {
+            p.el.play().catch(() => { p.blessed = false; });
         }
     }
 
-    /**
-     * Fetch and decode a track, independent of any scene (a scene's loader would
-     * be cancelled if that scene shuts down mid-download, e.g. leaving the creator).
-     */
-    _ensureLoaded(id, done) {
-        const key = `music-${id}`;
-        if (this.game.cache.audio.exists(key)) {
-            done();
-            return;
-        }
-        (this._loading ||= {});
-        if (this._loading[key]) {
-            this._loading[key].push(done);
-            return;
-        }
-        this._loading[key] = [done];
-        const ext = this.game.device.audio.ogg ? 'ogg' : 'mp3';
-        const finish = () => {
-            const waiting = this._loading[key] || [];
-            delete this._loading[key];
-            waiting.forEach(fn => fn());
-        };
-        fetch(`/audio/music/${id}.${ext}`)
-            .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
-            .then(buf => {
-                const onDecoded = (decodedKey) => {
-                    if (decodedKey !== key) return;
-                    this.sound.off('decoded', onDecoded);
-                    finish();
-                };
-                this.sound.on('decoded', onDecoded);
-                this.sound.decodeAudio(key, buf);
-            })
-            .catch(err => {
-                delete this._loading[key];
-                console.warn('Music unavailable:', id, err.message);
-            });
+    /** A player let go: stopped, and what it had buffered dropped. */
+    _release(sound) {
+        if (!sound?.key) return;
+        this._ramps.delete(sound);
+        sound.key = null;
+        sound.el.onended = null;
+        sound.el.pause();
+        sound.el.removeAttribute('src');
+        sound.el.load();
+    }
+
+    /** What music is playing (its keys), for tests. */
+    musicPlaying() {
+        return (this._players || []).filter(p => p.key && !p.el.paused && this.music?.sound === p).map(p => p.key);
     }
 
     _fadeIn(sound) {
-        // From silence: a sound new to the audio context reads 1 (its node's gain, not yet rendered), so the
-        // fade-in came in loud and fell
         this._ramp(sound, MUSIC_VOLUME, FADE_MS, undefined, 0);
     }
 

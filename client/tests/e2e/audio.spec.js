@@ -20,8 +20,11 @@ async function waitForPreview(page) {
     }, null, { timeout: 60000 });
 }
 
-const music = (page) => page.evaluate(() => window.__PHASER_GAME.sound.sounds
-    .filter(s => s.key.startsWith('music-') && s.isPlaying).map(s => s.key));
+const music = (page) => page.evaluate(() => window.__ALKEMA_AUDIO.musicPlaying());
+// Music is streamed from its file, never decoded whole (a track decoded was 12-62 MB, and a phone reloaded the game
+// grinding the Market Fields, each fight changing the music and back): what's decoded, and the players with a track on
+const decoded = (page) => page.evaluate(() => window.__PHASER_GAME.cache.audio.getKeys().filter(k => k.startsWith('music-')));
+const streaming = (page) => page.evaluate(() => (window.__ALKEMA_AUDIO._players || []).filter(p => p.key).map(p => p.key));
 
 test.describe('Sound', () => {
     test('every sound the code plays is in the effects sprite', () => {
@@ -55,8 +58,9 @@ test.describe('Sound', () => {
 
         await page.locator('#cc-play').click();
         await expect.poll(() => music(page), { timeout: 30000 }).toEqual(['music-town-theme']);
-        // The creator theme faded out and was freed
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.cache.audio.exists('music-grassy-world')), { timeout: 10000 }).toBe(false);
+        // The creator theme faded out and was let go, and no music was ever decoded
+        await expect.poll(() => streaming(page), { timeout: 10000 }).toEqual(['music-town-theme']);
+        expect(await decoded(page)).toEqual([]);
     });
 
     test('effects play on taps', async ({ page }) => {
@@ -124,8 +128,8 @@ test.describe('Sound', () => {
             me.setPosition(x, y - 23);
             me.body.reset(x, y - 23);
         }, [x, y]);
-        // Decoded music is tens of MB a track: no more than what's playing and what's fading out is kept
-        const held = () => page.evaluate(() => window.__PHASER_GAME.cache.audio.getKeys().filter(k => k.startsWith('music-')).length);
+        // No more than what's playing and what's fading out is held, and none of it decoded
+        const held = async () => (await decoded(page)).length * 100 + (await streaming(page)).length;
         const spots = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             const { forest } = gs.world;

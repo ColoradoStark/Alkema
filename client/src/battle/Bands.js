@@ -125,7 +125,7 @@ const MARKET_BANDS = [
 ];
 BANDS.z28 = [
     ...MARKET.packs.map((p, k) => ({ at: p.at, band: MARKET_BANDS[k] })),
-    { at: MARKET.lair, band: ['knight'], step: BOSS_STEP.z28, lair: true, arena: MARKET.arena },
+    { at: MARKET.lair, band: ['knight'], step: BOSS_STEP.z28, lair: true, arena: MARKET.arena, openOnly: true },
 ];
 
 // The guards: where tools/zonegen.py says (guards.json: one within a few tiles of every way out of the first area),

@@ -60,7 +60,7 @@ async function fight(page) {
         // (500 hit points, no defence: the game sets your most hit points from your stats every frame)
         Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 500 }, configurable: true, writable: true });
         Object.defineProperty(stats, 'defence', { value: 0, configurable: true, writable: true });
-        const { audio } = await import('/src/audio/audio.js');
+        const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
         window.__played = [];
         const play = audio.play.bind(audio);
         audio.play = (name, opts) => { window.__played.push(name); return play(name, opts); };

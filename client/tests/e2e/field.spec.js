@@ -419,7 +419,7 @@ test.describe("The Saltmere Point's foes", () => {
         expect(aimed.hp).toBe(aimed.max);
         expect(pack.map(p => p.i)).toContain(aimed.i);
         await page.evaluate(async () => {
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: a module imported here can be a second copy, Vite serving the game a newer one)
             window.__bows = 0;
             const play = audio.play.bind(audio);
             audio.play = (name, o) => { if (name === 'bow') window.__bows++; return play(name, o); };
@@ -562,7 +562,7 @@ test.describe("A foe after you doesn't let go while you're near", () => {
         await keepUp(page);
         const r = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene'), me = gs.localPlayer.sprite;
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
             let growls = 0;
             const play = audio.play.bind(audio);
             audio.play = (name, o) => { if (name === 'foe_orc') growls++; return play(name, o); };
@@ -2087,6 +2087,56 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
         expect(here.sheets.length).toBeGreaterThan(0);
     });
 
+    test("barred till the Point's cleared (the user's, for every zone: an uncleared zone's way on always warns and blocks, as the elves do): a new hero up the road is met at the way in by its nearest foe, warned and stood in the way of, not struck; further in, the zone fights; once the Rouser's beaten, kept with the hero, it's open", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'z28');
+        await keepUp(page);
+        const { PACKS } = await market(page);
+        const first = PACKS[0];
+        const said = [];
+        await page.exposeFunction('__said', (t) => said.push(t));
+        await page.evaluate(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, say = fd.say.bind(fd); fd.say = (t, ms) => { window.__said(t); say(t, ms); }; });
+        const barred = () => page.evaluate(() => import('/src/battle/zones.js').then(({ barred }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return barred('z28', gs.flags, gs.fieldDemons._strength());
+        }));
+        expect(await barred()).toBe(true);
+        // Up the road from Riverhold and over into the Market Fields
+        await standAt(page, WAY_IN.x, WAY_IN.y + 200);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBe(first.band.length);
+        await standAt(page, WAY_IN.x, WAY_IN.y);
+        const state = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            const z = fd.foes.filter(f => f.family === 'z28' && f.hp > 0);
+            const bar = z.find(f => f.barring);
+            return { barring: z.filter(f => f.barring).length, near: bar ? Math.hypot(bar.foe.x - me.x, bar.foe.y - me.y - 23) / 32 : null,
+                fighting: z.filter(f => !['post', 'home'].includes(f.state)).length, hp: gs.scene.get('UIScene').hp.now };
+        });
+        const before = (await state()).hp;
+        // One comes to the way in and stands before you, saying so; none strikes
+        await expect.poll(async () => { const s = await state(); return s.barring === 1 && s.near < 2.5; }, { timeout: 20000 }).toBe(true);
+        expect(said.some(t => /None pass to Stonebridge/.test(t))).toBe(true);
+        await page.waitForTimeout(3000);
+        const held = await state();
+        expect(held.fighting).toBe(0);
+        expect(held.hp).toBe(before);
+        // Further in than its warning: the zone fights
+        const [fx, fy] = first.at, k = 0.75;
+        await standAt(page, WAY_IN.x + (fx - WAY_IN.x) * k, WAY_IN.y + (fy - WAY_IN.y) * k);
+        await expect.poll(async () => (await state()).fighting, { timeout: 10000 }).toBeGreaterThan(0);
+        // The Rouser beaten (kept with the hero): open, its foes fighting as they're met, none barring
+        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.fieldDemons.forgive(); gs.setFlag('cleared-z35'); });
+        expect(await barred()).toBe(false);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').flags['cleared-z35'])).toBe(true);
+        await standAt(page, START.x, START.y);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'z28' && f.state !== 'post').length), { timeout: 30000 }).toBe(0);
+        await standAt(page, WAY_IN.x, WAY_IN.y + 200);
+        await page.waitForTimeout(500);
+        await standAt(page, WAY_IN.x, WAY_IN.y);
+        await page.waitForTimeout(3000);
+        expect((await state()).barring).toBe(0);
+    });
+
     test("a horseman charges: he stops and marks his lane red, then gallops down it; caught in it you're run down, stepped out of it you're not; ridden, he's winded a moment", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'z28');
@@ -2189,6 +2239,25 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
             return { i: f.i, step: f.step, want: BOSS_STEP.z28, ring: !!fd._arena, harder: strengthFor('z28', f.step) > strengthFor('z35', BOSS_STEP.z35) };
         });
         expect(knight).toMatchObject({ step: 16, want: 16, ring: true, harder: true });
+        // His ground is the whole clearing (the user's: all of it closed off for his fight): every pack's place in the field
+        // is in it, the road's corridor up to it isn't, nor the wood about it, the elves'; the mist stands round it all
+        const ground = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, pack = fd._arena.pack, ow = gs.overworld;
+            const [x0, y0, x1, y1] = pack.arena;
+            let wood = 0, woodIn = 0;
+            for (let y = y0; y <= y1; y += 32) for (let x = x0; x <= x1; x += 32) if (ow.forest.depthAt(x, y) > 1) { wood++; if (fd._inArena(pack, x, y)) woodIn++; }
+            return { wood, woodIn, puffs: fd._arena.puffs.length, wide: (x1 - x0) / 32, tall: (y1 - y0) / 32 };
+        });
+        const inArena = (at) => page.evaluate((at) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; return fd._inArena(fd._arena.pack, at[0], at[1]); }, at);
+        const field = PACKS.filter(p => !p.lair);
+        const inside = [];
+        for (const p of field) inside.push(await inArena(p.at));
+        expect(inside.slice(0, 3)).toEqual([false, false, false]);           // (up the road's corridor)
+        expect(inside.slice(3).every(Boolean)).toBe(true);                   // (the field's)
+        expect(ground.wood).toBeGreaterThan(0);
+        expect(ground.woodIn).toBe(0);
+        expect(ground.wide).toBeGreaterThanOrEqual(40);
+        expect(ground.puffs).toBeGreaterThan(50);
         // His charge: marked, ridden
         const rode = await page.evaluate(async (i) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i), me = gs.localPlayer.sprite;

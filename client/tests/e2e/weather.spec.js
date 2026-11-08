@@ -92,7 +92,7 @@ test.describe('Weather', () => {
         await expect.poll(async () => (await sky(page)).flash, { timeout: 3000 }).toBe(0);
         // The rain's sound is playing while it rains (made in the browser, where there's Web Audio)
         expect(await page.evaluate(async () => {
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
             return !!window.__PHASER_GAME.scene.getScene('GameScene').weather.sound.nodes === !!audio.sound?.context;
         })).toBe(true);
 

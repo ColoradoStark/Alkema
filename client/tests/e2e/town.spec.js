@@ -1018,7 +1018,7 @@ test.describe('Doors', () => {
         }), { timeout: 30000 }).toBe(true);
         const exit = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
             window.__played = [];
             window.__at = {};       // (when each came, in the page: the test's own looks are slow under load)
             const play = audio.play.bind(audio);
@@ -1083,7 +1083,7 @@ test.describe('Leaving', () => {
         });
         await expect.poll(() => where(page).then(w => w.town), { timeout: 15000 }).toBe('fernwick');
         await page.evaluate(async () => {
-            const { audio } = await import('/src/audio/audio.js');
+            const audio = window.__ALKEMA_AUDIO;       // (the game's own: an import here can be a second copy)
             window.__played = [];
             const play = audio.play.bind(audio);
             audio.play = (name, opts) => { window.__played.push(name); return play(name, opts); };

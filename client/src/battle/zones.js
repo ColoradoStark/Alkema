@@ -26,10 +26,29 @@ ZONES.z28 = {
     attack: POINT.attack * POINT.climb.hp ** ON, hp: POINT.hp * POINT.climb.hurt ** ON, defence: POINT.defence,
     climb: { hp: 2.3, hurt: 1.9, essence: POINT.climb.essence * POINT.climb.more ** ON, more: 1.5 },
     regrow: 90000,
+    after: 'z35',
 };
 
 /** The step a zone's boss is made for: the Point's at its last pack's, the Market Fields' three past its last (14 packs). */
 export const BOSS_STEP = { z35: 6, z28: 16 };
+
+/**
+ * A zone you've cleared: its boss felled (the flag `cleared-<zone>` kept with your hero), or a hero as strong as he's
+ * made for (one who felled him before it was kept).
+ */
+export function cleared(fam, flags, strength) {
+    return !!flags?.[`cleared-${fam}`] || (BOSS_STEP[fam] !== undefined && strength >= strengthFor(fam, BOSS_STEP[fam]));
+}
+
+/**
+ * A zone barred to you: the zone before it on the way (`after`) not cleared (the user's, November 2026, for every zone
+ * now and to come: an uncleared zone's way on is always the same, its foes warn you and stand in your way, and fight
+ * you further in, as the first area's guards do; a new hero up the river road was simply set on).
+ */
+export function barred(fam, flags, strength) {
+    const after = ZONES[fam]?.after;
+    return !!after && !cleared(after, flags, strength);
+}
 
 /** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */
 export const GOLD_SHARE = 0.25;
