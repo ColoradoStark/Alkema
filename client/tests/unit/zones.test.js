@@ -136,3 +136,48 @@ describe('The Market Fields, the next zone north of Riverhold', () => {
         expect(farTooStrong('z28', strength())).toBe(false);
     });
 });
+
+describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (19), after the Market Fields', () => {
+    const ROAD = [['z35', 7], ['z28', 14], ['z20', 16], ['z19', 18]];      // each zone and its packs (field.spec.js checks them)
+    /** A new hero up the whole road: each zone's packs in turn, then rounds of its top two till they're as strong as its boss, then him. */
+    function walk(a, h) {
+        const { u, inventory, strength } = fresh(a, h);
+        const short = [], rounds = {};
+        for (const [zone, packs] of ROAD) {
+            for (let step = 0; step < packs; step++) {
+                if (zone !== 'z35' && strength() < strengthFor(zone, step)) short.push(`${a}/${h} short for ${zone} pack ${step + 1} (${(strength() / strengthFor(zone, step)).toFixed(2)})`);
+                inventory.essence += packEssence(zone, step);
+                while (u.buy(u.current.id).ok);
+            }
+            let n = 0;
+            while (zone !== 'z35' && strength() < strengthFor(zone, BOSS_STEP[zone]) && n < 10) {
+                inventory.essence += packEssence(zone, packs - 1) + packEssence(zone, packs - 2);
+                while (u.buy(u.current.id).ok);
+                n++;
+            }
+            rounds[zone] = n;
+            inventory.essence += packEssence(zone, BOSS_STEP[zone]);       // (its boss)
+            while (u.buy(u.current.id).ok);
+        }
+        return { short, rounds };
+    }
+
+    test("each takes up where the last's boss leaves off, and is barred till the zone before it is cleared", () => {
+        expect(strengthFor('z20', 0)).toBeCloseTo(strengthFor('z28', BOSS_STEP.z28 + 1));
+        expect(strengthFor('z19', 0)).toBeCloseTo(strengthFor('z20', BOSS_STEP.z20 + 1));
+        expect(barred('z20', { 'cleared-z35': true }, 80)).toBe(true);
+        expect(barred('z20', { 'cleared-z28': true }, 80)).toBe(false);
+        expect(barred('z19', { 'cleared-z28': true }, 80)).toBe(true);
+        expect(barred('z19', { 'cleared-z20': true }, 80)).toBe(false);
+    });
+
+    test('every new hero is strong enough for each pack in turn all the way to Stonebridge, spending what the last paid, and grinds a round or few for each boss', () => {
+        const all = HEROES.map(([a, h]) => walk(a, h));
+        expect(all.flatMap(r => r.short)).toEqual([]);
+        for (const zone of ['z20', 'z19']) {
+            const n = all.map(r => r.rounds[zone]);
+            expect(Math.min(...n), `${zone}: its boss a wall`).toBeGreaterThanOrEqual(1);
+            expect(Math.max(...n), `${zone}: a little grinding, not a lot`).toBeLessThanOrEqual(4);
+        }
+    });
+});

@@ -10,6 +10,7 @@ import { DEMON_KINDS } from './Demons.js';
 import GUARDS from './guards.json';
 import HEART from './heart.json';
 import MARKET from './market.json';
+import ROAD from './road.json';
 import { BOSS_STEP } from './zones.js';
 
 // A unit's Wesnoth level: how many of its zone's hero's blows it takes, and how much of their hit points its blow
@@ -78,12 +79,48 @@ export const BAND_KINDS = {
     shyde: shooter(3, { speed: 80, ...THORNS, race: 'elf', ...ELF }),
     // (the chest's keeper, a boss: grown, named; she leaves none of her own, the chest's beside her)
     sylph: shooter(4, { speed: 76, ...FAERIE_FIRE, race: 'elf', ...ELF, boss: true, scale: 1.6 * ELF.scale, label: 'Elvish Sylph' }),
-    // The guards on open ground past Highmarket (the user's, November 2026: the elves keep only the forest where they
-    // live; north of Highmarket it's other foes): each zone's own (docs/WORLD.md), as quick as the elves on guard.
-    // The Duskwood's (zone 22) White Mage calls Wesnoth's beam of light down from the heavens on where you stood, its
-    // spot glowing gold as it gathers (`beam`: out of it you're clear); the Riverlands' (zone 20) Ogre swings close
+    // The guards beyond the road (the user's, November 2026: the elves keep only the Southern Forest where they live;
+    // the rest is other foes): each zone's own (docs/WORLD.md), as quick as the elves on guard. The Duskwood's (zone 22)
+    // White Mage calls Wesnoth's beam of light down from the heavens on where you stood, its spot glowing gold as it
+    // gathers (`beam`: out of it you're clear); the Twin Rivers' (21) Red Mage throws Wesnoth's fireball (`own`: as
+    // Wesnoth draws it, not tinted as a foe's fire is); the Westmarch's (24) Lieutenant his crossbow; and in the
+    // northern forest (Wyrmwood, 13, and the woods west and north of the road; the user's: not the south's elves) the
+    // Elvish Marksman's longbow
     whitemage: shooter(2, { speed: 140, halo: 'holy-halo', beam: { delay: 650, radius: 26 }, race: 'human' }),
-    ogre: { ...DEMON_KINDS.brute, speed: 140, reach: 48, windup: 640, recover: 900, anim: 'attack', race: 'ogre', level: 2 },
+    redmage: shooter(2, { speed: 140, missile: 'fireball', own: true, race: 'human' }),
+    lieutenant: shooter(2, { speed: 140, race: 'human' }),
+    marksman: shooter(2, { speed: 140, race: 'elf', ...ELF }),
+    // The road on to Stonebridge (the user's, November 2026: zones 20 and 19, in Grimhold's kingdom, other foes, two
+    // boss fights and a lot of levelling up). The Riverlands (zone 20), the wild valley between the rivers: ogres, a
+    // blow that doesn't stagger them (`poise`), and its wolves, quick, darting in and out
+    youngogre: melee(1, { speed: 70, reach: 44, windup: 540, recover: 780, lunge: 18, race: 'ogre', poise: true }),
+    ogre: { ...DEMON_KINDS.brute, speed: 66, reach: 50, windup: 660, recover: 920, anim: 'attack', race: 'ogre', level: 2 },
+    wolf: melee(1, { speed: 104, reach: 36, windup: 360, recover: 560, lunge: 28, race: 'beast' }),
+    greatwolf: melee(2, { speed: 110, reach: 38, windup: 380, recover: 580, lunge: 30, race: 'beast' }),
+    // (its leader, a boss: Wesnoth's Ogre grown, the eldest of them (`sheet`: the Ogre's own): his cleaver close, every
+    // third blow a slam, the ground about him marked red; off you, he lowers his head and charges down a lane marked
+    // red (`charge`); at half his health he bellows and the young ogres and wolves come (`rally`); at a quarter a fury)
+    ancientogre: { ...DEMON_KINDS.brute, sheet: 'ogre', speed: 72, reach: 60, windup: 720, recover: 950, anim: 'attack', race: 'ogre', level: 2,
+        boss: true, scale: 1.5, label: 'Ancient Ogre', title: 'Eldest of the Riverlands', chest: true,
+        slam: { every: 3, windup: 1100, radius: 84, hurt: 1.6 },
+        charge: { every: 4600, from: 110, length: 320, windup: 1100, speed: 400, width: 44, hurt: 1.7, recover: 1600 },
+        rally: { at: 0.5, call: ['youngogre', 'wolf', 'youngogre'], words: 'bellows! The valley answers.' },
+        fury: { at: 0.25, again: 2, quicker: 0.75, words: 'is in a fury!' } },
+    // The Meadowlands (zone 19): Grimhold's army camped in the meadows, its heavy foot slow and hard, a blow doesn't
+    // stagger them, and its bowmen behind them
+    heavyinfantry: { ...DEMON_KINDS.brute, speed: 56, reach: 44, windup: 680, recover: 900, anim: 'attack', race: 'human', level: 1 },
+    shocktrooper: { ...DEMON_KINDS.brute, speed: 58, reach: 50, windup: 700, recover: 950, anim: 'attack', race: 'human', level: 2 },
+    ironmauler: { ...DEMON_KINDS.brute, speed: 56, reach: 54, windup: 760, recover: 1000, anim: 'attack', race: 'human', level: 3 },
+    bowman: shooter(1, { race: 'human' }),
+    longbowman: shooter(2, { speed: 58, race: 'human' }),
+    // (its leader, a boss: the Iron Mauler grown, Grimhold's Master of Foot (docs/WORLD.md's Master Infantryman isn't a
+    // Wesnoth unit): his flail swung round every other blow, all about him struck (`slam`); at 60% he sounds the
+    // advance and his foot come (`rally`), at 30% a fury, quicker)
+    warmaster: { ...DEMON_KINDS.brute, sheet: 'ironmauler', speed: 64, reach: 60, windup: 760, recover: 1000, anim: 'attack', race: 'human', level: 3,
+        boss: true, scale: 1.5, label: 'Marshal Krell', title: "Grimhold's Master of Foot", chest: true,
+        slam: { every: 2, windup: 1150, radius: 92, hurt: 1.5 },
+        rally: { at: 0.6, call: ['heavyinfantry', 'shocktrooper', 'longbowman'], words: 'sounds the advance! His foot come.' },
+        fury: { at: 0.3, again: 2, quicker: 0.7, words: 'is in a fury!' } },
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
 export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));
@@ -137,17 +174,70 @@ BANDS.z28 = [
     { at: MARKET.lair, band: ['knight'], step: BOSS_STEP.z28, lair: true, arena: MARKET.arena, openOnly: true },
 ];
 
+// The road on to Stonebridge (the user's, November 2026): where tools/zonegen.py says (road.json: each zone's packs
+// spread over its open ground, its boss at its way on, his ground a box about him), more in each up its climb.
+// The Riverlands (zone 20): over the bridge by Highmarket, ogres and wolves; the Ancient Ogre at the way into the
+// Meadowlands. The Meadowlands (19): Grimhold's army, Marshal Krell at the bridge into Stonebridge
+const RIVERLANDS_BANDS = [
+    ['wolf', 'wolf', 'wolf'],
+    ['youngogre', 'wolf', 'wolf'],
+    ['youngogre', 'youngogre', 'wolf'],
+    ['ogre', 'wolf', 'wolf', 'wolf'],
+    ['youngogre', 'youngogre', 'greatwolf'],
+    ['ogre', 'youngogre', 'wolf', 'wolf'],
+    ['greatwolf', 'wolf', 'wolf', 'wolf'],
+    ['ogre', 'ogre', 'youngogre'],
+    ['ogre', 'youngogre', 'greatwolf', 'wolf'],
+    ['greatwolf', 'greatwolf', 'wolf', 'wolf'],
+    ['ogre', 'ogre', 'youngogre', 'youngogre'],
+    ['ogre', 'greatwolf', 'greatwolf', 'wolf', 'wolf'],
+    ['ogre', 'ogre', 'youngogre', 'greatwolf'],
+    ['greatwolf', 'greatwolf', 'greatwolf', 'wolf', 'wolf'],
+    ['ogre', 'ogre', 'ogre', 'youngogre', 'youngogre'],
+    ['ogre', 'ogre', 'greatwolf', 'greatwolf', 'youngogre', 'wolf'],
+];
+const MEADOWLANDS_BANDS = [
+    ['heavyinfantry', 'heavyinfantry', 'bowman'],
+    ['heavyinfantry', 'bowman', 'bowman'],
+    ['heavyinfantry', 'heavyinfantry', 'heavyinfantry'],
+    ['shocktrooper', 'heavyinfantry', 'bowman'],
+    ['heavyinfantry', 'heavyinfantry', 'bowman', 'bowman'],
+    ['shocktrooper', 'heavyinfantry', 'longbowman'],
+    ['shocktrooper', 'shocktrooper', 'bowman', 'bowman'],
+    ['heavyinfantry', 'heavyinfantry', 'heavyinfantry', 'longbowman'],
+    ['shocktrooper', 'heavyinfantry', 'longbowman', 'bowman'],
+    ['ironmauler', 'heavyinfantry', 'bowman'],
+    ['shocktrooper', 'shocktrooper', 'longbowman', 'longbowman'],
+    ['ironmauler', 'shocktrooper', 'bowman', 'bowman'],
+    ['heavyinfantry', 'heavyinfantry', 'shocktrooper', 'shocktrooper', 'longbowman'],
+    ['ironmauler', 'heavyinfantry', 'heavyinfantry', 'longbowman'],
+    ['shocktrooper', 'shocktrooper', 'shocktrooper', 'longbowman', 'bowman'],
+    ['ironmauler', 'ironmauler', 'longbowman', 'longbowman'],
+    ['ironmauler', 'shocktrooper', 'shocktrooper', 'longbowman', 'longbowman'],
+    ['ironmauler', 'ironmauler', 'shocktrooper', 'heavyinfantry', 'longbowman', 'longbowman'],
+];
+for (const [zone, bands, boss] of [['z20', RIVERLANDS_BANDS, 'ancientogre'], ['z19', MEADOWLANDS_BANDS, 'warmaster']]) {
+    const road = ROAD[zone];
+    BANDS[zone] = [
+        ...road.packs.map((p, k) => ({ at: p.at, band: bands[k] })),
+        { at: road.lair, band: [boss], step: BOSS_STEP[zone], lair: true, arena: road.arena, openOnly: true },
+    ];
+}
+
 // The guards: where tools/zonegen.py says (guards.json: one within a few tiles of every way out of the first area),
 // a sorceress at each (one each: a pair at all 33 posts was 66 bodies held from the start, on a weak phone), made far up the Point's climb (`GUARD_STEP`: ten packs past its last, as the wardens were), and keeping to
 // the trees where they stand in them by the road (`woods`: on the road you're out of their reach)
 // They come in groups of neighbours down the road (`GUARD_GROUP` posts each, `guards-0`, `guards-1`...), each made
 // only while you're near it, as a zone's band is: all at once, the start had every one of them about it.
-// The elves keep only the woods (the user's, November 2026): a post on open ground in a zone with foes of its own is
-// theirs (`OPEN_GUARDS`, by zone: docs/WORLD.md's), north of Highmarket; any other an elf's (the Darkwood's elvish too)
+// The Southern Forest's elves keep only its woods (the user's, November 2026): a post in a zone beyond with foes of
+// its own is theirs (`ZONE_GUARDS`, by zone: docs/WORLD.md's), the northern forest's the Wyrmwood elves' (the user's:
+// not the south's); a post in the trees of the road's own zones, the forest it's the edge of (north of
+// `NORTH_WOODS`, the northern; south of it, the Southern Forest's); any other the Southern Forest's elf
 export const GUARD_STEP = 16;
 const GUARD_GROUP = 5;
-export const OPEN_GUARDS = { 22: 'whitemage', 20: 'ogre' };
-export const guardOf = (g) => (!g.woods && OPEN_GUARDS[g.zone]) || 'sorceress';
+export const ZONE_GUARDS = { 22: 'whitemage', 21: 'redmage', 24: 'lieutenant', 13: 'marksman', 11: 'marksman' };
+const NORTH_WOODS = 8000;       // px down the world: the woods above it the northern forest's (Stonebridge and Highmarket stand below it)
+export const guardOf = (g) => ZONE_GUARDS[g.zone] || (g.at[1] < NORTH_WOODS ? 'marksman' : 'sorceress');
 [...GUARDS].sort((a, b) => a.at[1] - b.at[1] || a.at[0] - b.at[0]).forEach((g, i) => {
     (BANDS[`guards-${Math.floor(i / GUARD_GROUP)}`] ??= []).push({ at: g.at, band: [guardOf(g)], woods: g.woods, step: GUARD_STEP, guard: true });
 });
@@ -169,7 +259,9 @@ HEART.packs.forEach((p, i) => {
 /** The climb a band's foes are made on (ZONES in zones.js): a zone's own, the guards' and the wood's heart's the Point's. */
 export const climbOf = (family) => (family.startsWith('guards') || family.startsWith('heart') ? 'z35' : family);
 
-const sheetsOf = (zone, boss = true) => [...new Set(BANDS[zone].filter(p => boss || !p.lair).flatMap(p => p.band))];
+/** The sheet a kind wears: its own, or another's (`sheet`: a boss grown from a unit of his band). */
+export const sheetOf = (kind) => BAND_KINDS[kind]?.sheet || kind;
+const sheetsOf = (zone, boss = true) => [...new Set(BANDS[zone].filter(p => boss || !p.lair).flatMap(p => p.band).map(sheetOf))];
 
 /**
  * A zone's sheets, loaded as you near it (each held by its zone: another zone wearing one doesn't take it away); its

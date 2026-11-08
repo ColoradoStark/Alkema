@@ -275,6 +275,48 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
     });
 
+    for (const [fam, name, sheets, boss, worn] of [
+        ['z20', 'the Riverlands', ['foe-greatwolf', 'foe-ogre', 'foe-wolf', 'foe-youngogre'], 'ancientogre', 'foe-ogre'],
+        ['z19', 'the Meadowlands', ['foe-bowman', 'foe-heavyinfantry', 'foe-ironmauler', 'foe-longbowman', 'foe-shocktrooper'], 'warmaster', 'foe-ironmauler'],
+    ]) {
+        test(`${name}' foes, on the road to Stonebridge: every pack of it, its boss wearing his unit's sheet, under budget, and let go when you leave`, async ({ page }) => {
+            test.setTimeout(150000);
+            await enterWorld(page);
+            await keepUp(page);
+            await page.evaluate((fam) => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (family) => family === fam; }, fam);
+            const go = (x, y) => page.evaluate(([x, y]) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+                me.setPosition(x, y);
+                me.body.reset(x, y);
+            }, [x, y]);
+            await go(10960, 10192);
+            await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+            const base = await settled(page);
+            const { PLACES, PACKS } = await page.evaluate((fam) => import('/src/battle/FieldDemons.js').then(m => ({ PLACES: m.PLACES.filter(p => p.family === fam), PACKS: m.PACKS.filter(p => p.family === fam) })), fam);
+            const [x, y] = PACKS[0].at;
+            await go(x - 40, y + 260);
+            await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, PLACES.filter(p => !p.lair).length, { timeout: 60000 });
+            const held = await settled(page);
+            const have = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
+            await page.evaluate(([ids, fam]) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) { fd.slain.add(i); fd.fell.add(i); } fd._comeAshore(fam); },
+                [PLACES.filter(p => !p.lair).map(p => p.i), fam]);
+            await page.waitForFunction((boss) => !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === boss)?.foe.ready, boss, { timeout: 15000 });
+            const withBoss = await settled(page);
+            const his = await page.evaluate((boss) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.kind === boss).foe.key, boss);
+            await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.forgive());
+            await go(10960, 10192);
+            await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+            const after = await settled(page);
+            console.log(`${name}' foes`, +(held.mb - base.mb).toFixed(2), 'MB; with the boss', +(withBoss.mb - base.mb).toFixed(2), 'MB', have.join(' '));
+            expect(have).toEqual(sheets);
+            expect(his).toBe(worn);
+            expect(held.mb - base.mb).toBeLessThan(BUDGET_MB);
+            expect(withBoss.mb - base.mb).toBeLessThan(BUDGET_MB);
+            expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+            expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
+        });
+    }
+
     test("the first area's guards: a stretch of the road's, its elvish sorceresses, under budget, and let go when you leave it", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);

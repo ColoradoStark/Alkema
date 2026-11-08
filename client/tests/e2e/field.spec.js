@@ -1484,7 +1484,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
             const { PACKS } = await import('/src/battle/FieldDemons.js');
             const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), depth = (x, y) => ow.forest.depthAt(x, y);
             const out = [];
-            for (const p of PACKS.filter(p => p.guard && p.woods)) {
+            for (const p of PACKS.filter(p => p.guard && p.woods && ow.zoneAt(...p.at)?.id === 33)) {      // (the road out of Riverhold's)
                 const [gx, gy] = p.at;
                 let road = null;
                 for (let r = 64; r <= 192 && !road; r += 16) for (let a = 0; a < 16 && !road; a++) {
@@ -1580,7 +1580,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
             const { PACKS } = await import('/src/battle/FieldDemons.js');
             const open = (x, y) => !ow.boxBlocked(x - 9, y - 5, 18, 10), depth = (x, y) => ow.forest.depthAt(x, y);
-            const posts = PACKS.filter(p => p.guard && p.woods).map(p => p.at);
+            const posts = PACKS.filter(p => p.guard && p.woods && ow.zoneAt(...p.at)?.id === 33).map(p => p.at);      // (the road out of Riverhold's)
             for (const a of posts) for (const b of posts) {
                 const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
                 if (a === b || d < 120 || d > 200) continue;
@@ -1802,7 +1802,7 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
         await enterWorld(page, '/', 'all');
         await keepUp(page);
         const kinds = await page.evaluate(async () => { const B = await import('/src/battle/Bands.js'); return Object.values(B.BANDS).flat().filter(p => p.guard).map(p => ({ at: p.at, kind: p.band[0], woods: p.woods })); });
-        for (const p of kinds) if (p.woods) expect(p.kind, 'in the trees an elf').toBe('sorceress');
+        for (const p of kinds) if (p.woods) expect(['sorceress', 'marksman'], 'in the trees an elf').toContain(p.kind);
         expect(kinds.filter(p => p.kind === 'whitemage').length, 'the Duskwood mages').toBeGreaterThan(0);
         const post = kinds.find(p => p.kind === 'whitemage').at;
         await standAt(page, post[0], post[1] + 120);
@@ -2443,5 +2443,123 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
             return { standing: fd.standing.filter(f => f.guard).length, aimed: aimed?.kind, hit: elf.hp < before, provoked: !!fd.provoked, knightStands: fd.standing.includes(knight) };
         });
         expect(seen).toEqual({ standing: 0, aimed: 'knight', hit: false, provoked: false, knightStands: true });
+    });
+});
+
+test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (the user's, November 2026: zones 20 and 19, two boss fights, a lot of levelling up)", () => {
+    const ZONES = {
+        z20: { id: 20, packs: 16, kinds: ['ancientogre', 'greatwolf', 'ogre', 'wolf', 'youngogre'], boss: 'ancientogre', name: 'ANCIENT OGRE', sheet: 'ogre', call: ['wolf', 'youngogre', 'youngogre'], at: 0.45 },
+        z19: { id: 19, packs: 18, kinds: ['bowman', 'heavyinfantry', 'ironmauler', 'longbowman', 'shocktrooper', 'warmaster'], boss: 'warmaster', name: 'MARSHAL KRELL', sheet: 'ironmauler', call: ['heavyinfantry', 'longbowman', 'shocktrooper'], at: 0.55 },
+    };
+    const zone = (page, fam) => page.evaluate((fam) => import('/src/battle/FieldDemons.js').then(m => ({
+        PLACES: m.PLACES.filter(p => p.family === fam), PACKS: m.PACKS.map((p, k) => ({ ...p, k })).filter(p => p.family === fam) })), fam);
+    /** A hero as strong as a zone's `step`th pack is made for (and the zones before it cleared). */
+    const strongFor = (page, fam, step) => page.evaluate(([fam, step]) => import('/src/battle/zones.js').then(({ strengthFor }) => {
+        const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), stats = ui.inventory.stats, need = strengthFor(fam, step);
+        for (const z of ['z35', 'z28', 'z20']) gs.flags[`cleared-${z}`] = true;
+        Object.defineProperty(stats, 'attack', { value: Math.ceil(need / 2000), configurable: true, writable: true });
+        Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 2000, now: 2000 }, configurable: true, writable: true });
+        ui.hp.max = ui.hp.now = 2000;
+    }), [fam, step]);
+
+    for (const [fam, z] of Object.entries(ZONES)) {
+        test(`${fam}: its packs stand on its open ground, Grimhold's kingdom's own foes, no guard among them; barred till the zone before it is cleared; its first pack comes as you near; its boss isn't there till they're all beaten`, async ({ page }) => {
+            test.setTimeout(120000);
+            await enterWorld(page, '/', fam);
+            await keepUp(page);
+            const { PLACES, PACKS } = await zone(page, fam);
+            expect(PACKS.filter(p => !p.lair)).toHaveLength(z.packs);
+            expect([...new Set(PLACES.map(p => p.kind))].sort()).toEqual(z.kinds);
+            const where = await page.evaluate((packs) => {
+                const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
+                return { zones: [...new Set(packs.map(p => ow.zoneAt(...p.at)?.id))], kingdom: ow.zoneAt(...packs[0].at)?.kingdom };
+            }, PACKS);
+            expect(where.zones).toEqual([z.id]);
+            const barred = (flags) => page.evaluate(([fam, flags]) => import('/src/battle/zones.js').then(({ barred }) => barred(fam, flags, 80)), [fam, flags]);
+            expect(await barred({})).toBe(true);
+            expect(await barred({ 'cleared-z28': true, 'cleared-z20': true })).toBe(false);
+            await strongFor(page, fam, 0);
+            const first = PACKS.filter(p => !p.lair).sort((a, b) => a.step - b.step)[0];
+            await standAt(page, first.at[0], first.at[1] + 260);
+            await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBe(first.band.length);
+            expect(await page.evaluate((boss) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === boss), z.boss)).toBe(false);
+        });
+
+        test(`${fam}: its boss is a boss fight, made for the hero three packs past its last, wearing his own unit's sheet grown; his slam marked red; at his call his band comes; felled, a chest and the zone cleared`, async ({ page }) => {
+            test.setTimeout(150000);
+            await enterWorld(page, '/', fam);
+            const step = await page.evaluate((fam) => import('/src/battle/zones.js').then(({ BOSS_STEP }) => BOSS_STEP[fam]), fam);
+            await strongFor(page, fam, step);
+            await keepUp(page);
+            const { PACKS, PLACES } = await zone(page, fam);
+            await page.evaluate((places) => {
+                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+                for (const p of places) if (!p.lair) { fd.fell.add(p.i); fd.slain.add(p.i); }
+            }, PLACES);
+            const lair = PACKS.find(p => p.lair);
+            await standAt(page, lair.at[0] + 150, lair.at[1] + 60);
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bossBar.shown && window.__PHASER_GAME.scene.getScene('UIScene').bossBar.name.text), { timeout: 30000 }).toBe(z.name);
+            const boss = await page.evaluate((kind) => {
+                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.kind === kind);
+                return { i: f.i, step: f.step, sheet: f.foe.kind, ring: !!fd._arena };
+            }, z.boss);
+            expect(boss).toMatchObject({ step, sheet: z.sheet, ring: true });
+            // His slam: marked red as he raises it
+            const slam = await page.evaluate((i) => {
+                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+                f.met = true;
+                for (let n = 0; n < f.spec.slam.every && !f.slam; n++) fd._windup(f);
+                fd._slamMark(f);
+                const marked = f.slam && !!f.ring;
+                fd._unslam(f); f.slam = false; f.state = 'recover'; f.stun = 1e9;
+                return marked;
+            }, boss.i);
+            expect(slam).toBe(true);
+            // His call
+            await page.evaluate(([i, at]) => {
+                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(f => f.i === i);
+                fd._strikeFoe(f, f.hp - Math.floor(f.maxHp * at), { x: f.foe.x, y: f.foe.y + 30 });
+            }, [boss.i, z.at]);
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.called && f.hp > 0).map(f => f.kind).sort()), { timeout: 5000 })
+                .toEqual(z.call);
+            // Felled: a chest, the zone cleared
+            const out = await page.evaluate(([i, fam]) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, f = fd.foes.find(f => f.i === i);
+                const before = gs.chests.chests.length;
+                fd._strikeFoe(f, f.hp, { x: f.foe.x, y: f.foe.y + 30 });
+                return { chests: gs.chests.chests.length - before, cleared: !!gs.flags[`cleared-${fam}`] };
+            }, [boss.i, fam]);
+            expect(out).toEqual({ chests: 1, cleared: true });
+        });
+    }
+
+    test("past them Stonebridge's heath is open, no foe on it; the woods about the road are kept: the Southern Forest's by its sorceresses, the northern forest's by Wyrmwood's marksmen (the user's: not the south's elves); the Twin Rivers' red mages throw Wesnoth's own fireball", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        const posts = await page.evaluate(async () => {
+            const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
+            return PACKS.filter(p => p.guard).map(p => ({ zone: ow.zoneAt(...p.at)?.id, kind: p.band[0], at: p.at, woods: p.woods }));
+        });
+        const of = (zone) => [...new Set(posts.filter(p => p.zone === zone).map(p => p.kind))];
+        expect(of(13)).toEqual(['marksman']);
+        expect(of(27)).toEqual(['sorceress']);
+        expect(of(21)).toEqual(['redmage']);
+        expect(posts.filter(p => [19, 20, 25].includes(p.zone) && !p.woods), 'no guard on the road zones\' open ground').toEqual([]);
+        const heath = await page.evaluate(async () => { const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld; return PACKS.filter(p => !p.guard && ow.zoneAt(...p.at)?.id === 25).length; });
+        expect(heath, "no foe on Stonebridge's heath").toBe(0);
+        // A red mage's fireball, Wesnoth's own, untinted
+        const mage = posts.find(p => p.kind === 'redmage');
+        await standAt(page, mage.at[0], mage.at[1] + 120);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'redmage' && f.foe.ready)), { timeout: 30000 }).toBe(true);
+        const shot = await page.evaluate(async () => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, f = fd.foes.find(o => o.kind === 'redmage' && o.foe.ready);
+            for (const o of fd.foes) o.stun = 1e9;
+            f.damage = 0;
+            fd._foeSwing(f);
+            for (let t = 0; t < 40 && !fd.shots.length; t++) await new Promise(r => setTimeout(r, 25));
+            const s = fd.shots[fd.shots.length - 1];
+            return { kind: s?.kind, anim: s?.sprite.anims?.currentAnim?.key, tint: s?.sprite.tintTopLeft };
+        });
+        expect(shot).toEqual({ kind: 'fireball', anim: 'spell-fx-fireball', tint: 0xffffff });
     });
 });

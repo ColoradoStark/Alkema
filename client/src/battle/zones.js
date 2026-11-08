@@ -29,8 +29,19 @@ ZONES.z28 = {
     after: 'z35',
 };
 
-/** The step a zone's boss is made for: the Point's at its last pack's, the Market Fields' three past its last (14 packs). */
-export const BOSS_STEP = { z35: 6, z28: 16 };
+// The road on to Stonebridge (the user's, November 2026: zones 20 and 19, two boss fights and a lot of levelling up),
+// each zone's climb taking up where the last's boss leaves off (its first pack the step past him), as the Market
+// Fields' does, and as gentle a step, its packs coming back to grind for its boss, made for the hero three packs past
+// its last: the Riverlands (20) over the bridge by Highmarket, sixteen packs; the Meadowlands (19), eighteen
+const onFrom = (prev, at, after) => ({
+    attack: prev.attack * prev.climb.hp ** at, hp: prev.hp * prev.climb.hurt ** at, defence: prev.defence,
+    climb: { ...prev.climb, essence: prev.climb.essence * prev.climb.more ** at }, regrow: 90000, after,
+});
+
+/** The step a zone's boss is made for: the Point's at its last pack's, the others' three past their last. */
+export const BOSS_STEP = { z35: 6, z28: 16, z20: 18, z19: 20 };
+ZONES.z20 = onFrom(ZONES.z28, BOSS_STEP.z28 + 1, 'z28');
+ZONES.z19 = onFrom(ZONES.z20, BOSS_STEP.z20 + 1, 'z20');
 
 /**
  * A zone you've cleared: its boss felled (the flag `cleared-<zone>` kept with your hero), or a hero as strong as he's

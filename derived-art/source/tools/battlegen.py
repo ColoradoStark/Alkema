@@ -375,6 +375,100 @@ FOES = {
             'attack-s': seq('ogre-attack', range(1, 6), [75, 100, 75, 175, 100]),
             'defend-s': hit(['ogre', 'ogre-defend']),
         }},
+    # The road to Stonebridge (the user's, November 2026: zones 20 and 19 built, in Grimhold's kingdom, other foes).
+    # The Riverlands (zone 20), the wild valley between the rivers: ogres (data/core/units/ogres) and its wolves
+    # (data/core/units/monsters), a Wolf and a Great Wolf drawn running (`move`)
+    'youngogre': {
+        'name': 'Young Ogre', 'race': 'ogre', 'hp': 42, 'damage': 5, 'folder': 'wesnoth-youngogre', 'cloth': 'brown',
+        'anims': {
+            'stand-s': [('young-ogre', 1000)],
+            'breeze-s': seq('young-ogre-idle-', [3, 4, 3, 2, 1, 2, 1, 2, 1, 2, 1, 3, 4, 3], [200, 175, 150, 150, 150, 125, 125, 100, 100, 125, 125, 150, 150, 175]),
+            'attack-s': seq('young-ogre-attack', range(1, 6), [75, 100, 75, 175, 100]),
+            'defend-s': hit(['young-ogre', 'young-ogre-defend']),
+        }},
+    'wolf': {
+        'name': 'Wolf', 'race': 'beast', 'hp': 32, 'damage': 5, 'folder': 'wesnoth-wolf', 'cloth': 'brown',
+        'anims': {
+            'stand-s': [('wolf', 1000)],
+            'move-s': [('wolf-moving', 150), ('wolf', 150)],
+            'attack-s': [('wolf', 100), ('wolf-attack', 200), ('wolf-moving', 250), ('wolf', 50)],
+            'defend-s': hit(['wolf-defend-1', 'wolf-defend-2']),
+        }},
+    'greatwolf': {
+        'name': 'Great Wolf', 'race': 'beast', 'hp': 45, 'damage': 5, 'folder': 'wesnoth-wolf', 'cloth': 'brown',
+        'anims': {
+            'stand-s': [('wolf-great', 1000)],
+            'move-s': [('wolf-great-moving', 150), ('wolf-great', 150)],
+            'attack-s': [('wolf-great', 100), ('wolf-great-attack', 200), ('wolf-great-moving', 250), ('wolf-great', 50)],
+            'defend-s': hit(['wolf-great-defend-1', 'wolf-great-defend-2']),
+        }},
+    # The Meadowlands (zone 19): Grimhold's army camped in the meadows (data/core/units/humans), in Grimhold's blood
+    # red: its heavy foot, the Heavy Infantryman, Shock Trooper and Iron Mauler, and its bowmen behind them
+    'heavyinfantry': {
+        'name': 'Heavy Infantryman', 'race': 'human', 'hp': 38, 'damage': 11, 'folder': 'wesnoth-heavyinfantry', 'cloth': 'red',
+        'anims': {
+            'stand-s': [('heavyinfantry', 1000)],
+            'attack-s': seq('heavyinfantry-attack-', range(1, 16), [70] * 5 + [50] * 4 + [100, 75] + [50] * 4) + [('heavyinfantry', 100)],
+            'defend-s': hit(['heavyinfantry-defend-1', 'heavyinfantry-defend-2']),
+        }},
+    'shocktrooper': {
+        'name': 'Shock Trooper', 'race': 'human', 'hp': 52, 'damage': 18, 'folder': 'wesnoth-shocktrooper', 'cloth': 'red',
+        'anims': {
+            'stand-s': [('shocktrooper', 1000)],
+            'attack-s': seq('shocktrooper-attack-', range(1, 7), [85, 100, 125, 50, 50, 50]),
+            'defend-s': hit(['shocktrooper-defend-1', 'shocktrooper-defend-2']),
+        }},
+    'ironmauler': {
+        'name': 'Iron Mauler', 'race': 'human', 'hp': 64, 'damage': 25, 'folder': 'wesnoth-ironmauler', 'cloth': 'red',
+        'anims': {
+            'stand-s': [('siegetrooper', 1000)],
+            'attack-s': seq('siegetrooper-attack-', range(1, 7), [85, 100, 125, 50, 50, 50]),
+            'defend-s': hit(['siegetrooper-defend-1', 'siegetrooper-defend-2']),
+        }},
+    'bowman': {
+        'name': 'Bowman', 'race': 'human', 'hp': 33, 'damage': 6, 'folder': 'wesnoth-bowman', 'cloth': 'red',
+        'anims': {
+            'stand-s': [('bowman', 1000)], 'stand-n': [('bowman-ne', 1000)],
+            'attack-s': [('bowman-bow', 65)] + seq('bowman-bow-attack-', [1, 2, 3, 4, 1], [75, 75, 100, 130, 65]),
+            'attack-n': [('bowman-ne-bow', 65)] + seq('bowman-ne-bow-attack-', [1, 2, 3, 4, 1], [75, 75, 100, 130, 65]) + [('bowman-ne-bow', 35)],
+            'defend-s': hit(['bowman-bow', 'bowman-bow-defend']), 'defend-n': hit(['bowman-ne-bow', 'bowman-ne-bow-defend']),
+        }},
+    'longbowman': {
+        'name': 'Longbowman', 'race': 'human', 'hp': 51, 'damage': 10, 'folder': 'wesnoth-longbowman', 'cloth': 'red',
+        'anims': {
+            'stand-s': [('longbowman', 1000)],
+            'breeze-s': seq('longbowman-idle-', [1, 2, 3, 4, 3, 4, 3, 4, 3, 4, 1], [1000, 400, 100, 200, 100, 200, 100, 200, 100, 400, 100]),
+            'attack-s': [('longbowman-bow', 65)] + seq('longbowman-bow-attack-', [1, 2, 3, 4, 1], [75, 75, 100, 130, 65]),
+            'defend-s': hit(['longbowman-bow', 'longbowman-bow-defend']),
+        }},
+    # The guards round them (docs/WORLD.md's zones): Wyrmwood's Elvish Marksman in the northern forest (zone 13; not
+    # the Southern Forest's elves, the user's), a longbow; the Twin Rivers' Red Mage (zone 21), Wesnoth's fireball; the
+    # Westmarch's Lieutenant (zone 24), the western lords' man, his crossbow
+    'marksman': {
+        'name': 'Elvish Marksman', 'race': 'elf', 'hp': 37, 'damage': 9, 'folder': 'wesnoth-marksman', 'cloth': 'green',
+        'anims': {
+            'stand-s': [('marksman', 1000)],
+            'attack-s': [('marksman-bow', 75)] + seq('marksman-bow-attack', [1, 2, 3, 4], [75, 75, 100, 150]) + [('marksman-bow', 75)],
+            'defend-s': hit(['marksman-bow', 'marksman-bow-defend']),
+            'die-s': seq('marksman-die-', range(1, 6), [160, 220, 180, 200, 220]),
+        }},
+    'redmage': {
+        'name': 'Red Mage', 'race': 'human', 'hp': 42, 'damage': 8, 'folder': 'wesnoth-redmage', 'cloth': 'maroon',
+        'anims': {
+            'stand-s': [('red-mage', 1000)],
+            'breeze-s': seq('red-mage-idle-', [1, 2, 3, 4, 5, 4, 5, 3, 2, 1], [150] * 5 + [225, 225] + [150] * 3),
+            'attack-s': [('red-mage', 50), ('red-mage-attack-magic-1', 100), ('red-mage-attack-magic-2', 150), ('red-mage-attack-magic-1', 75), ('red-mage', 75)],
+            'defend-s': hit(['red-mage', 'red-mage-defend']),
+        }},
+    'lieutenant': {
+        'name': 'Lieutenant', 'race': 'human', 'hp': 40, 'damage': 7, 'folder': 'wesnoth-lieutenant', 'cloth': 'teal',
+        'anims': {
+            'stand-s': [('lieutenant', 1000)],
+            'breeze-s': [('lieutenant', 600), ('lieutenant-lead-1', 300), ('lieutenant-lead-2', 600), ('lieutenant-lead-1', 300)],
+            'attack-s': [('lieutenant-crossbow', 100), ('lieutenant-crossbow-attack1', 150), ('lieutenant-crossbow-attack2', 150), ('lieutenant-crossbow', 300)],
+            'defend-s': hit(['lieutenant-crossbow', 'lieutenant-crossbow-defend']),
+            'die-s': seq('lieutenant-die-', range(1, 10), 75),
+        }},
 }
 
 # Wesnoth's team colour: these magenta shades, darkest to lightest (data/core/team-colors)

@@ -17,7 +17,12 @@ bc78728314ea0403b0dbeecb488845fdc5822f55) for the Southern Forest. The Fencer, C
 (data/core/images/units/human-loyalists, their timings from data/core/units/humans, commit
 eeea9ac0361a6e98f1f6e85b746f15bd65210586) for the Market Fields, in Dunmere's navy. The White Mage (data/core/images/units/human-magi, its timings from
 data/core/units/humans/Mage_White.cfg) and the Ogre (data/core/images/units/ogres, data/core/units/ogres/Ogre.cfg),
-commit 0642abe98585fb40090db7c101533bd35c552b07, guarding the open ground past Highmarket.
+commit 0642abe98585fb40090db7c101533bd35c552b07, guarding the open ground past Highmarket. For the road on to
+Stonebridge, the same commit: the Young Ogre (units/ogres), the Wolf and Great Wolf (units/monsters, data/core/units/
+monsters/Wolf.cfg, Wolf_Great.cfg) for the Riverlands; the Heavy Infantryman, Shock Trooper, Iron Mauler, Bowman and
+Longbowman (units/human-loyalists, data/core/units/humans/Loyalist_*.cfg) for the Meadowlands, in Grimhold's red; and
+the guards about them, the Elvish Marksman (units/elves-wood, data/core/units/elves/Marksman.cfg), the Red Mage
+(units/human-magi, Mage_Red.cfg) and the Lieutenant (units/human-loyalists, Loyalist_Lieutenant.cfg).
 tools/battlegen.py recolours their team colour (to LPC cloth); the grunt's colours are all
 mapped to the LPC character palettes (team colour to maroon cloth, iron to LPC iron and steel, leather to
 LPC leather), and its dropped sword is drawn into its last death frames.

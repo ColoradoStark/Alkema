@@ -21,7 +21,7 @@
 
 import { UNIT } from './Demons.js';
 import { Orc } from './FieldOrcs.js';
-import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand, climbOf } from './Bands.js';
+import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -115,6 +115,8 @@ const BAR_WORDS = {
 const LOCK_REACH = 16 * TILE;
 const LOCK_WORDS = {
     z28: 'One of the Duke\'s men blocks the road: "None pass to Stonebridge who haven\'t beaten the Goblin Rouser at the Saltmere Point. Turn back."',
+    z20: 'An ogre blocks the way over the bridge: "Valley not for little ones. Beat the Duke\'s knight first. Go back."',
+    z19: 'One of Grimhold\'s foot blocks your way: "The Meadowlands are the army\'s. None pass who haven\'t beaten the Ancient Ogre. Turn back."',
 };
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
@@ -134,8 +136,8 @@ export const PACKS = Object.entries(BANDS).flatMap(([family, packs]) =>
 const FAMILIES = Object.fromEntries(Object.keys(BANDS).map(zone => [zone, {
     load: (scene, boss) => loadBand(scene, zone, boss),
     forget: (scene) => forgetBand(scene, zone),
-    make: (scene, x, y, kind, spec) => new Orc(scene, x, y, kind, spec.label),
-    sheet: (kind) => kind,
+    make: (scene, x, y, kind, spec) => new Orc(scene, x, y, sheetOf(kind), spec.label),
+    sheet: sheetOf,
     climb: climbOf(zone),
 }]));
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
@@ -1310,7 +1312,7 @@ export class FieldDemons {
                 return;
             }
             this.scene.time.delayedCall(250, () => {
-                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage, { tint: spec.tint, scale: spec.halo ? ELF_FX : 1 });
+                if (f.hp > 0 && this.foes.includes(f) && !this.fallen) this._launch({ x: foe.x, y: foe.y - 26 }, { x: you.x, y: you.y - 18 }, spec.missile || 'fire', 'foe', f.damage, { tint: spec.own ? 0xffffff : spec.tint, scale: spec.halo ? ELF_FX : 1 });
             });
             f.t = 600;
             return;
