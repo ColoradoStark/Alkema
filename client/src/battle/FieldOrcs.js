@@ -55,6 +55,7 @@ export class Orc extends Foe {
         this._foot = 1;
         this._turnT = 0;
         this.paper = true;      // a paper turn (false: at once)
+        this.exact = false;     // drawn only at its art's own proportions, never stretched or squashed (the elves)
         this.shadow = this.slides ? scene.add.ellipse(x, y, 26, 8, 0x000000, 0.28) : null;
     }
 
@@ -104,7 +105,7 @@ export class Orc extends Foe {
         if (!this.slides || !this.sprite.active) return;
         const f = this._phase % 1, up = Math.sin(Math.PI * f);
         this.lift = this.striking ? 0 : HOP * up;
-        const e = STRETCH * up - SQUASH * this._squash;
+        const e = this.exact ? 0 : STRETCH * up - SQUASH * this._squash;      // (`exact`: never out of its own proportions)
         const wide = this._turnT > 0 ? Math.abs(Math.cos(Math.PI * (1 - this._turnT / TURN_MS))) : 1;
         const sy = this.scale * (1 + e);
         this.sprite.setScale(this.scale / (1 + e) * wide, sy);

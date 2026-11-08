@@ -46,6 +46,7 @@ const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter mo
 const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tougher (and richer) than the first
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
+const GUARD_SEES = 7.5 * TILE;  // ...a wood's guard within this: their posts half as far apart again as they were (the user's, November 2026: fewer along the edge), so they see as much further
 const LEASH = 10 * TILE;        // and gives up once you're this far from it, however far from home it's come (the user's: a leash on its post was a line to stand behind and shoot it from; at five a corner lost the bear)
 const LOOK_MS = [1000, 2000];   // which it sees only now and then, as it chases (the user's: once a second or two is enough)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
@@ -96,7 +97,7 @@ const BAR = 1.3 * TILE;          // it stands this far before you
 const BAR_PRESS = 20;            // ...and walking on in, this near: inside its body's reach, so you're put back
 const BAR_HOLD_MS = 700;         // ...and stays so, this long after you last pressed on
 const BAR_TURN = 16;             // it turns to you only once you're this far round it, side to side
-const SHADOW = 2.5 * TILE;       // in the trees by its post, it keeps level with you this far either way of it
+const SHADOW = 3.75 * TILE;       // in the trees by its post, it keeps level with you this far either way of it
 const RUSH = 1.5;                // ...keeping level with you, half again its pace, so it's before you as you come in
 const BAR_RUSH = 1.3;            // ...and in your way, a third again
 const GLANCE_MS = 500;           // ...where you'll cross its line, or where to keep across your way, judged this often
@@ -396,6 +397,7 @@ export class FieldDemons {
         const foe = band.make(this.scene, at.x, at.y, p.kind, spec);
         foe.grow(FOE_SCALE * (spec.scale || 1));
         if (spec.paper === false) foe.paper = false;
+        if (spec.exact) foe.exact = true;
         if (spec.label) foe.labelColour('#ff8a7a');
         foe.setDepthAt();
         const step = this._stepOf(p.pack);
@@ -756,13 +758,13 @@ export class FieldDemons {
             if (you && f.guard && !this.provoked && f.woods && this._deep(f, you) < (f.barring ? 1 : NOTICE_DEEP)) {
                 // (put back out of the trees, a moment more before it lets you go: let go at once, your thumb still on
                 // the way in took you straight back, past it as the next post's came, field.spec.js "dashing into the wood")
-                if (f.barring && d <= AGGRO && (f.outT = (f.outT || 0) + delta) < BAR_HOLD_MS) return this._bar(f, you, d, dt, delta);
+                if (f.barring && d <= GUARD_SEES && (f.outT = (f.outT || 0) + delta) < BAR_HOLD_MS) return this._bar(f, you, d, dt, delta);
                 f.outT = 0;
-                if (d <= AGGRO && this._deep(f, you) > 0) return this._shadow(f, you, dt, delta);
+                if (d <= GUARD_SEES && this._deep(f, you) > 0) return this._shadow(f, you, dt, delta);
                 f.shadowK = null;
                 return this._home(f, dt, fromPost, delta);
             }
-            if (d <= AGGRO && f.guard && !this.provoked && this._shallow(f, you)) {
+            if (d <= GUARD_SEES && f.guard && !this.provoked && this._shallow(f, you)) {
                 f.outT = 0;
                 return this._bar(f, you, d, dt, delta);
             }
@@ -776,7 +778,7 @@ export class FieldDemons {
                 return this._home(f, dt, fromPost, delta);
             }
             f.barring = false;
-            if (d <= AGGRO && !((f.calm -= delta) > 0)) {
+            if (d <= (f.guard ? GUARD_SEES : AGGRO) && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
                 this._rouse(f.pack);
             } else return this._home(f, dt, fromPost, delta);
@@ -1463,7 +1465,7 @@ export class FieldDemons {
         g.clear();
         for (const f of this.foes) {
             if (f.hp <= 0 || f.hp >= f.maxHp || (f.spec.boss && f.met)) continue;      // (a boss's is along the bottom)
-            const w = f.spec.scale ? 44 : 28, x = f.foe.x - w / 2, y = f.foe.y - f.foe.tall - 6;
+            const w = (f.spec.scale || 1) > 1 ? 44 : 28, x = f.foe.x - w / 2, y = f.foe.y - f.foe.tall - 6;
             g.fillStyle(0x1d131e, 0.9).fillRect(x - 1, y - 1, w + 2, 5);
             g.fillStyle(0xd04648, 1).fillRect(x, y, w * f.hp / f.maxHp, 3);
         }

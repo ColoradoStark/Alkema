@@ -27,6 +27,9 @@ const ENTANGLE = { missile: 'entangle', halo: 'nature-halo' };
 const THORNS = { missile: 'thorns', halo: 'nature-halo' };
 
 // The Saltmere Point (zone 35, tier 1): the wharf rats, the river's outlaws and the goblins come ashore
+// Every elf (the user's, November 2026): 20% smaller than the other foes, they were too big; turning at once, no
+// paper turn; and never stretched or squashed as they step, drawn always at Wesnoth's own proportions (`exact`)
+const ELF = { scale: 0.8, paper: false, exact: true };
 export const BAND_KINDS = {
     rat: melee(0, { speed: 78, reach: 38, windup: 420, recover: 650, lunge: 18, race: 'beast' }),
     ruffian: melee(0, { speed: 64, windup: 520, recover: 750, lunge: 16, race: 'human' }),
@@ -66,15 +69,15 @@ export const BAND_KINDS = {
     // block the first area off till the story says where the journey goes): an elvish sorceress throwing faerie fire,
     // a little quicker than you (the user walked past slower wardens; the elder woses beside them went, the user's)
     // (turning at once, no paper turn: the user's, November 2026, they'd rather the elves didn't)
-    sorceress: shooter(2, { speed: 140, ...FAERIE_FIRE, race: 'elf', paper: false }),
+    sorceress: shooter(2, { speed: 140, ...FAERIE_FIRE, race: 'elf', ...ELF }),
     // The wood's own beyond them (zone 33's heart, docs/WORLD.md's Southern Forest): its casters, slower than you, so
     // a run to the chest at its heart can be made, every one of their shots dodged (the user's: a death run)
-    shaman: shooter(1, { speed: 62, ...ENTANGLE, race: 'elf', paper: false }),
-    druid: shooter(2, { speed: 66, ...THORNS, race: 'elf', paper: false }),
-    enchantress: shooter(3, { speed: 72, ...FAERIE_FIRE, race: 'elf', paper: false }),
-    shyde: shooter(3, { speed: 80, ...THORNS, race: 'elf', paper: false }),
+    shaman: shooter(1, { speed: 62, ...ENTANGLE, race: 'elf', ...ELF }),
+    druid: shooter(2, { speed: 66, ...THORNS, race: 'elf', ...ELF }),
+    enchantress: shooter(3, { speed: 72, ...FAERIE_FIRE, race: 'elf', ...ELF }),
+    shyde: shooter(3, { speed: 80, ...THORNS, race: 'elf', ...ELF }),
     // (the chest's keeper, a boss: grown, named; she leaves none of her own, the chest's beside her)
-    sylph: shooter(4, { speed: 76, ...FAERIE_FIRE, race: 'elf', paper: false, boss: true, scale: 1.6, label: 'Elvish Sylph' }),
+    sylph: shooter(4, { speed: 76, ...FAERIE_FIRE, race: 'elf', ...ELF, boss: true, scale: 1.6 * ELF.scale, label: 'Elvish Sylph' }),
 };
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
 export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));
