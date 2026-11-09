@@ -1,5 +1,6 @@
 // How hard the overworld's foes are, by zone (FieldDemons.js fights them): plain numbers, nothing drawn, so the
 // balance can be tested without a browser (tests/unit/zones.test.js).
+import MARKET from './market.json';
 
 /**
  * How hard each zone is (docs/WORLD.md: by how remote it is and how hostile its climate): its packs are a climb, each
@@ -68,6 +69,17 @@ export function cleared(fam, flags, strength) {
 export function barred(fam, flags, strength) {
     const after = ZONES[fam]?.after;
     return !!after && !cleared(after, flags, strength);
+}
+
+/**
+ * Where you come to, fallen in a zone (`GameScene.comeTo`): past the Market Fields, on the bridge by Highmarket, and
+ * mended there (the user's, November 2026: put all the way back at Riverhold from the ogres, and with no healer near
+ * the bridge, coming to with a hit point would have sent you back there anyway); null elsewhere, where you set out.
+ */
+const COME_TO = { 20: MARKET.bridge, 19: MARKET.bridge };
+export function comeToFor(zoneId) {
+    const at = COME_TO[zoneId];
+    return at ? { x: at[0], y: at[1], mend: true } : null;
 }
 
 /** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */

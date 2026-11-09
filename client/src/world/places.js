@@ -41,10 +41,10 @@ export const WORLD = {
   {
    "name": "Highmarket",
    "type": "city",
-   "x": 7888,
+   "x": 7952,
    "y": 8812,
    "rect": [
-    7776,
+    7840,
     8608,
     224,
     192

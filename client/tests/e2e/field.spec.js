@@ -753,7 +753,11 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         for (const b of r.blows) expect(b).toBeLessThanOrEqual(3);
         expect(Math.abs(r.got - r.pays)).toBeLessThanOrEqual(first.length);     // (each share rounded)
         expect(r.gold).toBeGreaterThan(0);          // (and a little gold, for town: the user's)
-        expect(r.pointing).toBe('stats');
+        // (told to upgrade: what it paid buys the next, so the arrow's on the banner over the pad, not the Upgrade tab)
+        await expect.poll(() => page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            return [ui.upgradeBanner.box.visible, ui.upgradeBanner.pointing, ui.bottomControls.pointing];
+        }), { timeout: 5000 }).toEqual([true, true, null]);
     });
 });
 
@@ -2192,6 +2196,57 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
         expect(here.sheets.length).toBeGreaterThan(0);
     });
 
+    test("its foes keep out of the elves' wood (the user's, November 2026: followed in and swung at, a rider brought the sorceress on you): roused with you a step into the trees, none of them sets foot past the wood's edge", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'z28');
+        await keepUp(page);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').setFlag('cleared-z35'));
+        // The pack nearest the wood, and a spot a little way into the trees beside it
+        const spot = await page.evaluate(async () => {
+            const { PACKS } = await import('/src/battle/FieldDemons.js'), gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld;
+            const closed = (x, y) => ow.zones.closed(Math.floor(x / 32), Math.floor(y / 32));
+            let best = null;
+            PACKS.forEach((p, k) => {
+                if (p.family !== 'z28' || p.lair) return;
+                for (let r = 160; r <= 320; r += 16) for (let a = 0; a < Math.PI * 2; a += 0.2) {
+                    const x = p.at[0] + Math.cos(a) * r, y = p.at[1] + Math.sin(a) * r;
+                    // (a little way into the trees, open ground most of the way there from its post: they have a way to come)
+                    const deep = [[0, 0], [24, 0], [-24, 0], [0, 24], [0, -24]].every(([u, v]) => closed(x + u, y + v))
+                        && [0.2, 0.4, 0.6].every(t => !closed(p.at[0] + (x - p.at[0]) * t, p.at[1] + (y - p.at[1]) * t) && !ow.boxBlocked(p.at[0] + (x - p.at[0]) * t - 9, p.at[1] + (y - p.at[1]) * t - 5, 18, 10));
+                    if (deep && !ow.boxBlocked(x - 9, y - 5, 18, 10) && (!best || r < best.r)) best = { k, x, y, r };
+                }
+            });
+            return best;
+        });
+        expect(spot).not.toBeNull();
+        const post = await page.evaluate(async (k) => (await import('/src/battle/FieldDemons.js')).PACKS[k].at, spot.k);
+        await standAt(page, (post[0] + spot.x) / 2, (post[1] + spot.y) / 2 + 300);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, spot.k), { timeout: 30000 }).toBeGreaterThan(0);
+        await standAt(page, spot.x, spot.y);
+        await page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._rouse(k), spot.k);
+        const into = [], states = new Set();
+        let nearest = Infinity;
+        for (let n = 0; n < 80; n++) {
+            const now = await page.evaluate((k) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ow = gs.overworld, me = gs.localPlayer.sprite;
+                const mine = gs.fieldDemons.foes.filter(f => f.pack === k && f.hp > 0);
+                return {
+                    into: gs.fieldDemons.foes.filter(f => f.family === 'z28' && f.hp > 0 && ow.zones.closed(Math.floor(f.foe.x / 32), Math.floor(f.foe.y / 32)))
+                        .map(f => `${f.kind} ${f.i} at ${Math.round(f.foe.x)},${Math.round(f.foe.y)}`),
+                    states: mine.map(f => f.state), near: Math.min(...mine.map(f => Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23))),
+                };
+            }, spot.k);
+            into.push(...now.into);
+            now.states.forEach(t => states.add(t));
+            nearest = Math.min(nearest, now.near);
+            await page.waitForTimeout(100);
+        }
+        // (they came for you, to the trees' edge, and fought from there: a step in, no going home mended at once)
+        expect(nearest).toBeLessThan(spot.r * 0.6);
+        expect(await page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.hp > 0).some(f => f.state !== 'post' && f.state !== 'home'), spot.k)).toBe(true);
+        expect(into).toEqual([]);
+    });
+
     test("barred till the Point's cleared (the user's, for every zone: an uncleared zone's way on always warns and blocks, as the elves do): a new hero up the road is met at the way in by its nearest foe, warned and stood in the way of, not struck; further in, the zone fights; once the Rouser's beaten, kept with the hero, it's open", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'z28');
@@ -2257,8 +2312,13 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
             for (const o of fd.foes) if (o !== h) o.stun = 1e9;          // (only he moves)
             fd._rouse(k);
             gs.tweens.killTweensOf(me);
-            // You 150 px below him, on open ground
-            me.setPosition(h.foe.x, h.foe.y + 150 - fd.FEET);
+            // You 150 px off him, on open ground his to ride (not the elves' wood: there he waits at its edge), his run on past you clear
+            const ways = [[0, 1], [0, -1], [1, 0], [-1, 0], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
+            const [ux, uy] = ways.find(([ux, uy]) => [...Array(16).keys()].every(n => {
+                const x = h.foe.x + ux * n * 16, y = h.foe.y + uy * n * 16;
+                return fd._open(x, y) && fd._mine(h, x, y);
+            })) || ways[0];
+            me.setPosition(h.foe.x + ux * 150, h.foe.y + uy * 150 - fd.FEET);
             me.body.reset(me.x, me.y);
             h.chargeT = 0;
             h.state = 'chase';
@@ -2271,7 +2331,8 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
             seen.lane = !!h.charging && !!h.lane;
             // Stepping out of the lane as it's marked
             if (aside) {
-                me.setPosition(me.x + 80, me.y);
+                const sx = fd._open(me.x - uy * 80, me.y + 23 + ux * 80) ? 1 : -1;     // (across his lane, onto open ground)
+                me.setPosition(me.x - uy * 80 * sx, me.y + ux * 80 * sx);
                 me.body.reset(me.x, me.y);
             }
             for (let t = 0; t < 80 && h.state !== 'charge'; t++) await new Promise(r => setTimeout(r, 25));

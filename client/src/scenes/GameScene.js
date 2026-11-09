@@ -1,4 +1,4 @@
-import { ZONES, barred } from '../battle/zones.js';
+import { ZONES, barred, comeToFor } from '../battle/zones.js';
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
@@ -594,9 +594,13 @@ export class GameScene extends Scene {
         if (near.length) loadPortraits(this, near.map(f => f.sprite.characterData.id));
     }
 
-    /** Fallen out on the world: you come to where you set out, with a hit point, and they forget you. */
+    /**
+     * Fallen out on the world: you come to where you set out, with a hit point, and they forget you; fallen on the road
+     * past the Market Fields, on the bridge by Highmarket, mended (`comeToFor`).
+     */
     comeTo() {
-        const at = { x: WORLD.spawn.x, y: WORLD.spawn.y - FEET };
+        const near = comeToFor(this.zone?.id);
+        const at = near ? { x: near.x, y: near.y - FEET } : { x: WORLD.spawn.x, y: WORLD.spawn.y - FEET };
         // Gone into a place as you fell (the user's: into Dunmere, and put back at the world's start inside its map,
         // nowhere to be seen): you come to there instead
         const away = () => this.town || this._changingRoom;
@@ -620,7 +624,7 @@ export class GameScene extends Scene {
             me.stopAnimation?.();
             this.cameras.main.centerOn(at.x, at.y);
             const hp = this.scene.get('UIScene')?.hp;
-            if (hp) hp.now = Math.max(1, hp.now);       // (a hit point: the rest at a healer, the user's)
+            if (hp) hp.now = near?.mend ? hp.max : Math.max(1, hp.now);       // (a hit point: the rest at a healer, the user's)
             this.fieldDemons.forgive();
             this._fallenInField = false;
             this._sendMove(0, 0);

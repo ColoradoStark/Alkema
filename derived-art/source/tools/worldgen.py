@@ -1137,10 +1137,10 @@ def cliff_foot(x, y, w, h):
 cave_ground = open_ground | mountain_tile
 
 
-def beside_bridge(i, side, w=7):
-    """Just off one end of a bridge, on the bank."""
+def beside_bridge(i, side, w=7, gap=1):
+    """Just off one end of a bridge, on the bank, `gap` tiles of it clear between."""
     bx, by, left, right = BRIDGES[i]
-    return (left - w // 2 - 1, by) if side < 0 else (right + w // 2 + 1, by)
+    return (left - w // 2 - gap, by) if side < 0 else (right + w // 2 + gap, by)
 
 
 water_tile = ~walk_land | river_touch
@@ -1198,9 +1198,11 @@ SEATS = [
     ('castle', 'Castle Dunmere', SHORE_SITES['Castle Dunmere'], open_ground, dict(radius=8, margin=0, require=gate_clear)),  # holding the coast road under the south-eastern hills
     ('castle', 'Castle Starhold', at((222, 54)), dry & big_island, dict(radius=14, margin=0, require=backed_by_mountains)),  # under the island's ridge
 ]
+# Highmarket stands back from its bridge's end (the user's, November 2026: hard to get onto the bridge past it)
+BRIDGE_GAP = {'Highmarket': 4}
 for i, (name, side) in enumerate((('Stonebridge', -1), ('Highmarket', +1))):                                       # towns at the bridges
     if len(BRIDGES) > i:
-        SEATS.insert(2 + i, ('city', name, beside_bridge(i, side, 8), open_ground, dict(radius=6, margin=0, require=gate_clear)))
+        SEATS.insert(2 + i, ('city', name, beside_bridge(i, side, 8, BRIDGE_GAP.get(name, 1)), open_ground, dict(radius=6, margin=0, require=gate_clear)))
 
 
 

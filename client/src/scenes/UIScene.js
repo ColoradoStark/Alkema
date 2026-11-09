@@ -1,3 +1,4 @@
+import { UpgradeBanner } from '../ui/UpgradeBanner.js';
 import { audio } from '../audio/audio.js';
 import { Scene, BlendModes } from 'phaser';
 import { TopBar } from '../ui/TopBar.js';
@@ -48,6 +49,8 @@ export class UIScene extends Scene {
         this.enterPrompt = new EnterPrompt(this, this.scale.width / 2, 32 + 448 - 70);   // low, clear of the hero
         // A boss's health, along the bottom of the map just above the pad (FieldDemons sets it)
         this.bossBar = new BossBar(this, 32 + 448 - 14);
+        // The next upgrade over the pad, bought with a tap (the user's: no changing screens for it)
+        this.upgradeBanner = new UpgradeBanner(this, () => this.upgrades);
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
         // In a fight, the blue button asks which spell (or skill)
@@ -173,13 +176,16 @@ export class UIScene extends Scene {
             this._tutoring?.();
             this._tutoring = null;
             gs?.setFlag?.('tut-upgrade');
+            this._tutorTab = null;
             this.bottomControls.point(null);
             this.gear.tutor = false;
             if (this.gear.mode === 'stats') this.gear.render();
             this.notice('Stronger! Back to the road north.', 3600);
         });
         this.notice(text, 6000);
-        this.bottomControls.point('stats');
+        // (the banner over the pad up, the arrow's on it, UpgradeBanner; short of essence for it, on the Upgrade tab)
+        this._tutorTab = () => this.bottomControls.point(this.upgradeBanner.box.visible ? null : 'stats');
+        this._tutorTab();
         this.gear.tutor = true;
         if (this.gear.mode === 'stats') this.gear.render();
         return true;
@@ -446,6 +452,8 @@ export class UIScene extends Scene {
         }
         // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
         this.bottomControls.setControlsShown(!this.gear?.visible);
+        this.upgradeBanner.update(!this.gear?.visible && !this.dialogue.visible && !this.enterPrompt.visible);
+        if (this._tutorTab && this.bottomControls.pointing !== (this.upgradeBanner.box.visible ? null : 'stats')) this._tutorTab();
         this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
         const dayNight = this.scene.get('GameScene')?.dayNight;
         if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);

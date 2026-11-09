@@ -3,7 +3,8 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, packEssence, strengthFor, tooStrong, BOSS_STEP, barred, cleared } from '../../src/battle/zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong, BOSS_STEP, barred, cleared, comeToFor } from '../../src/battle/zones.js';
+import MARKET from '../../src/battle/market.json';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
 
@@ -189,5 +190,14 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
             expect(Math.min(...n), `${zone}: its boss a wall`).toBeGreaterThanOrEqual(1);
             expect(Math.max(...n), `${zone}: a little grinding, not a lot`).toBeLessThanOrEqual(4);
         }
+    });
+});
+
+describe('Where you come to', () => {
+    test("fallen on the road past the Market Fields, you come to on the bridge by Highmarket, mended (the user's, November 2026: put all the way back at Riverhold, and no healer near the bridge)", () => {
+        for (const zone of [20, 19]) expect(comeToFor(zone)).toEqual({ x: MARKET.bridge[0], y: MARKET.bridge[1], mend: true });
+    });
+    test('fallen anywhere else, where you set out, as before', () => {
+        for (const zone of [35, 33, 28, 25, null]) expect(comeToFor(zone)).toBe(null);
     });
 });

@@ -74,8 +74,9 @@ test.describe('Upgrades', () => {
         await expect(page.locator('.gear-up-buy')).toHaveCount(1);
         expect(await ui(page, (ui) => ui.spellbook.rankOf('fireball'))).toBe(2);
         // Vigour: mostly hit points
-        const hp = await ui(page, (ui) => ui.hp.max);
-        await expect(vigour).toContainText(`Hit points ${hp.toLocaleString('en-GB')} →`);
+        // (read short from a thousand, as every number is: 2.2K)
+        const hp = await page.evaluate(async () => (await import('/src/upgrades/Upgrades.js')).short(window.__PHASER_GAME.scene.getScene('UIScene').hp.max));
+        await expect(vigour).toContainText(`Hit points ${hp} →`);
         await vigour.locator('.gear-up-buy').click();
         await expect(vigour.locator('.gear-up-level')).toHaveText('1/10');
         await expect(vigour).not.toHaveClass(/is-unlocked/);
@@ -134,5 +135,56 @@ test.describe('Upgrades', () => {
         await expect(rows.first()).toHaveAttribute('data-up', 'goddess-brigid');
         await expect(rows.last()).toHaveAttribute('data-up', 'goddess-gaia');
         expect(await page.evaluate(() => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i.width); i.src = '/goddesses.png'; }))).toBe(50 * 64);
+    });
+});
+
+test.describe('The next upgrade over the pad', () => {
+    /** Where the banner's middle (or a point `dx` off it) is on the page. */
+    const onPage = async (page, dx = 0) => {
+        const box = await page.locator('#game-container canvas').boundingBox();
+        const at = await ui(page, (ui) => ({ x: ui.upgradeBanner.box.x, y: ui.upgradeBanner.box.y, w: ui.scale.width, h: ui.scale.height }));
+        return { x: box.x + (at.x + dx) * box.width / at.w, y: box.y + at.y * box.height / at.h };
+    };
+    const banner = (page) => ui(page, (ui) => ({
+        shown: ui.upgradeBanner.box.visible, arrow: ui.upgradeBanner.pointing, name: ui.upgradeBanner.name.text, price: ui.upgradeBanner.price.text,
+        gives: ui.upgradeBanner.gives.text, bottom: ui.upgradeBanner.box.y + 20, level: ui.upgrades.level('might'), essence: ui.inventory.essence,
+    }));
+
+    test("the user's, November 2026: the Upgrade page's choice is always the next one, so it's a banner just above the pad, shown while you can pay; tapped, it buys, again and again till you're short; an arrow over it for your first three", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await asMage(page, 0);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = () => false);
+        // Nothing to pay with: none
+        await expect.poll(() => banner(page).then(b => b.shown)).toBe(false);
+        // Essence for four, the fifth short (20, 28, 39.2, 54.88: 143; the fifth 76.8)
+        await ui(page, (ui) => { ui.inventory.essence = 20 + 28 + 40 + 55 + 10; });
+        await expect.poll(() => banner(page).then(b => b.shown)).toBe(true);
+        let b = await banner(page);
+        expect(b.name).toBe('Strength of Arm  0/10');
+        expect(b.price).toBe('20');
+        expect(b.gives).toMatch(/^Attack \d+→\d+/);
+        expect(b.arrow).toBe(true);
+        expect(b.bottom).toBeLessThanOrEqual(480);        // (over the map, clear of the pad)
+        await page.waitForTimeout(300); await page.locator('#game-container canvas').screenshot({ path: 'tests/zzshots/upgrade-banner.png' });
+        for (let n = 1; n <= 4; n++) {
+            const at = await onPage(page);
+            await page.mouse.click(at.x, at.y);
+            await expect.poll(() => banner(page).then(b => b.level)).toBe(n);
+            b = await banner(page);
+            expect(b.arrow).toBe(n < 3);         // (gone after the third)
+        }
+        expect(b.essence).toBe(20 + 28 + 40 + 55 + 10 - 20 - 28 - 40 - 55);
+        expect(b.shown).toBe(false);        // (short for the fifth)
+        // With a menu open, none; back on the map, there it is
+        await ui(page, (ui) => { ui.inventory.essence = 1e6; ui.bottomControls.switchTab('stats'); });
+        await expect(page.locator('.gear-up-buy')).toHaveCount(1);
+        expect((await banner(page)).shown).toBe(false);
+        await ui(page, (ui) => ui.bottomControls.switchTab('map'));
+        await expect.poll(() => banner(page).then(b => b.shown)).toBe(true);
+        // A boss's bar along the map's bottom: it's raised over it
+        const low = (await banner(page)).bottom;
+        await ui(page, (ui) => ui.bossBar.set('Sir Aldous', 0.5, 16));
+        await expect.poll(() => banner(page).then(b => b.bottom)).toBeLessThan(low - 20);
     });
 });

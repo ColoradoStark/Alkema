@@ -234,10 +234,14 @@ export class Upgrades {
         return this.rewards.find(r => r.at === this.done + 1) || null;
     }
 
+    /** How many levels you've bought, all told. */
+    get bought() {
+        return HEROES.reduce((n, h) => n + Math.min(MAX, this.level(h.id)), 0);
+    }
+
     /** What the next level costs (every level dearer than the last, whoever's it is). */
     price() {
-        const bought = HEROES.reduce((n, h) => n + Math.min(MAX, this.level(h.id)), 0);
-        return Math.ceil(PATH_BASE * PATH_GROW ** bought);
+        return Math.ceil(PATH_BASE * PATH_GROW ** this.bought);
     }
 
     /** What the next upgrade costs (what the field's essence and the healers' price are reckoned in). */

@@ -338,7 +338,7 @@ export class FieldDemons {
             // (a guard you've struck keeps after you out of its trees, shooting from them: `_think`)
             // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
             // trees, each put you back over into the other's and they took turns, flashing; the user saw it)
-            const gone = yours !== null && this._arena?.boss !== f && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked))
+            const gone = yours !== null && this._arena?.boss !== f && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked), false)
                 && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE);
             this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
@@ -420,7 +420,7 @@ export class FieldDemons {
         // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
         // home and was mended at once; none known, it goes where it likes)
         const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, openLand: !PACKS[p.pack].guard && !this._beyond(...PACKS[p.pack].at), state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
     }
 
     /** A band goes (you've left its stretch of coast), and its sheets; its slain stay down. */
@@ -758,6 +758,27 @@ export class FieldDemons {
                 foe.face(you.x, you.y);
             }
             if (f.spec.ranged && f.cd <= 0 && d < SHOT_REACH + 60) this._windup(f);
+            return;
+        }
+        // You a step into the land beyond, the elves' woods, where it doesn't go: it comes to the edge and waits there
+        // for you, a shooter shooting, in reach a swing (no way to you, it went home there and then, and mended)
+        if (f.openLand && this._beyond(you.x, you.y) && this._arena?.boss !== f) {
+            const reach = f.spec.ranged ? f.spec.keep : f.spec.reach;
+            // (at the edge in reach of you, it's where it means to be: only one getting no nearer from further off gives up)
+            if (d <= reach + 100) f.idle = null;
+            else if (this._idle(f, d, delta)) {
+                f.lookT = LOOK_MS[1];
+                f.lost = true;
+                f.calm = GIVE_UP_MS / 2;
+                return;
+            }
+            if (d > reach) this._step(f, dx / u, dy / u, dt);
+            else {
+                this._step(f, 0, 0, dt);
+                foe.face(you.x, you.y);
+            }
+            const free = f.spec.ranged || this.foes.filter(o => o.state === 'windup' && !o.spec.ranged).length < ATTACKERS;
+            if (free && f.cd <= 0 && d <= (f.spec.ranged ? SHOT_REACH + 60 : f.spec.reach)) this._windup(f);
             return;
         }
         // Rock or water between it and you: round by the map (no way at all, or getting nowhere a long while: home)
@@ -1251,7 +1272,7 @@ export class FieldDemons {
         const ty = side ? foe.y : you.y, d = Math.hypot(you.x - foe.x, ty - foe.y) || 1;
         const k = Math.min(spec.lunge || 0, Math.max(0, d - 16)) / d;
         const x = foe.sprite.x + (you.x - foe.x) * k, y = foe.sprite.y + (ty - foe.y) * k;
-        if (k && this._open(x, y + FEET)) this.scene.tweens.add({ targets: foe.sprite, x, y, duration: 140 });
+        if (k && this._open(x, y + FEET) && this._mine(f, x, y + FEET)) this.scene.tweens.add({ targets: foe.sprite, x, y, duration: 140 });
         this.scene.time.delayedCall(200, () => {
             const now = this._you();
             if (f.hp <= 0 || !now || !this.foes.includes(f)) return;
@@ -1339,7 +1360,8 @@ export class FieldDemons {
     _knock(who, from, px) {
         const s = who.sprite, d = Math.hypot(s.x - from.x, s.y + FEET - from.y) || 1;
         const x = s.x + (s.x - from.x) / d * px, y = s.y + (s.y + FEET - from.y) / d * px;
-        if (this._open(x, y + FEET)) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
+        const f = this.foes.find(f => f.foe === who);       // (a foe kept out of the woods isn't knocked into them)
+        if (this._open(x, y + FEET) && !(f?.openLand && this._beyond(x, y + FEET))) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
     }
 
     /** Can't be stood on (water, or anything else in the way). */
@@ -1353,12 +1375,20 @@ export class FieldDemons {
 
     /** Can feet stand at (x, y) on the world's map? */
     /** Is (x, y) in the zone `f` keeps to (or the sea, or anywhere for one that keeps to none)? */
-    _mine(f, x, y, trees = true) {
+    _mine(f, x, y, trees = true, land = true) {
         // (one that keeps to the trees, the first area's guards: off the road, out of the wood, isn't its)
         if (trees && f.woods && !(this.scene.overworld?.forest?.depthAt(x, y) > 0)) return false;
+        // (and one posted on open ground keeps out of the land beyond, the elves' woods: followed in and swung at, a
+        // Market Fields rider brought the sorceress on the user; you in there, it waits at the edge, still after you)
+        if (land && f.openLand && this._beyond(x, y)) return false;
         if (f.zone === null) return true;
         const z = this.scene.overworld?.zoneAt?.(x, y);
         return !z || z.id === f.zone;
+    }
+
+    /** Land you can't go into yet (zonegen.py `open_land`; the zones barred to you aside): the woods the elves keep. */
+    _beyond(x, y) {
+        return !!this.scene.overworld?.zones?.closed(Math.floor(x / TILE), Math.floor(y / TILE));
     }
 
     _open(x, y) {
@@ -1389,7 +1419,7 @@ export class FieldDemons {
     _apart() {
         const me = this.scene.localPlayer?.sprite;
         // (a guard warning you off stands its ground, a wall you can't walk through: the user's, a block as well as words)
-        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, w: f.barring ? 0 : 1, r: BODY / 2 * (f.foe.scale || 1) * (f.barring ? 2 : 1) }));
+        const all = this.foes.filter(f => f.hp > 0).map(f => ({ s: f.foe.sprite, f, w: f.barring ? 0 : 1, r: BODY / 2 * (f.foe.scale || 1) * (f.barring ? 2 : 1) }));
         if (me && !this.fallen) all.push({ s: me, w: 0.15, r: BODY / 2 });
         for (let i = 0; i < all.length; i++) {
             for (let j = i + 1; j < all.length; j++) {
@@ -1399,8 +1429,10 @@ export class FieldDemons {
                 const push = (body - d) / 2, ux = d ? dx / d : 1, uy = d ? dy / d : 0;
                 // (one that won't move: the other's put out of it altogether)
                 const wa = all[j].w ? all[i].w : 2, wb = all[i].w ? all[j].w : 2;
-                for (const [s, k] of [[a, -push * wa], [b, push * wb]]) {
-                    if (this._open(s.x + ux * k, s.y + uy * k + FEET)) s.setPosition(s.x + ux * k, s.y + uy * k);
+                // (and never shoved into the woods it keeps out of)
+                for (const [s, k, f] of [[a, -push * wa, all[i].f], [b, push * wb, all[j].f]]) {
+                    const x = s.x + ux * k, y = s.y + uy * k;
+                    if (this._open(x, y + FEET) && !(f?.openLand && this._beyond(x, y + FEET))) s.setPosition(x, y);
                 }
             }
         }
