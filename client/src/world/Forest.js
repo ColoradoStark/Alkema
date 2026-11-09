@@ -83,6 +83,7 @@ export class Forest {
             this.buckets[Math.floor(y / CHUNK) * this.chunks + Math.floor(x / CHUNK)].push(x, y, list[i + 2]);
         }
         this.pool = [];
+        this.beyond = null;     // the land beyond, its trees darker (Beyond.js, set by Overworld)
 
         gloomTexture(scene);
         this.gloom = scene.add.image(0, 0, 'forest-gloom').setScrollFactor(0).setDepth(GLOOM_DEPTH).setAlpha(0);
@@ -130,7 +131,7 @@ export class Forest {
                     // A tree right in front of you thins so you can see yourself through it
                     const hides = feet && Math.abs(mx + dx - feet.x) < 22
                         && feet.y > my + dy - this.frameH * 0.8 && feet.y < my + dy;
-                    s.setAlpha(hides ? 0.55 : 1);
+                    s.setAlpha(hides ? 0.55 : 1).setTint(this.beyond ? this.beyond.tintAt(mx + dx, my + dy) : 0xffffff);
                 }
             }
         }

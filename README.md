@@ -108,7 +108,7 @@ You fight foes right where you meet them, out on the world map, in real time:
 
 ### Kingdoms and zones
 
-The world is four kingdoms, Dunmere, Grimhold, Nightspire and Gloomhold, split into 36 zones, each like a level. Crossing into one, a card names it and its kingdom. Foes keep to their own zone and never follow you out of it. Heroes start in the zone round Castle Dunmere, where the road north is a climb: packs that fall fast at first, then too strong till you spend what they paid on upgrades. A red skull floats over every pack too strong for you, and goes once you're strong enough. Every way out of it is guarded by a Warden, far too strong for you yet, and the card warns you as you cross.
+The world is four kingdoms, Dunmere, Grimhold, Nightspire and Gloomhold, split into 36 zones, each like a level. Crossing into one, a card names it and its kingdom. Foes keep to their own zone and never follow you out of it. Heroes start in the zone round Castle Dunmere, where the road north is a climb: packs that fall fast at first, then too strong till you spend what they paid on upgrades. A red skull floats over every pack too strong for you, and goes once you're strong enough. Every way out of it is guarded by a Warden, far too strong for you yet, and the card warns you as you cross. Land you can't go into yet is drawn greyer and darker, with a soft edge, so you can see where it begins; anyone standing on it stays bright, and a zone brightens once it opens to you.
 
 ## Spells
 

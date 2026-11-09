@@ -11,6 +11,8 @@
 import { zoneMap } from './zonemap.js';
 import { WORLD } from './places.js';
 import { Forest } from './Forest.js';
+import { Beyond } from './Beyond.js';
+import { EXPLORE } from '../explore.js';
 
 export const SIZE = WORLD.size;
 const TILE = WORLD.tileSize;
@@ -114,6 +116,8 @@ export class Overworld {
 
         this.map = map;
         this.forest = new Forest(scene, data);
+        // The land you can't go into yet, drawn darker (Beyond.js); in explore mode none is closed
+        this.beyond = this.forest.beyond = this.zones && !EXPLORE ? new Beyond(scene, this.zones) : null;
         // The towns on the map light up at night
         const dayNight = scene.dayNight;
         this.lamps = dayNight ? WORLD.places.filter(p => p.type !== 'dungeon').map(p =>
@@ -233,7 +237,10 @@ export class Overworld {
     /** Hide the whole map while you're inside a town, and show it again when you come out. */
     setVisible(on) {
         [this.groundLayer, this.featureLayer, this.canopyLayer, this.water, ...this.labels].forEach(o => o.setVisible(on));
-        if (!on) this.forest.hide();
+        if (!on) {
+            this.forest.hide();
+            this.beyond?.hide();
+        }
         this.scene.dayNight?.setOff(this.lamps, !on);
     }
 
@@ -277,6 +284,7 @@ export class Overworld {
                 label.setAlpha(near || unseen ? 0 : 1);
             }
         }
+        this.beyond?.update(delta);
         this.forest.update(delta, feet);
         this._waterTime += delta;
         if (this._waterTime >= WATER_FRAME_MS) {

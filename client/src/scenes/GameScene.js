@@ -1,4 +1,4 @@
-import { HOME, farTooStrong } from '../battle/zones.js';
+import { HOME, ZONES, farTooStrong, barred } from '../battle/zones.js';
 import { BANDS } from '../battle/Bands.js';
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
@@ -110,6 +110,9 @@ export class GameScene extends Scene {
         // Foes on the coast and the roads, fought where they stand (the game's one way of fighting)
         this.fieldDemons = new FieldDemons(this);
         this.overworld.blocker = (x, y, px, py) => this.fieldDemons.blocks(x, y, px, py);     // (a guard warning you off is walked into as a wall is)
+        // (the zones barred to you are drawn as closed as the land beyond the first area: Beyond.js)
+        if (this.overworld.beyond) this.overworld.beyond.barred = () => Object.keys(ZONES)
+            .filter(fam => barred(fam, this.flags, this.fieldDemons._strength())).map(fam => Number(fam.slice(1)));
         // Boats going up and down the rivers round Riverhold (scenery)
         this.riverBoats = new RiverBoats(this);
         // Ships going by off the coasts (scenery)

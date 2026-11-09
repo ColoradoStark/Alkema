@@ -397,6 +397,20 @@ test.describe('Memory', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').chests.chests.length), 'its chest gone too').toBe(0);
     });
 
+    test("the land beyond's shade: held out on the world, small, and let go in a place and made again on coming out", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        const shade = () => page.evaluate(() => ['beyond-shade', 'beyond-wash'].filter(k => window.__PHASER_GAME.textures.exists(k))
+            .map(k => window.__PHASER_GAME.textures.get(k).source[0]).reduce((mb, s) => mb + s.width * s.height * 4 / 2 ** 20, 0));
+        await expect.poll(shade).toBeGreaterThan(0);
+        expect(await shade()).toBeLessThan(0.1);
+        await visit(page, () => window.__PHASER_GAME.scene.getScene('GameScene').enterPlace({ name: 'Riverhold', x: 6320, y: 11116 }));
+        expect(await shade()).toBe(0);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').leaveTown());
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').town, null, { timeout: 15000 });
+        await expect.poll(shade).toBeGreaterThan(0);
+    });
+
     test("the river boats round Riverhold: their picture comes as you near the river and goes when you leave it", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);

@@ -1898,11 +1898,71 @@ test.describe("The world's zones (the user's: each like a level)", () => {
     });
 });
 
+test.describe("The land beyond, drawn darker (the user's: to see where a zone you can't go into begins)", () => {
+    test("the Duskwood over the Market Fields' north edge is greyer and darker, the fields too till the Point's cleared; the people over it aren't, and its trees are as its ground", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page, '/', 'all');
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (f) => f.startsWith('guards'); });
+        const HERE = { x: 8680, y: 8570 }, OVER = { x: 8680, y: 8350 };      // the fields, and the Duskwood over their edge
+        await standAt(page, 8740, 8540);
+        await expect.poll(() => field(page).then(f => f.drawn), { timeout: 30000 }).toBeGreaterThan(0);
+        const look = () => page.evaluate(([a, b]) => new Promise(done => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), cam = gs.cameras.main, by = gs.overworld.beyond;
+            const out = { here: by.shadeAt(a.x, a.y), over: by.shadeAt(b.x, b.y), light: [] };
+            // (the ground's brightness, a few px about each, as drawn: one snapshot of the strip between them, as only one is taken a frame)
+            const x = Math.round(a.x - cam.scrollX) - 4, top = Math.round(b.y - cam.scrollY + cam.y) - 4, h = a.y - b.y + 8;
+            gs.game.renderer.snapshotArea(x, top, 8, h, (img) => {
+                const c = document.createElement('canvas');
+                c.width = 8;
+                c.height = h;
+                const ctx = c.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const light = (y0) => {
+                    const d = ctx.getImageData(0, y0, 8, 8).data;
+                    let sum = 0;
+                    for (let i = 0; i < d.length; i += 4) sum += d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+                    return sum / 64;
+                };
+                out.light = [light(h - 8), light(0)];
+                done(out);
+            });
+        }), [HERE, OVER]);
+        // A new hero: the Market Fields are barred (the Point's not cleared), dark as the Duskwood
+        await expect.poll(() => look().then(l => [l.here, l.over])).toEqual([1, 1]);
+        const barred = await look();
+        // Cleared, the fields brighten and the Duskwood stays dark
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').flags['cleared-z35'] = true; });
+        await expect.poll(() => look().then(l => [l.here, l.over]), { timeout: 5000 }).toEqual([0, 1]);
+        const open = await look();
+        expect(open.light[0], 'the fields brighter once open').toBeGreaterThan(barred.light[0] * 1.4);
+        expect(open.light[1], 'the Duskwood as dark as it was').toBeLessThan(barred.light[1] * 1.1);
+        // Everyone over it: drawn above the shade (a guard of the wood, in it, as bright as ever), and the trees tinted as their ground
+        const people = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), by = gs.overworld.beyond;
+            const trees = gs.overworld.forest.pool.filter(t => t.visible);
+            return {
+                under: by.shade.depth,
+                you: gs.localPlayer.sprite.depth,
+                foes: gs.fieldDemons.foes.filter(f => f.foe.ready).map(f => ({ depth: f.foe.sprite.depth, closed: by.shadeAt(f.foe.x, f.foe.y), tint: f.foe.sprite.tintTopLeft })),
+                trees: trees.map(t => ({ ok: t.tintTopLeft === by.tintAt(t.x, t.y), dark: by.shadeAt(t.x, t.y) > 0.5, white: t.tintTopLeft === 0xffffff })),
+            };
+        });
+        expect(people.you).toBeGreaterThan(people.under);
+        expect(people.foes.some(f => f.closed === 1), 'a guard stands in the Duskwood').toBe(true);
+        for (const f of people.foes) expect(f.depth).toBeGreaterThan(people.under);
+        expect(people.trees.every(t => t.ok)).toBe(true);
+        expect(people.trees.filter(t => t.dark).every(t => !t.white)).toBe(true);
+        // (in a place there's none, and it's let go: memory.spec.js "the land beyond's shade")
+    });
+});
+
 test.describe('Explore mode (/?explore, the user\'s: to walk the whole world and see it)', () => {
     test('no foe comes out anywhere, you walk three times as fast, past the home zone nothing says its foes are too strong, and nothing is saved', async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page, '/?explore');
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').exploring?.text)).toBe('EXPLORE');
+        // (and no land is drawn darker: none is closed to an explorer)
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').overworld.beyond)).toBeNull();
         // By the Point's first pack and its last: none comes out
         const posts = await places(page).then(({ PACKS }) => [PACKS[0].at, PACKS.at(-1).at]);
         for (const [x, y] of posts) {

@@ -33,4 +33,15 @@ describe('Zones', () => {
         expect(map.at(START.x + 512 * 32, START.y - 512 * 32).id).toBe(33);
         expect(map.at(5, 5)).toBeNull();
     });
+
+    test("the land beyond is closed (the user's: drawn darker): the start, the Point and the Market Fields' open ground aren't, the Duskwood over its edge and the sea never; the Market Fields are while barred", () => {
+        const t = (x, y, barred) => map.closed(Math.floor(x / 32), Math.floor(y / 32), barred);
+        expect(t(START.x, START.y)).toBe(false);
+        expect(t(6450, 13000)).toBe(false);
+        expect(t(8740, 8540)).toBe(false);
+        expect(t(8740, 8380)).toBe(true);
+        expect(t(5, 5)).toBe(false);
+        expect(t(8740, 8540, new Set([28]))).toBe(true);
+        expect(t(8740 + 512 * 32, 8380 - 512 * 32)).toBe(true);
+    });
 });

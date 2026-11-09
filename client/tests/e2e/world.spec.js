@@ -210,6 +210,9 @@ test.describe('Living world', () => {
                 const me = gs.localPlayer.sprite;
                 me.setPosition((i % forest.n) * 32 + 16, Math.floor(i / forest.n) * 32 + 16 - 23);
                 me.body.reset(me.x, me.y);
+                // (the camera put there with you: left to glide across the world after you, under four browsers at once
+                // it hadn't caught up in the time given, and the dark, drawn about you, was off to one side of the view)
+                gs.cameras.main.centerOn(me.x, me.y);
                 await new Promise(r => setTimeout(r, 2500));
                 const g = forest.gloom, cam = gs.cameras.main;
                 const left = g.x - g.displayWidth / 2, top = g.y - g.displayHeight / 2;
