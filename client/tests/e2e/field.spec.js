@@ -685,7 +685,7 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(Math.abs(r.paid - r.pays)).toBeLessThanOrEqual(5);        // (each share rounded)
     });
 
-    test("the first time one ahead is too strong for you, you're told so and shown how: an arrow on Upgrade, one on a buy button; bought, it's done and never shown again (the user's: teach the system)", async ({ page }) => {
+    test("near a pack too strong for you, no skull over it and no warning (the user's, November 2026: they didn't like the look of them); beaten, the first pack shows you how to upgrade: an arrow on Upgrade, one on a buy button; bought, it's done and never shown again (the user's: teach the system)", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await page.evaluate(() => {
@@ -709,8 +709,14 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(spot).not.toBe(null);
         await standAt(page, spot.x, spot.y);
         const pointing = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.pointing);
+        await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBeGreaterThan(0);
+        await page.waitForTimeout(2500);
+        expect(await pointing(), 'not sent to upgrade by a pack too strong').toBe(null);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '')).not.toMatch(/too strong/i);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('danger-skull')), 'no skull').toBe(false);
+        // The first pack beaten shows the way to upgrade (as the next test's does by felling it)
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').tutorUpgrade('Well fought!'));
         await expect.poll(pointing, { timeout: 15000 }).toBe('stats');
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text)).toMatch(/too strong/i);
         // The Upgrade page: an arrow on a buy button; essence enough, and it's bought
         await page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
@@ -727,85 +733,6 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         // never again
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').tutorUpgrade());
         expect(await pointing()).toBe(null);
-    });
-
-    test("a skull floats over every pack too strong for you, none over one you can beat (none at first: whichever you take on first is a fair fight); strong enough, or the pack roused, it goes; leaving, every skull goes (the user's, after The Witcher 3's)", async ({ page }) => {
-        test.setTimeout(90000);
-        await enterWorld(page);
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._think = () => {}; });     // (all at their posts)
-        await atThePoint(page);
-        const marks = () => page.evaluate(() => {
-            const g = window.__PHASER_GAME, fd = g.scene.getScene('GameScene').fieldDemons;
-            return { packs: [...(fd._marks?.keys() || [])].sort((a, b) => a - b), shown: g.scene.getScene('GameScene').children.list.filter(o => o.texture?.key === 'danger-skull').length };
-        });
-        const { PACKS, PLACES } = await places(page);
-        // a new hero: whichever pack they take on first is a fair fight, so none has a skull
-        await page.waitForTimeout(500);
-        expect((await marks()).packs).toEqual([]);
-        // the first beaten and not upgraded, each left is the next step up, too strong: a skull over every one
-        const want = await page.evaluate((firsts) => {
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            for (const i of firsts) fd.slain.add(i);
-            for (const f of fd.foes) if (firsts.includes(f.i)) f.hp = 0;
-            fd._strength = () => 3 * 16;
-            return [...new Set(fd.foes.filter(f => !firsts.includes(f.i)).map(f => f.pack))].sort((a, b) => a - b);
-        }, PLACES.filter(p => p.pack === 0).map(p => p.i));
-        expect(want.length).toBe(PACKS.filter(p => !p.lair).length - 1);
-        await expect.poll(() => marks().then(m => m.packs), { timeout: 10000 }).toEqual(want);
-        let m = await marks();
-        expect(m.shown).toBe(want.length);
-        // the one over a pack sits above its heads
-        const over = await page.evaluate(() => {
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, [k, s] = [...fd._marks.entries()][0];
-            const heads = fd.foes.filter(f => f.pack === k).map(f => f.foe.y - f.foe.tall);
-            return s.skull.y < Math.min(...heads);
-        });
-        expect(over).toBe(true);
-        // roused, a pack's skull goes
-        const k = m.packs[0];
-        await page.evaluate((k) => { for (const f of window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes) if (f.pack === k) f.state = 'chase'; }, k);
-        await expect.poll(() => marks().then(m => m.packs.includes(k)), { timeout: 5000 }).toBe(false);
-        // strong enough for all of them: none
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => 1e12; });
-        await expect.poll(() => marks().then(m => m.shown), { timeout: 5000 }).toBe(0);
-        // weak again, then away from the Point: they go with the band, and the skull's picture with them
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._strength = () => 3 * 16; });
-        await expect.poll(() => marks().then(m => m.shown), { timeout: 5000 }).toBeGreaterThan(0);
-        await standAt(page, START.x, START.y);
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.textures.exists('danger-skull')), { timeout: 30000 }).toBe(false);
-        expect((await marks()).shown).toBe(0);
-    });
-
-    test("fighting a pack you're strong enough for, you're not told the one beyond it is too strong (the user's: told so just after upgrading, the next pack but one being as near as eight tiles); beaten, then you are", async ({ page }) => {
-        test.setTimeout(150000);
-        await enterWorld(page);
-        const { PACKS, PLACES } = await places(page);
-        // Two packs beaten, a third taken on (still standing, the one you're at), standing by a fourth: strong
-        // enough for the third and not what comes after it
-        const spot = await page.evaluate(async ([PACKS, PLACES]) => {
-            const { strengthFor } = await import('/src/battle/zones.js');
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            fd._think = () => {};          // (nothing roused by your nearness: only what's asked)
-            fd._strength = () => strengthFor('z35', 1) * 1.2;
-            for (const p of PLACES) if (p.pack < 2) fd.slain.add(p.i);
-            fd._takeOn(2);
-            const [x, y] = PACKS[3].at;
-            for (let r = 32; r < 4 * 32; r += 8) for (let n = 0; n < 24; n++) {
-                const px = x + Math.cos(n * Math.PI / 12) * r, py = y + Math.sin(n * Math.PI / 12) * r;
-                if (fd._open(px, py)) return { x: px, y: py, step: fd._stepOf(2), next: fd._stepOf(3) };
-            }
-            return null;
-        }, [PACKS, PLACES]);
-        expect(spot).toMatchObject({ step: 2, next: 3 });
-        await standAt(page, spot.x, spot.y);
-        await expect.poll(() => field(page).then(f => f.count), { timeout: 30000 }).toBeGreaterThan(0);
-        const notice = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text || '');
-        const frames = (n) => page.evaluate((n) => new Promise(done => { let k = 0; const tick = () => (++k >= n ? done() : requestAnimationFrame(tick)); tick(); }), n);
-        await frames(30);
-        expect(await notice()).not.toMatch(/too strong/i);
-        // that pack beaten, and not upgraded: now the next is too strong, and you're told
-        await page.evaluate((ids) => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons; for (const i of ids) fd.slain.add(i); }, PLACES.filter(p => p.pack === 2).map(p => p.i));
-        await expect.poll(notice, { timeout: 10000 }).toMatch(/too strong/i);
     });
 
     test('the first pack falls fast to a new hero and leaves its essence (and a little gold), and beaten it says to upgrade for what comes next', async ({ page }) => {
@@ -1509,6 +1436,43 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/home|post/);
     });
 
+    test("she heeds you before she stops you (the user's, picked from mock-ups): a step into her trees a \"!\" pops over her head; on where it darkens, \"No further!\" in a bubble over her as she stops you; back on the road both go, and nothing of them is kept", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        const spot = await roadside(page);
+        expect(spot).not.toBeNull();
+        await standAt(page, spot.road.x, spot.road.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g?.ready), { timeout: 30000 }).toBe(true);
+        await page.waitForTimeout(1500);
+        // What's over her, every frame
+        await page.evaluate(({ x, y }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            const f = fd.foes.filter(f => f.post && Math.hypot(f.post.x - x, f.post.y - y) < 48 && f.family.startsWith('guards'))
+                .sort((a, b) => Math.hypot(a.post.x - x, a.post.y - y) - Math.hypot(b.post.x - x, b.post.y - y))[0];
+            window.__heeds = [];
+            window.__heedRec = () => { const h = fd.heeds.on(f); window.__heeds.push({ bang: h.bang, words: h.words, barring: !!f.barring, sh: f.shadowK, n: fd.heeds.count, st: f.state }); };
+            gs.events.on('postupdate', window.__heedRec);
+        }, spot.at);
+        const seen = () => page.evaluate(() => { const l = window.__heeds; window.__heeds = []; return l; });
+        expect((await seen()).some(h => h.bang || h.words), 'on the road, nothing over her').toBe(false);
+        await standAt(page, spot.edge.x, spot.edge.y);
+        await page.waitForTimeout(1200);
+        const atEdge = await seen();
+        expect(atEdge.some(h => h.bang), `a step into her trees: her "!" ${JSON.stringify(atEdge.filter((_, i) => i % 10 === 0))}`).toBe(true);
+        expect(atEdge.some(h => h.words), 'but no words yet').toBe(false);
+        await standAt(page, spot.dim.x, spot.dim.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g.barring), { timeout: 10000 }).toBe(true);
+        await page.waitForTimeout(1000);
+        const stopped = await seen();
+        expect(stopped.find(h => h.words)?.words, 'stopping you, her words over her').toBe('No further!');
+        await standAt(page, spot.road.x, spot.road.y);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.heeds.count), { timeout: 10000 }).toBe(0);
+        const left = await seen();
+        expect(left.slice(-5).some(h => h.bang || h.words), 'back on the road, gone').toBe(false);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').events.off('postupdate', window.__heedRec));
+    });
+
     test("walking on in where the wood darkens, the guard warns you once and holds her ground, not flickering between warning you and stepping back (the user's: they were still flashing)", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page, '/', 'all');
@@ -1724,7 +1688,7 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
         await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === 'sylph' && f.foe.ready)), { timeout: 30000 }).toBe(true);
         const about = await page.evaluate(() => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            return { bodies: fd.foes.length, families: [...fd._up].filter(f => f.startsWith('heart')).length, weakest: Math.min(...fd.foes.map(f => f.maxHp)), skulls: fd._marks?.size ?? 0 };
+            return { bodies: fd.foes.length, families: [...fd._up].filter(f => f.startsWith('heart')).length, weakest: Math.min(...fd.foes.map(f => f.maxHp)) };
         });
         expect(about.bodies, 'only the packs near you (weak phones)').toBeLessThan(30);
         expect(about.weakest).toBeGreaterThan(1e6);
@@ -2205,12 +2169,12 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
         });
         expect(guards.length).toBeGreaterThan(0);
         expect(guards.every(Boolean)).toBe(true);
-        // A new hero crossing in is told its foes are far too strong
+        // A new hero crossing in: its card names it (no warning: the user's, November 2026, they didn't like them)
         await standAt(page, WAY_IN.x, WAY_IN.y + 200);
         await page.waitForTimeout(500);
         await standAt(page, WAY_IN.x, WAY_IN.y);
-        await expect.poll(() => card(page), { timeout: 10000 }).toEqual(['Kingdom of Dunmere', 'The Market Fields', 'Its foes are far too strong for you']);
-        // One who beat the Point isn't
+        await expect.poll(() => card(page), { timeout: 10000 }).toEqual(['Kingdom of Dunmere', 'The Market Fields']);
+        // One who beat the Point too
         await pastThePoint(page);
         await standAt(page, WAY_IN.x, WAY_IN.y + 200);
         await expect.poll(() => card(page).then(c => c?.[1]), { timeout: 10000 }).not.toBe('The Market Fields');

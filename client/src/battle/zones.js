@@ -99,11 +99,3 @@ export function strengthFor(fam, step) {
 export function tooStrong(fam, step, strength) {
     return step > 0 && strength < strengthFor(fam, step - 1);
 }
-
-/**
- * A zone's foes far too strong for a hero this strong (its card says so as you cross into it): short of even what its
- * first pack would be one step down its climb (a new hero by the Market Fields; not one who's beaten the Point).
- */
-export function farTooStrong(fam, strength) {
-    return !!ZONES[fam]?.climb && strength < strengthFor(fam, -1);
-}

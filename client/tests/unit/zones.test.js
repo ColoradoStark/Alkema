@@ -3,7 +3,7 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, packEssence, strengthFor, tooStrong, farTooStrong, BOSS_STEP, barred, cleared } from '../../src/battle/zones.js';
+import { ZONES, packEssence, strengthFor, tooStrong, BOSS_STEP, barred, cleared } from '../../src/battle/zones.js';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
 
@@ -128,12 +128,6 @@ describe('The Market Fields, the next zone north of Riverhold', () => {
         expect(Math.max(...cleared)).toBeLessThan(0.75);
         expect(Math.min(...rounds)).toBeGreaterThanOrEqual(1);
         expect(Math.max(...rounds)).toBeLessThanOrEqual(3);
-    });
-
-    test('a new hero is told its foes are far too strong; one who beat the Point is not', () => {
-        expect(farTooStrong('z28', 5 * 16)).toBe(true);
-        const { strength } = road(5, 19, 0);
-        expect(farTooStrong('z28', strength())).toBe(false);
     });
 });
 

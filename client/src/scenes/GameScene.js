@@ -1,5 +1,4 @@
-import { HOME, ZONES, farTooStrong, barred } from '../battle/zones.js';
-import { BANDS } from '../battle/Bands.js';
+import { ZONES, barred } from '../battle/zones.js';
 import { Scene } from 'phaser';
 import { Player } from '../sprites/Player.js';
 import { GameNetworkBridge } from './GameNetworkBridge.js';
@@ -394,16 +393,14 @@ export class GameScene extends Scene {
     /** Walk out through an exit (a town's gate, any door) and you're in the map it leads to. */
     /**
      * Crossing into another of the world's zones (zones.js, the user's: each like a level), a card says which: its name
-     * and kingdom, and that its foes are far beyond you yet where they are (short of even what its first pack wants: a new
-     * hero by the Market Fields, not one who's beaten the Point; zones.js `farTooStrong`). On foot only; the sea is no zone, so
-     * landing in the one you sailed from says nothing.
+     * and kingdom (no warning that its foes are too strong: the user's, November 2026, they didn't like them). On foot
+     * only; the sea is no zone, so landing in the one you sailed from says nothing.
      */
     updateZone(feet) {
         const zone = feet && this.overworld.zoneAt(feet.x, feet.y);
         if (!zone || zone.id === this.zone?.id) return;
         this.zone = zone;
-        const fam = `z${zone.id}`;
-        this.scene.get('UIScene')?.zoneCard?.(zone, zone.id !== HOME && !!BANDS[fam] && !EXPLORE && farTooStrong(fam, this.fieldDemons?._strength?.() ?? 0));
+        this.scene.get('UIScene')?.zoneCard?.(zone);
     }
 
     updateGate() {

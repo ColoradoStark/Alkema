@@ -1460,12 +1460,6 @@ Dungeon Crawl Stone Soup's scroll.png, unchanged, from the same 2010 release
 (releases/Ancient/Oct-5-2010/item/scroll), by the DCSS artists.
   License: CC0
 
-ui/danger-skull.png (over a pack of foes too strong for you): Dungeon Crawl
-Stone Soup's skull.png, cropped to its drawn pixels, otherwise unchanged, from
-the same 2010 release (releases/Ancient/Oct-5-2010/UNUSED/spells/components),
-by the DCSS artists.
-  License: CC0
-
 ======================================================================
 WILDLIFE
 ======================================================================

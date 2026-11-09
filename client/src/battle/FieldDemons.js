@@ -29,8 +29,9 @@ import { getRangedAnimation } from '../sprites/weaponTypes.js';
 import { availableMoves } from '../creator/Showcase.js';
 import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
+import { Heeds } from './Heeds.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, GOLD_SHARE, packEssence, strengthFor, tooStrong, barred } from './zones.js';
+import { ZONES, GOLD_SHARE, packEssence, strengthFor, barred } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -86,9 +87,6 @@ const MIST_APART = 26;          // a boss's walls of mist drawn as soft puffs th
 const MIST_CELL = 16;           // ...found on a grid this fine
 const REGROW_AWAY = 14 * TILE;   // a zone's felled pack comes back only with you this far from it (out of sight)
 const BOSS_IN = [560, 500, 440, 380, 320];   // px off you a boss comes into the world (the user's: just out of sight he was on them too fast), furthest first          // px from a boss that the foes his horn calls come ashore
-const SKULL_LIFT = 8;           // px the skull over a pack too strong for you floats above its tallest head
-const SKULL_BOB = 2;            // px it bobs, up and down
-const WARN = 8 * TILE;           // nearing a climb's pack too strong for you, you're told so this far off
 // The first area's guards warn before they fight (the user's, November 2026: stepping into the wood by night, they
 // were killed before they knew it): a wood's guard lets you NOTICE_DEEP tiles in, where its gloom begins (the user's:
 // at the very edge was still too near); then, within BAR_DEEP tiles of its edge, or of where you crossed into a guarded
@@ -121,6 +119,9 @@ const BAR_WORDS = {
 // the way in and bars you as a guard does (the user's: always the same for an uncleared zone); deeper, or struck, the
 // zone fights
 const LOCK_REACH = 16 * TILE;
+// ...and what each says in the bubble over its head as it stops you, short (Heeds.js: the whole warning's in the notice)
+const SHOUT = 'No further!';
+const SHOUTS = { marksman: 'One more step...', maskedfighter: 'Turn back!', z28: 'Turn back!', z20: 'Go back!', z19: 'Halt!' };
 const LOCK_WORDS = {
     z28: 'One of the Duke\'s men blocks the road: "None pass to Stonebridge who haven\'t beaten the Goblin Rouser at the Saltmere Point. Turn back."',
     z20: 'An ogre blocks the way over the bridge: "Valley not for little ones. Beat the Duke\'s knight first. Go back."',
@@ -205,6 +206,7 @@ export class FieldDemons {
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
         this.shots = [];          // arrows and spells in flight (_launch, _fly)
+        this.heeds = new Heeds(scene);       // a guard's "!" as she sees you coming, her words over her as she stops you
         this._up = new Set();      // the bands (FAMILIES) come or coming: you're near their stretch of coast
         this._coming = new Set();  // those whose sheets are loading
         this._near = new Set();
@@ -309,8 +311,7 @@ export class FieldDemons {
         for (let left = Math.min(delta, MAX_FRAME_MS); left > 0 && !(this._freeze > 0) && this.foes.length; left -= STEP_MS) {
             this._tick(Math.min(left, STEP_MS), feet);
         }
-        this._warn(feet);
-        this._skulls();
+        this.heeds.update(this.foes);
         this._bars();
         // A boss after you: his bar along the bottom of the screen (the user's), not over his head
         const boss = this.foes.find(f => f.spec.boss && f.met && f.hp > 0 && f.state !== 'home' && f.state !== 'post');
@@ -431,7 +432,6 @@ export class FieldDemons {
             f.foe.destroy();
         }
         this.foes = this.foes.filter(f => f.family !== fam);
-        this._skulls();         // (theirs go with them)
         this._forget(fam);
     }
 
@@ -456,12 +456,11 @@ export class FieldDemons {
     /** They go, and their sheet with them, and the spells' effects (you've left the coast, or gone into a place). */
     release() {
         this._arenaDown();
-        this._warned?.clear();
         this.scene.scene.get('UIScene')?.bossBar?.hide();
         this.boss = null;
         this.provoked = false;      // (gone into a place: the guards forget you)
         this.dared.clear();
-        this._unmark();
+        this.heeds.clear();
         for (const fam of [...this._up]) this._dismiss(fam);
         if (this._freeze > 0) this.scene.anims.resumeAll();        // (a hit-stop never outlives them)
         this._freeze = 0;
@@ -623,88 +622,6 @@ export class FieldDemons {
     _strength() {
         const ui = this.scene.scene.get('UIScene');
         return (ui?.inventory?.stats?.attack ?? 5) * (ui?.hp?.max ?? 1);
-    }
-
-    /**
-     * Nearing a pack up a climb that's too strong for you, you're told so, once a visit (and the first time, shown
-     * the Upgrade page): the user's, "upgrade to beat this".
-     */
-    _warn(feet) {
-        this._warned ??= new Set();
-        for (const [pack, p] of PACKS.entries()) {
-            if (!ZONES[p.family]?.climb || p.guard || p.lair || Math.hypot(p.at[0] - feet.x, p.at[1] - feet.y) > WARN) continue;      // (the first area's guards stand by the road all along it: not a pack up a climb to upgrade for)
-            const step = this._stepOf(pack), seen = `${pack}:${step}`;
-            if (!step || this._warned.has(seen) || this._locked(p.family)) continue;      // (a barred zone's foes say so themselves)
-            if (this._beaten(pack)) continue;
-            // (one you've taken on still standing is the one you're at: fighting one, the user was told the one beyond
-            // it was too strong, just after upgrading)
-            if ([...this.order.keys()].some(k => PACKS[k].family === p.family && !this._beaten(k))) continue;
-            this._warned.add(seen);
-            if (!tooStrong(p.family, step, this._strength())) continue;
-            const ui = this.scene.scene.get('UIScene');
-            const words = 'These foes are too strong for you. Upgrade first!';
-            audio.play('error', { volume: 0.5 });
-            if (!ui?.tutorUpgrade?.(`${words} Spend your essence on the Upgrade page.`)) ui?.notice?.(words, 4000);
-        }
-    }
-
-    /**
-     * A skull floats over each pack too strong for you, glowing (the user's, November 2026, after The Witcher 3's
-     * skull: you see from afar which pack to leave for later, no words): a pack up a climb (not the first area's
-     * guards), its foes still at their posts (roused, the fight's on and it goes), and gone once you're strong
-     * enough for it (`tooStrong`, as `_warn`). Over the night's dark (`FX_DEPTH`): a warning shows at any hour.
-     */
-    _skulls() {
-        const marks = this._marks ??= new Map();
-        const want = new Set();
-        if (this.scene.textures.exists('danger-skull')) {
-            const strength = this._strength(), bob = Math.sin(this.scene.time.now / 380) * SKULL_BOB;
-            for (const [k, p] of PACKS.entries()) {
-                if (!this._up.has(p.family) || p.guard || !ZONES[climbOf(p.family)]?.climb || !tooStrong(climbOf(p.family), this._stepOf(k), strength)) continue;      // (the wood's heart's too: its climb's the Point's)
-                const mine = this.foes.filter(f => f.pack === k && f.hp > 0);
-                if (!mine.length || mine.some(f => f.state !== 'post' || !f.foe.ready)) continue;
-                want.add(k);
-                let m = marks.get(k);
-                if (!m) {
-                    m = { glow: this.scene.add.image(0, 0, this._glowTex()).setDepth(FX_DEPTH).setAlpha(0.8),
-                        skull: this.scene.add.image(0, 0, 'danger-skull').setScale(2).setDepth(FX_DEPTH + 0.1) };
-                    marks.set(k, m);
-                }
-                const x = mine.reduce((t, f) => t + f.foe.x, 0) / mine.length;
-                const y = Math.min(...mine.map(f => f.foe.y - (f.foe.tall || 48))) - SKULL_LIFT - 17 + bob;
-                m.skull.setPosition(x, y);
-                m.glow.setPosition(x, y).setScale(1 + bob / 20);
-            }
-        }
-        for (const [k, m] of marks) if (!want.has(k)) {
-            m.glow.destroy();
-            m.skull.destroy();
-            marks.delete(k);
-        }
-    }
-
-    /** Every skull over a pack goes. */
-    _unmark() {
-        for (const m of this._marks?.values() || []) {
-            m.glow.destroy();
-            m.skull.destroy();
-        }
-        this._marks?.clear();
-    }
-
-    /** A soft red glow behind the skull (made here: a blur, no art), let go with the spells' effects (forgetFx). */
-    _glowTex() {
-        const key = 'danger-glow', size = 64;
-        if (this.scene.textures.exists(key)) return key;
-        const tex = this.scene.textures.createCanvas(key, size, size);
-        const ctx = tex.getContext(), g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-        g.addColorStop(0, 'rgba(220, 30, 20, 0.75)');
-        g.addColorStop(0.45, 'rgba(200, 20, 15, 0.35)');
-        g.addColorStop(1, 'rgba(180, 10, 10, 0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, size, size);
-        tex.refresh();
-        return key;
     }
 
     /**
@@ -1176,8 +1093,10 @@ export class FieldDemons {
         }
         // (said again only after a while, whoever bars you: said each time one took over, it flashed)
         const now = this.scene.time.now;
+        this.heeds.seen(f);
         if (!(now - this._barSaid < BAR_SAY_MS)) {
             this.say(words ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
+            this.heeds.shout(f, SHOUTS[f.guard ? f.kind : f.family] ?? SHOUT);
             this._barSaid = now;
         }
         if (!f.barring) f.barSince = now;
@@ -1205,6 +1124,7 @@ export class FieldDemons {
         const k = f.shadowK;
         const tx = post.x + along.x * k - (deeper?.x ?? 0) * fore, ty = post.y + along.y * k - (deeper?.y ?? 0) * fore, g = Math.hypot(tx - foe.x, ty - foe.y);
         f.barring = false;
+        this.heeds.seen(f);         // (her "!": she's seen you coming)
         const left = Math.abs(you.x - foe.x) > BAR_TURN ? you.x < foe.x : foe.left ?? you.x < foe.x, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
         if (g > 3) return this._step(f, (tx - foe.x) / g, (ty - foe.y) / g, dt, Math.min(RUSH, g / (f.spec.speed * dt || 1)), facing);
         this._step(f, 0, 0, dt);
@@ -1969,6 +1889,7 @@ export class FieldDemons {
         f.state = 'windup';
         f.t = c.windup * (f.furious ? f.spec.fury.quicker : 1);
         f.charging = { dx: dx / d, dy: dy / d, x: foe.x, y: foe.y, len: this._runOf(f, dx / d, dy / d) };
+        this._laneMark(f);          // (marked as it's set: drawn only on the next step, a frame's end could show him charging with none)
         foe.walking = false;
         foe.halt();
         foe.face(you.x, you.y);
