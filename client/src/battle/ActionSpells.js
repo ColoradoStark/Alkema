@@ -61,7 +61,7 @@ function streak(battle, a, b, colour) {
 function stagger(battle, f, ms, words = 'Staggered') {
     f.stun = Math.max(f.stun || 0, ms);
     if (f.state === 'windup') battle._calm(f);
-    if (words) battle.scene.effects.floatText(f.foe.x, f.foe.y - f.foe.tall - 4, words, '#e0d0b0', 13);
+    if (words) battle._pop(f.foe.x, f.foe.y - f.foe.tall - 4, words, '#e0d0b0', 13);
 }
 
 export const ACTION_SPELLS = {
@@ -321,7 +321,7 @@ export const ACTION_SPELLS = {
                     o.ward = at.lasts * 1000;
                     o.wardCut = at.cut;
                 }
-                this.scene.effects.floatText(s.x, s.y - 34, spell.name, '#fff6c0', 14);
+                this.scene.effects.floatText(s.x, s.y - 56, spell.name, '#fff6c0', 14);
             }
         },
     },
@@ -334,7 +334,7 @@ export const ACTION_SPELLS = {
             this._fx('flare', s.x, s.y - 6, { scale: 1.3, tint: colour });
             this._rise(s.x, s.y + 10, colour, 16);
             m.rage = { t: at.lasts * 1000, hit: at.hit || 1, hurt: at.hurt || 1, speed: at.speed || 1, colour };
-            this.scene.effects.floatText(s.x, s.y - 34, `${spell.name}!`, '#ffd0a0', 15);
+            this.scene.effects.floatText(s.x, s.y - 56, `${spell.name}!`, '#ffd0a0', 15);
         },
     },
 
@@ -424,7 +424,7 @@ export const ACTION_SPELLS = {
                 f.markMore = at.more;
                 this._fx('flare', f.foe.x, f.foe.y - 20, { tint: RED, scale: 0.9 });
                 this._sparkle(f.foe.x, f.foe.y - 22, RED, 10);
-                this.scene.effects.floatText(f.foe.x, f.foe.y - f.foe.tall - 4, 'Marked', '#ff8080', 14);
+                this._pop(f.foe.x, f.foe.y - f.foe.tall - 4, 'Marked', '#ff8080', 14);
             }
         },
     },
@@ -489,7 +489,7 @@ export const ACTION_SPELLS = {
                 f.fear = at.fear;
                 if (f.state === 'windup') this._calm(f);
             }
-            this.scene.effects.floatText(f.foe.x, f.foe.y - f.foe.tall - 4, at.fear ? 'Afraid' : 'Cursed', '#d0a0ff', 14);
+            this._pop(f.foe.x, f.foe.y - f.foe.tall - 4, at.fear ? 'Afraid' : 'Cursed', '#d0a0ff', 14);
         },
     },
 

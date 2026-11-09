@@ -831,6 +831,41 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
 });
 
 test.describe('Foes that close in keep their heads', () => {
+    test("surrounded, the numbers keep off you (the user's, November 2026: a blow's, the essence's and the gold's were all over them and the foes about them, and they couldn't see a way out): no part of one over a foe comes up nearer your middle than POP_CLEAR (56), past the foes in reach of you, and floats on away from you, big ones read short", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await atThePoint(page);
+        const got = await page.evaluate(async () => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
+            const frame = () => new Promise(r => requestAnimationFrame(r));
+            const labels = [], was = gs.effects.floatText.bind(gs.effects);
+            gs.effects.floatText = (...a) => { const l = was(...a); labels.push(l); return l; };
+            const ring = fd.foes.filter(f => f.hp > 0).slice(0, 6);
+            for (const f of fd.foes) f.stun = 1e9;
+            ring.forEach((f, k) => {
+                const a = k / ring.length * Math.PI * 2;
+                f.foe.sprite.setPosition(me.x + Math.cos(a) * 34, me.y + 23 + Math.sin(a) * 30 - 23);
+            });
+            for (const f of ring) { f.hp = f.maxHp = 1e15; fd._strikeFoe(f, 123456789012345, me); }
+            for (const f of ring.slice(0, 3)) { f.hp = 0; fd._reward(f); }
+            await frame();
+            const start = labels.map(l => ({ text: l.text, x: l.x, y: l.y, w: l.width, h: l.height }));
+            await new Promise(r => setTimeout(r, 700));
+            const later = labels.map(l => ({ x: l.x, y: l.y }));
+            return { me: { x: me.x, y: me.y }, start, later };
+        });
+        await page.screenshot({ path: 'tests/zzshots/numbers-surrounded.png' });
+        // (from your middle to the nearest of its box, and its middle's way out later)
+        const box = (l) => Math.hypot(Math.max(0, Math.abs(l.x - got.me.x) - l.w / 2), Math.max(0, Math.abs(l.y - got.me.y) - l.h / 2));
+        const near = got.start.map((l, k) => ({ ...l, edge: box(l), d: Math.hypot(l.x - got.me.x, l.y - got.me.y), d2: Math.hypot(got.later[k].x - got.me.x, got.later[k].y - got.me.y) }));
+        expect(near.length).toBeGreaterThan(8);
+        for (const l of near) {
+            expect(l.edge, JSON.stringify(l)).toBeGreaterThanOrEqual(55.5);
+            expect(l.d2, JSON.stringify(l)).toBeGreaterThanOrEqual(l.d);
+        }
+        expect(near.filter(l => /^\d/.test(l.text)).every(l => l.text === '123T'), JSON.stringify(near)).toBe(true);
+    });
+
     test("roused about you, no foe jams on the spot turning back and forth (the user's: bumping into each other, a couple of pixels one way and the other, flashing, getting nowhere)", async ({ page }) => {
         test.setTimeout(240000);
         await enterWorld(page);

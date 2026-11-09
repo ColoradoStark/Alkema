@@ -40,6 +40,8 @@ const ELF_FX = 1.25;            // grown as Wesnoth's units are (battlegen.py)
 // (Bands.js, by its Wesnoth level), and what it's worth (`bounty`, off a climb)
 const KINDS = BAND_KINDS, HITS = BAND_HITS, HURTS = BAND_HURTS, PAY = BAND_PAY;
 // (the user never fell below 80% at a third of HURTS, October 2026: a fight on the road should be one you can lose)
+const POP_CLEAR = 56;          // no part of a number over a foe comes up nearer your middle than this, past the foes in reach of you (floating on out away from you)
+const OVER_YOU = 56;           // and one about you (a blow on you, a mend) above your head, over your name, not on you
 const SOFTER = 1.4;             // every blow 30% less than HURTS says (the user's, October 2026: the packs coming round them made it much harder), then twice that (the user's, November 2026: they didn't hurt enough)
 const COMBO_MS = 4000;          // a kill within this of the last keeps a combo going
 const COMBO_STEP = 0.25, COMBO_MAX = 3;     // each kill in it pays a quarter more, up to three times
@@ -554,8 +556,8 @@ export class FieldDemons {
         if (this._locked(f.family)) this.dared.add(f.family);      // (a barred zone struck: it fights, all of it)
         audio.play('hit_blade', { volume: 0.8 });
         fx.impact('metal', foe.x, foe.y - 22, foe.y);
-        fx.floatText(foe.x, foe.y - foe.tall, String(damage), colour, words ? 24 : 20);
-        if (words) fx.floatText(foe.x, foe.y - foe.tall - 18, words, colour, 14);
+        this._pop(foe.x, foe.y - foe.tall, short(damage), colour, words ? 24 : 20);
+        if (words) this._pop(foe.x, foe.y - foe.tall - 18, words, colour, 14);
         this._rouse(f.pack);
         foe.tint(0xffffff, true);
         this.scene.time.delayedCall(80, () => foe.tint(f.state === 'windup' ? 0xff5050 : null));
@@ -718,8 +720,8 @@ export class FieldDemons {
         // Its essence, all it's worth, for the Upgrade page (the user's: gold is for town), and a little gold
         inv?.gather(worth);
         this._sparkle(x, y - f.foe.tall / 2, 0xb884ff, 14);
-        fx?.floatText(x, y - f.foe.tall + 4, `+${short(worth)} essence`, '#d7b8ff', 18);
-        if (this.combo > 1) this.scene.time.delayedCall(220, () => fx?.floatText(x, y - f.foe.tall - 16, `Combo ×${this.combo}`, '#ffb347', 16));
+        this._pop(x, y - f.foe.tall + 4, `+${short(worth)} essence`, '#d7b8ff', 18);
+        if (this.combo > 1) this.scene.time.delayedCall(220, () => this._pop(x, y - f.foe.tall - 16, `Combo ×${this.combo}`, '#ffb347', 16));
         const coin = Math.ceil(worth * GOLD_SHARE);
         if (f.spec.chest) {     // (the champion, the warlord)
             this.scene.chests?.drop(x, y, { gold: coin, item: rollLoot(4).item });
@@ -729,7 +731,7 @@ export class FieldDemons {
         inv?.loot(gold);
         audio.play('coins');
         fx?.coinBurst(x, y - 14, y + 6);
-        this.scene.time.delayedCall(380, () => fx?.floatText(x + 14, y - f.foe.tall + 10, `+${gold} gold`, '#fbf236', 14));
+        this.scene.time.delayedCall(380, () => this._pop(x + 14, y - f.foe.tall + 10, `+${short(gold)} gold`, '#fbf236', 14));
     }
 
     /** What the cheapest upgrade you could buy next costs (what the demons' gold is reckoned in). */
@@ -1347,6 +1349,15 @@ export class FieldDemons {
     }
 
     /**
+     * A number or word over a foe, kept off you (`POP_CLEAR` from your middle) and floating on out away from you: with
+     * them all about you, you can still see yourself and who's in your way (the user's, November 2026).
+     */
+    _pop(x, y, text, colour, size) {
+        const s = this.scene.localPlayer?.sprite;
+        this.scene.effects?.floatText(x, y, text, colour, size, s ? { x: s.x, y: s.y, clear: POP_CLEAR } : null);
+    }
+
+    /**
      * A blow on you: less half your defence (and a Shield Wall's share, more in a Berserk rage; a ward
      * turns it aside); at no hit points left you fall, and come to where you set out.
      */
@@ -1358,7 +1369,7 @@ export class FieldDemons {
             m.guard = GUARD_MS / 2;
             audio.play('block', { volume: 0.7 });
             this._sparkle(s.x, s.y, 0xfff6c0, 10);
-            this.scene.effects.floatText(s.x, s.y - 29, 'Warded', '#fff6c0', 16);
+            this.scene.effects.floatText(s.x, s.y - OVER_YOU, 'Warded', '#fff6c0', 16);
             return;
         }
         damage = Math.max(1, damage - Math.floor((m.defence || 0) / 2));
@@ -1366,7 +1377,7 @@ export class FieldDemons {
         if (m.rage) damage = Math.round(damage * (m.rage.hurt || 1));                   // Berserk
         ui.hp.now = Math.max(0, ui.hp.now - damage);
         m.guard = GUARD_MS;
-        this.scene.effects.floatText(s.x, s.y - 29, String(damage), '#ff6a5a', 20);
+        this.scene.effects.floatText(s.x, s.y - OVER_YOU, short(damage), '#ff6a5a', 20);
         me.playSound?.('hurt');
         s.flashHit?.(120);
         this._knock(me, from, KNOCK);
@@ -2189,7 +2200,7 @@ export class FieldDemons {
                 if ((f.poison.tick -= delta) <= 0) {
                     f.poison.tick = 1000;
                     f.hp = Math.max(0, f.hp - f.poison.dmg);
-                    this.scene.effects.floatText(f.foe.x, f.foe.y - f.foe.tall, String(f.poison.dmg), '#99e550', 16);
+                    this._pop(f.foe.x, f.foe.y - f.foe.tall, short(f.poison.dmg), '#99e550', 16);
                     if (f.hp <= 0) this._slay(f);
                 }
                 if (f.poison.t <= 0) f.poison = null;
@@ -2224,7 +2235,7 @@ export class FieldDemons {
         this.glints.setParticleTint(0xc8ffc8);
         this.glints.explode(6, s.x, s.y);
         them.life.now = Math.min(them.life.max, them.life.now + mend);
-        this.scene.effects.floatText(s.x, s.y - 30, `+${mend}`, '#7ee07e', 20);
+        this.scene.effects.floatText(s.x, s.y - OVER_YOU, `+${short(mend)}`, '#7ee07e', 20);
     }
 
     _feet(m) { return { x: m.who.sprite.x, y: m.who.sprite.y + FEET }; }

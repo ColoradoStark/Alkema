@@ -142,10 +142,13 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
     /** A new hero up the whole road: each zone's packs in turn, then rounds of its top two till they're as strong as its boss, then him. */
     function walk(a, h) {
         const { u, inventory, strength } = fresh(a, h);
-        const short = [], rounds = {};
+        const short = [], rounds = {}, feel = [];
         for (const [zone, packs] of ROAD) {
             for (let step = 0; step < packs; step++) {
                 if (zone !== 'z35' && strength() < strengthFor(zone, step)) short.push(`${a}/${h} short for ${zone} pack ${step + 1} (${(strength() / strengthFor(zone, step)).toFixed(2)})`);
+                const s = u.apply(BASE(a, h)), Z = ZONES[zone];
+                // (your blows to fell one, and its blows to fell you, against what its zone's made for)
+                feel.push({ at: `${a}/${h} ${zone} pack ${step + 1}`, fell: Z.attack * Z.climb.hp ** step / s.attack, fall: s.hp.max / (Z.hp * Z.climb.hurt ** step), zone });
                 inventory.essence += packEssence(zone, step);
                 while (u.buy(u.current.id).ok);
             }
@@ -159,16 +162,24 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
             inventory.essence += packEssence(zone, BOSS_STEP[zone]);       // (its boss)
             while (u.buy(u.current.id).ok);
         }
-        return { short, rounds };
+        return { short, rounds, feel };
     }
 
     test("each takes up where the last's boss leaves off, and is barred till the zone before it is cleared", () => {
-        expect(strengthFor('z20', 0)).toBeCloseTo(strengthFor('z28', BOSS_STEP.z28 + 1));
-        expect(strengthFor('z19', 0)).toBeCloseTo(strengthFor('z20', BOSS_STEP.z20 + 1));
+        expect(strengthFor('z20', 0) / strengthFor('z28', BOSS_STEP.z28 + 1)).toBeCloseTo(1);
+        expect(strengthFor('z19', 0) / strengthFor('z20', BOSS_STEP.z20 + 1)).toBeCloseTo(1);
         expect(barred('z20', { 'cleared-z35': true }, 80)).toBe(true);
         expect(barred('z20', { 'cleared-z28': true }, 80)).toBe(false);
         expect(barred('z19', { 'cleared-z28': true }, 80)).toBe(true);
         expect(barred('z19', { 'cleared-z20': true }, 80)).toBe(false);
+    });
+
+    test("a fight on the road stays a fight like the Point's (the user's, November 2026: an ogre took 50 to 100 blows and 20 or 30 of its own hardly hurt): your attack and hit points both keep up with what its packs are made for, never one far ahead and the other far behind", () => {
+        const off = HEROES.flatMap(([a, h]) => walk(a, h).feel).filter(f => ['z20', 'z19'].includes(f.zone))
+            // (within what new heroes differ by: the sturdiest, 31 hit points, starts at twice the Point's hero's)
+            .filter(f => f.fell > 5 || f.fell < 1 / 5 || f.fall > 5 || f.fall < 1 / 5)
+            .map(f => `${f.at}: blows to fell x${f.fell.toFixed(1)}, to fall x${f.fall.toFixed(1)}`);
+        expect(off).toEqual([]);
     });
 
     test('every new hero is strong enough for each pack in turn all the way to Stonebridge, spending what the last paid, and grinds a round or few for each boss', () => {

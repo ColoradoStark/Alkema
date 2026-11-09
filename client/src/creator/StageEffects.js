@@ -148,16 +148,36 @@ export class StageEffects {
         this.coins.explode(16, x, y);
     }
 
-    /** A number (or word) that pops up and floats away. */
-    floatText(x, y, text, color = '#fff6e0', size = 18) {
+    /**
+     * A number (or word) that pops up and floats away. Given `away` ({ x, y, clear }: the hero, in a fight), no part of
+     * it comes up nearer them than `clear` (a wide one moved further out) and it floats on out away from them, not up
+     * over them (the user's, November 2026: surrounded, the numbers were all over them and the foes about them, and
+     * they couldn't see a way out).
+     */
+    floatText(x, y, text, color = '#fff6e0', size = 18, away = null) {
         const label = this.scene.add.text(x, y, text, {
             fontFamily: 'Alagard', fontSize: `${size}px`, color, stroke: '#222034', strokeThickness: 4,
-        }).setOrigin(0.5).setDepth(this.depth + 1).setScale(0.6);
+        }).setOrigin(0.5).setDepth(this.depth + 1);
+        let toX = x, toY = y - 34;
+        if (away) {
+            let dx = x - away.x, dy = y - away.y, d = Math.hypot(dx, dy);
+            if (d < 1) { dx = 0; dy = -1; d = 1; }
+            const ux = dx / d, uy = dy / d;
+            // (moved on out till the nearest of its box is `clear` from them)
+            const w = label.width / 2, h = label.height / 2;
+            const gap = (t) => Math.hypot(Math.max(0, Math.abs(ux * t) - w), Math.max(0, Math.abs(uy * t) - h));
+            let at = d;
+            while (gap(at) < away.clear && at < d + 400) at += 2;
+            label.setPosition(away.x + ux * at, away.y + uy * at);
+            toX = label.x + ux * 30; toY = label.y + uy * 30 - 8;
+        }
+        label.setScale(0.6);
         this.scene.tweens.add({ targets: label, scale: 1, duration: 120, ease: 'Back.easeOut' });
         this.scene.tweens.add({
-            targets: label, y: y - 34, alpha: 0, delay: 350, duration: 650, ease: 'Sine.easeIn',
+            targets: label, x: toX, y: toY, alpha: 0, delay: 350, duration: 650, ease: 'Sine.easeIn',
             onComplete: () => label.destroy(),
         });
+        return label;
     }
 
     /** Fly a projectile from one point to another, then call onHit. */

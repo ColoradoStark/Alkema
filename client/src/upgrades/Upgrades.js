@@ -121,10 +121,10 @@ export const HEROES = [...OWN, ...GODDESSES];
  */
 export const REWARD_AT = (k) => (k ? 3 * k + 1 : 1);
 
-/** A big number as it reads: 9500, then 12.3K, 4.5M, 6B, 7T, 8Qa... and past those, 1.2e48. */
+/** A big number as it reads: 950, then 1.5K, 12.3K, 4.5M, 6B, 7T, 8Qa... and past those, 1.2e48 (the user's: from a thousand on). */
 const UNITS = ['K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid'];
 export function short(n) {
-    if (n < 10000) return Math.round(n).toLocaleString('en-GB');
+    if (n < 1000) return String(Math.round(n));
     const e = Math.floor(Math.log10(n) / 3);
     if (e > UNITS.length) return n.toExponential(1).replace('+', '');
     const v = n / 1000 ** e;

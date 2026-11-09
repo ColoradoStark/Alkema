@@ -32,11 +32,20 @@ ZONES.z28 = {
 // The road on to Stonebridge (the user's, November 2026: zones 20 and 19, two boss fights and a lot of levelling up),
 // each zone's climb taking up where the last's boss leaves off (its first pack the step past him), as the Market
 // Fields' does, and as gentle a step, its packs coming back to grind for its boss, made for the hero three packs past
-// its last: the Riverlands (20) over the bridge by Highmarket, sixteen packs; the Meadowlands (19), eighteen
-const onFrom = (prev, at, after) => ({
-    attack: prev.attack * prev.climb.hp ** at, hp: prev.hp * prev.climb.hurt ** at, defence: prev.defence,
-    climb: { ...prev.climb, essence: prev.climb.essence * prev.climb.more ** at }, regrow: 90000, after,
-});
+// its last: the Riverlands (20) over the bridge by Highmarket, sixteen packs; the Meadowlands (19), eighteen.
+// Each is made for a hero as strong as that, split between attack and hit points as a new hero's are (`SPLIT`), and
+// its packs grow in health and blow alike (each the root of the strength a step asks): the Upgrade page grows your
+// attack and hit points about alike, and with health growing 2.3 times a pack and blows 1.9 the two drifted apart
+// pack after pack, so by the Riverlands an ogre took 50 to 100 blows and 20 or 30 of its own hardly hurt (the user's,
+// November 2026). The strength each pack asks, and so the prices and pay, are as they were.
+const SPLIT = POINT.attack / POINT.hp;
+const onFrom = (prev, at, after) => {
+    const strength = prev.attack * prev.hp * (prev.climb.hp * prev.climb.hurt) ** at, grow = Math.sqrt(prev.climb.hp * prev.climb.hurt);
+    return {
+        attack: Math.sqrt(strength * SPLIT), hp: Math.sqrt(strength / SPLIT), defence: prev.defence,
+        climb: { ...prev.climb, hp: grow, hurt: grow, essence: prev.climb.essence * prev.climb.more ** at }, regrow: 90000, after,
+    };
+};
 
 /** The step a zone's boss is made for: the Point's at its last pack's, the others' three past their last. */
 export const BOSS_STEP = { z35: 6, z28: 16, z20: 18, z19: 20 };

@@ -161,3 +161,16 @@ describe('Hit points', () => {
         expect(u.healPrice(0)).toBe(0);
     });
 });
+
+describe('Big numbers read short', () => {
+    test("from a thousand on, K, M, B, T... (the user's, November 2026: a blow's number ran to fifteen digits over the fight)", async () => {
+        const { short } = await import('../../src/upgrades/Upgrades.js');
+        expect(short(999)).toBe('999');
+        expect(short(1000)).toBe('1K');
+        expect(short(1530)).toBe('1.5K');
+        expect(short(48200)).toBe('48.2K');
+        expect(short(3_400_000)).toBe('3.4M');
+        expect(short(7_000_000_000)).toBe('7B');
+        expect(short(123_456_789_012_345)).toBe('123T');
+    });
+});

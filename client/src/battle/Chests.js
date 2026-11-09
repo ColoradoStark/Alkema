@@ -2,6 +2,7 @@
 // what's inside is yours (gold, and sometimes something a shop will buy).
 
 import { sortDepth } from '../world/Forest.js';
+import { short } from '../upgrades/Upgrades.js';
 import { wrapDelta } from '../world/Overworld.js';
 import { audio } from '../audio/audio.js';
 import { HEART_CHEST } from './Bands.js';
@@ -102,7 +103,7 @@ export class Chests {
         s.time.delayedCall(70, () => sprite.active && sprite.setFrame(CHEST_FRAMES.open));
         const x = sprite.x, y = sprite.y;
         if (gold) s.effects?.coinBurst(x, y - 18, y + 4);
-        if (gold) s.effects?.floatText(x, y - 34, `+${gold} gold`, '#fbf236', 18);
+        if (gold) s.effects?.floatText(x, y - 34, `+${short(gold)} gold`, '#fbf236', 18);
         const name = inventory?.item(item)?.name;
         if (name) s.time.delayedCall(450, () => s.effects?.floatText(x, y - 34, name, '#fff6e0', 16));
         s.time.delayedCall(CHEST_STAYS_MS, () => {
