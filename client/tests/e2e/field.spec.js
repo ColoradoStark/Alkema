@@ -1463,7 +1463,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         await standAt(page, spot.deep.x, spot.deep.y);
         await expect.poll(() => guard(page, spot.at).then(g => g.state), { timeout: 10000 }).toMatch(/chase|windup|recover/);
         const g = await guard(page, spot.at);
-        expect(g.kind, 'the elf, no woses (the user\'s)').toBe('sorceress');
+        expect(g.kind, 'Fernwick Dales\' elf, the plan\'s, no woses').toBe('shamanguard');
         expect(g.hp).toBeGreaterThan(1e6);
         // Back on the road: it turns for home, never stepping out of the trees
         await standAt(page, spot.road.x, spot.road.y);
@@ -1760,9 +1760,12 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
         await expect.poll(() => page.evaluate(() => new Set(window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).map(f => f.kind)).size), { timeout: 30000 }).toBeGreaterThanOrEqual(3);
         // Wesnoth's own (data/core/units/elves): its halo about her as she casts, the bolt she throws
         const WESNOTH = { sorceress: ['faerie-halo', 'ice-missile'], enchantress: ['faerie-halo', 'ice-missile'], sylph: ['faerie-halo', 'ice-missile'],
-                          shaman: ['nature-halo', 'entangle'], druid: ['nature-halo', 'thorns'], shyde: ['nature-halo', 'thorns'] };
+                          shaman: ['nature-halo', 'entangle'], druid: ['nature-halo', 'thorns'], shyde: ['nature-halo', 'thorns'],
+                          shamanguard: ['nature-halo', 'entangle'], druidguard: ['nature-halo', 'thorns'], enchantressguard: ['faerie-halo', 'ice-missile'] };
         const seen = await page.evaluate(async () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            const here = new Set(fd.foes.map(f => f.family));
+            fd.only = (family) => here.has(family);          // (no band summoned meanwhile, its elves shooting: only those here now)
             for (const f of fd.foes) { f.stun = 1e9; f.damage = 0; }          // (held: each cast by hand; harmless, as a bolt far up the climb fells you and the band goes)
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             const playing = () => gs.children.list.filter(o => o.active && o.anims?.currentAnim).map(o => o.anims.currentAnim.key);
@@ -1773,6 +1776,7 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
             fd._launch = (...args) => { launch(...args); const s = fd.shots[fd.shots.length - 1]; shot ??= { kind: s.kind, flying: s.sprite.anims?.currentAnim?.key ?? s.sprite.frame.name }; };
             for (const kind of [...new Set(fd.foes.filter(f => f.foe.ready).map(f => f.kind))]) {
                 shot = null;
+                for (const o of fd.foes) { o.stun = 1e9; o.damage = 0; }          // (any come since held too: a guard's band summoned meanwhile shot)
                 const f = fd.foes.find(o => o.kind === kind && o.foe.ready);
                 ui.hp.now = ui.hp.max;
                 const before = playing().filter(k => /halo/.test(k));
@@ -1802,7 +1806,7 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
         await enterWorld(page, '/', 'all');
         await keepUp(page);
         const kinds = await page.evaluate(async () => { const B = await import('/src/battle/Bands.js'); return Object.values(B.BANDS).flat().filter(p => p.guard).map(p => ({ at: p.at, kind: p.band[0], woods: p.woods })); });
-        for (const p of kinds) if (p.woods) expect(['sorceress', 'marksman'], 'in the trees an elf').toContain(p.kind);
+        for (const p of kinds) if (p.woods) expect(['shamanguard', 'druidguard', 'sorceress', 'enchantressguard', 'marksman'], 'in the trees an elf').toContain(p.kind);
         expect(kinds.filter(p => p.kind === 'whitemage').length, 'the Duskwood mages').toBeGreaterThan(0);
         const post = kinds.find(p => p.kind === 'whitemage').at;
         await standAt(page, post[0], post[1] + 120);
@@ -2448,8 +2452,8 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
 
 test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (the user's, November 2026: zones 20 and 19, two boss fights, a lot of levelling up)", () => {
     const ZONES = {
-        z20: { id: 20, packs: 16, kinds: ['ancientogre', 'greatwolf', 'ogre', 'wolf', 'youngogre'], boss: 'ancientogre', name: 'ANCIENT OGRE', sheet: 'ogre', call: ['wolf', 'youngogre', 'youngogre'], at: 0.45 },
-        z19: { id: 19, packs: 18, kinds: ['bowman', 'heavyinfantry', 'ironmauler', 'longbowman', 'shocktrooper', 'warmaster'], boss: 'warmaster', name: 'MARSHAL KRELL', sheet: 'ironmauler', call: ['heavyinfantry', 'longbowman', 'shocktrooper'], at: 0.55 },
+        z20: { id: 20, packs: 16, kinds: ['ancientogre', 'greatogre', 'ogre', 'youngogre'], boss: 'ancientogre', name: 'ANCIENT OGRE', sheet: 'ancientogre', call: ['greatogre', 'ogre', 'ogre'], at: 0.45 },
+        z19: { id: 19, packs: 18, kinds: ['heavyinfantry', 'ironmauler', 'masterinfantryman', 'shocktrooper'], boss: 'masterinfantryman', name: 'MASTER INFANTRYMAN', sheet: 'masterinfantryman', call: ['heavyinfantry', 'heavyinfantry', 'shocktrooper'], at: 0.55 },
     };
     const zone = (page, fam) => page.evaluate((fam) => import('/src/battle/FieldDemons.js').then(m => ({
         PLACES: m.PLACES.filter(p => p.family === fam), PACKS: m.PACKS.map((p, k) => ({ ...p, k })).filter(p => p.family === fam) })), fam);
@@ -2533,7 +2537,7 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         });
     }
 
-    test("past them Stonebridge's heath is open, no foe on it; the woods about the road are kept: the Southern Forest's by its sorceresses, the northern forest's by Wyrmwood's marksmen (the user's: not the south's elves); the Twin Rivers' red mages throw Wesnoth's own fireball", async ({ page }) => {
+    test("past them Stonebridge's heath is open, no foe on it; the woods about the road are kept: every post by the plan's units for the zone it guards, the trees of the road's zones by the nearest forest's elves (the user's: not the south's elves); the Twin Rivers' red mages throw Wesnoth's own fireball", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         const posts = await page.evaluate(async () => {
@@ -2541,8 +2545,15 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             return PACKS.filter(p => p.guard).map(p => ({ zone: ow.zoneAt(...p.at)?.id, kind: p.band[0], at: p.at, woods: p.woods }));
         });
         const of = (zone) => [...new Set(posts.filter(p => p.zone === zone).map(p => p.kind))];
-        expect(of(13)).toEqual(['marksman']);
+        // (every post the plan's for the zone it guards, docs/WORLD.md: the user's, every border by the plan's units)
+        expect(of(33)).toEqual(['shamanguard']);
+        expect(of(34)).toEqual(['druidguard']);
         expect(of(27)).toEqual(['sorceress']);
+        expect(of(26)).toEqual(['enchantressguard']);
+        expect(of(13)).toEqual(['marksman']);
+        expect(of(11)).toEqual(['maskedfighter']);
+        expect(of(22)).toEqual(['whitemage']);
+        expect(of(24)).toEqual(['noblelord']);
         expect(of(21)).toEqual(['redmage']);
         expect(posts.filter(p => [19, 20, 25].includes(p.zone) && !p.woods), 'no guard on the road zones\' open ground').toEqual([]);
         const heath = await page.evaluate(async () => { const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld; return PACKS.filter(p => !p.guard && ow.zoneAt(...p.at)?.id === 25).length; });

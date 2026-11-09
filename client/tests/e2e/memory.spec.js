@@ -276,8 +276,8 @@ test.describe('Memory', () => {
     });
 
     for (const [fam, name, sheets, boss, worn] of [
-        ['z20', 'the Riverlands', ['foe-greatwolf', 'foe-ogre', 'foe-wolf', 'foe-youngogre'], 'ancientogre', 'foe-ogre'],
-        ['z19', 'the Meadowlands', ['foe-bowman', 'foe-heavyinfantry', 'foe-ironmauler', 'foe-longbowman', 'foe-shocktrooper'], 'warmaster', 'foe-ironmauler'],
+        ['z20', 'the Riverlands', ['foe-greatogre', 'foe-ogre', 'foe-youngogre'], 'ancientogre', 'foe-ancientogre'],
+        ['z19', 'the Meadowlands', ['foe-heavyinfantry', 'foe-ironmauler', 'foe-shocktrooper'], 'masterinfantryman', 'foe-masterinfantryman'],
     ]) {
         test(`${name}' foes, on the road to Stonebridge: every pack of it, its boss wearing his unit's sheet, under budget, and let go when you leave`, async ({ page }) => {
             test.setTimeout(150000);
@@ -317,7 +317,7 @@ test.describe('Memory', () => {
         });
     }
 
-    test("the first area's guards: a stretch of the road's, its elvish sorceresses, under budget, and let go when you leave it", async ({ page }) => {
+    test("the first area's guards: a stretch of the road's, its elvish shamans (the plan's), under budget, and let go when you leave it", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await keepUp(page);
@@ -353,7 +353,7 @@ test.describe('Memory', () => {
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         const after = await settled(page);
         console.log("the first area's guards", +(there.mb - base.mb).toFixed(2), 'MB', near.join(' '), sheets.join(' '));
-        expect(sheets).toEqual(expect.arrayContaining(['foe-sorceress']));
+        expect(sheets).toEqual(expect.arrayContaining(['foe-shaman']));
         expect(sheets, 'no woses (the user\'s)').not.toContain('foe-elderwose');
         expect(near.filter(f => f.startsWith('guards')).length).toBeLessThan(5);     // (not every group about the road: only those near)
         expect(there.mb - base.mb).toBeLessThan(BUDGET_MB);

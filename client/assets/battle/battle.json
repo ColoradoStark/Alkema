@@ -3346,15 +3346,15 @@
    },
    "image": "youngogre.png"
   },
-  "wolf": {
-   "name": "Wolf",
-   "race": "beast",
-   "hp": 32,
-   "damage": 5,
-   "frameWidth": 90,
-   "frameHeight": 90,
-   "feet": 77,
-   "tall": 47,
+  "greatogre": {
+   "name": "Great Ogre",
+   "race": "ogre",
+   "hp": 80,
+   "damage": 15,
+   "frameWidth": 91,
+   "frameHeight": 91,
+   "feet": 83,
+   "tall": 75,
    "anims": {
     "stand-s": [
      [
@@ -3362,20 +3362,18 @@
       1000
      ]
     ],
-    "move-s": [
+    "breeze-s": [
      [
       1,
-      150
+      200
      ],
      [
-      0,
-      150
-     ]
-    ],
-    "attack-s": [
+      2,
+      200
+     ],
      [
-      0,
-      100
+      3,
+      200
      ],
      [
       2,
@@ -3383,39 +3381,57 @@
      ],
      [
       1,
-      250
+      200
+     ]
+    ],
+    "attack-s": [
+     [
+      4,
+      75
      ],
      [
-      0,
-      50
+      5,
+      100
+     ],
+     [
+      5,
+      75
+     ],
+     [
+      6,
+      175
+     ],
+     [
+      4,
+      100
      ]
     ],
     "defend-s": [
      [
-      3,
+      0,
       80
      ],
      [
-      4,
+      7,
       220
      ],
      [
-      3,
+      0,
       80
      ]
     ]
    },
-   "image": "wolf.png"
+   "image": "greatogre.png"
   },
-  "greatwolf": {
-   "name": "Great Wolf",
-   "race": "beast",
-   "hp": 45,
-   "damage": 5,
-   "frameWidth": 90,
-   "frameHeight": 90,
-   "feet": 74,
-   "tall": 51,
+  "ancientogre": {
+   "name": "Ancient Ogre",
+   "race": "ogre",
+   "hp": 94,
+   "damage": 19,
+   "frameWidth": 150,
+   "frameHeight": 150,
+   "feet": 114,
+   "tall": 78,
    "anims": {
     "stand-s": [
      [
@@ -3423,50 +3439,40 @@
       1000
      ]
     ],
-    "move-s": [
-     [
-      1,
-      150
-     ],
-     [
-      0,
-      150
-     ]
-    ],
     "attack-s": [
      [
-      0,
-      100
+      1,
+      125
      ],
      [
       2,
-      200
+      125
+     ],
+     [
+      3,
+      100
      ],
      [
       1,
-      250
-     ],
-     [
-      0,
-      50
+      100
      ]
     ],
     "defend-s": [
      [
-      3,
+      4,
       80
      ],
      [
-      4,
+      5,
       220
      ],
      [
-      3,
+      4,
       80
      ]
     ]
    },
-   "image": "greatwolf.png"
+   "image": "ancientogre.png"
   },
   "heavyinfantry": {
    "name": "Heavy Infantryman",
@@ -3685,15 +3691,15 @@
    },
    "image": "ironmauler.png"
   },
-  "bowman": {
-   "name": "Bowman",
+  "masterinfantryman": {
+   "name": "Master Infantryman",
    "race": "human",
-   "hp": 33,
-   "damage": 6,
-   "frameWidth": 90,
-   "frameHeight": 90,
-   "feet": 71,
-   "tall": 50,
+   "hp": 74,
+   "damage": 19,
+   "frameWidth": 160,
+   "frameHeight": 160,
+   "feet": 109,
+   "tall": 71,
    "anims": {
     "stand-s": [
      [
@@ -3701,24 +3707,22 @@
       1000
      ]
     ],
-    "stand-n": [
-     [
-      1,
-      1000
-     ]
-    ],
     "attack-s": [
      [
+      1,
+      100
+     ],
+     [
       2,
-      65
+      100
      ],
      [
       3,
-      75
+      100
      ],
      [
       4,
-      75
+      100
      ],
      [
       5,
@@ -3726,178 +3730,33 @@
      ],
      [
       6,
-      130
-     ],
-     [
-      3,
-      65
-     ]
-    ],
-    "attack-n": [
-     [
-      7,
-      65
-     ],
-     [
-      8,
-      75
-     ],
-     [
-      9,
-      75
-     ],
-     [
-      10,
       100
      ],
      [
-      11,
-      130
+      7,
+      100
      ],
      [
       8,
-      65
-     ],
-     [
-      7,
-      35
+      100
      ]
     ],
     "defend-s": [
-     [
-      2,
-      80
-     ],
-     [
-      12,
-      220
-     ],
-     [
-      2,
-      80
-     ]
-    ],
-    "defend-n": [
-     [
-      7,
-      80
-     ],
-     [
-      13,
-      220
-     ],
-     [
-      7,
-      80
-     ]
-    ]
-   },
-   "image": "bowman.png"
-  },
-  "longbowman": {
-   "name": "Longbowman",
-   "race": "human",
-   "hp": 51,
-   "damage": 10,
-   "frameWidth": 90,
-   "frameHeight": 90,
-   "feet": 74,
-   "tall": 60,
-   "anims": {
-    "stand-s": [
      [
       0,
-      1000
-     ]
-    ],
-    "breeze-s": [
-     [
-      1,
-      1000
-     ],
-     [
-      2,
-      400
-     ],
-     [
-      3,
-      100
-     ],
-     [
-      4,
-      200
-     ],
-     [
-      3,
-      100
-     ],
-     [
-      4,
-      200
-     ],
-     [
-      3,
-      100
-     ],
-     [
-      4,
-      200
-     ],
-     [
-      3,
-      100
-     ],
-     [
-      4,
-      400
-     ],
-     [
-      1,
-      100
-     ]
-    ],
-    "attack-s": [
-     [
-      5,
-      65
-     ],
-     [
-      6,
-      75
-     ],
-     [
-      7,
-      75
-     ],
-     [
-      8,
-      100
-     ],
-     [
-      9,
-      130
-     ],
-     [
-      6,
-      65
-     ]
-    ],
-    "defend-s": [
-     [
-      5,
       80
      ],
      [
-      10,
+      0,
       220
      ],
      [
-      5,
+      0,
       80
      ]
     ]
    },
-   "image": "longbowman.png"
+   "image": "masterinfantryman.png"
   },
   "marksman": {
    "name": "Elvish Marksman",
@@ -4077,15 +3936,15 @@
    },
    "image": "redmage.png"
   },
-  "lieutenant": {
-   "name": "Lieutenant",
+  "noblelord": {
+   "name": "Noble Lord",
    "race": "human",
-   "hp": 40,
-   "damage": 7,
+   "hp": 64,
+   "damage": 8,
    "frameWidth": 90,
    "frameHeight": 90,
-   "feet": 74,
-   "tall": 64,
+   "feet": 70,
+   "tall": 52,
    "anims": {
     "stand-s": [
      [
@@ -4093,45 +3952,90 @@
       1000
      ]
     ],
-    "breeze-s": [
-     [
-      0,
-      600
-     ],
+    "attack-s": [
      [
       1,
-      300
+      100
      ],
      [
       2,
-      600
+      50
      ],
      [
-      1,
-      300
-     ]
-    ],
-    "attack-s": [
-     [
       3,
-      100
+      50
      ],
      [
       4,
       150
      ],
      [
-      5,
-      150
-     ],
-     [
-      3,
-      300
+      1,
+      100
      ]
     ],
     "defend-s": [
      [
+      1,
+      80
+     ],
+     [
+      5,
+      220
+     ],
+     [
+      1,
+      80
+     ]
+    ]
+   },
+   "image": "noblelord.png"
+  },
+  "maskedfighter": {
+   "name": "Dwarvish Masked Fighter",
+   "race": "dwarf",
+   "hp": 38,
+   "damage": 7,
+   "frameWidth": 90,
+   "frameHeight": 90,
+   "feet": 72,
+   "tall": 37,
+   "anims": {
+    "stand-s": [
+     [
+      0,
+      1000
+     ]
+    ],
+    "attack-s": [
+     [
+      1,
+      25
+     ],
+     [
+      2,
+      75
+     ],
+     [
       3,
+      150
+     ],
+     [
+      4,
+      50
+     ],
+     [
+      5,
+      50
+     ],
+     [
+      1,
+      50
+     ]
+    ],
+    "defend-s": [
+     [
+      0,
       80
      ],
      [
@@ -4139,50 +4043,12 @@
       220
      ],
      [
-      3,
+      0,
       80
-     ]
-    ],
-    "die-s": [
-     [
-      7,
-      75
-     ],
-     [
-      8,
-      75
-     ],
-     [
-      9,
-      75
-     ],
-     [
-      10,
-      75
-     ],
-     [
-      11,
-      75
-     ],
-     [
-      12,
-      75
-     ],
-     [
-      13,
-      75
-     ],
-     [
-      14,
-      75
-     ],
-     [
-      15,
-      75
      ]
     ]
    },
-   "image": "lieutenant.png"
+   "image": "maskedfighter.png"
   },
   "snowchaser": {
    "name": "Snowchaser",

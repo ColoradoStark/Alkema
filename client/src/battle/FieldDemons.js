@@ -106,8 +106,14 @@ const BAR_SAY_MS = 6000;         // its warning, again this often while you stan
 const BAR_HANDOFF = TILE / 2;    // another guard bars you in one's stead only this much nearer you
 const BAR_WORDS = {
     whitemage: 'A White Mage blocks your way: "The Duskwood is the Order\'s, and closed to the unproven. Turn back, before the light finds you."',
-    ogre: 'An Ogre blocks your way, its blade lowered: "Valley is ours. Little one goes back. Now."',
     sorceress: 'An Elvish Sorceress blocks your way: "No further. This wood is the Wardens\', and it does not suffer the unproven. Turn back."',
+    shamanguard: 'An Elvish Shaman blocks your way: "No further. These woods are the Wardens\', and they do not suffer the unproven. Turn back."',
+    druidguard: 'An Elvish Druid blocks your way: "The Darkwood is the Wardens\'. Go back to the road, and live."',
+    enchantressguard: 'An Elvish Enchantress blocks your way: "The Barrows sleep, and the unproven do not wake them. Turn back."',
+    marksman: 'An Elvish Marksman blocks your way, an arrow nocked: "Wyrmwood is the elves\' old kingdom. One more step and I loose. Turn back."',
+    redmage: 'A Red Mage blocks your way: "The Twin Rivers are the College\'s. Go back before I singe you."',
+    noblelord: 'A Noble Lord blocks your way: "The Westmarch is the lords\' war camp, no place for the unproven. Turn back."',
+    maskedfighter: 'A Masked Fighter blocks your way, axe raised: "The Cliffs are the clan\'s. Turn back."',
 };
 // A zone barred to you (zones.js `barred`: the one before it not cleared), its nearest foe within LOCK_REACH comes to
 // the way in and bars you as a guard does (the user's: always the same for an uncleared zone); deeper, or struck, the
