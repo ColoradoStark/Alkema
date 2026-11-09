@@ -174,11 +174,16 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
         expect(barred('z19', { 'cleared-z20': true }, 80)).toBe(false);
     });
 
-    test("a fight on the road stays a fight like the Point's (the user's, November 2026: an ogre took 50 to 100 blows and 20 or 30 of its own hardly hurt): your attack and hit points both keep up with what its packs are made for, never one far ahead and the other far behind", () => {
-        const off = HEROES.flatMap(([a, h]) => walk(a, h).feel).filter(f => ['z20', 'z19'].includes(f.zone))
-            // (within what new heroes differ by: the sturdiest, 31 hit points, starts at twice the Point's hero's)
-            .filter(f => f.fell > 5 || f.fell < 1 / 5 || f.fall > 5 || f.fall < 1 / 5)
-            .map(f => `${f.at}: blows to fell x${f.fell.toFixed(1)}, to fall x${f.fall.toFixed(1)}`);
+    test("a fight on the road stays a fight like the Point's (the user's, November 2026: an ogre took 50 to 100 blows and 20 or 30 of its own hardly hurt; the Point's and the Market Fields' felt right): in the Riverlands and the Meadowlands alike, the blows each hero takes to fell a foe and to fall stay within what the Point asked of that same hero", () => {
+        const off = [];
+        for (const [a, h] of HEROES) {
+            const feel = walk(a, h).feel, point = feel.filter(f => f.zone === 'z35');
+            const span = k => [Math.min(...point.map(f => f[k])) / 1.6, Math.max(...point.map(f => f[k])) * 1.6];
+            const [fellLo, fellHi] = span('fell'), [fallLo, fallHi] = span('fall');
+            for (const f of feel.filter(f => ['z20', 'z19'].includes(f.zone)))
+                if (f.fell < fellLo || f.fell > fellHi || f.fall < fallLo || f.fall > fallHi)
+                    off.push(`${f.at}: blows to fell x${f.fell.toFixed(2)} (Point ${fellLo.toFixed(2)}-${fellHi.toFixed(2)}), to fall x${f.fall.toFixed(2)} (Point ${fallLo.toFixed(2)}-${fallHi.toFixed(2)})`);
+        }
         expect(off).toEqual([]);
     });
 
