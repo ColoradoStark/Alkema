@@ -629,3 +629,41 @@
 }
 @keyframes gear-tutor-bob { 50% { transform: translateX(-10px) scale(1.12); } }
 @keyframes gear-tutor-glow { 50% { box-shadow: 0 0 0 3px #fbf23666, 0 0 4px #fbf23633; } }
+
+/* ---------- The next upgrade over the pad (UpgradeBanner.js): the page's own row, over the map ---------- */
+.gear.gear-banner { z-index: 40; }
+.gear-banner-slot {
+    position: absolute; left: 4px; right: 4px; bottom: 164px; pointer-events: auto; cursor: pointer;
+    background: url('/ui/creator/art/leather.png') 0 0 / 32px 32px repeat, var(--leather);
+    border-radius: 4px; box-shadow: 0 0 0 1px #c8a04a, 0 3px 8px rgba(0, 0, 0, 0.6);
+    padding: 3px;
+}
+.gear-banner-slot[hidden] { display: none; }
+.gear-banner-slot .gear-up { min-height: 56px; animation: gear-banner-glow 1.04s ease-in-out infinite; }
+.gear-banner-slot .gear-up.is-goddess { min-height: 84px; }
+@keyframes gear-banner-glow { 50% { box-shadow: inset 0 0 0 2px #fbf236, 0 0 10px #fbf23699; } }
+/* (bought: the row flashes, the bar fills on, the button presses in) */
+.gear-banner-slot .gear-up.is-bought { animation: gear-bought-flash 0.5s ease-out; }
+@keyframes gear-bought-flash { 0% { box-shadow: 0 0 0 3px #fff6a8, 0 0 24px #fbf236; filter: brightness(1.6); } 100% { box-shadow: inset 0 0 0 2px #dab040; filter: none; } }
+.gear-up-fill.is-growing { transition: width 0.4s ease-out; }
+.gear-up-buy.is-pressed { animation: gear-buy-press 0.28s ease-out; }
+@keyframes gear-buy-press { 0% { transform: scale(0.86); filter: brightness(1.7); } 100% { transform: scale(1); filter: none; } }
+/* (the tutorial's big arrow over it, bouncing) */
+.gear-banner-arrow {
+    position: absolute; left: 50%; bottom: 100%; width: 44px; height: 46px; margin-left: -22px; pointer-events: none;
+    background: #fbf236; clip-path: polygon(30% 0, 70% 0, 70% 50%, 100% 50%, 50% 100%, 0 50%, 30% 50%);
+    filter: drop-shadow(0 0 0 #222034) drop-shadow(2px 2px 0 #222034); animation: gear-arrow-bob 0.76s ease-in-out infinite;
+}
+@keyframes gear-arrow-bob { 50% { transform: translateY(-16px); } }
+/* "Level n!" floating up, and gold sparks off the button */
+.gear-banner-fx { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.gear-banner-pop {
+    position: absolute; left: 0; right: 0; text-align: center; font: 20px Alagard, serif; color: #fbf236;
+    text-shadow: 2px 2px #222034, 0 0 8px #df7126; animation: gear-pop-up 1.1s ease-out forwards;
+}
+@keyframes gear-pop-up { 0% { transform: translateY(40px) scale(0.6); opacity: 0; } 20% { transform: translateY(-50px) scale(1.25); opacity: 1; } 100% { transform: translateY(-110px) scale(1); opacity: 0; } }
+.gear-banner-spark {
+    position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; background: #fff6a8; border-radius: 1px;
+    box-shadow: 0 0 4px #fbf236, 0 0 2px #df7126; transform: rotate(45deg); animation: gear-spark 0.55s ease-out forwards;
+}
+@keyframes gear-spark { 100% { transform: translate(var(--dx), var(--dy)) rotate(225deg) scale(0.3); opacity: 0; } }

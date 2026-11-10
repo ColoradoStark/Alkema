@@ -119,6 +119,11 @@ const BAR_WORDS = {
 // the way in and bars you as a guard does (the user's: always the same for an uncleared zone); deeper, or struck, the
 // zone fights
 const LOCK_REACH = 16 * TILE;
+// ...coming to meet you as you come within LOCK_SEE of its zone, a "!" over it, to stand at the edge before you (the
+// user's, November 2026: they walked over into the Meadowlands unstopped, its nearest foe far off and slow, there only
+// once they were well in), at no less than LOCK_PACE: a heavy foot's own pace never got there in time
+const LOCK_SEE = 5 * TILE;
+const LOCK_PACE = 150;
 // ...and what each says in the bubble over its head as it stops you, short (Heeds.js: the whole warning's in the notice)
 const SHOUT = 'No further!';
 const SHOUTS = { marksman: 'One more step...', maskedfighter: 'Turn back!', z28: 'Turn back!', z20: 'Go back!', z19: 'Halt!' };
@@ -331,6 +336,7 @@ export class FieldDemons {
         // Out of a foe's zone, you're out of its reach: it doesn't follow you over (the user's)
         const yours = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id ?? null;
         if (yours !== null && yours !== this._entry?.zone) this._entry = { zone: yours, x: feet.x, y: feet.y };       // (where you crossed into it: a guard's ground is reckoned from there)
+        const brink = out ? null : this._brinkOf(feet, yours, delta);
         for (const f of this.foes) {
             if (f.ring && (f.state !== 'windup' || f.hp <= 0)) this._unslam(f);       // (a slam put off: its mark goes)
             if (f.lane && ((f.state !== 'windup' && f.state !== 'charge') || f.hp <= 0)) this._unlane(f);      // (a charge put off, or ridden)
@@ -339,7 +345,8 @@ export class FieldDemons {
             // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
             // trees, each put you back over into the other's and they took turns, flashing; the user saw it)
             const gone = yours !== null && this._arena?.boss !== f && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked), false)
-                && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE);
+                && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE)
+                && !(brink?.has(f.zone) && !f.guard && !f.spec.boss && this._locked(f.family));      // (you coming up to a zone barred to you: it comes to meet you)
             this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
@@ -420,7 +427,7 @@ export class FieldDemons {
         // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
         // home and was mended at once; none known, it goes where it likes)
         const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, openLand: !PACKS[p.pack].guard && !this._beyond(...PACKS[p.pack].at), state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, aggro: PACKS[p.pack].aggro, openLand: !PACKS[p.pack].guard && !this._beyond(...PACKS[p.pack].at), state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
     }
 
     /** A band goes (you've left its stretch of coast), and its sheets; its slain stay down. */
@@ -699,17 +706,21 @@ export class FieldDemons {
                 f.outT = 0;
                 return this._bar(f, you, d, dt, delta);
             }
-            if (you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._shallow(f, you) && this._locked(f.family)) {
+            const locked = you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._locked(f.family);
+            if (locked && this._shallow(f, you)) {
                 // (only the nearest of its zone's comes: the rest stay home; one barring keeps on till another's well nearer)
                 const rival = this.foes.some(o => o !== f && o.hp > 0 && o.zone === f.zone && !o.guard && !o.spec.boss && (o.state === 'post' || o.state === 'home')
                     && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (o.barring ? BAR_HANDOFF : f.barring ? -BAR_HANDOFF : 0));
                 // (the wood's its guards' to bar: two barring you at once shoved you past the elf)
-                if (!rival && !(this.scene.overworld?.forest?.depthAt(you.x, you.y) > 0)) return this._bar(f, you, d, dt, delta, LOCK_WORDS[f.family]);
+                // (you not over its edge yet, it comes to it before you, a "!" over it, its words kept till you press on at it)
+                if (!rival && !(this.scene.overworld?.forest?.depthAt(you.x, you.y) > 0)) return this._bar(f, you, d, dt, delta, LOCK_WORDS[f.family], this._deep(f, you) === 0);
                 f.barring = false;
                 return this._home(f, dt, fromPost, delta);
             }
+            // (on past it, deeper than it warns: it fights you, and its pack; it had come all that way)
+            const pressed = locked && f.barring;
             f.barring = false;
-            if (d <= (f.guard ? GUARD_SEES : AGGRO) && !((f.calm -= delta) > 0)) {
+            if ((pressed || d <= (f.guard ? GUARD_SEES : f.aggro || AGGRO)) && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
                 this._rouse(f.pack);
             } else return this._home(f, dt, fromPost, delta);
@@ -1055,7 +1066,29 @@ export class FieldDemons {
     _deep(f, you) {
         if (f.woods) return this.scene.overworld?.forest?.depthAt(you.x, you.y) ?? 0;
         const e = this._entry;
-        return e?.zone === f.zone ? 1 + Math.hypot(you.x - e.x, you.y - e.y) / TILE : 0;
+        if (e?.zone === f.zone) return 1 + Math.hypot(you.x - e.x, you.y - e.y) / TILE;
+        return this.scene.overworld?.zoneAt?.(you.x, you.y)?.id === f.zone ? 1 : 0;      // (a step ahead of you over its edge)
+    }
+
+    /**
+     * The zones barred to you within LOCK_SEE of you, you not in them (their foes come to meet you at the edge), looked
+     * at every GLANCE_MS: a Set of zone ids, or null.
+     */
+    _brinkOf(feet, yours, delta) {
+        if ((this._brinkT = (this._brinkT || 0) - delta) > 0) return this._brink;
+        this._brinkT = GLANCE_MS / 2;
+        const zones = new Set(this.foes.filter(f => f.hp > 0 && f.zone !== null && f.zone !== yours && !f.guard && !f.spec.boss && this._locked(f.family)).map(f => f.zone));
+        const ow = this.scene.overworld, r = LOCK_SEE / TILE, seen = new Set();
+        if (zones.size && ow?.zoneAt) {
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    if (dx * dx + dy * dy > r * r) continue;
+                    const id = ow.zoneAt(feet.x + dx * TILE, feet.y + dy * TILE)?.id;
+                    if (zones.has(id)) seen.add(id);
+                }
+            }
+        }
+        return (this._brink = seen.size ? seen : null);
     }
 
     /** Are you only at the edge of a guard's ground, where it warns before it fights? */
@@ -1068,7 +1101,7 @@ export class FieldDemons {
      * (the user's: a block as well as words; quicker than you, it's not walked round; walking back out, it lets you go),
      * a wall you can't pass through (`_apart`).
      */
-    _bar(f, you, d, dt, delta, words = BAR_WORDS[f.kind]) {
+    _bar(f, you, d, dt, delta, words = BAR_WORDS[f.kind], quiet = false) {
         const { foe } = f;
         // (one at a time, the nearest: the next post's, barring you too, walked into you from behind and shoved you
         // round the first; another stands and watches)
@@ -1107,7 +1140,8 @@ export class FieldDemons {
         const [wx, wy] = inWay ? [f.across.x, f.across.y] : [tx, ty], w = Math.hypot(wx - foe.x, wy - foe.y);
         // (facing you side-on, turning only once you're well round it: straight above or below, it flipped to and fro)
         const left = Math.abs(rx) > BAR_TURN ? rx > 0 : foe.left ?? rx > 0, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
-        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(BAR_RUSH, w / (f.spec.speed * dt || 1)), facing);
+        const rush = f.guard ? BAR_RUSH : Math.max(BAR_RUSH, LOCK_PACE / f.spec.speed);     // (a barred zone's foe, coming to meet you)
+        if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(rush, w / (f.spec.speed * dt || 1)), facing);
         else {
             this._step(f, 0, 0, dt, 1, you);
             if (!foe.striking) foe.face?.(facing.x, facing.y);
@@ -1115,7 +1149,7 @@ export class FieldDemons {
         // (said again only after a while, whoever bars you: said each time one took over, it flashed)
         const now = this.scene.time.now;
         this.heeds.seen(f);
-        if (!(now - this._barSaid < BAR_SAY_MS)) {
+        if (!(quiet && !pressing) && !(now - this._barSaid < BAR_SAY_MS)) {      // (not over its edge yet: once you press on toward it)
             this.say(words ?? 'A guard blocks your way: "Turn back. You are not ready for what lies beyond."', 4500);
             this.heeds.shout(f, SHOUTS[f.guard ? f.kind : f.family] ?? SHOUT);
             this._barSaid = now;

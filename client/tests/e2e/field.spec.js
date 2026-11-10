@@ -1444,6 +1444,8 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         await keepUp(page);
+        // (only the guards: by Riverhold's road the Market Fields' riders, barred to a new hero, come to meet you too)
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (fam) => fam.startsWith('guards'); });
         const spot = await roadside(page);
         expect(spot).not.toBeNull();
         await standAt(page, spot.road.x, spot.road.y);
@@ -2656,6 +2658,83 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             expect(out).toEqual({ chests: 1, cleared: true });
         });
     }
+
+    test("the Riverlands' ogres stand in your way on, not spread over the valley (the user's, November 2026: they had to be hunted for): every pack nearer the Meadowlands than the bridge you came in by but one at the way in, and walking west from the bridge they come for you, from further off than the Point's", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'z20');
+        await strongFor(page, 'z20', 0);
+        await keepUp(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').flags['cleared-z20'] = false; });
+        const { PACKS } = await zone(page, 'z20');
+        const lair = PACKS.find(p => p.lair), road = PACKS.filter(p => !p.lair), bridge = { x: 7592, y: 8704 };
+        const nearer = road.filter(p => Math.hypot(p.at[0] - lair.at[0], p.at[1] - lair.at[1]) < Math.hypot(p.at[0] - bridge.x, p.at[1] - bridge.y));
+        expect(nearer.length, 'packed before the way on').toBeGreaterThanOrEqual(road.length - 2);
+        expect(road.every(p => p.aggro > 5 * 32), 'they see you from further off').toBe(true);
+        // Nothing to hunt: 6.5 tiles off the first you'd meet coming from the bridge (beyond the Point's five), it comes
+        const first = road.slice().sort((a, b) => Math.hypot(a.at[0] - bridge.x, a.at[1] - bridge.y) - Math.hypot(b.at[0] - bridge.x, b.at[1] - bridge.y))[0];
+        const toward = Math.atan2(bridge.y - first.at[1], bridge.x - first.at[0]);
+        await standAt(page, first.at[0] + Math.cos(toward) * 6.5 * 32, first.at[1] + Math.sin(toward) * 6.5 * 32);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBeGreaterThan(0);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && !['post', 'home'].includes(f.state)).length, first.k), { timeout: 10000 }).toBeGreaterThan(0);
+    });
+
+    test("the Meadowlands, barred till the Ancient Ogre's beaten (the user's, November 2026: they walked over into it unstopped): walked up to anywhere along its border, one of Grimhold's foot comes to meet you there, a \"!\" over him, and stops you a step over it, \"Halt!\", striking no blow", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, '/', 'z19');
+        await keepUp(page);
+        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.flags['cleared-z35'] = gs.flags['cleared-z28'] = true; });
+        expect(await page.evaluate(() => import('/src/battle/zones.js').then(({ barred }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            return barred('z19', gs.flags, gs.fieldDemons._strength());
+        }))).toBe(true);
+        // Where the border is, row by row, along the Riverlands' west side
+        const crossings = await page.evaluate(() => {
+            const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld, out = [];
+            for (const y of [7400, 7880, 8300]) {
+                let x = 6900;
+                while (x > 5600 && ow.zoneAt(x, y)?.id !== 19) x -= 8;
+                out.push({ x: x + 8, y });
+            }
+            return out;
+        });
+        for (const c of crossings) {
+            await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.fieldDemons.forgive?.(); });
+            await standAt(page, c.x + 6 * 32, c.y);
+            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'z19' && f.foe.ready).length), { timeout: 30000 }).toBeGreaterThan(0);
+            await page.waitForTimeout(400);
+            const hp = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now);
+            await page.evaluate((c) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+                window.__cross = { deepest: 0, bang: false, words: null, barring: false, fighting: 0 };
+                window.__crossRec = () => {
+                    const me = gs.localPlayer.sprite, r = window.__cross, z = fd.foes.filter(f => f.family === 'z19' && f.hp > 0);
+                    r.deepest = Math.max(r.deepest, (c.x - me.x) / 32);
+                    for (const f of z) {
+                        const h = fd.heeds.on(f);
+                        r.bang ||= h.bang;
+                        r.words ||= h.words;
+                        r.barring ||= !!f.barring;
+                    }
+                    r.fighting = Math.max(r.fighting, z.filter(f => !['post', 'home'].includes(f.state)).length);
+                };
+                gs.events.on('postupdate', window.__crossRec);
+            }, c);
+            await page.keyboard.down('ArrowLeft');
+            await page.waitForTimeout(6000);
+            await page.keyboard.up('ArrowLeft');
+            const r = await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.events.off('postupdate', window.__crossRec); return window.__cross; });
+            const at = `crossing at ${c.x},${c.y}: ${JSON.stringify(r)}`;
+            expect(r.bang, `a "!" as he sees you, ${at}`).toBe(true);
+            expect(r.barring, `he stops you, ${at}`).toBe(true);
+            expect(r.words, at).toBe('Halt!');
+            expect(r.deepest, `no further than a step or two over, ${at}`).toBeLessThan(4);
+            expect(r.fighting, `no blow, ${at}`).toBe(0);
+            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(hp);
+            // (back out, so the next crossing starts afresh)
+            await standAt(page, c.x + 12 * 32, c.y);
+            await page.waitForTimeout(2500);
+        }
+    });
 
     test("past them Stonebridge's heath is open, no foe on it; the woods about the road are kept: every post by the plan's units for the zone it guards, the trees of the road's zones by the nearest forest's elves (the user's: not the south's elves); the Twin Rivers' red mages throw Wesnoth's own fireball", async ({ page }) => {
         test.setTimeout(120000);

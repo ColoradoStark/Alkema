@@ -139,18 +139,19 @@ test.describe('Upgrades', () => {
 });
 
 test.describe('The next upgrade over the pad', () => {
-    /** Where the banner's middle (or a point `dx` off it) is on the page. */
-    const onPage = async (page, dx = 0) => {
-        const box = await page.locator('#game-container canvas').boundingBox();
-        const at = await ui(page, (ui) => ({ x: ui.upgradeBanner.box.x, y: ui.upgradeBanner.box.y, w: ui.scale.width, h: ui.scale.height }));
-        return { x: box.x + (at.x + dx) * box.width / at.w, y: box.y + at.y * box.height / at.h };
-    };
-    const banner = (page) => ui(page, (ui) => ({
-        shown: ui.upgradeBanner.box.visible, arrow: ui.upgradeBanner.pointing, name: ui.upgradeBanner.name.text, price: ui.upgradeBanner.price.text,
-        gives: ui.upgradeBanner.gives.text, bottom: ui.upgradeBanner.box.y + 20, level: ui.upgrades.level('might'), essence: ui.inventory.essence,
-    }));
+    const banner = (page) => ui(page, (ui) => {
+        const slot = document.querySelector('.gear-banner .gear-banner-slot'), row = slot?.querySelector('.gear-up');
+        const r = slot?.getBoundingClientRect(), c = document.querySelector('#game-container canvas').getBoundingClientRect();
+        return {
+            shown: ui.upgradeBanner.visible && !slot.hidden, arrow: ui.upgradeBanner.pointing, row: row?.className ?? null,
+            name: row?.querySelector('.gear-up-name')?.firstChild?.textContent ?? null, level: row?.querySelector('.gear-up-level')?.textContent ?? null,
+            price: row?.querySelector('.gear-up-buy')?.textContent ?? null, gives: [...(row?.querySelectorAll('.gear-up-gives') ?? [])].map(e => e.textContent),
+            goddess: !!row?.querySelector('.gear-goddess'), pictures: document.querySelectorAll('.gear-banner .gear-goddess').length,
+            bottom: r ? (r.bottom - c.top) * 640 / c.height : null, bought: ui.upgrades.level('might'), essence: ui.inventory.essence,
+        };
+    });
 
-    test("the user's, November 2026: the Upgrade page's choice is always the next one, so it's a banner just above the pad, shown while you can pay; tapped, it buys, again and again till you're short; an arrow over it for your first three", async ({ page }) => {
+    test("the user's, November 2026: the Upgrade page's choice is always the next one, so it's a banner just above the pad, the page's own row (the user's: the same art, her picture), shown while you can pay; tapped, it buys and it's felt, sound and sight, again and again till you're short; an arrow over it for your first three", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page);
         await asMage(page, 0);
@@ -161,24 +162,44 @@ test.describe('The next upgrade over the pad', () => {
         await ui(page, (ui) => { ui.inventory.essence = 20 + 28 + 40 + 55 + 10; });
         await expect.poll(() => banner(page).then(b => b.shown)).toBe(true);
         let b = await banner(page);
-        expect(b.name).toBe('Strength of Arm  0/10');
+        expect(b.row).toBe('gear-up is-current');       // (the page's own row, as it's drawn there)
+        expect(b.name).toBe('Strength of Arm');
+        expect(b.level).toBe('0/10');
         expect(b.price).toBe('20');
-        expect(b.gives).toMatch(/^Attack \d+→\d+/);
+        expect(b.gives[0]).toMatch(/^Attack \d+ → \d+/);
         expect(b.arrow).toBe(true);
         expect(b.bottom).toBeLessThanOrEqual(480);        // (over the map, clear of the pad)
-        await page.waitForTimeout(300); await page.locator('#game-container canvas').screenshot({ path: 'tests/zzshots/upgrade-banner.png' });
+        await page.waitForTimeout(300); await page.screenshot({ path: 'tests/zzshots/upgrade-banner.png' });
+        // A buy is felt: coins and a chime climbing with her level, a flash, "Level n!" floating up, sparks, a ring round the hero
+        await page.evaluate(() => {
+            const audio = window.__ALKEMA_AUDIO, was = audio.play.bind(audio);
+            window.__played = [];
+            audio.play = (name, o) => { window.__played.push([name, o?.rate ?? 1]); return was(name, o); };
+        });
         for (let n = 1; n <= 4; n++) {
-            const at = await onPage(page);
-            await page.mouse.click(at.x, at.y);
-            await expect.poll(() => banner(page).then(b => b.level)).toBe(n);
+            await page.locator('.gear-banner .gear-up-buy').click();
+            await expect.poll(() => banner(page).then(b => b.bought)).toBe(n);
+            if (n === 1) {
+                const felt = await page.evaluate(() => ({
+                    flash: !!document.querySelector('.gear-banner .gear-up.is-bought'), press: !!document.querySelector('.gear-banner .gear-up-buy.is-pressed'),
+                    pop: document.querySelector('.gear-banner-pop')?.textContent, sparks: document.querySelectorAll('.gear-banner-spark').length,
+                    played: window.__played.map(([n]) => n),
+                }));
+                expect(felt).toMatchObject({ flash: true, press: true, pop: 'Level 1!', played: ['coins', 'confirm', 'ting'] });
+                expect(felt.sparks).toBeGreaterThan(5);
+                await page.waitForTimeout(120); await page.screenshot({ path: 'tests/zzshots/upgrade-banner-bought.png' });
+            }
             b = await banner(page);
             expect(b.arrow).toBe(n < 3);         // (gone after the third)
         }
+        const tings = await page.evaluate(() => window.__played.filter(([n]) => n === 'ting').map(([, r]) => r));
+        expect(tings).toHaveLength(4);
+        for (let i = 1; i < tings.length; i++) expect(tings[i]).toBeGreaterThan(tings[i - 1]);     // (climbing)
         expect(b.essence).toBe(20 + 28 + 40 + 55 + 10 - 20 - 28 - 40 - 55);
-        expect(b.shown).toBe(false);        // (short for the fifth)
+        await expect.poll(() => banner(page).then(b => [b.shown, b.pictures])).toEqual([false, 0]);       // (short for the fifth: gone, and its row with it)
         // With a menu open, none; back on the map, there it is
         await ui(page, (ui) => { ui.inventory.essence = 1e6; ui.bottomControls.switchTab('stats'); });
-        await expect(page.locator('.gear-up-buy')).toHaveCount(1);
+        await expect(page.locator('.gear .gear-panel .gear-up-buy')).toHaveCount(1);
         expect((await banner(page)).shown).toBe(false);
         await ui(page, (ui) => ui.bottomControls.switchTab('map'));
         await expect.poll(() => banner(page).then(b => b.shown)).toBe(true);
@@ -186,5 +207,21 @@ test.describe('The next upgrade over the pad', () => {
         const low = (await banner(page)).bottom;
         await ui(page, (ui) => ui.bossBar.set('Sir Aldous', 0.5, 16));
         await expect.poll(() => banner(page).then(b => b.bottom)).toBeLessThan(low - 20);
+        await ui(page, (ui) => ui.bossBar.set(null, 0, 16));
+    });
+
+    test("a goddess on it is her own picture from the page, and hidden it holds none (the user's weak phones)", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await asMage(page, 0);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = () => false);
+        await ui(page, (ui) => {
+            for (const id of ['might', 'vigour', 'focus']) ui.upgrades.levels[id] = 10;
+            ui.inventory.essence = 1e9;
+        });
+        await expect.poll(() => banner(page).then(b => [b.shown, b.goddess, b.name])).toEqual([true, true, 'Brigid']);
+        await page.waitForTimeout(300); await page.screenshot({ path: 'tests/zzshots/upgrade-banner-goddess.png' });
+        await ui(page, (ui) => { ui.inventory.essence = 0; });
+        await expect.poll(() => banner(page).then(b => [b.shown, b.pictures])).toEqual([false, 0]);
     });
 });

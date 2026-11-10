@@ -176,8 +176,9 @@ BANDS.z28 = [
     { at: MARKET.lair, band: ['knight'], step: BOSS_STEP.z28, lair: true, arena: MARKET.arena, openOnly: true },
 ];
 
-// The road on to Stonebridge (the user's, November 2026): where tools/zonegen.py says (road.json: each zone's packs
-// spread over its open ground, its boss at its way on, his ground a box about him), more in each up its climb.
+// The road on to Stonebridge (the user's, November 2026): where tools/zonegen.py says (road.json: each zone's first
+// packs along its way in, the rest packed before its way on, its boss there, his ground a box about him), more in each
+// up its climb.
 // The Riverlands (zone 20): over the bridge by Highmarket, ogres, young, grown and great; the Ancient Ogre at the way into the
 // Meadowlands. The Meadowlands (19): Grimhold's army, its Master Infantryman at the bridge into Stonebridge
 const RIVERLANDS_BANDS = [
@@ -218,10 +219,12 @@ const MEADOWLANDS_BANDS = [
     ['ironmauler', 'ironmauler', 'ironmauler', 'shocktrooper'],
     ['ironmauler', 'ironmauler', 'ironmauler', 'shocktrooper', 'shocktrooper', 'heavyinfantry'],
 ];
+// (each comes for you from further off than the Point's: they stand in your way on, and the user had to hunt for them)
+const ROAD_AGGRO = 7 * 32;
 for (const [zone, bands, boss] of [['z20', RIVERLANDS_BANDS, 'ancientogre'], ['z19', MEADOWLANDS_BANDS, 'masterinfantryman']]) {
     const road = ROAD[zone];
     BANDS[zone] = [
-        ...road.packs.map((p, k) => ({ at: p.at, band: bands[k] })),
+        ...road.packs.map((p, k) => ({ at: p.at, band: bands[k], aggro: ROAD_AGGRO })),
         { at: road.lair, band: [boss], step: BOSS_STEP[zone], lair: true, arena: road.arena, openOnly: true },
     ];
 }

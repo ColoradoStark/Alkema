@@ -51,6 +51,7 @@ export class UIScene extends Scene {
         this.bossBar = new BossBar(this, 32 + 448 - 14);
         // The next upgrade over the pad, bought with a tap (the user's: no changing screens for it)
         this.upgradeBanner = new UpgradeBanner(this, () => this.upgrades);
+        this.events.once('shutdown', () => this.upgradeBanner.destroy());
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
         // In a fight, the blue button asks which spell (or skill)
@@ -184,7 +185,7 @@ export class UIScene extends Scene {
         });
         this.notice(text, 6000);
         // (the banner over the pad up, the arrow's on it, UpgradeBanner; short of essence for it, on the Upgrade tab)
-        this._tutorTab = () => this.bottomControls.point(this.upgradeBanner.box.visible ? null : 'stats');
+        this._tutorTab = () => this.bottomControls.point(this.upgradeBanner.visible ? null : 'stats');
         this._tutorTab();
         this.gear.tutor = true;
         if (this.gear.mode === 'stats') this.gear.render();
@@ -452,8 +453,9 @@ export class UIScene extends Scene {
         }
         // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
         this.bottomControls.setControlsShown(!this.gear?.visible);
-        this.upgradeBanner.update(!this.gear?.visible && !this.dialogue.visible && !this.enterPrompt.visible);
-        if (this._tutorTab && this.bottomControls.pointing !== (this.upgradeBanner.box.visible ? null : 'stats')) this._tutorTab();
+        // (a page layer over the canvas: kept off the black of a door's card and a boss's name)
+        this.upgradeBanner.update(!this.gear?.visible && !this.dialogue.visible && !this.enterPrompt.visible && !this._card && !this._bossCard?.active);
+        if (this._tutorTab && this.bottomControls.pointing !== (this.upgradeBanner.visible ? null : 'stats')) this._tutorTab();
         this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
         const dayNight = this.scene.get('GameScene')?.dayNight;
         if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);

@@ -38,7 +38,7 @@ const SAY = {
     'cannot-wear': "That can't go on there.",
 };
 
-function el(tag, className, attrs = {}) {
+export function el(tag, className, attrs = {}) {
     const node = document.createElement(tag);
     if (className) node.className = className;
     for (const [k, v] of Object.entries(attrs)) {
@@ -69,10 +69,84 @@ function coins(n) {
 }
 
 /** Essence as it reads, with its glowing orb (what upgrades cost: the user's, gold being for town). */
-function essence(n) {
+export function essence(n) {
     const span = el('span', 'gear-coins gear-essence');
     span.append(el('i', 'gear-orb'), document.createTextNode(goldText(n)));
     return span;
+}
+
+/** A goddess's picture: her figure in its frame's lower middle; a shadow till she's reached. */
+function goddessFace(g, lit) {
+    const face = el('span', `gear-goddess${lit ? '' : ' is-shadow'}`);
+    face.style.backgroundPosition = `${-g.frame * GODDESS_FRAME * 2 - 12}px -40px`;
+    face.style.backgroundSize = `${GODDESSES.length * GODDESS_FRAME * 2}px ${GODDESS_FRAME * 2}px`;
+    return face;
+}
+
+/** What maxing teaches: "learn Frost Lance", "Fireball rank II". */
+const taught = (r) => (r.rank === 1 ? `learn ${r.spell.name}` : `${r.spell.name} rank ${RANK_NAMES[r.rank]}`);
+
+/** What a maxing taught you, said after it (nothing if it taught nothing). */
+export const learnedText = (r) => (!r ? '' : r.rank === 1 ? ` You've learned ${r.spell.name}! Equip it on Equip's Magic tab.` : ` ${r.spell.name} is rank ${RANK_NAMES[r.rank]} now.`);
+
+/**
+ * One row of the Upgrade page: Strength of Arm, Vigour, Focus or a goddess, maxed (sealed), the one you're on (what a
+ * level does in your own numbers, how far to maxing her, what that teaches, the buy button: `onBuy(price)`), or locked.
+ * The banner over the pad shows the one you're on with it too (UpgradeBanner.js: the user's, the page's own row).
+ */
+export function upgradeRow(h, up, inv, { justMaxed, justUnlocked, tutor, onBuy } = {}) {
+    const level = up.level(h.id), maxed = up.maxed(h), here = h === up.current || h.id === up.current?.id;
+    const row = el('div', `gear-up${h.goddess ? ' is-goddess' : ''}${maxed ? ' is-maxed' : here ? ' is-current' : ' is-locked'}`
+        + `${justMaxed === h.id ? ' is-just-maxed' : ''}${justUnlocked === h.id ? ' is-unlocked' : ''}`, { 'data-up': h.id });
+    row.append(h.goddess ? goddessFace(h, maxed || here) : el('span', `gear-icon gear-up-glyph gear-up-glyph--${h.stat}`, { text: h.glyph }));
+    const words = el('div', 'gear-up-words');
+    const name = el('div', 'gear-up-name', { text: h.name });
+    if (here) name.append(el('span', 'gear-up-level', { text: `${level}/${MAX}` }));
+    words.append(name, el('div', 'gear-up-title', { text: h.title }));
+    if (here) {
+        const bar = el('div', 'gear-up-bar');
+        const fill = el('span', 'gear-up-fill');
+        fill.style.width = `${Math.round(100 * level / MAX)}%`;
+        bar.append(fill);
+        words.append(bar);
+        const now = inv.stats, then = up.after(h.id);
+        const lines = [['Attack', now?.attack, then?.attack], ...(up.magic ? [['Spell power', now?.spell, then?.spell]] : []),
+            ['Hit points', now?.hp.max, then?.hp.max]];
+        for (const [what, a, b] of lines) if (a != null && b != null && a !== b) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
+        const r = up.teaches;
+        if (r) words.append(el('div', 'gear-up-reward', { text: `Max ${h.goddess ? 'her' : 'it'}: ${taught(r)}` }));
+    } else if (!maxed) {
+        const before = HEROES[HEROES.indexOf(h) - 1];
+        words.append(el('div', 'gear-up-gives', { text: `🔒 Max ${before.name} first` }));
+    }
+    row.append(words);
+    if (maxed) row.append(el('span', 'gear-up-seal', { text: '✓ Maxed' }));
+    else if (here) {
+        const price = up.price();
+        const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': h.id });
+        buy.append(essence(price));
+        buy.classList.toggle('is-dear', price > inv.essence);
+        if (onBuy) buy.addEventListener('click', () => onBuy(price));
+        if (justUnlocked === h.id) row.append(el('span', 'gear-up-ribbon', { text: 'Unlocked!' }));
+        if (tutor) {     // (the tutorial's, the first time: an arrow on the button to tap)
+            row.classList.add('is-tutor');
+            row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
+        }
+        row.append(buy);
+    }
+    return row;
+}
+
+/** Lays a page layer in the game's 352 px column over the canvas, scaled with it (the gear screens, the banner). */
+export function fitToCanvas(root, gameWidth) {
+    const canvas = document.querySelector('#game-container canvas');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const sx = rect.width / gameWidth;
+    const sy = rect.height / BASE_HEIGHT;
+    const side = (gameWidth - BASE_WIDTH) / 2;
+    root.style.setProperty('--side', `${side}px`);
+    root.style.transform = `translate(${rect.left + side * sx}px, ${rect.top}px) scale(${sx}, ${sy})`;
 }
 
 export class GearScreen {
@@ -112,14 +186,7 @@ export class GearScreen {
     }
 
     fitToCanvas() {
-        const canvas = document.querySelector('#game-container canvas');
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const sx = rect.width / this.gameWidth;
-        const sy = rect.height / BASE_HEIGHT;
-        const side = (this.gameWidth - BASE_WIDTH) / 2;
-        this.root.style.setProperty('--side', `${side}px`);
-        this.root.style.transform = `translate(${rect.left + side * sx}px, ${rect.top}px) scale(${sx}, ${sy})`;
+        fitToCanvas(this.root, this.gameWidth);
     }
 
     /** A shopkeeper's counter: { shop, keeper: { name, role, says, portrait } }. */
@@ -656,68 +723,16 @@ export class GearScreen {
         }
         const inv = this.inventory;
         const list = el('div', 'gear-list gear-upgrades', { 'data-key': 'upgrades' });
-        const on = up.current;
         let lit = null;
         for (const h of HEROES) {
-            const level = up.level(h.id), maxed = up.maxed(h), here = h === on || h.id === on?.id;
-            const row = el('div', `gear-up${h.goddess ? ' is-goddess' : ''}${maxed ? ' is-maxed' : here ? ' is-current' : ' is-locked'}`
-                + `${this.justMaxed === h.id ? ' is-just-maxed' : ''}${this.justUnlocked === h.id ? ' is-unlocked' : ''}`, { 'data-up': h.id });
-            row.append(h.goddess ? this._goddessFace(h, maxed || here) : el('span', `gear-icon gear-up-glyph gear-up-glyph--${h.stat}`, { text: h.glyph }));
-            const words = el('div', 'gear-up-words');
-            const name = el('div', 'gear-up-name', { text: h.name });
-            if (here) name.append(el('span', 'gear-up-level', { text: `${level}/${MAX}` }));
-            words.append(name, el('div', 'gear-up-title', { text: h.title }));
-            if (here) {
-                const bar = el('div', 'gear-up-bar');
-                const fill = el('span', 'gear-up-fill');
-                fill.style.width = `${Math.round(100 * level / MAX)}%`;
-                bar.append(fill);
-                words.append(bar);
-                const now = inv.stats, then = up.after(h.id);
-                const lines = [['Attack', now?.attack, then?.attack], ...(up.magic ? [['Spell power', now?.spell, then?.spell]] : []),
-                    ['Hit points', now?.hp.max, then?.hp.max]];
-                for (const [what, a, b] of lines) if (a != null && b != null && a !== b) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
-                const r = up.teaches;
-                if (r) words.append(el('div', 'gear-up-reward', { text: `Max ${h.goddess ? 'her' : 'it'}: ${this._taught(r)}` }));
-            } else if (!maxed) {
-                const before = HEROES[HEROES.indexOf(h) - 1];
-                words.append(el('div', 'gear-up-gives', { text: `🔒 Max ${before.name} first` }));
-            }
-            row.append(words);
-            if (maxed) row.append(el('span', 'gear-up-seal', { text: '✓ Maxed' }));
-            else if (here) {
-                const price = up.price();
-                const buy = el('button', 'gear-up-buy', { type: 'button', 'data-buy': h.id });
-                buy.append(essence(price));
-                buy.classList.toggle('is-dear', price > inv.essence);
-                buy.addEventListener('click', () => this._buyUpgrade(h, price));
-                if (this.justUnlocked === h.id) row.append(el('span', 'gear-up-ribbon', { text: 'Unlocked!' }));
-                if (this.tutor) {     // (the tutorial's, the first time: an arrow on the button to tap)
-                    row.classList.add('is-tutor');
-                    row.append(el('span', 'gear-tutor-arrow', { text: 'Tap' }));
-                }
-                row.append(buy);
-                lit = row;
-            }
+            const row = upgradeRow(h, up, inv, { justMaxed: this.justMaxed, justUnlocked: this.justUnlocked, tutor: this.tutor, onBuy: (price) => this._buyUpgrade(h, price) });
+            if (row.classList.contains('is-current')) lit = row;
             list.append(row);
             if (h === OWN[OWN.length - 1]) list.append(el('div', 'gear-up-heading', { text: 'Goddesses' }));
         }
         panel.append(list);
         // (the one you're on in sight: newly unlocked, scrolled to)
         if (lit && this.justUnlocked) requestAnimationFrame(() => lit.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }));
-    }
-
-    /** A goddess's picture: her figure in its frame's lower middle; a shadow till she's reached. */
-    _goddessFace(g, lit) {
-        const face = el('span', `gear-goddess${lit ? '' : ' is-shadow'}`);
-        face.style.backgroundPosition = `${-g.frame * GODDESS_FRAME * 2 - 12}px -40px`;
-        face.style.backgroundSize = `${GODDESSES.length * GODDESS_FRAME * 2}px ${GODDESS_FRAME * 2}px`;
-        return face;
-    }
-
-    /** What maxing teaches: "learn Frost Lance", "Fireball rank II". */
-    _taught(r) {
-        return r.rank === 1 ? `learn ${r.spell.name}` : `${r.spell.name} rank ${RANK_NAMES[r.rank]}`;
     }
 
     _buyUpgrade(h, price) {
@@ -735,8 +750,7 @@ export class GearScreen {
             this.justMaxed = h.id;
             this.justUnlocked = res.next?.id || null;
             this.notice = `${h.name} maxed!${res.next ? ` ${res.next.name} is unlocked.` : ''}`;
-            const r = res.learned;
-            if (r) this.notice += r.rank === 1 ? ` You've learned ${r.spell.name}! Equip it on Equip's Magic tab.` : ` ${r.spell.name} is rank ${RANK_NAMES[r.rank]} now.`;
+            this.notice += learnedText(res.learned);
         } else {
             audio.play('coins', { volume: 0.6 });
             this.notice = `${h.name}: ${up.level(h.id)}/${MAX}.`;
