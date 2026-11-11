@@ -4,6 +4,7 @@
 // Rouser coming ashore once they're all beaten, a boss fought alone on his own ground. Within five tiles one
 // comes for you, winds up (flashing red) and swings; your swing strikes it; far enough off it goes home.
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 /** Into the world; only the Point's band comes (`bands`: 'all' lets the first area's guards come too). */
 async function enterWorld(page, path = '/', bands = 'z35') {
@@ -2611,6 +2612,36 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             expect(await page.evaluate((boss) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === boss), z.boss)).toBe(false);
         });
 
+        test(`${fam}: its foes stand about the way through and see you further off; its edge onto the next zone is held, a foe in your way warning you off, till its boss falls (the user's: they walked on past no one)`, async ({ page }) => {
+            test.setTimeout(120000);
+            await enterWorld(page, '/', fam);
+            const { way, edge } = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url)))[fam];
+            // (a hero as strong as its first pack is made for, the zones before it cleared, not it)
+            await page.evaluate((fam) => import('/src/battle/zones.js').then(({ strengthFor, ZONES }) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), stats = ui.inventory.stats;
+                for (let z = ZONES[fam].after; z; z = ZONES[z].after) gs.flags[`cleared-${z}`] = true;
+                Object.defineProperty(stats, 'attack', { value: Math.ceil(strengthFor(fam, 0) / 2000), configurable: true, writable: true });
+                Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 2000, now: 2000 }, configurable: true, writable: true });
+                ui.hp.max = ui.hp.now = 2000;
+                window.__mend = setInterval(() => { ui.hp.now = ui.hp.max; }, 100);
+            }), fam);
+            // Near the way on: one of them comes and stands in your way, warning you off
+            const near = way[way.length - 4];
+            await standAt(page, near[0], near[1]);
+            const holding = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.holding && f.barring).length);
+            await expect.poll(holding, { timeout: 30000 }).toBe(1);
+            const seen = await page.evaluate((fam) => {
+                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+                return { sees: [...new Set(fd.foes.filter(f => f.family === fam && !f.spec.boss).map(f => f.aggro / 32))], said: fd._barSaid > 0 };
+            }, fam);
+            expect(seen).toEqual({ sees: [7], said: true });
+            expect(edge.length).toBeGreaterThan(0);
+            // Its boss felled, it's no longer held
+            await page.evaluate((fam) => { window.__PHASER_GAME.scene.getScene('GameScene').flags[`cleared-${fam}`] = true; }, fam);
+            await expect.poll(holding, { timeout: 10000 }).toBe(0);
+            await page.evaluate(() => clearInterval(window.__mend));
+        });
+
         test(`${fam}: its boss is a boss fight, made for the hero three packs past its last, wearing his own unit's sheet grown; his slam marked red; at his call his band comes; felled, a chest and the zone cleared`, async ({ page }) => {
             test.setTimeout(150000);
             await enterWorld(page, '/', fam);
@@ -2659,7 +2690,7 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         });
     }
 
-    test("the Riverlands' ogres stand in your way on, not spread over the valley (the user's, November 2026: they had to be hunted for): every pack nearer the Meadowlands than the bridge you came in by but one at the way in, and walking west from the bridge they come for you, from further off than the Point's", async ({ page }) => {
+    test("the Riverlands' ogres stand in your way on, not spread over the valley (the user's, November 2026: they had to be hunted for): every pack about the way from the bridge you came in by to the Meadowlands but one at the way in, and walking west from the bridge they come for you, from further off than the Point's", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'z20');
         await strongFor(page, 'z20', 0);
@@ -2667,8 +2698,13 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').flags['cleared-z20'] = false; });
         const { PACKS } = await zone(page, 'z20');
         const lair = PACKS.find(p => p.lair), road = PACKS.filter(p => !p.lair), bridge = { x: 7592, y: 8704 };
-        const nearer = road.filter(p => Math.hypot(p.at[0] - lair.at[0], p.at[1] - lair.at[1]) < Math.hypot(p.at[0] - bridge.x, p.at[1] - bridge.y));
-        expect(nearer.length, 'packed before the way on').toBeGreaterThanOrEqual(road.length - 2);
+        // (all about the way from the bridge to the way on, not over the valley: within a few tiles of the line, the way
+        // through curving a little; the user's, November 2026: hordes in the way of where you're going)
+        const off = (p) => {
+            const vx = lair.at[0] - bridge.x, vy = lair.at[1] - bridge.y, t = Math.max(0, Math.min(1, ((p.at[0] - bridge.x) * vx + (p.at[1] - bridge.y) * vy) / (vx * vx + vy * vy)));
+            return Math.hypot(p.at[0] - bridge.x - t * vx, p.at[1] - bridge.y - t * vy) / 32;
+        };
+        expect(road.filter(p => off(p) <= 12).length, 'about the way through').toBeGreaterThanOrEqual(road.length - 1);
         expect(road.every(p => p.aggro > 5 * 32), 'they see you from further off').toBe(true);
         // Nothing to hunt: 6.5 tiles off the first you'd meet coming from the bridge (beyond the Point's five), it comes
         const first = road.slice().sort((a, b) => Math.hypot(a.at[0] - bridge.x, a.at[1] - bridge.y) - Math.hypot(b.at[0] - bridge.x, b.at[1] - bridge.y))[0];

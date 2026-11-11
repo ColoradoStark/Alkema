@@ -221,8 +221,13 @@ const MEADOWLANDS_BANDS = [
 ];
 // (each comes for you from further off than the Point's: they stand in your way on, and the user had to hunt for them)
 const ROAD_AGGRO = 7 * 32;
+// Each zone's edge onto the next (road.json `edge`: the Riverlands' onto the Meadowlands, the Meadowlands' at
+// Stonebridge's bridge), held by its foes till its boss is felled (FieldDemons `_holding`; the user's, November 2026:
+// they crossed into the Meadowlands, and over the bridge into Stonebridge, with no one warning them or in their way)
+export const HOLDS = {};
 for (const [zone, bands, boss] of [['z20', RIVERLANDS_BANDS, 'ancientogre'], ['z19', MEADOWLANDS_BANDS, 'masterinfantryman']]) {
     const road = ROAD[zone];
+    HOLDS[zone] = road.edge;
     BANDS[zone] = [
         ...road.packs.map((p, k) => ({ at: p.at, band: bands[k], aggro: ROAD_AGGRO })),
         { at: road.lair, band: [boss], step: BOSS_STEP[zone], lair: true, arena: road.arena, openOnly: true },

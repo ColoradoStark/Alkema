@@ -21,7 +21,7 @@
 
 import { UNIT } from './Demons.js';
 import { Orc } from './FieldOrcs.js';
-import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
+import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, HOLDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -31,7 +31,7 @@ import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { Heeds } from './Heeds.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, GOLD_SHARE, packEssence, strengthFor, barred } from './zones.js';
+import { ZONES, GOLD_SHARE, packEssence, strengthFor, barred, cleared } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -131,6 +131,15 @@ const LOCK_WORDS = {
     z28: 'One of the Duke\'s men blocks the road: "None pass to Stonebridge who haven\'t beaten the Goblin Rouser at the Saltmere Point. Turn back."',
     z20: 'An ogre blocks the way over the bridge: "Valley not for little ones. Beat the Duke\'s knight first. Go back."',
     z19: 'One of Grimhold\'s foot blocks your way: "The Meadowlands are the army\'s. None pass who haven\'t beaten the Ancient Ogre. Turn back."',
+};
+// A zone's edge onto the next (Bands.js `HOLDS`), its boss not yet felled: you within HOLD_NEAR of it, its nearest foe
+// within LOCK_REACH, not after you, comes and stands in your way and warns you off, as a guard does (the user's,
+// November 2026: they walked from the Riverlands into the Meadowlands, and over the bridge into Stonebridge, with no
+// one warning them or in their way)
+const HOLD_NEAR = 5 * TILE;
+const HOLD_WORDS = {
+    z20: 'An ogre stands in your way: "Old One says nobody goes to the meadows. Beat Old One first. Go back."',
+    z19: 'One of Grimhold\'s foot bars your way: "None cross to Stonebridge while the Master of Foot stands. Turn back."',
 };
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
@@ -620,6 +629,21 @@ export class FieldDemons {
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
     }
 
+    /** The nearest point of a zone's edge onto the next (Bands.js `HOLDS`) to you, and how far (`d`, px). */
+    _edge(fam, you) {
+        let near = { x: you.x, y: you.y, d: Infinity };
+        for (const [x, y] of HOLDS[fam] ?? []) {
+            const d = Math.hypot(x - you.x, y - you.y);
+            if (d < near.d) near = { x, y, d };
+        }
+        return near;
+    }
+
+    /** A zone's edge onto the next held against you: you near it, and its boss not yet felled (zones.js `cleared`). */
+    _holding(fam, you) {
+        return !!HOLDS[fam] && this._edge(fam, you).d <= HOLD_NEAR && !cleared(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength());
+    }
+
     /** A zone barred to you (zones.js `barred`), its foes warning you off and in your way, not yet struck. */
     _locked(fam) {
         return !this.dared.has(fam) && barred(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength());
@@ -705,6 +729,14 @@ export class FieldDemons {
             if (d <= GUARD_SEES && f.guard && !this.provoked && this._shallow(f, you)) {
                 f.outT = 0;
                 return this._bar(f, you, d, dt, delta);
+            }
+            f.holding = !!you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._holding(f.family, you);
+            if (f.holding) {
+                // (only the nearest of its zone's not after you: the rest stay home)
+                const rival = this.foes.some(o => o !== f && o.hp > 0 && o.family === f.family && !o.guard && !o.spec.boss && (o.state === 'post' || o.state === 'home')
+                    && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (o.barring ? BAR_HANDOFF : f.barring ? -BAR_HANDOFF : 0));
+                if (!rival) return this._bar(f, you, d, dt, delta, HOLD_WORDS[f.family]);
+                f.holding = false;
             }
             const locked = you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._locked(f.family);
             if (locked && this._shallow(f, you)) {
@@ -1064,6 +1096,7 @@ export class FieldDemons {
 
     /** How far in you are on a guard's ground (tiles): the wood's depth, or how far from where you crossed into its zone. */
     _deep(f, you) {
+        if (f.holding) return -this._edge(f.family, you).d / TILE;      // (holding a zone's edge: deeper is nearer it)
         if (f.woods) return this.scene.overworld?.forest?.depthAt(you.x, you.y) ?? 0;
         const e = this._entry;
         if (e?.zone === f.zone) return 1 + Math.hypot(you.x - e.x, you.y - e.y) / TILE;
@@ -1123,7 +1156,8 @@ export class FieldDemons {
             f.press = { x: v.x / sp, y: v.y / sp };
         } else f.pressT = Math.max(0, (f.pressT || 0) - delta);
         const pressing = f.pressT > 0;
-        const [px, py] = pressing ? [f.press.x, f.press.y] : [f.post.x - you.x, f.post.y - you.y];
+        const toward = f.holding ? this._edge(f.family, you) : f.post;      // (between you and the edge it holds, or its post)
+        const [px, py] = pressing ? [f.press.x, f.press.y] : [toward.x - you.x, toward.y - you.y];
         const pd = Math.hypot(px, py) || 1, at = pressing ? BAR_PRESS : BAR;      // (pressing on: right up against you, so you're put back)
         const tx = you.x + px / pd * at, ty = you.y + py / pd * at, g = Math.hypot(tx - foe.x, ty - foe.y);
         // (already in your way, it only keeps across it, onto your line, and you slide off it no way round: following a
