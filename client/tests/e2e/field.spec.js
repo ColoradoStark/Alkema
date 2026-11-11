@@ -2135,6 +2135,8 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             return gs.chests.chests.length - before;
         }, boss.i);
         expect(chests).toBe(1);
+        // (beaten the first time: a blessing to choose, once the fight's over: upgrades.spec.js "A blessing")
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').upgrades.offer?.from)).toBe('z35');
         await expect.poll(() => page.evaluate(() => {
             const ui = window.__PHASER_GAME.scene.getScene('UIScene');
             return { bar: ui.bossBar.shown, dark: ui.textures.exists('boss-dark'), ring: !!window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons._arena,

@@ -76,7 +76,7 @@ export function essence(n) {
 }
 
 /** A goddess's picture: her figure in its frame's lower middle; a shadow till she's reached. */
-function goddessFace(g, lit) {
+export function goddessFace(g, lit) {
     const face = el('span', `gear-goddess${lit ? '' : ' is-shadow'}`);
     face.style.backgroundPosition = `${-g.frame * GODDESS_FRAME * 2 - 12}px -40px`;
     face.style.backgroundSize = `${GODDESSES.length * GODDESS_FRAME * 2}px ${GODDESS_FRAME * 2}px`;

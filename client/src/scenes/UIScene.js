@@ -1,3 +1,4 @@
+import { Blessings, CALM_MS } from '../ui/Blessings.js';
 import { UpgradeBanner } from '../ui/UpgradeBanner.js';
 import { audio } from '../audio/audio.js';
 import { Scene, BlendModes } from 'phaser';
@@ -52,6 +53,10 @@ export class UIScene extends Scene {
         // The next upgrade over the pad, bought with a tap (the user's: no changing screens for it)
         this.upgradeBanner = new UpgradeBanner(this, () => this.upgrades);
         this.events.once('shutdown', () => this.upgradeBanner.destroy());
+        // A blessing to choose, once a zone's boss is beaten and the fight's over (Blessings.js)
+        this.blessings = new Blessings(this, () => this.upgrades);
+        this._calmT = 0;
+        this.events.once('shutdown', () => this.blessings.destroy());
         // Story mode: what someone in town has to say, with their portrait
         this.dialogue = new Dialogue(this, 32, 32 + 448);
         // In a fight, the blue button asks which spell (or skill)
@@ -163,6 +168,11 @@ export class UIScene extends Scene {
         audio.play('holy');
         const me = this.scene.get('GameScene')?.localPlayer?.sprite;
         if (me) this.scene.get('GameScene').effects?.floatText(me.x, me.y - 30, 'Healed', '#7ee07e', 18);
+    }
+
+    /** A menu over the world (Upgrade, Equip, Items, a shop, a blessing to choose): the fight holds (FieldDemons). */
+    get menuUp() {
+        return !!(this.gear?.visible || this.blessings?.visible);
     }
 
     /**
@@ -454,7 +464,12 @@ export class UIScene extends Scene {
         // A menu open: it has the pad's and the buttons' room (the user's), only the tab bar showing
         this.bottomControls.setControlsShown(!this.gear?.visible);
         // (a page layer over the canvas: kept off the black of a door's card and a boss's name)
-        this.upgradeBanner.update(!this.gear?.visible && !this.dialogue.visible && !this.enterPrompt.visible && !this._card && !this._bossCard?.active);
+        const clear = !this.gear?.visible && !this.dialogue.visible && !this.enterPrompt.visible && !this._card && !this._bossCard?.active;
+        // (a blessing to choose: up once nothing's been after you a while, CALM_MS, never mid-fight, the user's)
+        const fight = this.scene.get('GameScene')?.fieldDemons;
+        this._calmT = fight?.engaged || !clear ? 0 : this._calmT + delta;
+        if (this.upgrades?.offer && !this.blessings.visible && this._calmT >= CALM_MS) this.blessings.show();
+        this.upgradeBanner.update(clear && !this.blessings.visible);
         if (this._tutorTab && this.bottomControls.pointing !== (this.upgradeBanner.visible ? null : 'stats')) this._tutorTab();
         this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
         const dayNight = this.scene.get('GameScene')?.dayNight;
@@ -475,7 +490,7 @@ export class UIScene extends Scene {
         if (stick) ({ dx, dy } = stick);
 
         const me = gameScene.localPlayer.sprite;
-        if (this.dialogue.visible || this.gear?.visible || this.enterPrompt.leaving) {        // the world waits while someone's talking, you're shopping, or asked if you'd leave
+        if (this.dialogue.visible || this.gear?.visible || this.blessings.visible || this.enterPrompt.leaving) {        // the world waits while someone's talking, you're shopping, or asked if you'd leave
             gameScene.handlePlayerMovement(0, 0);
             return;
         }

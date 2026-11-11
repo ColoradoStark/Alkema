@@ -3,7 +3,7 @@
 // spells taught as they're maxed; heroes from before starting afresh. (What it looks like is upgrades.spec.js's.)
 import { readFileSync } from 'node:fs';
 import { describe, test, expect, beforeEach } from 'vitest';
-import { Upgrades, HEROES, MAX, lifeAfter, lifeAtStart } from '../../src/upgrades/Upgrades.js';
+import { Upgrades, HEROES, MAX, BLESSINGS, OFFERED, lifeAfter, lifeAtStart } from '../../src/upgrades/Upgrades.js';
 import { packEssence, GOLD_SHARE } from '../../src/battle/zones.js';
 import { Spellbook } from '../../src/magic/Spellbook.js';
 import { account } from '../../src/account/account.js';
@@ -172,5 +172,52 @@ describe('Big numbers read short', () => {
         expect(short(3_400_000)).toBe('3.4M');
         expect(short(7_000_000_000)).toBe('7B');
         expect(short(123_456_789_012_345)).toBe('123T');
+    });
+
+    test("a boss beaten the first time offers three blessings to choose from, once for his zone; one taken lasts, and its share comes on top of the path's (the user's: a choice now and then, never mid-fight)", () => {
+        const { u, inventory } = hero('mage');
+        expect(u.offer).toBe(null);
+        expect(u.offerFor('z35', () => 0)).toBe(true);
+        expect(u.offerFor('z35')).toBe(false);                   // (once for each zone)
+        const { choices } = u.offer;
+        expect(choices).toHaveLength(OFFERED);
+        expect(new Set(choices).size).toBe(OFFERED);
+        expect(u.bless('nope')).toBe(null);
+        const before = u.apply(BASE).attack;
+        const keen = choices.includes('keen') ? 'keen' : null;
+        expect(keen).toBe('keen');                                // (pick(0) took the first of the pool each time: stout, keen, arcane)
+        expect(u.bless('keen').name).toBe('Keen Edge');
+        expect(u.offer).toBe(null);
+        expect(u.apply(BASE).attack).toBe(Math.round(before * 1.12));
+        expect(account.current.data.blessings).toEqual({ keen: 1 });
+        expect(u.offerFor('z35')).toBe(false);                   // (taken: still never again for his zone)
+        // Kept with the hero: made again from the save, it's there, and so is a choice not yet made
+        u.offerFor('z28', () => 0);
+        const again = new Upgrades({ inventory, spellbook: null });
+        expect(again.blessed('keen')).toBe(1);
+        expect(again.offer.from).toBe('z28');
+    });
+
+    test("every blessing does what it says: hit points, attack, spell power, essence, gold, magic coming back, a healer's price", () => {
+        const { u } = hero('mage');
+        const plain = { hp: u.apply(BASE).hp.max, spell: u.apply(BASE).spell, fortune: u.fortune, regen: u.regen, heal: u.healPrice(1) };
+        u.blessings = Object.fromEntries(BLESSINGS.map(b => [b.id, 1]));
+        u.version++;
+        expect(u.apply(BASE).hp.max).toBe(Math.round(plain.hp * 1.12));
+        expect(u.apply(BASE).spell).toBe(Math.round(plain.spell * 1.15));
+        expect(u.blessing('essence')).toBeCloseTo(1.15);
+        expect(u.fortune).toBeCloseTo(plain.fortune * 1.2);
+        expect(u.regen).toBeCloseTo(plain.regen * 1.25);
+        expect(u.healPrice(1)).toBeLessThan(plain.heal);
+        u.blessings.thrift = 50;
+        expect(u.healPrice(1)).toBeGreaterThan(0);             // (never free)
+    });
+
+    test('a warrior, with no magic, is never offered a spell\'s blessing', () => {
+        for (let k = 0; k < 20; k++) {
+            const { u } = hero('warrior');
+            u.offerFor('z35');
+            for (const id of u.offer.choices) expect(BLESSINGS.find(b => b.id === id).magic).toBeFalsy();
+        }
     });
 });

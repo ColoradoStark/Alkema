@@ -115,6 +115,11 @@ export class Inventory {
         return gold ? Math.round(gold * (this.upgrades?.fortune ?? 1)) : 0;
     }
 
+    /** What `essence` a felled foe leaves comes to with Gleaning (a blessing): it goes through this before it's shown. */
+    gleaned(essence) {
+        return Math.round(essence * (this.upgrades?.blessing('essence') ?? 1));
+    }
+
     /** Essence gathered from a felled foe. */
     gather(essence) {
         this.essence += essence;

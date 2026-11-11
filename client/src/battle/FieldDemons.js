@@ -304,7 +304,7 @@ export class FieldDemons {
         if (!this.foes.length) return;
         // A menu open (Upgrade, Equip, Items, a shop), the fight holds (the user's: upgrading, they were struck);
         // back from it, a moment before anything strikes you
-        const menu = !!this.scene.scene.get('UIScene')?.gear?.visible;
+        const menu = !!this.scene.scene.get('UIScene')?.menuUp;
         if (menu !== !!this._held) {
             this._held = menu;
             for (const f of this.foes) {
@@ -664,7 +664,8 @@ export class FieldDemons {
         const now = this.scene.time.now;
         this.combo = now - this._lastKill <= COMBO_MS ? this.combo + 1 : 1;
         this._lastKill = now;
-        const { x, y } = f.foe, worth = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, { ...(PLACES[f.i] ?? f), step: f.step }, this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
+        const { x, y } = f.foe, paid = ZONES[FAMILIES[f.family].climb || f.family].climb ? climbBounty(f.kind, { ...(PLACES[f.i] ?? f), step: f.step }, this.combo) : bounty(f.kind, f.tier, this._price(ui), this.combo);
+        const worth = inv?.gleaned?.(paid) ?? paid;      // (Gleaning, a blessing)
         // Its essence, all it's worth, for the Upgrade page (the user's: gold is for town), and a little gold
         inv?.gather(worth);
         this._sparkle(x, y - f.foe.tall / 2, 0xb884ff, 14);
@@ -1915,8 +1916,10 @@ export class FieldDemons {
     /** He's beaten: his bar empties, and a fanfare. */
     _bossFalls(f) {
         this._arenaDown(true);
+        const first = !this.scene.flags?.[`cleared-${f.family}`];
         this.scene.setFlag?.(`cleared-${f.family}`);       // (the zone after it is open to you: zones.js `barred`)
         const ui = this.scene.scene.get('UIScene');
+        if (first) ui?.upgrades?.offerFor(f.family);         // (a blessing to choose, once his fight's over: UIScene, Blessings.js)
         ui?.bossBar?.hide(true);
         this.scene.cameras.main.shake(300, 0.006);
         this.scene.time.delayedCall(700, () => {

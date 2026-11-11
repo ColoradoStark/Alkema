@@ -23,6 +23,7 @@ export const PATH_BASE = 20, PATH_GROW = 1.4;
 // A healer mends you from nothing for this much of the next upgrade's price, in gold as fights pay it (a share of their
 // essence, GOLD_SHARE): priced in essence it was four times that, the user's 2,200 gold short after a few upgrades
 const HEAL_SHARE = 0.5;
+const THRIFT_FLOOR = 0.2;         // (Healer's Friend taken again and again: a healer asks at least this share)
 export const TIMES = 3.4;
 
 /** Your own three, before the goddesses: Strength of Arm (your blows), Vigour (your hit points), Focus (your spells). */
@@ -110,6 +111,24 @@ export const GODDESSES = [
 ].map(([id, name, title, stats], k) => ({ id: `goddess-${id}`, name, title, stats, goddess: true, frame: k }));
 
 export const GODDESS_FRAME = 64;
+
+/**
+ * Blessings (the user's, November 2026: the Upgrade page's path has no choice in it, so a choice now and then, as
+ * Vampire Survivors' and Archero's level-ups give, but never mid-fight): a zone's boss felled the first time, once his
+ * fight is over you choose one of three (`OFFERED`), each a small lasting share more of something, taken again and
+ * again. Small, so no pick is ever wrong for good: the climb is made for the path, not for these. Kept in the save
+ * as `blessings` ({ id: times taken }) and `blessingOffers` (the choices still to make: [{ from, choices }]).
+ */
+export const BLESSINGS = [
+    { id: 'stout', name: 'Stout Heart', glyph: '♥', text: '+12% hit points', stat: 'hp', by: 0.12 },
+    { id: 'keen', name: 'Keen Edge', glyph: '⚔', text: '+12% attack', stat: 'attack', by: 0.12 },
+    { id: 'arcane', name: 'Arcane Flame', glyph: '✦', text: '+15% spell power', stat: 'spell', by: 0.15, magic: true },
+    { id: 'gleaning', name: 'Gleaning', glyph: '◆', text: '+15% essence from foes', stat: 'essence', by: 0.15 },
+    { id: 'lucky', name: 'Lucky Star', glyph: '★', text: '+20% gold found', stat: 'gold', by: 0.2 },
+    { id: 'wellspring', name: 'Wellspring', glyph: '❂', text: 'Magic comes back 25% faster', stat: 'regen', by: 0.25, magic: true },
+    { id: 'thrift', name: 'Healer\'s Friend', glyph: '✚', text: 'Healers ask 20% less', stat: 'heal', by: -0.2 },
+];
+export const OFFERED = 3;
 
 /** Everyone, in the order they're hired. */
 export const HEROES = [...OWN, ...GODDESSES];
@@ -201,7 +220,61 @@ export class Upgrades {
             .sort((a, b) => a.k - b.k)
             .map((r, k) => ({ spell: r.spell, rank: r.rank, at: REWARD_AT(k) }));
         if (spellbook) spellbook.boost = (id) => this.spellBoost(id);
+        this.blessings = {};
+        for (const [id, n] of Object.entries(account.current?.data?.blessings || {})) if (Number.isFinite(n) && n > 0) this.blessings[id] = Math.floor(n);
+        this.offers = (account.current?.data?.blessingOffers || []).filter(o => o?.choices?.length);
         this._teach();
+    }
+
+    /** How many times you've taken a blessing. */
+    blessed(id) {
+        return this.blessings[id] || 0;
+    }
+
+    /** What your blessings make a stat (hp, attack, spell, essence, gold, regen, heal): 1 with none. */
+    blessing(stat) {
+        let k = 1;
+        for (const b of BLESSINGS) if (b.stat === stat) k += b.by * this.blessed(b.id);
+        return stat === 'heal' ? Math.max(THRIFT_FLOOR, k) : k;
+    }
+
+    /** The choice still to make (the first of them), or null. */
+    get offer() {
+        return this.offers[0] || null;
+    }
+
+    /**
+     * A zone's boss felled (`from`, his zone): three blessings to choose from, once for each zone (a zone you'd cleared
+     * before blessings came offers none). `pick(n)` chooses them, for the tests; else at random. False if none's due.
+     */
+    offerFor(from, pick = null) {
+        if (this.offers.some(o => o.from === from) || (account.current?.data?.blessedFor || []).includes(from)) return false;
+        const pool = BLESSINGS.filter(b => this.magic || !b.magic);
+        const choices = [];
+        while (choices.length < Math.min(OFFERED, pool.length)) {
+            const b = pool.splice(pick ? pick(pool.length) : Math.floor(Math.random() * pool.length), 1)[0];
+            choices.push(b.id);
+        }
+        this.offers.push({ from, choices });
+        this._saveBlessings();
+        return true;
+    }
+
+    /** Choose one of the choice before you: the blessing, or null if it isn't one of them. */
+    bless(id) {
+        const o = this.offer;
+        if (!o?.choices.includes(id)) return null;
+        this.offers.shift();
+        this.blessings[id] = this.blessed(id) + 1;
+        const done = [...(account.current?.data?.blessedFor || []), o.from];
+        this._saveBlessings({ blessedFor: done });
+        this.version++;                 // (your stats reckoned again)
+        this.inventory?._save?.();
+        return BLESSINGS.find(b => b.id === id);
+    }
+
+    _saveBlessings(more = {}) {
+        account.updateProgress({ blessings: { ...this.blessings }, blessingOffers: this.offers.map(o => ({ ...o })), ...more });
     }
 
     level(id) {
@@ -252,7 +325,7 @@ export class Upgrades {
     /** What a healer asks to mend you, `hurt` the share of your hit points gone (the user's: they charged nothing). */
     healPrice(hurt) {
         if (!(hurt > 0)) return 0;
-        return Math.max(1, Math.ceil(HEAL_SHARE * GOLD_SHARE * this.price() * hurt));
+        return Math.max(1, Math.ceil(HEAL_SHARE * GOLD_SHARE * this.price() * hurt * this.blessing('heal')));
     }
 
     /** Your stats with one more level of `id`: what buying it does. */
@@ -290,7 +363,7 @@ export class Upgrades {
     times(stat) {
         let levels = 0;
         for (const h of HEROES) levels += Math.min(MAX, this.level(h.id)) * GIVES[h.goddess ? 'goddess' : h.id][stat];
-        return TIMES ** levels;
+        return TIMES ** levels * this.blessing(stat);
     }
 
     /** What a track from before gives at its level: so much a level, doubled at each milestone. */
@@ -314,12 +387,12 @@ export class Upgrades {
 
     /** More gold found (Fortune, from before), times a find. */
     get fortune() {
-        return 1 + this.amount(KEPT.fortune, this.level('fortune')) / 100;
+        return (1 + this.amount(KEPT.fortune, this.level('fortune')) / 100) * this.blessing('gold');
     }
 
     /** How much faster magic comes back (Second Wind, from before; hit points come back only at a healer, the user's). */
     get regen() {
-        return 1 + this.amount(KEPT.breath, this.level('breath')) / 100;
+        return (1 + this.amount(KEPT.breath, this.level('breath')) / 100) * this.blessing('regen');
     }
 
     /** The hero's stats with their upgrades: what the server reckoned from their race, class and gear, and these. */

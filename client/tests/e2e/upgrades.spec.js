@@ -224,4 +224,103 @@ test.describe('The next upgrade over the pad', () => {
         await ui(page, (ui) => { ui.inventory.essence = 0; });
         await expect.poll(() => banner(page).then(b => [b.shown, b.pictures])).toEqual([false, 0]);
     });
+
+    test("some buys more than others (the user's, November 2026: the same every time wears thin): a milestone level bursts bigger, gold flooding the map; maxing one is the biggest, her picture rising large in a burst of light; all of it gone after", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await asMage(page, 0);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = () => false);
+        await ui(page, (ui) => { ui.upgrades.levels.might = 3; ui.upgrades.version++; ui.inventory.essence = 1e9; });
+        await expect.poll(() => banner(page).then(b => b.shown)).toBe(true);
+        await page.evaluate(() => {
+            const audio = window.__ALKEMA_AUDIO, was = audio.play.bind(audio);
+            window.__played = [];
+            audio.play = (name, o) => { window.__played.push(name); return was(name, o); };
+        });
+        const fx = () => page.evaluate(() => ({
+            pop: document.querySelector('.gear-banner-pop:last-of-type')?.className, flash: document.querySelectorAll('.gear-banner-flash').length,
+            sparks: document.querySelectorAll('.gear-banner-spark').length, crown: document.querySelector('.gear-banner-crown-name')?.textContent ?? null,
+            goddess: !!document.querySelector('.gear-banner-crown .gear-goddess'), played: window.__played.splice(0),
+        }));
+        const tap = async (n) => {
+            await page.locator('.gear-banner .gear-up-buy').click();
+            await expect.poll(() => banner(page).then(b => b.bought)).toBe(n);
+        };
+        // Level 4: an ordinary buy
+        await tap(4);
+        let f = await fx();
+        expect(f).toMatchObject({ pop: 'gear-banner-pop is-step', flash: 0, crown: null });
+        expect(f.played).not.toContain('holy');
+        await page.waitForTimeout(1300);
+        // Level 5, halfway: a milestone
+        await tap(5);
+        f = await fx();
+        expect(f).toMatchObject({ pop: 'gear-banner-pop is-mile', flash: 1, crown: null });
+        expect(f.sparks).toBeGreaterThanOrEqual(20);
+        expect(f.played).toContain('holy');
+        await page.waitForTimeout(150); await page.screenshot({ path: 'tests/zzshots/upgrade-milestone.png' });
+        await page.waitForTimeout(1300);
+        // Maxed: the biggest
+        await ui(page, (ui) => { ui.upgrades.levels.might = 9; ui.upgrades.version++; });
+        await page.locator('.gear-banner .gear-up-buy').click();
+        await expect.poll(() => ui(page, (ui) => ui.upgrades.current.id)).toBe('vigour');
+        f = await fx();
+        expect(f).toMatchObject({ flash: 1, crown: 'Strength of Arm maxed!', goddess: false });
+        expect(f.sparks).toBeGreaterThanOrEqual(30);
+        expect(f.played).toEqual(expect.arrayContaining(['reveal', 'holy']));
+        await expect.poll(() => fx().then(f => [f.crown, f.flash, f.sparks]), { timeout: 4000 }).toEqual([null, 0, 0]);       // (all gone after)
+        // A goddess maxed: her own picture, large
+        await ui(page, (ui) => { for (const id of ['vigour', 'focus']) ui.upgrades.levels[id] = 10; ui.upgrades.levels['goddess-brigid'] = 9; ui.upgrades.version++; });
+        await expect.poll(() => banner(page).then(b => b.name)).toBe('Brigid');
+        await page.locator('.gear-banner .gear-up-buy').click();
+        await expect.poll(() => fx().then(f => [f.crown, f.goddess])).toEqual(['Brigid maxed!', true]);
+        await page.waitForTimeout(400); await page.screenshot({ path: 'tests/zzshots/upgrade-maxed.png' });
+        await ui(page, (ui) => { ui.inventory.essence = 0; });
+        await expect.poll(() => banner(page).then(b => [b.shown, b.pictures]), { timeout: 5000 }).toEqual([false, 0]);       // (her picture let go with it)
+    });
+});
+
+test.describe("A blessing to choose, after a boss (the user's, November 2026: a choice now and then, never mid-fight)", () => {
+    const card = (page) => ui(page, (ui) => {
+        const root = document.querySelector('.gear-bless');
+        return {
+            shown: ui.blessings.visible && !root.hidden, cards: [...root.querySelectorAll('.gear-bless-card')].map(c => c.dataset.bless),
+            held: ui.menuUp, banner: ui.upgradeBanner.visible, offer: ui.upgrades.offer?.from ?? null,
+        };
+    });
+
+    test("once nothing's after you it comes up, three cards, the world held and the banner down; still fighting, it waits; one tapped is yours, and it's gone and let go", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page);
+        await asMage(page, 1e9);
+        await page.evaluate(() => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            fd.only = () => false;
+            Object.defineProperty(fd, 'engaged', { get: () => !!window.__fighting, configurable: true });
+            window.__fighting = true;
+        });
+        await expect.poll(() => card(page).then(c => c.banner)).toBe(true);
+        const attack = await ui(page, (ui) => { ui.upgrades.offerFor('z35', () => 0); return ui.upgrades.times('attack'); });
+        // Still fighting: it waits
+        await page.waitForTimeout(3500);
+        expect(await card(page)).toMatchObject({ shown: false, offer: 'z35' });
+        // The fight over: up a moment after, three to choose from, the world held, the banner down
+        await page.evaluate(() => { window.__fighting = false; });
+        await expect.poll(() => card(page).then(c => c.shown), { timeout: 6000 }).toBe(true);
+        let c = await card(page);
+        expect(c).toMatchObject({ cards: ['stout', 'keen', 'arcane'], held: true, banner: false });
+        const x = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.x);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(400);
+        await page.keyboard.up('ArrowRight');
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.x)).toBe(x);
+        await page.waitForTimeout(600); await page.screenshot({ path: 'tests/zzshots/blessing.png' });
+        // Keen Edge: yours, 12% more attack, and it's gone
+        await page.locator('.gear-bless-card[data-bless="keen"]').click();
+        await expect.poll(() => ui(page, (ui) => ui.upgrades.times('attack')).then(a => a / attack)).toBeCloseTo(1.12, 5);
+        expect(await ui(page, (ui) => ui.inventory.stats.attack === Math.round(ui.inventory.stats.base.attack * ui.upgrades.times('attack') * ui.upgrades.legendary))).toBe(true);
+        await expect.poll(() => card(page).then(c => [c.shown, c.cards.length, c.offer, c.held]), { timeout: 4000 }).toEqual([false, 0, null, false]);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').upgrades.blessed('keen'))).toBe(1);
+        await expect.poll(() => card(page).then(c => c.banner)).toBe(true);
+    });
 });

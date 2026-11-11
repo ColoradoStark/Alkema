@@ -656,7 +656,7 @@
 }
 @keyframes gear-arrow-bob { 50% { transform: translateY(-16px); } }
 /* "Level n!" floating up, and gold sparks off the button */
-.gear-banner-fx { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.gear-banner-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .gear-banner-pop {
     position: absolute; left: 0; right: 0; text-align: center; font: 20px Alagard, serif; color: #fbf236;
     text-shadow: 2px 2px #222034, 0 0 8px #df7126; animation: gear-pop-up 1.1s ease-out forwards;
@@ -667,3 +667,56 @@
     box-shadow: 0 0 4px #fbf236, 0 0 2px #df7126; transform: rotate(45deg); animation: gear-spark 0.55s ease-out forwards;
 }
 @keyframes gear-spark { 100% { transform: translate(var(--dx), var(--dy)) rotate(225deg) scale(0.3); opacity: 0; } }
+/* (a milestone's and a maxing's bigger bursts: UpgradeBanner) */
+.gear-banner-pop.is-mile { font-size: 28px; color: #ffd75a; text-shadow: 2px 2px #222034, 0 0 12px #ff9a1f, 0 0 22px #fbf236; }
+.gear-banner-pop.is-max { font-size: 30px; color: #fff6a8; text-shadow: 2px 2px #222034, 0 0 14px #df7126, 0 0 28px #fbf236; animation-duration: 1.8s; }
+.gear-banner-spark.is-mile { width: 7px; height: 7px; animation-duration: 0.8s; }
+.gear-banner-spark.is-max { width: 8px; height: 8px; background: #ffffff; animation-duration: 1.1s; }
+.gear-banner-flash {
+    position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 70%, #fbf236aa, #fbf23600 70%);
+    animation: gear-flash 0.6s ease-out forwards;
+}
+.gear-banner-flash.is-max { background: radial-gradient(ellipse at 50% 50%, #fff6a8dd, #fbf23644 55%, #fbf23600 85%); animation-duration: 1.1s; }
+@keyframes gear-flash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+.gear-banner-crown {
+    position: absolute; left: 0; right: 0; top: 214px; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    animation: gear-crown 2s ease-out forwards;
+}
+.gear-banner-crown .gear-goddess { position: relative; margin: 0; transform: scale(1.55); transform-origin: 50% 60%; filter: drop-shadow(0 0 6px #fbf236); }
+.gear-banner-crown .gear-up-glyph { position: relative; font-size: 72px; width: auto; height: auto; filter: drop-shadow(0 0 8px #fbf236); }
+.gear-banner-crown-name { position: relative; margin-top: 30px; font: 24px Alagard, serif; color: #fff6a8; text-shadow: 2px 2px #222034, 0 0 10px #df7126; }
+.gear-banner-rays {
+    position: absolute; left: 50%; top: 40%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%;
+    background: repeating-conic-gradient(#fbf23655 0deg 8deg, #fbf23600 8deg 22deg);
+    -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%);
+    animation: gear-rays 2s linear forwards;
+}
+@keyframes gear-crown { 0% { transform: translateY(40px) scale(0.3); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 25% { transform: scale(1); } 75% { opacity: 1; } 100% { transform: translateY(-30px); opacity: 0; } }
+@keyframes gear-rays { 100% { transform: rotate(60deg); } }
+
+/* A blessing to choose, after a boss (Blessings.js): three cards over the darkened map */
+.gear.gear-bless { z-index: 45; pointer-events: auto; background: radial-gradient(ellipse at 50% 45%, rgba(34, 32, 52, 0.55), rgba(34, 32, 52, 0.85)); }
+.gear.gear-bless[hidden] { display: none; }
+.gear-bless-box { position: absolute; left: 8px; right: 8px; top: 120px; text-align: center; }
+.gear-bless-title { font: 32px Alagard, serif; color: #fbf236; text-shadow: 2px 2px #222034, 0 0 12px #df7126; animation: gear-bless-in 0.4s ease-out both; }
+.gear-bless-sub { font: 16px Alagard, serif; color: var(--text); text-shadow: 1px 1px #222034; margin-bottom: 14px; animation: gear-bless-in 0.4s 0.08s ease-out both; }
+.gear-bless-cards { display: flex; gap: 6px; justify-content: center; }
+.gear-bless-card {
+    flex: 1 1 0; min-width: 0; min-height: 116px; padding: 12px 4px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+    background: url('/ui/creator/art/leather.png') 0 0 / 32px 32px repeat, var(--leather); color: var(--text); cursor: pointer;
+    border: 0; border-radius: 5px; box-shadow: 0 0 0 2px #c8a04a, 0 4px 10px rgba(0, 0, 0, 0.6); font-family: 'Alagard', monospace;
+    animation: gear-bless-deal 0.45s ease-out both;
+}
+.gear-bless-card:active { transform: scale(0.95); }
+.gear-bless-glyph { font-size: 40px; line-height: 1; color: #fbf236; text-shadow: 0 0 8px #df7126; }
+.gear-bless-glyph--hp { color: #ff6b6b; text-shadow: 0 0 8px #ac3232; }
+.gear-bless-glyph--spell, .gear-bless-glyph--regen { color: #8fd3ff; text-shadow: 0 0 8px #5b6ee1; }
+.gear-bless-glyph--essence { color: #d7b8ff; text-shadow: 0 0 8px #8f6db0; }
+.gear-bless-name { font-size: 15px; color: #fbf236; }
+.gear-bless-text { font-size: 13px; line-height: 1.3; }
+.gear-bless-had { font-size: 11px; color: var(--muted); }
+.gear-bless-card.is-chosen { animation: gear-bless-chosen 0.9s ease-out forwards; }
+.gear-bless-card.is-passed { transition: opacity 0.3s, transform 0.3s; opacity: 0.15; transform: scale(0.9); }
+@keyframes gear-bless-in { 0% { transform: translateY(-14px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes gear-bless-deal { 0% { transform: translateY(60px) rotate(-6deg) scale(0.7); opacity: 0; } 70% { transform: translateY(-4px) scale(1.04); opacity: 1; } 100% { transform: none; } }
+@keyframes gear-bless-chosen { 0% { transform: scale(1); } 25% { transform: scale(1.12); box-shadow: 0 0 0 3px #fff6a8, 0 0 30px #fbf236; filter: brightness(1.4); } 100% { transform: scale(1.05) translateY(-20px); opacity: 0; } }
