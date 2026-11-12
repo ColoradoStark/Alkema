@@ -14,11 +14,11 @@ const ZONE_PACKS = [...bands.slice(bands.indexOf('z35: ['), bands.indexOf('],\n}
     .matchAll(/at: \[(\d+), (\d+)\]/g)].map(m => [Number(m[1]), Number(m[2])]);
 
 describe('Zones', () => {
-    test("36 zones in four kingdoms, the user's: Dunmere 10, Grimhold 14, Nightspire 6, Gloomhold 6", () => {
-        expect(map.zones).toHaveLength(36);
+    test("33 zones in four kingdoms, the user's: Dunmere 10, Grimhold 13, Nightspire 6, Gloomhold 4 (a copse is the zone round it)", () => {
+        expect(map.zones).toHaveLength(33);
         const count = (k) => map.zones.filter(z => z.kingdom === k).length;
-        expect([count('Dunmere'), count('Grimhold'), count('Nightspire'), count('Gloomhold')]).toEqual([10, 14, 6, 6]);
-        expect(new Set(map.zones.map(z => z.name)).size).toBe(36);
+        expect([count('Dunmere'), count('Grimhold'), count('Nightspire'), count('Gloomhold')]).toEqual([10, 13, 6, 4]);
+        expect(new Set(map.zones.map(z => z.name)).size).toBe(33);
     });
 
     test('heroes start below Riverhold, in its wood (33), and the Saltmere Point (35) is the home zone, all seven of its packs and the Rouser\'s ground in it', () => {
