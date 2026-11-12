@@ -9,6 +9,7 @@ import { WORLD } from '../world/places.js';
 import { wrapDelta } from '../world/Overworld.js';
 import { walkingFrom } from '../world/walking.js';
 import { nearestHealer } from '../world/questWay.js';
+import { ROAD, roadStep } from '../world/journey.js';
 
 function distance(a, b) {
     return Math.hypot(wrapDelta(a.x, b.x), wrapDelta(a.y, b.y));
@@ -83,7 +84,9 @@ export class QuestTracker {
         placeQuests(scene.cache.json.get('world'));
         this.index = Math.max(0, Math.min(QUESTS.length, saved?.index || 0));
         this.progress = saved?.progress || 0;
-        this.done = new Set(saved?.done || []);        // the quests before the list that are done (Wren)
+        this.done = new Set(saved?.done || []);        // the quests before the list that are done (Wren, the road's places)
+        this._road = null;                             // the road to Stonebridge's step (setRoad)
+        this._tally = null;                            // ...and how its zone is going
         this.heal = null;                              // hurt badly: the quest to the healer
         this.onChange = onChange;
 
@@ -103,9 +106,28 @@ export class QuestTracker {
         this._render();
     }
 
-    /** The quest shown: the healer's when you're badly hurt, someone to find, then the list's; null when all are done. */
+    /** The quest shown: the healer's when you're badly hurt, someone to find, the road, then the list's; null when all are done. */
     get current() {
-        return this.heal || this.seeking || this.listed;
+        return this.heal || this.seeking || this.road || this.listed;
+    }
+
+    /** The road to Stonebridge's step (journey.js), once the controls are learnt; null at its end. */
+    get road() {
+        return this.index >= WREN.after ? this._road : null;
+    }
+
+    /**
+     * Each frame, as the road stands (`cleared(zone)`, zones.js's for this hero) and how the step's zone is going
+     * (RoadGuide's `tally`: its packs beaten, or null once its boss is all that's left). A step done ticks off.
+     */
+    setRoad(cleared, tally = null) {
+        const was = this._road;
+        this._road = roadStep(cleared, this.done);
+        const changed = was?.id !== this._road?.id, told = this._tally;
+        this._tally = tally;
+        const order = step => (step ? ROAD.indexOf(step) : ROAD.length);
+        if (changed && was && this.index >= WREN.after && order(this._road) > order(was)) this._flourish(was);
+        else if (changed || told?.beaten !== tally?.beaten || !told !== !tally) this._render();
     }
 
     /** The list's quest being worked on (it goes on underneath the others). */
@@ -163,6 +185,15 @@ export class QuestTracker {
 
     /** Check the player's position against the list's visit quest. */
     updatePosition(x, y) {
+        const r = this.road;
+        if (r?.place && this.current === r) {
+            const p = WORLD.places.find(o => o.name === r.place);
+            if (p && distance({ x, y }, p) <= r.radius) {
+                this.done.add(r.id);
+                this._save();
+            }
+            return;
+        }
         const q = this.listed;
         if (q?.kind !== 'visit') return;
         if (distance({ x, y }, q) <= q.radius) this._complete();
@@ -193,6 +224,11 @@ export class QuestTracker {
             this.title.setText('Quest complete!');
             this.line.setText(finished.text);
             this.count.setText(`${goal}/${goal}`).setColor('#99e550');
+        } else if (q && q === this.road) {
+            this.title.setText('Road to Stonebridge');
+            this.line.setText(q.text);
+            const t = q.zone && this._tally;
+            this.count.setText(t ? `${t.beaten}/${t.of}` : q.zone ? 'Boss' : '').setColor('#eec39a');
         } else if (q) {
             this.title.setText('Quest');
             this.line.setText(q.text);

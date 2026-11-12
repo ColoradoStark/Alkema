@@ -107,7 +107,8 @@ export class Minimap {
         this.dark.setAlpha(0);
     }
 
-    update(me, others, target) {
+    /** `trail`: the way on to the quest's target (the road's, RoadGuide), world points a tile apart, drawn as dots. */
+    update(me, others, target, trail = null) {
         const SCALE = this.scale;
         if (this.town) this.town.image.setPosition(Math.round(this.cx - me.x * SCALE), Math.round(this.cy - me.y * SCALE));
         else this.map.setTilePosition(Math.round(me.x * SCALE) - RADIUS, Math.round(me.y * SCALE) - RADIUS);
@@ -119,6 +120,15 @@ export class Minimap {
             if (dx * dx + dy * dy > (RADIUS - 3) ** 2) continue;
             g.fillStyle(INK).fillRect(this.cx + dx - 2.5, this.cy + dy - 2.5, 5, 5);
             g.fillStyle(0xcbdbfc).fillRect(this.cx + dx - 1.5, this.cy + dy - 1.5, 3, 3);
+        }
+
+        if (trail) {
+            for (let k = 2; k < trail.length; k += 3) {
+                const dx = wrapDelta(me.x, trail[k].x) * SCALE, dy = wrapDelta(me.y, trail[k].y) * SCALE;
+                if (dx * dx + dy * dy > (RADIUS - 4) ** 2) break;
+                g.fillStyle(INK).fillRect(this.cx + dx - 2, this.cy + dy - 2, 4, 4);
+                g.fillStyle(0xfbf236).fillRect(this.cx + dx - 1, this.cy + dy - 1, 2, 2);
+            }
         }
 
         if (target) {

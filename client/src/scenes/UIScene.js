@@ -7,6 +7,7 @@ import { BottomControls } from '../ui/BottomControls.js';
 import { Minimap } from '../ui/Minimap.js';
 import { QuestTracker } from '../ui/QuestTracker.js';
 import { wayTo } from '../world/questWay.js';
+import { cleared } from '../battle/zones.js';
 import { EnterPrompt } from '../ui/EnterPrompt.js';
 import { BossBar } from '../ui/BossBar.js';
 import { Dialogue, portraitUrl, nightNow } from '../ui/Dialogue.js';
@@ -508,8 +509,10 @@ export class UIScene extends Scene {
         this.minimap.setVisible(true);
         this.minimap.setTown(town);
         if (this.hp?.max) this.quests.setHealth(this.hp.now / this.hp.max, town ? gameScene._townPlace : me);
+        const guide = gameScene.roadGuide;
+        this.quests.setRoad(zone => cleared(zone, gameScene.flags, gameScene.fieldDemons?._strength() ?? 0), guide?.tally);
         const quest = this.quests.current;
-        this.minimap.update(me, others, this.questTarget(quest, gameScene));
+        this.minimap.update(me, others, this.questTarget(quest, gameScene), !town && quest === this.quests.road ? guide?.trail : null);
         this.minimap.setLost(town ? 0 : gameScene.world?.forest?.lost ?? 0);
         if (!town) this.quests.updatePosition(me.x, me.y);
     }
@@ -518,6 +521,11 @@ export class UIScene extends Scene {
     questTarget(quest, gameScene) {
         const town = gameScene.town;
         if (quest?.kind === 'visit') return town ? null : quest;
+        // (the road's: out on the world, what's to be fought next or the place; in a place, the way out)
+        if (quest && quest === this.quests.road) {
+            if (!town) return gameScene.roadGuide?.target ?? null;
+            return wayTo({ town: null, room: null }, { key: town.key, exits: town.data.exits, find: () => null });
+        }
         if (quest?.kind !== 'seek') return null;
         return wayTo(quest, town && {
             key: town.key,

@@ -22,6 +22,7 @@ import { Wildlife } from '../world/Wildlife.js';
 import { Ambience } from '../world/Ambience.js';
 import { ElvenGlow } from '../world/ElvenGlow.js';
 import { QuestMarks } from '../world/QuestMarks.js';
+import { RoadGuide } from '../world/RoadGuide.js';
 import { account } from '../account/account.js';
 import { getRangedAnimation } from '../sprites/weaponTypes.js';
 
@@ -122,9 +123,11 @@ export class GameScene extends Scene {
         // The elven spear's glow, on whoever carries it
         this.elvenGlow = new ElvenGlow(this);
         this.questMarks = new QuestMarks(this);
+        this.roadGuide = new RoadGuide(this);
         this.events.once('shutdown', () => {
             this.elvenGlow.destroy();
             this.questMarks.destroy();
+            this.roadGuide.destroy();
             this.chests.destroy();
             this.fieldDemons.destroy();
             this.riverBoats.destroy();
@@ -232,6 +235,9 @@ export class GameScene extends Scene {
         // Whoever the quest sends you to, in the map you're in, ringed with its glow
         const q = this.scene.get('UIScene')?.quests?.current;
         this.questMarks?.update(this.town && q?.kind === 'seek' && q.room === this.town.key ? this.town.folk.filter(f => f.plan.id === q.who) : []);
+        // The road's quest: the way on, out on the world
+        const road = q && q === this.scene.get('UIScene').quests.road ? q : null;
+        this.roadGuide?.update(road, this.world === this.overworld && !this._changingRoom && !this.localPlayer?.sailing ? feet : null, delta);
     }
 
     /**

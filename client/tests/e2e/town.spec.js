@@ -838,7 +838,7 @@ test.describe('Riverhold', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             gs.scene.get('UIScene').talkTo(gs.town.folk.find(f => f.plan.id === 'wren'));
         });
-        await expect.poll(quest).toMatchObject({ id: 'fernwick', glow: null, held: ['minimap-town'] });
+        await expect.poll(quest).toMatchObject({ id: 'road-z35', glow: null, held: ['minimap-town'] });
         expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current.data.quests.done)).toEqual(['wren']);
         // Out of town the town's map is let go, the world's back
         await page.evaluate(() => {
