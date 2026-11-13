@@ -13,7 +13,7 @@ export const ZONES = {
     // times `more` a pack along it: the first falls fast to a new hero, and each after needs what the last paid spent
     // on the Upgrade page, or you die. What it pays grows slowly (the user's, November 2026: the numbers got too big too
     // fast, millions up one road), the upgrades' prices as slowly with it
-    z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 50, more: 1.5 } },
+    z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 40, more: 1.5 } },       // (essence 20% less, the user's, November 2026: powered up too fast; it was 50)
 };
 // The Market Fields (28), north of Riverhold up the river road: the next zone (the user's, November 2026: bigger, at
 // least twice the foes, and a harder boss you grind a little for). Its climb takes up where the Point's leaves off
@@ -83,7 +83,7 @@ export function comeToFor(zoneId) {
 }
 
 /** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */
-export const GOLD_SHARE = 0.25;
+export const GOLD_SHARE = 0.25 / 0.8;      // (a quarter of what essence paid before it was cut 20%: gold as it was)
 
 /** The home zone: the Saltmere Point, the first loop (the user's: clear one zone, then grow). */
 export const HOME = 35;

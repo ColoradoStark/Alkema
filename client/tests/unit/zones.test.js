@@ -8,6 +8,10 @@ import MARKET from '../../src/battle/market.json';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
 
+// Spending what each pack paid, a new hero is never under this share of the strength the next is made for (the
+// user's, November 2026: essence cut 20%, they'd powered up too fast; at full pay none was ever short, the strongest
+// 3 to 13 times the mark; the weakest now about half, a fight to win by dodging; the user is trying it)
+const FAIR = 0.5;
 const PACKS = 7;        // up the climb (field.spec.js checks the road has them)
 const HEROES = [[4, 16], [5, 19], [7, 20], [9, 19], [9, 31]];      // new heroes' attack and hit points, weakest to strongest
 const BASE = (a, h) => ({ attack: a, spell: a, defence: 0, hp: { now: h, max: h }, mp: { now: 0, max: 0 } });
@@ -28,7 +32,7 @@ describe('The climb up the Saltmere Point', () => {
         expect(packEssence('z35', 1) / packEssence('z35', 0)).toBe(z.climb.more);
     });
 
-    test("the whole road, all seven packs, buys about ten upgrades (the user's: seventeen up it was too many), every new hero, with combos or without; never short for the next pack, and all spent the weakest not a pack ahead; no goddess on it", () => {
+    test("the whole road, all seven packs, buys about ten upgrades (the user's: seventeen up it was too many), every new hero, with combos or without; never under half the next pack's mark (FAIR), and all spent the weakest not a pack ahead; no goddess on it", () => {
         const short = [], ahead = [], counts = [], vigour = [];
         for (const combo of [1, 1.6]) {       // (kills close together pay more: about this much over a pack)
             for (const [a, h] of HEROES) {
@@ -38,7 +42,7 @@ describe('The climb up the Saltmere Point', () => {
                     inventory.essence += packEssence('z35', step - 1) * combo;
                     while (u.buy(u.current.id).ok) n++;
                     if (step === PACKS) break;
-                    if (strength() < strengthFor('z35', step)) short.push(`${a}/${h} short for pack ${step + 1}`);
+                    if (strength() < FAIR * strengthFor('z35', step)) short.push(`${a}/${h} short for pack ${step + 1} (${(strength() / strengthFor('z35', step)).toFixed(2)})`);
                     if (a === 4 && combo === 1) ahead.push(strength() / strengthFor('z35', step));
                 }
                 counts.push(n);
@@ -97,7 +101,7 @@ describe('The Market Fields, the next zone north of Riverhold', () => {
         inventory.essence += packEssence('z35', BOSS_STEP.z35);        // (the Rouser, a band of his own)
         while (u.buy(u.current.id).ok);
         for (let step = 0; step < packs; step++) {
-            if (strength() < strengthFor('z28', step)) short.push(`${a}/${h} short for pack ${step + 1} (${(strength() / strengthFor('z28', step)).toFixed(2)})`);
+            if (strength() < FAIR * strengthFor('z28', step)) short.push(`${a}/${h} short for pack ${step + 1} (${(strength() / strengthFor('z28', step)).toFixed(2)})`);
             inventory.essence += packEssence('z28', step);
             while (u.buy(u.current.id).ok);
         }
@@ -109,7 +113,7 @@ describe('The Market Fields, the next zone north of Riverhold', () => {
         expect(packEssence('z28', 0)).toBeCloseTo(packEssence('z35', 7));
     });
 
-    test('every new hero who beat the Point is strong enough for each of its packs in turn, spending what the last paid', () => {
+    test('every new hero who beat the Point is at least half as strong as each of its packs in turn, spending what the last paid', () => {
         expect(HEROES.flatMap(([a, h]) => road(a, h).short)).toEqual([]);
     });
 
@@ -140,7 +144,7 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
         const short = [], rounds = {}, feel = [];
         for (const [zone, packs] of ROAD) {
             for (let step = 0; step < packs; step++) {
-                if (zone !== 'z35' && strength() < strengthFor(zone, step)) short.push(`${a}/${h} short for ${zone} pack ${step + 1} (${(strength() / strengthFor(zone, step)).toFixed(2)})`);
+                if (zone !== 'z35' && strength() < FAIR * strengthFor(zone, step)) short.push(`${a}/${h} short for ${zone} pack ${step + 1} (${(strength() / strengthFor(zone, step)).toFixed(2)})`);
                 const s = u.apply(BASE(a, h)), Z = ZONES[zone];
                 // (your blows to fell one, and its blows to fell you, against what its zone's made for)
                 feel.push({ at: `${a}/${h} ${zone} pack ${step + 1}`, fell: Z.attack * Z.climb.hp ** step / s.attack, fall: s.hp.max / (Z.hp * Z.climb.hurt ** step), zone });
@@ -182,7 +186,7 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
         expect(off).toEqual([]);
     });
 
-    test('every new hero is strong enough for each pack in turn all the way to Stonebridge, spending what the last paid, and grinds a round or few for each boss', () => {
+    test('every new hero is at least half as strong as each pack in turn all the way to Stonebridge, spending what the last paid, and grinds a round or few for each boss', () => {
         const all = HEROES.map(([a, h]) => walk(a, h));
         expect(all.flatMap(r => r.short)).toEqual([]);
         for (const zone of ['z20', 'z19']) {
