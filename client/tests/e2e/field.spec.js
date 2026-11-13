@@ -2057,7 +2057,8 @@ test.describe('The Goblin Rouser, a boss fight', () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ring = fd._arena, me = gs.localPlayer.sprite;
             const puffs = ring?.puffs.map(p => [p.x, p.y]) || [];
             const walled = (x0, y0, x1, y1) => puffs.some(([x, y]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
-            const walls = { north: [6160, 6230, 6290].every(x => walled(x - 20, 12700, x + 20, 12770)) && walled(6420, 12560, 6700, 12640), east: walled(6800, 13200, 6880, 13520), wood: walled(6700, 12600, 6880, 13100) };
+            // (north, across the river road and up the line his zone meets the start's wood: none of his ground another zone's)
+            const walls = { north: walled(6130, 12690, 6200, 12780) && walled(6240, 12620, 6400, 12790) && walled(6420, 12560, 6700, 12640), east: walled(6800, 13200, 6880, 13520), wood: walled(6700, 12600, 6880, 13100) };
             const tries = [[6180, 12600], [6900, 13350], [6900, 12900]], back = [];
             const step = (k) => {
                 if (k === tries.length) return done({ walls, back, mist: gs.textures.exists('boss-mist') });
@@ -2691,6 +2692,27 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             expect(out).toEqual({ chests: 1, cleared: true });
         });
     }
+
+    test("a boss's ground is in his own zone (the user's, November 2026: fighting the Ancient Ogre they crossed into the Meadowlands): no point his mist holds you in is in another zone, every boss's", async ({ page }) => {
+        test.setTimeout(90000);
+        await enterWorld(page, '/', 'z20');
+        const out = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PACKS }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ow = gs.overworld, res = {};
+            for (const pack of PACKS.filter(p => p.lair)) {
+                const own = ow.zoneAt(...pack.at)?.id, [x0, y0, x1, y1] = pack.arena;
+                let inside = 0, other = 0;
+                for (let y = y0; y <= y1; y += 16) for (let x = x0; x <= x1; x += 16) {
+                    if (!fd._inArena(pack, x, y)) continue;
+                    inside++;
+                    const z = ow.zoneAt(x, y)?.id;
+                    if (z !== undefined && z !== own) other++;
+                }
+                res[pack.family] = { inside: inside > 100, other };
+            }
+            return res;
+        }));
+        for (const fam of ['z35', 'z28', 'z20', 'z19']) expect(out[fam], fam).toEqual({ inside: true, other: 0 });
+    });
 
     test("the Riverlands' ogres stand in your way on, not spread over the valley (the user's, November 2026: they had to be hunted for): every pack about the way from the bridge you came in by to the Meadowlands but one at the way in, and walking west from the bridge they come for you, from further off than the Point's", async ({ page }) => {
         test.setTimeout(120000);

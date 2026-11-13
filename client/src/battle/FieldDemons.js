@@ -50,6 +50,7 @@ const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tough
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
 const GUARD_SEES = 7.5 * TILE;  // ...a wood's guard within this: their posts half as far apart again as they were (the user's, November 2026: fewer along the edge), so they see as much further
+const HUNT = 12 * TILE;         // a pack in your way on the road's quest sees you this far off (RoadGuide), and keeps after you as far
 const LEASH = 10 * TILE;        // and gives up once you're this far from it, however far from home it's come (the user's: a leash on its post was a line to stand behind and shoot it from; at five a corner lost the bear)
 const LOOK_MS = [1000, 2000];   // which it sees only now and then, as it chases (the user's: once a second or two is enough)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
@@ -224,6 +225,7 @@ export class FieldDemons {
         this._up = new Set();      // the bands (FAMILIES) come or coming: you're near their stretch of coast
         this._coming = new Set();  // those whose sheets are loading
         this._near = new Set();
+        this.hunting = null;      // packs in your way on the road's quest (RoadGuide): they see you from HUNT, and come
         this.only = null;         // (the tests' switch, as weatherOverride: which bands may come, family => bool; null, every one)
         this._freeze = 0;
         this._mpT = 0;
@@ -596,15 +598,16 @@ export class FieldDemons {
     }
 
     /** One of a pack is after you: they all are. */
-    _rouse(pack) {
+    _rouse(pack, hunts = false) {
         this._takeOn(pack);
-        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && (o.state === 'post' || o.state === 'home')) this._roused(o);
+        for (const o of this.foes) if (o.pack === pack && o.hp > 0 && (o.state === 'post' || o.state === 'home')) this._roused(o, hunts);
     }
 
     /** After you: it comes on a while before it first looks how far off you are (struck from further off, it gave up there and then, and was mended). */
-    _roused(f) {
+    _roused(f, hunts = false) {
         if (f.spec.boss && !f.met && PACKS[f.pack]?.lair) this._bossBegins(f);
         f.state = 'chase';
+        if (hunts) f.hunts = true;      // (come from further off, it keeps after you as far, till it goes home)
         f.barring = false;      // (a guard warning you off, struck: no wall now, a fight)
         f.lookT = LOOK_MS[1];
         f.lost = false;
@@ -753,18 +756,20 @@ export class FieldDemons {
             // (on past it, deeper than it warns: it fights you, and its pack; it had come all that way)
             const pressed = locked && f.barring;
             f.barring = false;
-            if ((pressed || d <= (f.guard ? GUARD_SEES : f.aggro || AGGRO)) && !((f.calm -= delta) > 0)) {
+            const hunts = !f.guard && !!this.hunting?.has(f.pack);
+            if ((pressed || d <= (f.guard ? GUARD_SEES : hunts ? HUNT : f.aggro || AGGRO)) && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
-                this._rouse(f.pack);
+                this._rouse(f.pack, hunts);
             } else return this._home(f, dt, fromPost, delta);
         }
         // Now and then, chasing, it looks how far off you've got
         if ((f.lookT = (f.lookT ?? 0) - delta) <= 0) {
             f.lookT = LOOK_MS[0] + Math.random() * (LOOK_MS[1] - LOOK_MS[0]);
-            f.lost = d > Math.max(LEASH, (f.spec.keep || 0) + 80) && this._arena?.boss !== f;     // (a caster's own distance kept is no getting away; nor is a boss's ring)
+            f.lost = d > Math.max(f.hunts ? HUNT + 2 * TILE : LEASH, (f.spec.keep || 0) + 80) && this._arena?.boss !== f;     // (a caster's own distance kept is no getting away; nor is a boss's ring)
         }
         if (!you || f.lost) {
             f.lost = false;
+            f.hunts = false;
             if (f.state === 'windup') foe.tint(null);
             f.state = 'home';
             f.idle = null;
@@ -1802,10 +1807,13 @@ export class FieldDemons {
         if (box && (x < box[0] || y < box[1] || x > box[2] || y > box[3])) return false;
         const cut = pack.arenaCut;
         if (cut && x >= cut[0] && y >= cut[1] && x <= cut[2] && y <= cut[3]) return false;
-        const z = ow?.zoneAt?.(x, y)?.id, wood = ow?.forest?.depthAt?.(x, y) > 0;
-        if (box && !wood) return true;        // (within its box, open ground out of the wood is his, whoever's zone: its lines clean)
+        const z = ow?.zoneAt?.(x, y)?.id, own = ow?.zoneAt?.(...pack.at)?.id, wood = ow?.forest?.depthAt?.(x, y) > 0;
+        // (never another zone's: the user, November 2026, fighting the Ancient Ogre, walked on into the Meadowlands; water,
+        // no zone's, his within the box, a bridge over a river and all)
+        if (z !== undefined && z !== own) return false;
+        if (box && !wood) return true;        // (within its box, open ground out of the wood is his)
         if (pack.openOnly) return false;      // (a clearing his ground, the wood about it the elves': the Market Fields')
-        return z !== undefined && z === ow.zoneAt(...pack.at)?.id;
+        return z !== undefined;
     }
 
     /**

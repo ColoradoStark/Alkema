@@ -1,8 +1,11 @@
-// The way the road's quest points (journey.js), out on the world: what's to be fought next in its zone (the nearest
-// pack not yet beaten this visit; every one beaten, its boss's ground), or the place to reach, and the way there on foot
-// (`flowField`, found again only when what's to be fought changes). The minimap draws the way as a trail of dots
-// (UIScene), and an arrow at your feet points along it (the user's, November 2026: to try being guided zone by zone).
-// The arrow is shapes; the field, a little over a byte and a half a tile, goes when the road's quest isn't shown.
+// The way the road's quest points (journey.js), out on the world: where you're going (the zone's boss's ground, the way
+// on; or the place to reach), and the way there on foot (`flowField`, found again only when that changes). The foes
+// are in your way, not what you're led to (the user's, November 2026: led to the nearest pack they were running about
+// looking for foes; they wanted to be shown where they're going and the foes to come at them, pursuing and blocking):
+// a pack of the zone's ahead of you on the way, within HUNT, comes for you (`FieldDemons.hunting`). There with some
+// of its packs still standing (his ground waits on every one), it leads to those left. The minimap draws the way as
+// a trail of dots (UIScene), and an arrow at your feet points along it. The arrow is shapes; the field, a little over a
+// byte and a half a tile, goes when the road's quest isn't shown.
 
 import { PACKS, PLACES } from '../battle/FieldDemons.js';
 import { WORLD } from './places.js';
@@ -13,6 +16,9 @@ const AHEAD = 7;            // the arrow points at the way this many tiles on
 const TRAIL = 64;           // the way the minimap shows, in tiles
 const THERE = 5 * TILE;     // this near what it points to, the arrow goes: you're there
 const RING = 34;            // the arrow's distance from your feet (px), on the ground round them
+const HUNT = 12 * TILE;     // a pack ahead of you on the way this near comes for you (FieldDemons' own sight, past the view's edge)
+const AHEAD_OF = 3;         // ...ahead: its post no more than this many tiles' walk further from where you're going than you
+const ARRIVED = 8 * TILE;   // this near his ground with packs left, it leads to them
 
 export class RoadGuide {
     /** @param {Phaser.Scene} scene the GameScene */
@@ -24,6 +30,8 @@ export class RoadGuide {
         this.target = null;     // the one you're led to: { x, y }
         this.trail = [];        // the way there: [{ x, y }, ...] (world px)
         this.tally = null;      // a zone's packs: { beaten, of }, or null once its boss is all that's left
+        this.left = [];         // its packs still standing (PACKS indices)
+        this.mopUp = null;      // the step whose boss's ground you reached with packs left: led to them now
         this.arrow = scene.add.graphics().setDepth(27).setVisible(false);
         this._t = 0;
     }
@@ -37,10 +45,11 @@ export class RoadGuide {
             this._off(!step);
             return;
         }
-        this._aim(step);
+        this._aim(step, feet);
         const k = this.key && this.field;
         if (!k) return this._off(false);
         const tx = Math.floor(feet.x / TILE), ty = Math.floor(feet.y / TILE);
+        this._hunt(step, feet, tx, ty);
         const way = wayOn(this.field, tx, ty, TRAIL);
         this.trail = way.map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE }));
         const end = way.length ? way[way.length - 1] : [tx, ty];
@@ -49,18 +58,22 @@ export class RoadGuide {
         this._draw(feet, delta);
     }
 
-    /** What's to be fought next for this step, and the field toward it if that's changed. */
-    _aim(step) {
+    /** Where this step goes (its boss's ground; there with packs left, those), and the field toward it if that's changed. */
+    _aim(step, feet) {
         let sources;
         this.tally = null;
+        this.left = [];
         if (step.zone) {
             const fd = this.scene.fieldDemons, packs = [];
             PACKS.forEach((p, k) => { if (p.family === step.zone) packs.push(k); });
             const beaten = k => PLACES.every(p => p.pack !== k || fd.fell.has(p.i));
-            const left = packs.filter(k => !PACKS[k].lair && !beaten(k));
+            const left = this.left = packs.filter(k => !PACKS[k].lair && !beaten(k));
             const of = packs.filter(k => !PACKS[k].lair).length;
             this.tally = left.length ? { beaten: of - left.length, of } : null;
-            sources = (left.length ? left : packs.filter(k => PACKS[k].lair)).map(k => PACKS[k].at);
+            const lair = packs.filter(k => PACKS[k].lair).map(k => PACKS[k].at);
+            if (!left.length) this.mopUp = null;
+            else if (lair.some(([x, y]) => Math.hypot(x - feet.x, y - feet.y) < ARRIVED)) this.mopUp = step.id;
+            sources = this.mopUp === step.id ? left.map(k => PACKS[k].at) : lair;
         } else {
             const p = WORLD.places.find(o => o.name === step.place);
             sources = p ? [[p.x, p.y]] : [];
@@ -70,6 +83,29 @@ export class RoadGuide {
         this.key = key;
         this.sources = sources;
         this.field = sources.length ? this._flow(step, sources) : null;
+    }
+
+    /**
+     * The step's packs in your way come for you: standing, within HUNT, and ahead of you on the way (no further from
+     * where you're going on foot than you, give or take AHEAD_OF), not those you've passed.
+     */
+    _hunt(step, feet, tx, ty) {
+        const fd = this.scene.fieldDemons;
+        if (!fd) return;
+        const { size, dist } = this.field;
+        const at = (x, y) => {      // (the least about a tile: a post's own may be rock)
+            let m = 0xffff;
+            for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) m = Math.min(m, dist[(((y + b) % size + size) % size) * size + ((x + a) % size + size) % size]);
+            return m;
+        };
+        const mine = at(tx, ty), hunting = new Set();
+        for (const k of this.left) {
+            const [x, y] = PACKS[k].at;
+            if (Math.hypot(x - feet.x, y - feet.y) > HUNT) continue;
+            const theirs = at(Math.floor(x / TILE), Math.floor(y / TILE));
+            if (this.mopUp === step.id || (theirs !== 0xffff && theirs <= mine + AHEAD_OF)) hunting.add(k);
+        }
+        fd.hunting = hunting.size ? hunting : null;
     }
 
     /** The walking distance to the sources over the open world (not into land closed to you, but the step's own zone). */
@@ -111,12 +147,15 @@ export class RoadGuide {
     /** Nothing to point to: the arrow hidden, and with no road's quest, the field let go. */
     _off(forget) {
         this.arrow.setVisible(false);
+        if (this.scene.fieldDemons) this.scene.fieldDemons.hunting = null;
         this.trail = [];
         this.target = null;
         if (forget) {
             this.field = null;
             this.key = null;
             this.tally = null;
+            this.left = [];
+            this.mopUp = null;
         }
     }
 
