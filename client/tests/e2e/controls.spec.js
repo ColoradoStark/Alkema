@@ -105,27 +105,31 @@ test("pushing the stick off straight up by more than 15 degrees faces you sidewa
         const keys = gs.scene.get('UIScene').bottomControls.movementKeys;
         // (timed by the physics steps that move the walk: under load Phaser smooths a slow frame's delta into the next
         // ones, and neither the scene's clock nor the frames' deltas kept with the walk)
-        const x0 = me.x, world = gs.physics.world;
-        let t = 0;
+        // The easing goes by the game's own frames (its loop's delta), so it's watched by them: timed by the physics
+        // steps, a busy machine's long frames had it look too quick at first (four browsers at once, November 2026)
+        const x0 = me.x, world = gs.physics.world, game = window.__PHASER_GAME;
+        let t = 0, acc = 0;
+        const paces = [];
         const step = () => { t += 1000 / world.fps; };
+        const frame = () => { if (acc < 400) { acc += game.loop.delta; paces.push({ acc, pace: gs._pace }); } };
         world.on('worldstep', step);
         keys.right = true;
-        let early = null;
-        while (t < 1000) {
-            await new Promise(r => requestAnimationFrame(r));
-            if (early === null && t >= 100) early = (me.x - x0) / (t / 1000);
-        }
+        gs.events.on('postupdate', frame);
+        while (t < 1000) await new Promise(r => requestAnimationFrame(r));
         const whole = (me.x - x0) / (t / 1000);
         keys.right = false;
         world.off('worldstep', step);
-        return { early, whole };
+        gs.events.off('postupdate', frame);
+        return { whole, paces };
     });
     expect(walked.whole).toBeGreaterThan(100);
     expect(walked.whole).toBeLessThan(132);         // (128 a second, less the easing in)
-    expect(walked.early).toBeLessThan(0.75 * 128);  // the first tenth of a second slower
+    // Slow at first, full speed by a quarter of a second of the game's own time (EASE_IN_MS)
+    for (const { acc, pace } of walked.paces) expect(pace, `at ${Math.round(acc)} ms`).toBeCloseTo(Math.min(1, 0.15 + acc / 250), 2);
+    expect(walked.paces.some(p => p.pace < 0.75), 'slow at first').toBe(true);
 });
 
-test("a thief has no magic bar (their skills cost none: an empty one looked like magic run out, the user's); a mage has hers", async ({ page }) => {
+test("a thief has a magic bar, as a mage has hers (the user's, November 2026: every class's magic comes back; a warrior's skills were free, cast without end)", async ({ page }) => {
     test.setTimeout(120000);
     const bar = async (cls) => {
         await page.goto('/');
@@ -146,7 +150,9 @@ test("a thief has no magic bar (their skills cost none: an empty one looked like
             return { max: ui.mp.max, shown: ui.topBar.mpBar.visible && ui.topBar.mpBg.visible };
         });
     };
-    expect(await bar('thief')).toEqual({ max: 0, shown: false });
+    const thief = await bar('thief');
+    expect(thief.max).toBeGreaterThan(0);
+    expect(thief.shown).toBe(true);
     const mage = await bar('mage');
     expect(mage.max).toBeGreaterThan(0);
     expect(mage.shown).toBe(true);

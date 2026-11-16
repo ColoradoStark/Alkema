@@ -172,9 +172,13 @@ test.describe('The next upgrade over the pad', () => {
         await page.waitForTimeout(300); await page.screenshot({ path: 'tests/zzshots/upgrade-banner.png' });
         // A buy is felt: coins and a chime climbing with her level, a flash, "Level n!" floating up, sparks, a ring round the hero
         await page.evaluate(() => {
-            const audio = window.__ALKEMA_AUDIO, was = audio.play.bind(audio);
+            // (only this hero's own: browsers running at once share one game server, and another test's hero by you,
+            // coming in and casting, was heard as this buy's; theirs are played where they stand, `playAt`)
+            const audio = window.__ALKEMA_AUDIO, was = audio.play.bind(audio), at = audio.playAt.bind(audio);
+            let theirs = 0;
+            audio.playAt = (...a) => { theirs++; try { return at(...a); } finally { theirs--; } };
             window.__played = [];
-            audio.play = (name, o) => { window.__played.push([name, o?.rate ?? 1]); return was(name, o); };
+            audio.play = (name, o) => { if (!theirs && name !== 'join') window.__played.push([name, o?.rate ?? 1]); return was(name, o); };
         });
         for (let n = 1; n <= 4; n++) {
             await page.locator('.gear-banner .gear-up-buy').click();
@@ -233,9 +237,12 @@ test.describe('The next upgrade over the pad', () => {
         await ui(page, (ui) => { ui.upgrades.levels.might = 3; ui.upgrades.version++; ui.inventory.essence = 1e9; });
         await expect.poll(() => banner(page).then(b => b.shown)).toBe(true);
         await page.evaluate(() => {
-            const audio = window.__ALKEMA_AUDIO, was = audio.play.bind(audio);
+            // (only this hero's own, as above: another hero's cast by you, a cleric's 'holy', was heard as a milestone's)
+            const audio = window.__ALKEMA_AUDIO, was = audio.play.bind(audio), at = audio.playAt.bind(audio);
+            let theirs = 0;
+            audio.playAt = (...a) => { theirs++; try { return at(...a); } finally { theirs--; } };
             window.__played = [];
-            audio.play = (name, o) => { window.__played.push(name); return was(name, o); };
+            audio.play = (name, o) => { if (!theirs && name !== 'join') window.__played.push(name); return was(name, o); };
         });
         const fx = () => page.evaluate(() => ({
             pop: document.querySelector('.gear-banner-pop:last-of-type')?.className, flash: document.querySelectorAll('.gear-banner-flash').length,
@@ -315,9 +322,9 @@ test.describe("A blessing to choose, after a boss (the user's, November 2026: a 
         await page.keyboard.up('ArrowRight');
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.x)).toBe(x);
         await page.waitForTimeout(600); await page.screenshot({ path: 'tests/zzshots/blessing.png' });
-        // Keen Edge: yours, 12% more attack, and it's gone
+        // Keen Edge: yours, 6% more attack, and it's gone
         await page.locator('.gear-bless-card[data-bless="keen"]').click();
-        await expect.poll(() => ui(page, (ui) => ui.upgrades.times('attack')).then(a => a / attack)).toBeCloseTo(1.12, 5);
+        await expect.poll(() => ui(page, (ui) => ui.upgrades.times('attack')).then(a => a / attack)).toBeCloseTo(1.06, 5);
         expect(await ui(page, (ui) => ui.inventory.stats.attack === Math.round(ui.inventory.stats.base.attack * ui.upgrades.times('attack') * ui.upgrades.legendary))).toBe(true);
         await expect.poll(() => card(page).then(c => [c.shown, c.cards.length, c.offer, c.held]), { timeout: 4000 }).toEqual([false, 0, null, false]);
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').upgrades.blessed('keen'))).toBe(1);

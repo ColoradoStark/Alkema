@@ -11,7 +11,7 @@ import { account } from '../../src/account/account.js';
 // Spending what each pack paid, a new hero is never under this share of the strength the next is made for (the
 // user's, November 2026: essence cut 20%, they'd powered up too fast; at full pay none was ever short, the strongest
 // 3 to 13 times the mark; the weakest now about half, a fight to win by dodging; the user is trying it)
-const FAIR = 0.5;
+const FAIR = 1 / 3;     // (a half till essence was cut 10% more, the user's, November 2026: the weakest new hero, attack 4 and 16 hit points, comes to some packs a third to a half as strong as they're made for; the user's archer beat a pack a third of its mark unupgraded)
 const PACKS = 7;        // up the climb (field.spec.js checks the road has them)
 const HEROES = [[4, 16], [5, 19], [7, 20], [9, 19], [9, 31]];      // new heroes' attack and hit points, weakest to strongest
 const BASE = (a, h) => ({ attack: a, spell: a, defence: 0, hp: { now: h, max: h }, mp: { now: 0, max: 0 } });
@@ -82,10 +82,13 @@ describe('The climb up the Saltmere Point', () => {
 });
 
 describe('The Market Fields, the next zone north of Riverhold', () => {
-    test("barred till the Point's cleared (the user's: an uncleared zone's way on always warns and blocks): a new hero is, one who felled the Rouser isn't, nor one as strong as he's made for (felled before it was kept)", () => {
+    test("barred till the Point's cleared (the user's: an uncleared zone's way on always warns and blocks): a new hero is, one who felled the Rouser isn't; one only as strong as he's made for still is", () => {
         for (const [a, h] of HEROES) expect(barred('z28', {}, a * h)).toBe(true);
         expect(barred('z28', { 'cleared-z35': true }, 80)).toBe(false);
-        expect(barred('z28', {}, strengthFor('z35', BOSS_STEP.z35))).toBe(false);
+        // (strong as he's made for isn't cleared: a zone's boss must be felled; the user's, November 2026, walked past
+        // the Meadowlands' foes and its boss into Stonebridge, strong enough that it counted as cleared)
+        expect(barred('z28', {}, 1000 * strengthFor('z35', BOSS_STEP.z35))).toBe(true);
+        expect(cleared('z19', {}, 1000 * strengthFor('z19', BOSS_STEP.z19))).toBe(false);
         expect(barred('z35', {}, 80)).toBe(false);          // (the home zone: nothing before it)
         expect(cleared('z28', {}, 80)).toBe(false);
     });

@@ -31,6 +31,11 @@ const THORNS = { missile: 'thorns', halo: 'nature-halo' };
 // Every elf (the user's, November 2026): 20% smaller than the other foes, they were too big; turning at once, no
 // paper turn; and never stretched or squashed as they step, drawn always at Wesnoth's own proportions (`exact`)
 const ELF = { scale: 0.8, paper: false, exact: true };
+// What a blow marked red on the ground does, a charge's lane or a slam's ring, as so many of its plain blows (the
+// user's, November 2026: swinging in the middle of them got through anything; the red should say now get out of the
+// way, and taken, be a really bad hit): three, a boss's four. And more foes have one: the Point's impaler, the Market
+// Fields' cavalrymen, the Riverlands' ogres and great ogres, the Meadowlands' shock troopers and iron maulers
+export const HEAVY = 3, BOSS_HEAVY = 4;
 export const BAND_KINDS = {
     rat: melee(0, { speed: 78, reach: 38, windup: 420, recover: 650, lunge: 18, race: 'beast' }),
     ruffian: melee(0, { speed: 64, windup: 520, recover: 750, lunge: 16, race: 'human' }),
@@ -38,7 +43,8 @@ export const BAND_KINDS = {
     woodsman: shooter(0, { race: 'human' }),
     footpad: melee(1, { speed: 76, windup: 480, recover: 700, lunge: 18, race: 'human' }),
     poacher: shooter(1, { race: 'human' }),
-    impaler: melee(1, { speed: 66, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'goblin', scale: 1.3 }),     // (a big one: the user's, some a little bigger than you)
+    impaler: melee(1, { speed: 66, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'goblin', scale: 1.3,
+        charge: { every: 4200, from: 70, length: 220, windup: 900, speed: 360, width: 28, hurt: HEAVY, recover: 1200 } }),     // (a spear rush down a red lane)     // (a big one: the user's, some a little bigger than you)
     // (its leader, a boss: grown, named, a chest; nearly a rat's pace, the climb's stressful moment)
     // Fought alone on his own ground once the rest of the Point is beaten (the user's, November 2026: a real boss
     // fight, after the RPG makers' advice: not a sack of health, his moves from who he is, few and readable): every
@@ -46,16 +52,17 @@ export const BAND_KINDS = {
     // health he blows his war horn and goblins come ashore to him (`horn`: he's a rouser)
     rouser: { ...DEMON_KINDS.brute, speed: 74, reach: 50, windup: 700, recover: 900, anim: 'attack', race: 'goblin', level: 1,
         boss: true, scale: 1.75, label: 'Goblin Rouser', title: 'Chief of the Shore Raiders', chest: true,
-        slam: { every: 3, windup: 1100, radius: 72, hurt: 1.5 },
+        slam: { every: 3, windup: 1100, radius: 72, hurt: BOSS_HEAVY },
         horn: { at: 0.5, call: ['spearman', 'spearman', 'impaler'] } },
     // The Market Fields (zone 28, tier 2): the Duke's patrols on the market road to Highmarket, who take any armed
     // stranger for a raider (docs/WORLD.md). Fencers dart in and out; cavalrymen are a horse's weight, a blow doesn't
     // stagger them; horsemen charge (`charge`: they stop, a red lane marks where they'll ride, and they gallop down it,
     // so step out of it; winded after, they're yours a moment)
     fencer: melee(1, { speed: 88, reach: 36, windup: 380, recover: 560, lunge: 24, race: 'human' }),
-    cavalryman: { ...DEMON_KINDS.brute, speed: 92, reach: 46, windup: 620, recover: 860, anim: 'attack', race: 'human', level: 1 },
+    cavalryman: { ...DEMON_KINDS.brute, speed: 92, reach: 46, windup: 620, recover: 860, anim: 'attack', race: 'human', level: 1,
+        charge: { every: 4000, from: 90, length: 280, windup: 1000, speed: 420, width: 34, hurt: HEAVY, recover: 1400 } },
     horseman: melee(1, { speed: 96, reach: 44, windup: 560, recover: 800, lunge: 18, race: 'human',
-        charge: { every: 3200, from: 90, length: 260, windup: 950, speed: 430, width: 30, hurt: 1.5, recover: 1300 } }),
+        charge: { every: 3200, from: 90, length: 260, windup: 950, speed: 430, width: 30, hurt: HEAVY, recover: 1300 } }),
     // (its leader, a boss: a knight of the Duke's, his captain on the market road; the user's, November 2026: a stronger
     // boss and a more interesting fight than the Rouser's, one you grind a little for. His moves are a knight's: his
     // sword close, his lance charge across the field when you're off him (longer, faster, harder than a horseman's); at
@@ -63,7 +70,7 @@ export const BAND_KINDS = {
     // charges come one on another, wheeling round between, and his blows quicker)
     knight: { ...DEMON_KINDS.brute, speed: 96, reach: 52, windup: 650, recover: 850, anim: 'attack', race: 'human', level: 2,
         boss: true, scale: 1.5, label: 'Sir Aldous', title: "Captain of the Duke's Riders", chest: true,
-        charge: { every: 4200, from: 100, length: 360, windup: 1050, speed: 520, width: 38, hurt: 1.8, recover: 1500 },
+        charge: { every: 4200, from: 100, length: 360, windup: 1050, speed: 520, width: 38, hurt: BOSS_HEAVY, recover: 1500 },
         rally: { at: 0.6, call: ['horseman', 'cavalryman', 'horseman'], words: 'sounds the rally! His riders come.' },
         fury: { at: 0.3, again: 2, quicker: 0.75, words: 'is in a fury!' } },
     // The Southern Forest's guards round the first area (its wood keeps anyone off the road out of it: the user's,
@@ -100,32 +107,38 @@ export const BAND_KINDS = {
     // blow that doesn't stagger them (`poise`): Young Ogre, Ogre, Great Ogre (docs/WORLD.md's list and no more, the
     // user's; the Great Ogre and Ancient Ogre from Wesnoth's Eastern Invasion)
     youngogre: melee(1, { speed: 70, reach: 44, windup: 540, recover: 780, lunge: 18, race: 'ogre', poise: true }),
-    ogre: { ...DEMON_KINDS.brute, speed: 66, reach: 50, windup: 660, recover: 920, anim: 'attack', race: 'ogre', level: 2 },
-    greatogre: { ...DEMON_KINDS.brute, speed: 68, reach: 54, windup: 700, recover: 950, anim: 'attack', race: 'ogre', level: 3 },
+    ogre: { ...DEMON_KINDS.brute, speed: 66, reach: 50, windup: 660, recover: 920, anim: 'attack', race: 'ogre', level: 2,
+        slam: { every: 3, windup: 950, radius: 62, hurt: HEAVY } },
+    greatogre: { ...DEMON_KINDS.brute, speed: 68, reach: 54, windup: 700, recover: 950, anim: 'attack', race: 'ogre', level: 3,
+        slam: { every: 3, windup: 1000, radius: 72, hurt: HEAVY } },
     // (its leader, a boss: Eastern Invasion's Ancient Ogre, grown: his cleaver close, every
     // third blow a slam, the ground about him marked red; off you, he lowers his head and charges down a lane marked
     // red (`charge`); at half his health he bellows and the young ogres come (`rally`); at a quarter a fury)
     ancientogre: { ...DEMON_KINDS.brute, speed: 72, reach: 60, windup: 720, recover: 950, anim: 'attack', race: 'ogre', level: 2,
-        boss: true, scale: 1.5, label: 'Ancient Ogre', title: 'Eldest of the Riverlands', chest: true,
-        slam: { every: 3, windup: 1100, radius: 84, hurt: 1.6 },
-        charge: { every: 4600, from: 110, length: 320, windup: 1100, speed: 400, width: 44, hurt: 1.7, recover: 1600 },
+        boss: true, scale: 1.5, label: 'Ancient Ogre', title: 'Eldest of the Riverlands', chest: true, might: 2,
+        slam: { every: 3, windup: 1100, radius: 84, hurt: BOSS_HEAVY },
+        charge: { every: 4600, from: 110, length: 320, windup: 1100, speed: 400, width: 44, hurt: BOSS_HEAVY, recover: 1600 },
         rally: { at: 0.5, call: ['ogre', 'greatogre', 'ogre'], words: 'bellows! The valley answers.' },
         fury: { at: 0.25, again: 2, quicker: 0.75, words: 'is in a fury!' } },
     // The Meadowlands (zone 19): Grimhold's army camped in the meadows, its heavy foot slow and hard, a blow doesn't
     // stagger them (docs/WORLD.md's list and no more, the user's)
     heavyinfantry: { ...DEMON_KINDS.brute, speed: 56, reach: 44, windup: 680, recover: 900, anim: 'attack', race: 'human', level: 1 },
-    shocktrooper: { ...DEMON_KINDS.brute, speed: 58, reach: 50, windup: 700, recover: 950, anim: 'attack', race: 'human', level: 2 },
-    ironmauler: { ...DEMON_KINDS.brute, speed: 56, reach: 54, windup: 760, recover: 1000, anim: 'attack', race: 'human', level: 3 },
+    shocktrooper: { ...DEMON_KINDS.brute, speed: 58, reach: 50, windup: 700, recover: 950, anim: 'attack', race: 'human', level: 2,
+        charge: { every: 4400, from: 70, length: 200, windup: 950, speed: 340, width: 32, hurt: HEAVY, recover: 1400 } },     // (a shield rush down a red lane)
+    ironmauler: { ...DEMON_KINDS.brute, speed: 56, reach: 54, windup: 760, recover: 1000, anim: 'attack', race: 'human', level: 3,
+        slam: { every: 3, windup: 1000, radius: 70, hurt: HEAVY } },
     // (its leader, a boss: docs/WORLD.md's Master Infantryman, from Wesnoth's The South Guard, grown: his flail swung round every other blow, all about him struck (`slam`); at 60% he sounds the
     // advance and his foot come (`rally`), at 30% a fury, quicker)
     masterinfantryman: { ...DEMON_KINDS.brute, speed: 64, reach: 60, windup: 760, recover: 1000, anim: 'attack', race: 'human', level: 3,
-        boss: true, scale: 1.5, label: 'Master Infantryman', title: "Grimhold's Master of Foot", chest: true,
-        slam: { every: 2, windup: 1150, radius: 92, hurt: 1.5 },
+        boss: true, scale: 1.5, label: 'Master Infantryman', title: "Grimhold's Master of Foot", chest: true, might: 2,
+        slam: { every: 3, windup: 1150, radius: 92, hurt: BOSS_HEAVY },
         rally: { at: 0.6, call: ['heavyinfantry', 'shocktrooper', 'heavyinfantry'], words: 'sounds the advance! His foot come.' },
         fury: { at: 0.3, again: 2, quicker: 0.7, words: 'is in a fury!' } },
 };
-export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS : LEVEL_HITS[s.level]]));
-export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS : LEVEL_HURTS[s.level]]));
+// (`might`: a boss that many times the health and blow of one made for his step; the road's two, twice: the user's,
+// November 2026, felled each in a couple of blows, no grinding)
+export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS * (s.might || 1) : LEVEL_HITS[s.level]]));
+export const BAND_HURTS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HURTS * (s.might || 1) : LEVEL_HURTS[s.level]]));
 export const BAND_PAY = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? 4 : 0.25 + 0.2 * s.level]));
 
 /**

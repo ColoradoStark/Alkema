@@ -77,8 +77,13 @@ export class Spellbook {
         return { ...r, ...(r.power ? { power: Math.round(r.power * k) } : {}), ...(r.mult ? { mult: r.mult * k } : {}) };
     }
 
-    /** Does their class cast spells (magic points), or use battle skills? */
+    /** Does their class's magic cost magic points? (Every class's does: the user's, November 2026.) */
     get magic() {
         return this.list.some(s => s.ranks.some(r => r.mp));
+    }
+
+    /** Do any of their spells go by spell power (not by their blow, as a warrior's skills do)? */
+    get powered() {
+        return this.list.some(s => s.ranks.some(r => r.power));
     }
 }

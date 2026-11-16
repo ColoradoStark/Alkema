@@ -13,7 +13,7 @@ export const ZONES = {
     // times `more` a pack along it: the first falls fast to a new hero, and each after needs what the last paid spent
     // on the Upgrade page, or you die. What it pays grows slowly (the user's, November 2026: the numbers got too big too
     // fast, millions up one road), the upgrades' prices as slowly with it
-    z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 40, more: 1.5 } },       // (essence 20% less, the user's, November 2026: powered up too fast; it was 50)
+    z35: { attack: 5, hp: 16, defence: 2, climb: { hp: 2.5, hurt: 2, essence: 36, more: 1.5 } },       // (essence 20% less, the user's, November 2026: powered up too fast; it was 50; then 10% less again, 40 to 36, the user's playing up to Stonebridge)
 };
 // The Market Fields (28), north of Riverhold up the river road: the next zone (the user's, November 2026: bigger, at
 // least twice the foes, and a harder boss you grind a little for). Its climb takes up where the Point's leaves off
@@ -54,11 +54,13 @@ ZONES.z20 = onFrom(ZONES.z28, BOSS_STEP.z28 + 1, 'z28');
 ZONES.z19 = onFrom(ZONES.z20, BOSS_STEP.z20 + 1, 'z20');
 
 /**
- * A zone you've cleared: its boss felled (the flag `cleared-<zone>` kept with your hero), or a hero as strong as he's
- * made for (one who felled him before it was kept).
+ * A zone you've cleared: its boss felled (the flag `cleared-<zone>` kept with your hero). Only that (the user's,
+ * November 2026: a hero as strong as he's made for counted too, and strong from their blessings they walked past the
+ * Meadowlands' foes and its Master of Foot into Stonebridge, its edge held by no one; a boss is a gate, felled to pass).
+ * (`strength`, unused, is kept for the callers.)
  */
 export function cleared(fam, flags, strength) {
-    return !!flags?.[`cleared-${fam}`] || (BOSS_STEP[fam] !== undefined && strength >= strengthFor(fam, BOSS_STEP[fam]));
+    return !!flags?.[`cleared-${fam}`];
 }
 
 /**
@@ -83,7 +85,7 @@ export function comeToFor(zoneId) {
 }
 
 /** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */
-export const GOLD_SHARE = 0.25 / 0.8;      // (a quarter of what essence paid before it was cut 20%: gold as it was)
+export const GOLD_SHARE = 0.25 / 0.72;     // (a quarter of what essence paid before it was cut 20% and 10%: gold as it was)
 
 /** The home zone: the Saltmere Point, the first loop (the user's: clear one zone, then grow). */
 export const HOME = 35;

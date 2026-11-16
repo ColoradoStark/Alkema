@@ -22,7 +22,7 @@ export const MAX = 10;
 export const PATH_BASE = 20, PATH_GROW = 1.4;
 // A healer mends you from nothing for this much of the next upgrade's price, in gold as fights pay it (a share of their
 // essence, GOLD_SHARE): priced in essence it was four times that, the user's 2,200 gold short after a few upgrades
-const HEAL_SHARE = 0.5;
+const HEAL_SHARE = 0.45;     // (0.5 till essence was cut 10% and gold kept by a larger GOLD_SHARE: the price in gold as it was)
 const THRIFT_FLOOR = 0.2;         // (Healer's Friend taken again and again: a healer asks at least this share)
 export const TIMES = 3.4;
 
@@ -120,13 +120,14 @@ export const GODDESS_FRAME = 64;
  * as `blessings` ({ id: times taken }) and `blessingOffers` (the choices still to make: [{ from, choices }]).
  */
 export const BLESSINGS = [
-    { id: 'stout', name: 'Stout Heart', glyph: '♥', text: '+12% hit points', stat: 'hp', by: 0.12 },
-    { id: 'keen', name: 'Keen Edge', glyph: '⚔', text: '+12% attack', stat: 'attack', by: 0.12 },
-    { id: 'arcane', name: 'Arcane Flame', glyph: '✦', text: '+15% spell power', stat: 'spell', by: 0.15, magic: true },
-    { id: 'gleaning', name: 'Gleaning', glyph: '◆', text: '+15% essence from foes', stat: 'essence', by: 0.15 },
-    { id: 'lucky', name: 'Lucky Star', glyph: '★', text: '+20% gold found', stat: 'gold', by: 0.2 },
-    { id: 'wellspring', name: 'Wellspring', glyph: '❂', text: 'Magic comes back 25% faster', stat: 'regen', by: 0.25, magic: true },
-    { id: 'thrift', name: 'Healer\'s Friend', glyph: '✚', text: 'Healers ask 20% less', stat: 'heal', by: -0.2 },
+    // (each half what it was: the user's, November 2026, they were a little too powerful)
+    { id: 'stout', name: 'Stout Heart', glyph: '♥', text: '+6% hit points', stat: 'hp', by: 0.06 },
+    { id: 'keen', name: 'Keen Edge', glyph: '⚔', text: '+6% attack', stat: 'attack', by: 0.06 },
+    { id: 'arcane', name: 'Arcane Flame', glyph: '✦', text: '+7.5% spell power', stat: 'spell', by: 0.075, power: true },
+    { id: 'gleaning', name: 'Gleaning', glyph: '◆', text: '+7.5% essence from foes', stat: 'essence', by: 0.075 },
+    { id: 'lucky', name: 'Lucky Star', glyph: '★', text: '+10% gold found', stat: 'gold', by: 0.1 },
+    { id: 'wellspring', name: 'Wellspring', glyph: '❂', text: 'Magic comes back 12.5% faster', stat: 'regen', by: 0.125, magic: true },
+    { id: 'thrift', name: 'Healer\'s Friend', glyph: '✚', text: 'Healers ask 10% less', stat: 'heal', by: -0.1 },
 ];
 export const OFFERED = 3;
 
@@ -191,6 +192,7 @@ export class Upgrades {
         this.inventory = inventory;
         this.book = spellbook;
         this.magic = !!spellbook?.magic;
+        this.powered = !!spellbook?.powered;      // (spells that go by spell power: a warrior's skills go by their blow)
         const saved = account.current?.data?.upgrades || {};
         this.levels = {};
         for (const [id, n] of Object.entries(saved)) if (Number.isFinite(n) && n > 0) this.levels[id] = Math.floor(n);
@@ -249,7 +251,7 @@ export class Upgrades {
      */
     offerFor(from, pick = null) {
         if (this.offers.some(o => o.from === from) || (account.current?.data?.blessedFor || []).includes(from)) return false;
-        const pool = BLESSINGS.filter(b => this.magic || !b.magic);
+        const pool = BLESSINGS.filter(b => (this.magic || !b.magic) && (this.powered || !b.power));
         const choices = [];
         while (choices.length < Math.min(OFFERED, pool.length)) {
             const b = pool.splice(pick ? pick(pool.length) : Math.floor(Math.random() * pool.length), 1)[0];

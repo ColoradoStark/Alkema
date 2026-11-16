@@ -2693,6 +2693,45 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         });
     }
 
+    test("the red on the ground is a heavy blow (the user's, November 2026: swinging in the middle of them got through anything; when the red shows, get out of the way, and taken, it really hurts): more foes mark one, each three of its plain blows, a boss's four; an ogre in a pack slams, not only a boss on his ground", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'z20');
+        await keepUp(page);
+        const kinds = await page.evaluate(() => import('/src/battle/Bands.js').then(({ BAND_KINDS, HEAVY, BOSS_HEAVY }) => {
+            const out = {};
+            for (const k of ['impaler', 'horseman', 'cavalryman', 'ogre', 'greatogre', 'shocktrooper', 'ironmauler', 'rouser', 'knight', 'ancientogre', 'masterinfantryman']) {
+                const s = BAND_KINDS[k], marks = [s.charge, s.slam].filter(Boolean);
+                out[k] = marks.length && marks.every(m => m.hurt === (s.boss ? BOSS_HEAVY : HEAVY));
+            }
+            return { out, HEAVY, BOSS_HEAVY };
+        }));
+        expect(kinds.HEAVY).toBeGreaterThanOrEqual(3);
+        expect(kinds.BOSS_HEAVY).toBeGreaterThan(kinds.HEAVY);
+        for (const [k, ok] of Object.entries(kinds.out)) expect(ok, k).toBe(true);
+        // An ogre of a pack: its third blow a slam, the ground about it marked red, and coming down on you it's three of its blows
+        const { PACKS } = await page.evaluate(() => import('/src/battle/FieldDemons.js').then(m => ({ PACKS: m.PACKS.map((p, k) => ({ ...p, k })).filter(p => p.family === 'z20' && !p.lair && p.band.includes('ogre')) })));
+        const pack = PACKS[0];
+        await standAt(page, pack.at[0], pack.at[1] + 200);
+        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.kind === 'ogre' && f.foe.ready).length, pack.k), { timeout: 30000 }).toBeGreaterThan(0);
+        const out = await page.evaluate((k) => new Promise(done => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            for (const o of fd.foes) o.stun = 1e9;          // (held: only what's asked happens)
+            const f = fd.foes.find(f => f.pack === k && f.kind === 'ogre');
+            const me = gs.localPlayer.sprite;
+            me.setPosition(f.foe.x + 20, f.foe.y - 23 + 10); me.body.reset(me.x, me.y);
+            for (let n = 0; n < f.spec.slam.every && !f.slam; n++) fd._windup(f);
+            fd._slamMark(f);
+            const marked = !!f.slam && !!f.ring;
+            const hurt = fd._hurt.bind(fd), took = [];
+            fd._hurt = (m, damage, from) => { took.push(damage); };
+            fd.you.guard = 0;
+            fd._slam(f);
+            setTimeout(() => { fd._hurt = hurt; done({ marked, took, damage: f.damage, hurt: f.spec.slam.hurt }); }, 600);
+        }), pack.k);
+        expect(out.marked).toBe(true);
+        expect(out.took).toEqual([Math.round(out.damage * out.hurt)]);
+    });
+
     test("a boss's ground is in his own zone (the user's, November 2026: fighting the Ancient Ogre they crossed into the Meadowlands): no point his mist holds you in is in another zone, every boss's", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page, '/', 'z20');
@@ -2736,6 +2775,54 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         await standAt(page, first.at[0] + Math.cos(toward) * 6.5 * 32, first.at[1] + Math.sin(toward) * 6.5 * 32);
         await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBeGreaterThan(0);
         await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && !['post', 'home'].includes(f.state)).length, first.k), { timeout: 10000 }).toBeGreaterThan(0);
+    });
+
+    test("the Meadowlands, walked through as the user did (November 2026: they had to look for its foes, none came at them, and they walked on into Stonebridge past them all and its boss): walking the way from the Riverlands to Stonebridge's bridge, its foes come at you as the ogres do, and you don't get over the bridge while the Master of Foot stands", async ({ page }) => {
+        test.setTimeout(180000);
+        await enterWorld(page, '/', 'z19');
+        const { way } = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url))).z19;
+        // (a hero far stronger than its boss is made for, as the user's was: he fell to a couple of blows; the Riverlands
+        // and before cleared, the Meadowlands not, its boss never fought; the road's quest on the Meadowlands; never
+        // falling: this is about whether you get by. Strong as he's made for counted the zone cleared, and nothing held
+        // its edge or came for you from further off)
+        await page.evaluate(() => import('/src/battle/zones.js').then(({ strengthFor, BOSS_STEP }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), stats = ui.inventory.stats;
+            for (const z of ['z35', 'z28', 'z20']) gs.setFlag(`cleared-${z}`);
+            const q = ui.quests;
+            q.index = 2; q.done.add('wren'); q._render();
+            Object.defineProperty(stats, 'attack', { value: Math.ceil(4 * strengthFor('z19', BOSS_STEP.z19) / 2000), configurable: true, writable: true });
+            Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 2000, now: 2000 }, configurable: true, writable: true });
+            ui.hp.max = ui.hp.now = 2000;
+            window.__mend = setInterval(() => { ui.hp.now = ui.hp.max; }, 50);
+        }));
+        await standAt(page, way[0][0], way[0][1]);
+        // Walk the way, then on over the bridge to Stonebridge's gate, steering the pad's stick as a thumb would
+        const out = await page.evaluate((way) => new Promise(done => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), fd = gs.fieldDemons;
+            const path = [...way, [4700, 8696], [4560, 8696]];
+            let k = 0, came = 0, over = false;
+            const t0 = Date.now(), seen = new Set();
+            const tick = setInterval(() => {
+                const me = gs.localPlayer.sprite, x = me.x, y = me.y + 23;
+                while (k < path.length - 1 && Math.hypot(path[k][0] - x, path[k][1] - y) < 40) k++;
+                const [tx, ty] = path[k], d = Math.hypot(tx - x, ty - y) || 1;
+                ui.bottomControls.stick = { dx: (tx - x) / d, dy: (ty - y) / d };
+                for (const f of fd.foes) if (f.family === 'z19' && !f.spec.boss && !['post', 'home'].includes(f.state)) seen.add(f.i);
+                came = seen.size;
+                // (over the bridge: off its far end onto Stonebridge's heath; a knock back from a charge can put you a
+                // step over the zone's line at its near end, where they hold you, and that isn't getting by)
+                if (x < 4700 && gs.overworld.zoneAt(x, y)?.id === 25) over = true;
+                (window.__trace ??= []).push(`${Math.round(x)},${Math.round(y)} z${gs.overworld.zoneAt(x, y)?.id} hold${fd.foes.filter(f => f.holding).length} bar${fd.foes.filter(f => f.barring).length} after${fd.foes.filter(f => f.family === 'z19' && !['post', 'home'].includes(f.state)).length} ${fd.foes.filter(f => f.family === 'z19' && Math.hypot(f.foe.x - x, f.foe.y - y) < 200).map(f => f.kind[0] + ':' + f.state + (f.barring ? 'B' : '') + (f.holding ? 'H' : '') + '@' + Math.round(f.foe.x)).join(' ')}`);
+                if (window.__trace.length > 60) window.__trace.shift();
+                if (over || Date.now() - t0 > 120000) {
+                    clearInterval(tick); clearInterval(window.__mend);
+                    ui.bottomControls.stick = null;
+                    done({ came, over, at: [Math.round(x), Math.round(y)], k, of: path.length, trace: window.__trace.slice(-40) });
+                }
+            }, 50);
+        }), way);
+        expect(out.came, `foes that came at you on the way: ${JSON.stringify(out)}`).toBeGreaterThanOrEqual(6);
+        expect(out.over, `over the bridge into Stonebridge with the Master of Foot standing: ${JSON.stringify(out)}`).toBe(false);
     });
 
     test("the Meadowlands, barred till the Ancient Ogre's beaten (the user's, November 2026: they walked over into it unstopped): walked up to anywhere along its border, one of Grimhold's foot comes to meet you there, a \"!\" over him, and stops you a step over it, \"Halt!\", striking no blow", async ({ page }) => {

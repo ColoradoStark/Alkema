@@ -188,7 +188,7 @@ describe('Big numbers read short', () => {
         expect(keen).toBe('keen');                                // (pick(0) took the first of the pool each time: stout, keen, arcane)
         expect(u.bless('keen').name).toBe('Keen Edge');
         expect(u.offer).toBe(null);
-        expect(u.apply(BASE).attack).toBe(Math.round(before * 1.12));
+        expect(u.apply(BASE).attack).toBe(Math.round(before * 1.06));
         expect(account.current.data.blessings).toEqual({ keen: 1 });
         expect(u.offerFor('z35')).toBe(false);                   // (taken: still never again for his zone)
         // Kept with the hero: made again from the save, it's there, and so is a choice not yet made
@@ -203,21 +203,24 @@ describe('Big numbers read short', () => {
         const plain = { hp: u.apply(BASE).hp.max, spell: u.apply(BASE).spell, fortune: u.fortune, regen: u.regen, heal: u.healPrice(1) };
         u.blessings = Object.fromEntries(BLESSINGS.map(b => [b.id, 1]));
         u.version++;
-        expect(u.apply(BASE).hp.max).toBe(Math.round(plain.hp * 1.12));
-        expect(u.apply(BASE).spell).toBe(Math.round(plain.spell * 1.15));
-        expect(u.blessing('essence')).toBeCloseTo(1.15);
-        expect(u.fortune).toBeCloseTo(plain.fortune * 1.2);
-        expect(u.regen).toBeCloseTo(plain.regen * 1.25);
+        expect(u.apply(BASE).hp.max).toBe(Math.round(plain.hp * 1.06));
+        expect(u.apply(BASE).spell).toBe(Math.round(plain.spell * 1.075));
+        expect(u.blessing('essence')).toBeCloseTo(1.075);
+        expect(u.fortune).toBeCloseTo(plain.fortune * 1.1);
+        expect(u.regen).toBeCloseTo(plain.regen * 1.125);
         expect(u.healPrice(1)).toBeLessThan(plain.heal);
         u.blessings.thrift = 50;
         expect(u.healPrice(1)).toBeGreaterThan(0);             // (never free)
     });
 
-    test('a warrior, with no magic, is never offered a spell\'s blessing', () => {
-        for (let k = 0; k < 20; k++) {
+    test('a warrior, whose skills go by their blow, is never offered spell power; magic coming back faster they can be (every class has magic now, the user\'s)', () => {
+        const offered = new Set();
+        for (let k = 0; k < 40; k++) {
             const { u } = hero('warrior');
             u.offerFor('z35');
-            for (const id of u.offer.choices) expect(BLESSINGS.find(b => b.id === id).magic).toBeFalsy();
+            for (const id of u.offer.choices) offered.add(id);
         }
+        expect(offered.has('arcane')).toBe(false);
+        expect(offered.has('wellspring')).toBe(true);
     });
 });

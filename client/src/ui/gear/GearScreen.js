@@ -110,7 +110,7 @@ export function upgradeRow(h, up, inv, { justMaxed, justUnlocked, tutor, onBuy }
         bar.append(fill);
         words.append(bar);
         const now = inv.stats, then = up.after(h.id);
-        const lines = [['Attack', now?.attack, then?.attack], ...(up.magic ? [['Spell power', now?.spell, then?.spell]] : []),
+        const lines = [['Attack', now?.attack, then?.attack], ...(up.powered ? [['Spell power', now?.spell, then?.spell]] : []),
             ['Hit points', now?.hp.max, then?.hp.max]];
         for (const [what, a, b] of lines) if (a != null && b != null && a !== b) words.append(el('div', 'gear-up-gives', { text: `${what} ${short(a)} → ${short(b)}` }));
         const r = up.teaches;

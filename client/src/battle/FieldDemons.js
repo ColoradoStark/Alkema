@@ -294,6 +294,7 @@ export class FieldDemons {
         this._bossCall(feet);
         this._regrow(feet);
         this._hold();
+        this._holdEdge(feet);
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
@@ -1303,7 +1304,7 @@ export class FieldDemons {
         f.state = 'windup';
         f.t = f.spec.windup * (f.furious ? f.spec.fury.quicker : 1);
         const slam = f.spec.slam;
-        if (slam && f.met && (f.swings = (f.swings || 0) + 1) % slam.every === 0) {      // (on his own ground's fight)
+        if (slam && (f.met || !f.spec.boss) && (f.swings = (f.swings || 0) + 1) % slam.every === 0) {      // (a boss's on his own ground's fight; a pack's any time)
             f.slam = true;
             f.t = slam.windup;
             audio.play('foe_orc', { volume: 0.8, rate: 0.75 });
@@ -1435,7 +1436,10 @@ export class FieldDemons {
         const s = who.sprite, d = Math.hypot(s.x - from.x, s.y + FEET - from.y) || 1;
         const x = s.x + (s.x - from.x) / d * px, y = s.y + (s.y + FEET - from.y) / d * px;
         const f = this.foes.find(f => f.foe === who);       // (a foe kept out of the woods isn't knocked into them)
-        if (this._open(x, y + FEET) && !(f?.openLand && this._beyond(x, y + FEET))) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
+        // (nor you over a zone's edge: a charge's knock put you over the line its foes hold, where they don't follow,
+        // and on into Stonebridge past the Master of Foot; field.spec.js "the Meadowlands, walked through")
+        const zones = this.scene.overworld?.zoneAt, over = !f && zones && zones.call(this.scene.overworld, x, y + FEET)?.id !== zones.call(this.scene.overworld, s.x, s.y + FEET)?.id;
+        if (this._open(x, y + FEET) && !over && !(f?.openLand && this._beyond(x, y + FEET))) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
     }
 
     /** Can't be stood on (water, or anything else in the way). */
@@ -1896,6 +1900,32 @@ export class FieldDemons {
         else {
             me.setPosition(ring.last.x, ring.last.y - FEET);
             me.body?.reset(me.x, me.y);
+        }
+    }
+
+    /**
+     * A zone's edge onto the next (Bands.js `HOLDS`) held, its boss not felled: you don't step over it, whoever's about
+     * (the user's, November 2026: they walked over the bridge into Stonebridge, its soldiers all behind them chasing and
+     * the one holding it far off; field.spec.js "the Meadowlands, walked through as the user did"). Near it, a step over
+     * puts you back where you stood, and its soldiers' words say why.
+     */
+    _holdEdge(feet) {
+        const me = this.scene.localPlayer?.sprite, ow = this.scene.overworld;
+        if (!me || this.fallen || !ow?.zoneAt) return;
+        const here = ow.zoneAt(feet.x, feet.y)?.id;
+        for (const fam of Object.keys(HOLDS)) {
+            if (this._edge(fam, feet).d > HOLD_NEAR || cleared(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength())) continue;
+            const id = Number(fam.slice(1)), last = this._edgeLast?.[fam];
+            if (here === id) (this._edgeLast ??= {})[fam] = { x: feet.x, y: feet.y };
+            else if (last && Math.hypot(last.x - feet.x, last.y - feet.y) < 2 * TILE) {
+                me.setPosition(last.x, last.y - FEET);
+                me.body?.reset(me.x, me.y);
+                const now = this.scene.time.now;
+                if (!(now - this._barSaid < BAR_SAY_MS)) {
+                    this.say(HOLD_WORDS[fam], 4500);
+                    this._barSaid = now;
+                }
+            }
         }
     }
 
