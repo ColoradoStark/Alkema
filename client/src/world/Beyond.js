@@ -1,7 +1,7 @@
 // The land beyond, drawn darker (the user's, November 2026, picked from mock-ups of ways to show where a zone you
 // can't go into begins): out on the world, land a hero can't go into yet is greyer and darker, its edge soft, so the
 // border shows before the guards do. Closed is the zones' own (zonemap.js `closed`: beyond the first area, tools/
-// zonegen.py `open_land`, or in a zone barred to you, zones.js), water never.
+// zonegen.py `open_land`), water never. No zone is barred (docs/zones/loop.md): its foes keep you out.
 //
 // The ground and its features are shaded by two pictures laid over them, a multiply and a grey wash, under everyone
 // (people sort at about 20, Forest.js `sortDepth`), so a hero, a guard or a deer over the dark stays bright; the trees,
@@ -20,7 +20,6 @@ const WASH = [56, 52, 66];         // ...then washed this much with this grey: g
 const WASH_A = 0.35;
 const TREE = [0.45, 0.43, 0.51];    // a tree's tint there (it stands with the people, over the shade)
 const UNDER = 19.5;                // over the ground and its features, under everyone and the trees
-const CHECK_MS = 1000;             // a zone cleared (or barred again) shows within this
 
 export class Beyond {
     /**
@@ -30,11 +29,8 @@ export class Beyond {
     constructor(scene, zones) {
         this.scene = scene;
         this.zones = zones;
-        this.barred = () => null;           // the ids of the zones barred to you (GameScene: zones.js `barred`)
         this.v = null;                      // how closed each shade px is, 0 to 1
         this.at = null;                     // the tile at the shade's top left corner
-        this._key = '';
-        this._checkT = 0;
     }
 
     _make() {
@@ -48,13 +44,13 @@ export class Beyond {
         this.v = new Float32Array(SIZE * SIZE);
     }
 
-    _fill(cx, cy, barred) {
+    _fill(cx, cy) {
         const tx0 = Math.floor(cx / TILE) - SPAN / 2, ty0 = Math.floor(cy / TILE) - SPAN / 2;
         this.at = { tx: tx0, ty: ty0 };
         const raw = new Float32Array(SIZE * SIZE);
         for (let ty = 0; ty < SPAN; ty++) {
             for (let tx = 0; tx < SPAN; tx++) {
-                if (!this.zones.closed(tx0 + tx, ty0 + ty, barred)) continue;
+                if (!this.zones.closed(tx0 + tx, ty0 + ty)) continue;
                 for (let y = 0; y < PX; y++) raw.fill(1, (ty * PX + y) * SIZE + tx * PX, (ty * PX + y) * SIZE + tx * PX + PX);
             }
         }
@@ -86,17 +82,8 @@ export class Beyond {
     update(delta) {
         if (!this.v) this._make();
         const cam = this.scene.cameras.main, mx = cam.midPoint.x, my = cam.midPoint.y;
-        this._checkT -= delta;
-        let barred = null;
-        if (this._checkT <= 0 || !this.at) {
-            this._checkT = CHECK_MS;
-            barred = new Set(this.barred() || []);
-            const key = [...barred].sort().join();
-            if (key !== this._key) this.at = null;
-            this._key = key;
-        }
         const far = this.at && (Math.abs(mx / TILE - (this.at.tx + SPAN / 2)) > REFILL || Math.abs(my / TILE - (this.at.ty + SPAN / 2)) > REFILL);
-        if (!this.at || far) this._fill(mx, my, barred ?? new Set(this.barred() || []));
+        if (!this.at || far) this._fill(mx, my);
     }
 
     /** How closed the land at world (x, y) looks, 0 to 1 (0 off the shade). */

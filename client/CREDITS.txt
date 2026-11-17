@@ -106,7 +106,9 @@ full list of contributors is in data/core/about.cfg of the Wesnoth
 repository): the Giant Rat, Ruffian, Woodsman, Footpad, Poacher, Goblin
 Spearman, Goblin Impaler and Goblin Rouser on the Saltmere Point, the
 Elder Wose and Elvish Sorceress guarding the great wood round it, the
-Fencer, Cavalryman, Horseman and Knight riding the Market Fields, and
+Fencer, Cavalryman, Horseman and Knight riding the Market Fields, the
+Thief, Thug and Bandit and Secrets of the Ancients' Delinquent on
+Stonebridge Heath, and
 the Orcish Grunt, Archer, Warrior and Warlord made for the coast before. Their standing, idle, attack, defend, death and (the riders')
 running frames are used, scaled up a quarter, with their team colour mapped to
 LPC cloth (the grunt's, archer's, warrior's and warlord's every colour

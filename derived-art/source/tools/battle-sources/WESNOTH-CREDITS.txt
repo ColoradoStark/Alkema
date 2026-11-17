@@ -26,7 +26,11 @@ Guard (data/campaigns/The_South_Guard, units/Gerrick3_Master_Infantryman.cfg: in
 lieutenant's attack frames); and the guards about them, the Elvish Marksman (units/elves-wood), the Red Mage
 (units/human-magi), the Noble Lord from The Rise of Wesnoth (data/campaigns/The_Rise_Of_Wesnoth, units/Noble_Lord.cfg)
 and the Dwarvish Masked Fighter from The Hammer of Thursagan (data/campaigns/The_Hammer_of_Thursagan, units/
-Dwarvish_Masked_Fighter.cfg).
+Dwarvish_Masked_Fighter.cfg). For Stonebridge Heath, commit
+d95858d3638d87c89a415aeb7ce02997179a8b90, the plan's cutpurses (docs/WORLD.md): the Thief, Thug and
+Bandit (data/core/images/units/human-outlaws, the male frames; their timings from data/core/units/humans/
+Outlaw_Thief.cfg, Outlaw_Thug.cfg, Outlaw_Bandit.cfg) and the Delinquent from Secrets of the Ancients
+(data/campaigns/Secrets_of_the_Ancients, images/units/delinquent, units/Delinquent.cfg).
 
 Artists: the Wesnoth terrain and unit artists. The full list of contributors
 is in data/core/about.cfg of the Wesnoth repository.

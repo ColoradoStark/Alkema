@@ -16,6 +16,7 @@ async function enterWorld(page) {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
         gs.dayNight.hourOverride = 12;
         gs.fieldDemons.only = (family) => family === 'z35';      // (the Point's band, not the first area's guards: this is about spells)
+        gs.fieldDemons.hunt = false;        // (nor its packs hunting you: the zone loop's)
     });
     await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook, null, { timeout: 20000 });
 }

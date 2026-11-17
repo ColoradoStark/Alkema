@@ -19,15 +19,13 @@ export const ZONES = {
 // least twice the foes, and a harder boss you grind a little for). Its climb takes up where the Point's leaves off
 // (its first pack made for a hero the Point's seventh pack past its last), fourteen packs a little gentler a step (2.3
 // times the health, 1.9 the blow; at the Point's 2.5 and 2 the weakest new hero fell short halfway up), paying as the
-// Point's do. Its packs come back a while after they fall (`regrow`, ms; you away from them): to grind, as Clicker
+// Point's do. Its packs come back a while after they fall (`REGROW_MS`, below): to grind, as Clicker
 // Heroes' zones are farmed, for its boss, made for the hero three packs past its last (`BOSS_STEP`): cleared, a hero is
 // a tenth to a half of what he's made for; a round or two more of its top two packs and they're there (tests/unit/zones.test.js).
 const POINT = ZONES.z35, ON = 7;
 ZONES.z28 = {
     attack: POINT.attack * POINT.climb.hp ** ON, hp: POINT.hp * POINT.climb.hurt ** ON, defence: POINT.defence,
     climb: { hp: 2.3, hurt: 1.9, essence: POINT.climb.essence * POINT.climb.more ** ON, more: 1.5 },
-    regrow: 90000,
-    after: 'z35',
 };
 
 // The road on to Stonebridge (the user's, November 2026: zones 20 and 19, two boss fights and a lot of levelling up),
@@ -40,45 +38,47 @@ ZONES.z28 = {
 // pack after pack, so by the Riverlands an ogre took 50 to 100 blows and 20 or 30 of its own hardly hurt (the user's,
 // November 2026). The strength each pack asks, and so the prices and pay, are as they were.
 const SPLIT = POINT.attack / POINT.hp;
-const onFrom = (prev, at, after) => {
+const onFrom = (prev, at) => {
     const strength = prev.attack * prev.hp * (prev.climb.hp * prev.climb.hurt) ** at, grow = Math.sqrt(prev.climb.hp * prev.climb.hurt);
     return {
         attack: Math.sqrt(strength * SPLIT), hp: Math.sqrt(strength / SPLIT), defence: prev.defence,
-        climb: { ...prev.climb, hp: grow, hurt: grow, essence: prev.climb.essence * prev.climb.more ** at }, regrow: 90000, after,
+        climb: { ...prev.climb, hp: grow, hurt: grow, essence: prev.climb.essence * prev.climb.more ** at },
     };
 };
 
+/**
+ * The zone loop's order (docs/zones/loop.md: the same loop for every zone, the user's, November 2026): each zone's climb
+ * takes up where the one before's boss leaves off, so the next is too strong for you till you've grown. Nothing else
+ * keeps you out of a zone: none is barred, no edge held.
+ */
+export const ORDER = ['z35', 'z28', 'z20', 'z19', 'z25'];
+
 /** The step a zone's boss is made for: the Point's at its last pack's, the others' three past their last. */
-export const BOSS_STEP = { z35: 6, z28: 16, z20: 18, z19: 20 };
-ZONES.z20 = onFrom(ZONES.z28, BOSS_STEP.z28 + 1, 'z28');
-ZONES.z19 = onFrom(ZONES.z20, BOSS_STEP.z20 + 1, 'z20');
+export const BOSS_STEP = { z35: 6, z28: 16, z20: 18, z19: 20, z25: 18 };
+// (Stonebridge Heath, 25: the heath road on from the Meadowlands' bridge to the Westmarch, Wesnoth's outlaws, sixteen packs)
+for (const [was, is] of [['z28', 'z20'], ['z20', 'z19'], ['z19', 'z25']]) ZONES[is] = onFrom(ZONES[was], BOSS_STEP[was] + 1);
 
 /**
  * A zone you've cleared: its boss felled (the flag `cleared-<zone>` kept with your hero). Only that (the user's,
- * November 2026: a hero as strong as he's made for counted too, and strong from their blessings they walked past the
- * Meadowlands' foes and its Master of Foot into Stonebridge, its edge held by no one; a boss is a gate, felled to pass).
- * (`strength`, unused, is kept for the callers.)
+ * November 2026: a hero as strong as he's made for counted too, and they walked past the Meadowlands' boss).
  */
-export function cleared(fam, flags, strength) {
+export function cleared(fam, flags) {
     return !!flags?.[`cleared-${fam}`];
 }
 
 /**
- * A zone barred to you: the zone before it on the way (`after`) not cleared (the user's, November 2026, for every zone
- * now and to come: an uncleared zone's way on is always the same, its foes warn you and stand in your way, and fight
- * you further in, as the first area's guards do; a new hero up the river road was simply set on).
+ * A zone's packs come back this long after they fall, you away from them, once every one of them has fallen once
+ * (docs/zones/loop.md: what you beat stays beaten till then, so a trip to the healer loses nothing; then you can grind
+ * for its boss).
  */
-export function barred(fam, flags, strength) {
-    const after = ZONES[fam]?.after;
-    return !!after && !cleared(after, flags, strength);
-}
+export const REGROW_MS = 90000;
 
 /**
  * Where you come to, fallen in a zone (`GameScene.comeTo`): past the Market Fields, on the bridge by Highmarket, and
  * mended there (the user's, November 2026: put all the way back at Riverhold from the ogres, and with no healer near
  * the bridge, coming to with a hit point would have sent you back there anyway); null elsewhere, where you set out.
  */
-const COME_TO = { 20: MARKET.bridge, 19: MARKET.bridge };
+const COME_TO = { 20: MARKET.bridge, 19: MARKET.bridge, 25: MARKET.bridge };
 export function comeToFor(zoneId) {
     const at = COME_TO[zoneId];
     return at ? { x: at[0], y: at[1], mend: true } : null;

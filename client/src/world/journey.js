@@ -11,6 +11,7 @@ export const ROAD = [
     { id: 'road-z20', zone: 'z20', text: "Over Highmarket's bridge: fell the Ancient Ogre" },
     { id: 'road-z19', zone: 'z19', text: 'Through the Meadowlands: fell the Master Infantryman' },
     { id: 'road-stonebridge', place: 'Stonebridge', radius: 140, text: 'Cross the bridge into Stonebridge' },
+    { id: 'road-z25', zone: 'z25', text: 'Over Stonebridge Heath: fell the Bandit' },
 ];
 
 /** The step you're on: the first not done (a zone's when it's cleared, a place's once reached); null at the road's end. */

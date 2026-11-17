@@ -3,7 +3,7 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, packEssence, strengthFor, tooStrong, BOSS_STEP, barred, cleared, comeToFor } from '../../src/battle/zones.js';
+import { ZONES, ORDER, packEssence, strengthFor, tooStrong, BOSS_STEP, cleared, comeToFor } from '../../src/battle/zones.js';
 import MARKET from '../../src/battle/market.json';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
@@ -82,15 +82,10 @@ describe('The climb up the Saltmere Point', () => {
 });
 
 describe('The Market Fields, the next zone north of Riverhold', () => {
-    test("barred till the Point's cleared (the user's: an uncleared zone's way on always warns and blocks): a new hero is, one who felled the Rouser isn't; one only as strong as he's made for still is", () => {
-        for (const [a, h] of HEROES) expect(barred('z28', {}, a * h)).toBe(true);
-        expect(barred('z28', { 'cleared-z35': true }, 80)).toBe(false);
-        // (strong as he's made for isn't cleared: a zone's boss must be felled; the user's, November 2026, walked past
-        // the Meadowlands' foes and its boss into Stonebridge, strong enough that it counted as cleared)
-        expect(barred('z28', {}, 1000 * strengthFor('z35', BOSS_STEP.z35))).toBe(true);
-        expect(cleared('z19', {}, 1000 * strengthFor('z19', BOSS_STEP.z19))).toBe(false);
-        expect(barred('z35', {}, 80)).toBe(false);          // (the home zone: nothing before it)
-        expect(cleared('z28', {}, 80)).toBe(false);
+    test("a zone is cleared by its boss felled, and only that (the user's, November 2026: strong as he's made for counted once, and they walked past the Meadowlands' boss)", () => {
+        expect(cleared('z28', { 'cleared-z28': true })).toBe(true);
+        expect(cleared('z28', {})).toBe(false);
+        expect(cleared('z19', { 'cleared-z20': true })).toBe(false);
     });
     const MARKET = 14;      // its packs (field.spec.js checks the zone has them)
     /** A new hero up the Point, its Rouser and all, then `packs` of the Market Fields: what each spent, and how they stood. */
@@ -140,7 +135,7 @@ describe('The Market Fields, the next zone north of Riverhold', () => {
 });
 
 describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (19), after the Market Fields', () => {
-    const ROAD = [['z35', 7], ['z28', 14], ['z20', 16], ['z19', 18]];      // each zone and its packs (field.spec.js checks them)
+    const ROAD = [['z35', 7], ['z28', 14], ['z20', 16], ['z19', 18], ['z25', 16]];      // each zone and its packs (field.spec.js checks them)
     /** A new hero up the whole road: each zone's packs in turn, then rounds of its top two till they're as strong as its boss, then him. */
     function walk(a, h) {
         const { u, inventory, strength } = fresh(a, h);
@@ -167,13 +162,14 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
         return { short, rounds, feel };
     }
 
-    test("each takes up where the last's boss leaves off, and is barred till the zone before it is cleared", () => {
-        expect(strengthFor('z20', 0) / strengthFor('z28', BOSS_STEP.z28 + 1)).toBeCloseTo(1);
-        expect(strengthFor('z19', 0) / strengthFor('z20', BOSS_STEP.z20 + 1)).toBeCloseTo(1);
-        expect(barred('z20', { 'cleared-z35': true }, 80)).toBe(true);
-        expect(barred('z20', { 'cleared-z28': true }, 80)).toBe(false);
-        expect(barred('z19', { 'cleared-z28': true }, 80)).toBe(true);
-        expect(barred('z19', { 'cleared-z20': true }, 80)).toBe(false);
+    test("every zone in the loop's order takes up where the one before's boss leaves off, so the next is too strong till you've grown (docs/zones/loop.md: nothing bars a zone but its foes)", () => {
+        expect(ORDER).toEqual(['z35', 'z28', 'z20', 'z19', 'z25']);
+        for (let k = 1; k < ORDER.length; k++) {
+            const [was, is] = [ORDER[k - 1], ORDER[k]];
+            expect(strengthFor(is, 0) / strengthFor(was, BOSS_STEP[was] + 1), is).toBeCloseTo(1);
+            expect(strengthFor(is, 0), `${is} stronger than ${was}'s boss`).toBeGreaterThan(strengthFor(was, BOSS_STEP[was]));
+            expect(ZONES[is].after, `${is}: nothing bars it`).toBeUndefined();
+        }
     });
 
     test("a fight on the road stays a fight like the Point's (the user's, November 2026: an ogre took 50 to 100 blows and 20 or 30 of its own hardly hurt; the Point's and the Market Fields' felt right): in the Riverlands and the Meadowlands alike, the blows each hero takes to fell a foe and to fall stay within what the Point asked of that same hero", () => {
@@ -182,7 +178,7 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
             const feel = walk(a, h).feel, point = feel.filter(f => f.zone === 'z35');
             const span = k => [Math.min(...point.map(f => f[k])) / 1.6, Math.max(...point.map(f => f[k])) * 1.6];
             const [fellLo, fellHi] = span('fell'), [fallLo, fallHi] = span('fall');
-            for (const f of feel.filter(f => ['z20', 'z19'].includes(f.zone)))
+            for (const f of feel.filter(f => ['z20', 'z19', 'z25'].includes(f.zone)))
                 if (f.fell < fellLo || f.fell > fellHi || f.fall < fallLo || f.fall > fallHi)
                     off.push(`${f.at}: blows to fell x${f.fell.toFixed(2)} (Point ${fellLo.toFixed(2)}-${fellHi.toFixed(2)}), to fall x${f.fall.toFixed(2)} (Point ${fallLo.toFixed(2)}-${fallHi.toFixed(2)})`);
         }
@@ -192,7 +188,7 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
     test('every new hero is at least half as strong as each pack in turn all the way to Stonebridge, spending what the last paid, and grinds a round or few for each boss', () => {
         const all = HEROES.map(([a, h]) => walk(a, h));
         expect(all.flatMap(r => r.short)).toEqual([]);
-        for (const zone of ['z20', 'z19']) {
+        for (const zone of ['z20', 'z19', 'z25']) {
             const n = all.map(r => r.rounds[zone]);
             expect(Math.min(...n), `${zone}: its boss a wall`).toBeGreaterThanOrEqual(1);
             expect(Math.max(...n), `${zone}: a little grinding, not a lot`).toBeLessThanOrEqual(4);
@@ -202,9 +198,9 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
 
 describe('Where you come to', () => {
     test("fallen on the road past the Market Fields, you come to on the bridge by Highmarket, mended (the user's, November 2026: put all the way back at Riverhold, and no healer near the bridge)", () => {
-        for (const zone of [20, 19]) expect(comeToFor(zone)).toEqual({ x: MARKET.bridge[0], y: MARKET.bridge[1], mend: true });
+        for (const zone of [20, 19, 25]) expect(comeToFor(zone)).toEqual({ x: MARKET.bridge[0], y: MARKET.bridge[1], mend: true });
     });
     test('fallen anywhere else, where you set out, as before', () => {
-        for (const zone of [35, 33, 28, 25, null]) expect(comeToFor(zone)).toBe(null);
+        for (const zone of [35, 33, 28, null]) expect(comeToFor(zone)).toBe(null);
     });
 });

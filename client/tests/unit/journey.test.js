@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { ROAD, roadStep, flowField, wayOn } from '../../src/world/journey.js';
 
 describe('the road to Stonebridge', () => {
-    it('goes zone by zone, each boss in turn, then the city', () => {
-        expect(ROAD.map(s => s.zone || s.place)).toEqual(['z35', 'z28', 'z20', 'z19', 'Stonebridge']);
+    it('goes zone by zone, each boss in turn, the city, then its heath', () => {
+        expect(ROAD.map(s => s.zone || s.place)).toEqual(['z35', 'z28', 'z20', 'z19', 'Stonebridge', 'z25']);
         const none = new Set();
         expect(roadStep(() => false, none).id).toBe('road-z35');
         expect(roadStep(z => z === 'z35', none).id).toBe('road-z28');
         expect(roadStep(z => ['z35', 'z28', 'z20'].includes(z), none).id).toBe('road-z19');
         expect(roadStep(() => true, none).id).toBe('road-stonebridge');
+        expect(roadStep(z => z !== 'z25', new Set(['road-stonebridge'])).id).toBe('road-z25');
         expect(roadStep(() => true, new Set(['road-stonebridge']))).toBeNull();
     });
 

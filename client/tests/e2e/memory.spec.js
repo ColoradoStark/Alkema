@@ -278,6 +278,7 @@ test.describe('Memory', () => {
     for (const [fam, name, sheets, boss, worn] of [
         ['z20', 'the Riverlands', ['foe-greatogre', 'foe-ogre', 'foe-youngogre'], 'ancientogre', 'foe-ancientogre'],
         ['z19', 'the Meadowlands', ['foe-heavyinfantry', 'foe-ironmauler', 'foe-shocktrooper'], 'masterinfantryman', 'foe-masterinfantryman'],
+        ['z25', 'Stonebridge Heath', ['foe-delinquent', 'foe-thief', 'foe-thug'], 'bandit', 'foe-bandit'],
     ]) {
         test(`${name}' foes, on the road to Stonebridge: every pack of it, its boss wearing his unit's sheet, under budget, and let go when you leave`, async ({ page }) => {
             test.setTimeout(150000);

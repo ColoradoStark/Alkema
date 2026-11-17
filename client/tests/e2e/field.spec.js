@@ -19,8 +19,12 @@ async function enterWorld(page, path = '/', bands = 'z35') {
         const gs = window.__PHASER_GAME.scene.getScene('GameScene');
         gs.dayNight.hourOverride = 12;
         gs.fieldDemons.only = bands === 'all' ? null : (family) => family === bands;
+        gs.fieldDemons.hunt = false;        // (the zone loop's hunt: only where a test is about it, `hunting`)
     }, bands);
 }
+
+/** The zone loop's hunt on (docs/zones/loop.md: its packs come for you wherever you are in a zone not cleared). */
+const hunting = (page) => page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.hunt = true; });
 
 /** Put the hero's feet at (x, y). */
 const standAt = (page, x, y) => page.evaluate(([x, y]) => {
@@ -392,6 +396,7 @@ test.describe("The Saltmere Point's foes", () => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
             gs.dayNight.hourOverride = 12;
             gs.fieldDemons.only = (family) => family === 'z35';
+            gs.fieldDemons.hunt = false;        // (the zone loop's hunt: not what this is about)
         });
         const { PLACES, PACKS } = await places(page);
         await atThePoint(page);
@@ -686,7 +691,7 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(Math.abs(r.paid - r.pays)).toBeLessThanOrEqual(5);        // (each share rounded)
     });
 
-    test("near a pack too strong for you, no skull over it and no warning (the user's, November 2026: they didn't like the look of them); beaten, the first pack shows you how to upgrade: an arrow on Upgrade, one on a buy button; bought, it's done and never shown again (the user's: teach the system)", async ({ page }) => {
+    test("near a pack too strong for you, no skull over it and no warning (the user's, November 2026: they didn't like the look of them); beaten, the first pack shows you how to upgrade: never an arrow on the Upgrade tab (the user's: it sent them to the menu early), one on a buy button there; bought, it's done and never shown again (the user's: teach the system)", async ({ page }) => {
         test.setTimeout(150000);
         await enterWorld(page);
         await page.evaluate(() => {
@@ -716,14 +721,17 @@ test.describe('The climb up the Saltmere Point (after Clicker Heroes)', () => {
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene')._notice?.text ?? '')).not.toMatch(/too strong/i);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.exists('danger-skull')), 'no skull').toBe(false);
         // The first pack beaten shows the way to upgrade (as the next test's does by felling it)
+        // (never to the Upgrade tab's menu, the user's, November 2026: the old prompt sent them there early in the game;
+        // the arrow's the banner's over the pad, once there's essence for it)
         await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').tutorUpgrade('Well fought!'));
-        await expect.poll(pointing, { timeout: 15000 }).toBe('stats');
-        // The Upgrade page: an arrow on a buy button; essence enough, and it's bought
-        await page.evaluate(() => {
-            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
-            ui.inventory.essence += 500;
-            ui.bottomControls.switchTab('stats');
-        });
+        await page.waitForTimeout(1500);
+        expect(await pointing(), 'no arrow on the Upgrade tab, short of essence').toBe(null);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('UIScene').inventory.essence += 500; });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').upgradeBanner.visible), { timeout: 15000 }).toBe(true);
+        await page.waitForTimeout(500);
+        expect(await pointing(), 'no arrow on the Upgrade tab, the banner up').toBe(null);
+        // The Upgrade page, if you go there: an arrow on a buy button, and it's bought
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').bottomControls.switchTab('stats'));
         const buy = page.locator('.gear-up.is-tutor .gear-up-buy');
         await expect(buy).toHaveCount(1);
         await expect(page.locator('.gear-tutor-arrow')).toHaveCount(1);
@@ -1445,7 +1453,7 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         await keepUp(page);
-        // (only the guards: by Riverhold's road the Market Fields' riders, barred to a new hero, come to meet you too)
+        // (only the guards: by Riverhold's road the Market Fields' riders come for you too)
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (fam) => fam.startsWith('guards'); });
         const spot = await roadside(page);
         expect(spot).not.toBeNull();
@@ -1905,7 +1913,7 @@ test.describe("The world's zones (the user's: each like a level)", () => {
 });
 
 test.describe("The land beyond, drawn darker (the user's: to see where a zone you can't go into begins)", () => {
-    test("the Duskwood over the Market Fields' north edge is greyer and darker, the fields too till the Point's cleared; the people over it aren't, and its trees are as its ground", async ({ page }) => {
+    test("the Duskwood over the Market Fields' north edge is greyer and darker, the fields not (never barred); the people over it aren't, and its trees are as its ground", async ({ page }) => {
         test.setTimeout(90000);
         await enterWorld(page, '/', 'all');
         await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (f) => f.startsWith('guards'); });
@@ -1933,15 +1941,9 @@ test.describe("The land beyond, drawn darker (the user's: to see where a zone yo
                 done(out);
             });
         }), [HERE, OVER]);
-        // A new hero: the Market Fields are barred (the Point's not cleared), dark as the Duskwood
-        await expect.poll(() => look().then(l => [l.here, l.over])).toEqual([1, 1]);
-        const barred = await look();
-        // Cleared, the fields brighten and the Duskwood stays dark
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').flags['cleared-z35'] = true; });
-        await expect.poll(() => look().then(l => [l.here, l.over]), { timeout: 5000 }).toEqual([0, 1]);
-        const open = await look();
-        expect(open.light[0], 'the fields brighter once open').toBeGreaterThan(barred.light[0] * 1.4);
-        expect(open.light[1], 'the Duskwood as dark as it was').toBeLessThan(barred.light[1] * 1.1);
+        // A new hero: the Market Fields open (a zone is never barred, docs/zones/loop.md: its foes are what keep you
+        // out), the Duskwood beyond the guards dark
+        await expect.poll(() => look().then(l => [l.here, l.over])).toEqual([0, 1]);
         // Everyone over it: drawn above the shade (a guard of the wood, in it, as bright as ever), and the trees tinted as their ground
         const people = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), by = gs.overworld.beyond;
@@ -2253,56 +2255,6 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
         expect(into).toEqual([]);
     });
 
-    test("barred till the Point's cleared (the user's, for every zone: an uncleared zone's way on always warns and blocks, as the elves do): a new hero up the road is met at the way in by its nearest foe, warned and stood in the way of, not struck; further in, the zone fights; once the Rouser's beaten, kept with the hero, it's open", async ({ page }) => {
-        test.setTimeout(120000);
-        await enterWorld(page, '/', 'z28');
-        await keepUp(page);
-        const { PACKS } = await market(page);
-        const first = PACKS[0];
-        const said = [];
-        await page.exposeFunction('__said', (t) => said.push(t));
-        await page.evaluate(() => { const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons, say = fd.say.bind(fd); fd.say = (t, ms) => { window.__said(t); say(t, ms); }; });
-        const barred = () => page.evaluate(() => import('/src/battle/zones.js').then(({ barred }) => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return barred('z28', gs.flags, gs.fieldDemons._strength());
-        }));
-        expect(await barred()).toBe(true);
-        // Up the road from Riverhold and over into the Market Fields
-        await standAt(page, WAY_IN.x, WAY_IN.y + 200);
-        await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBe(first.band.length);
-        await standAt(page, WAY_IN.x, WAY_IN.y);
-        const state = () => page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
-            const z = fd.foes.filter(f => f.family === 'z28' && f.hp > 0);
-            const bar = z.find(f => f.barring);
-            return { barring: z.filter(f => f.barring).length, near: bar ? Math.hypot(bar.foe.x - me.x, bar.foe.y - me.y - 23) / 32 : null,
-                fighting: z.filter(f => !['post', 'home'].includes(f.state)).length, hp: gs.scene.get('UIScene').hp.now };
-        });
-        const before = (await state()).hp;
-        // One comes to the way in and stands before you, saying so; none strikes
-        await expect.poll(async () => { const s = await state(); return s.barring === 1 && s.near < 2.5; }, { timeout: 20000 }).toBe(true);
-        expect(said.some(t => /None pass to Stonebridge/.test(t))).toBe(true);
-        await page.waitForTimeout(3000);
-        const held = await state();
-        expect(held.fighting).toBe(0);
-        expect(held.hp).toBe(before);
-        // Further in than its warning: the zone fights
-        const [fx, fy] = first.at, k = 0.75;
-        await standAt(page, WAY_IN.x + (fx - WAY_IN.x) * k, WAY_IN.y + (fy - WAY_IN.y) * k);
-        await expect.poll(async () => (await state()).fighting, { timeout: 10000 }).toBeGreaterThan(0);
-        // The Rouser beaten (kept with the hero): open, its foes fighting as they're met, none barring
-        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.fieldDemons.forgive(); gs.setFlag('cleared-z35'); });
-        expect(await barred()).toBe(false);
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').flags['cleared-z35'])).toBe(true);
-        await standAt(page, START.x, START.y);
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'z28' && f.state !== 'post').length), { timeout: 30000 }).toBe(0);
-        await standAt(page, WAY_IN.x, WAY_IN.y + 200);
-        await page.waitForTimeout(500);
-        await standAt(page, WAY_IN.x, WAY_IN.y);
-        await page.waitForTimeout(3000);
-        expect((await state()).barring).toBe(0);
-    });
-
     test("a horseman charges: he stops and marks his lane red, then gallops down it; caught in it you're run down, stepped out of it you're not; ridden, he's winded a moment", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'z28');
@@ -2369,6 +2321,11 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
         const pack = PACKS[0];
         await standAt(page, pack.at[0], pack.at[1] + 120);
         await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, pack.k), { timeout: 30000 }).toBe(pack.band.length);
+        // (what you beat stays beaten till every pack has fallen once: docs/zones/loop.md)
+        await page.evaluate((places) => {
+            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+            for (const p of places) if (!p.lair) fd.fell.add(p.i);
+        }, PLACES);
         const step = await page.evaluate((k) => {
             const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
             fd._rouse(k);
@@ -2593,7 +2550,7 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
     }), [fam, step]);
 
     for (const [fam, z] of Object.entries(ZONES)) {
-        test(`${fam}: its packs stand on its open ground, Grimhold's kingdom's own foes, no guard among them; barred till the zone before it is cleared; its first pack comes as you near; its boss isn't there till they're all beaten`, async ({ page }) => {
+        test(`${fam}: its packs stand on its open ground, Grimhold's kingdom's own foes, no guard among them; its first pack comes as you near; its boss isn't there till they're all beaten`, async ({ page }) => {
             test.setTimeout(120000);
             await enterWorld(page, '/', fam);
             await keepUp(page);
@@ -2605,44 +2562,11 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
                 return { zones: [...new Set(packs.map(p => ow.zoneAt(...p.at)?.id))], kingdom: ow.zoneAt(...packs[0].at)?.kingdom };
             }, PACKS);
             expect(where.zones).toEqual([z.id]);
-            const barred = (flags) => page.evaluate(([fam, flags]) => import('/src/battle/zones.js').then(({ barred }) => barred(fam, flags, 80)), [fam, flags]);
-            expect(await barred({})).toBe(true);
-            expect(await barred({ 'cleared-z28': true, 'cleared-z20': true })).toBe(false);
             await strongFor(page, fam, 0);
             const first = PACKS.filter(p => !p.lair).sort((a, b) => a.step - b.step)[0];
             await standAt(page, first.at[0], first.at[1] + 260);
             await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && f.foe.ready).length, first.k), { timeout: 30000 }).toBe(first.band.length);
             expect(await page.evaluate((boss) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.some(f => f.kind === boss), z.boss)).toBe(false);
-        });
-
-        test(`${fam}: its foes stand about the way through and see you further off; its edge onto the next zone is held, a foe in your way warning you off, till its boss falls (the user's: they walked on past no one)`, async ({ page }) => {
-            test.setTimeout(120000);
-            await enterWorld(page, '/', fam);
-            const { way, edge } = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url)))[fam];
-            // (a hero as strong as its first pack is made for, the zones before it cleared, not it)
-            await page.evaluate((fam) => import('/src/battle/zones.js').then(({ strengthFor, ZONES }) => {
-                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), stats = ui.inventory.stats;
-                for (let z = ZONES[fam].after; z; z = ZONES[z].after) gs.flags[`cleared-${z}`] = true;
-                Object.defineProperty(stats, 'attack', { value: Math.ceil(strengthFor(fam, 0) / 2000), configurable: true, writable: true });
-                Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 2000, now: 2000 }, configurable: true, writable: true });
-                ui.hp.max = ui.hp.now = 2000;
-                window.__mend = setInterval(() => { ui.hp.now = ui.hp.max; }, 100);
-            }), fam);
-            // Near the way on: one of them comes and stands in your way, warning you off
-            const near = way[way.length - 4];
-            await standAt(page, near[0], near[1]);
-            const holding = () => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.holding && f.barring).length);
-            await expect.poll(holding, { timeout: 30000 }).toBe(1);
-            const seen = await page.evaluate((fam) => {
-                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-                return { sees: [...new Set(fd.foes.filter(f => f.family === fam && !f.spec.boss).map(f => f.aggro / 32))], said: fd._barSaid > 0 };
-            }, fam);
-            expect(seen).toEqual({ sees: [7], said: true });
-            expect(edge.length).toBeGreaterThan(0);
-            // Its boss felled, it's no longer held
-            await page.evaluate((fam) => { window.__PHASER_GAME.scene.getScene('GameScene').flags[`cleared-${fam}`] = true; }, fam);
-            await expect.poll(holding, { timeout: 10000 }).toBe(0);
-            await page.evaluate(() => clearInterval(window.__mend));
         });
 
         test(`${fam}: its boss is a boss fight, made for the hero three packs past its last, wearing his own unit's sheet grown; his slam marked red; at his call his band comes; felled, a chest and the zone cleared`, async ({ page }) => {
@@ -2753,7 +2677,7 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         for (const fam of ['z35', 'z28', 'z20', 'z19']) expect(out[fam], fam).toEqual({ inside: true, other: 0 });
     });
 
-    test("the Riverlands' ogres stand in your way on, not spread over the valley (the user's, November 2026: they had to be hunted for): every pack about the way from the bridge you came in by to the Meadowlands but one at the way in, and walking west from the bridge they come for you, from further off than the Point's", async ({ page }) => {
+    test("the Riverlands' ogres stand in your way on, not spread over the valley (the user's, November 2026: they had to be hunted for): every pack about the way from the bridge you came in by to the Meadowlands but one at the way in, and walking west from the bridge they come for you (the zone loop's hunt)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'z20');
         await strongFor(page, 'z20', 0);
@@ -2768,8 +2692,9 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             return Math.hypot(p.at[0] - bridge.x - t * vx, p.at[1] - bridge.y - t * vy) / 32;
         };
         expect(road.filter(p => off(p) <= 12).length, 'about the way through').toBeGreaterThanOrEqual(road.length - 1);
-        expect(road.every(p => p.aggro > 5 * 32), 'they see you from further off').toBe(true);
-        // Nothing to hunt: 6.5 tiles off the first you'd meet coming from the bridge (beyond the Point's five), it comes
+        // Stood 6.5 tiles off the first you'd meet coming from the bridge (beyond the Point's five), it comes for you:
+        // the zone loop's hunt (docs/zones/loop.md)
+        await hunting(page);
         const first = road.slice().sort((a, b) => Math.hypot(a.at[0] - bridge.x, a.at[1] - bridge.y) - Math.hypot(b.at[0] - bridge.x, b.at[1] - bridge.y))[0];
         const toward = Math.atan2(bridge.y - first.at[1], bridge.x - first.at[0]);
         await standAt(page, first.at[0] + Math.cos(toward) * 6.5 * 32, first.at[1] + Math.sin(toward) * 6.5 * 32);
@@ -2777,9 +2702,10 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         await expect.poll(() => page.evaluate((k) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.pack === k && !['post', 'home'].includes(f.state)).length, first.k), { timeout: 10000 }).toBeGreaterThan(0);
     });
 
-    test("the Meadowlands, walked through as the user did (November 2026: they had to look for its foes, none came at them, and they walked on into Stonebridge past them all and its boss): walking the way from the Riverlands to Stonebridge's bridge, its foes come at you as the ogres do, and you don't get over the bridge while the Master of Foot stands", async ({ page }) => {
+    test("the Meadowlands, walked through as the user did (November 2026: they had to look for its foes, none came at them, and they walked on into Stonebridge past them all and its boss): walking the way from the Riverlands to Stonebridge's bridge, its foes come at you as the ogres do (Stonebridge's bridge then open: docs/zones/loop.md, the next test)", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page, '/', 'z19');
+        await hunting(page);
         const { way } = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url))).z19;
         // (a hero far stronger than its boss is made for, as the user's was: he fell to a couple of blows; the Riverlands
         // and before cleared, the Meadowlands not, its boss never fought; the road's quest on the Meadowlands; never
@@ -2812,7 +2738,7 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
                 // (over the bridge: off its far end onto Stonebridge's heath; a knock back from a charge can put you a
                 // step over the zone's line at its near end, where they hold you, and that isn't getting by)
                 if (x < 4700 && gs.overworld.zoneAt(x, y)?.id === 25) over = true;
-                (window.__trace ??= []).push(`${Math.round(x)},${Math.round(y)} z${gs.overworld.zoneAt(x, y)?.id} hold${fd.foes.filter(f => f.holding).length} bar${fd.foes.filter(f => f.barring).length} after${fd.foes.filter(f => f.family === 'z19' && !['post', 'home'].includes(f.state)).length} ${fd.foes.filter(f => f.family === 'z19' && Math.hypot(f.foe.x - x, f.foe.y - y) < 200).map(f => f.kind[0] + ':' + f.state + (f.barring ? 'B' : '') + (f.holding ? 'H' : '') + '@' + Math.round(f.foe.x)).join(' ')}`);
+                (window.__trace ??= []).push(`${Math.round(x)},${Math.round(y)} z${gs.overworld.zoneAt(x, y)?.id} bar${fd.foes.filter(f => f.barring).length} after${fd.foes.filter(f => f.family === 'z19' && !['post', 'home'].includes(f.state)).length} ${fd.foes.filter(f => f.family === 'z19' && Math.hypot(f.foe.x - x, f.foe.y - y) < 200).map(f => f.kind[0] + ':' + f.state + '@' + Math.round(f.foe.x)).join(' ')}`);
                 if (window.__trace.length > 60) window.__trace.shift();
                 if (over || Date.now() - t0 > 120000) {
                     clearInterval(tick); clearInterval(window.__mend);
@@ -2822,68 +2748,9 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             }, 50);
         }), way);
         expect(out.came, `foes that came at you on the way: ${JSON.stringify(out)}`).toBeGreaterThanOrEqual(6);
-        expect(out.over, `over the bridge into Stonebridge with the Master of Foot standing: ${JSON.stringify(out)}`).toBe(false);
     });
 
-    test("the Meadowlands, barred till the Ancient Ogre's beaten (the user's, November 2026: they walked over into it unstopped): walked up to anywhere along its border, one of Grimhold's foot comes to meet you there, a \"!\" over him, and stops you a step over it, \"Halt!\", striking no blow", async ({ page }) => {
-        test.setTimeout(150000);
-        await enterWorld(page, '/', 'z19');
-        await keepUp(page);
-        await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.flags['cleared-z35'] = gs.flags['cleared-z28'] = true; });
-        expect(await page.evaluate(() => import('/src/battle/zones.js').then(({ barred }) => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            return barred('z19', gs.flags, gs.fieldDemons._strength());
-        }))).toBe(true);
-        // Where the border is, row by row, along the Riverlands' west side
-        const crossings = await page.evaluate(() => {
-            const ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld, out = [];
-            for (const y of [7400, 7880, 8300]) {
-                let x = 6900;
-                while (x > 5600 && ow.zoneAt(x, y)?.id !== 19) x -= 8;
-                out.push({ x: x + 8, y });
-            }
-            return out;
-        });
-        for (const c of crossings) {
-            await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.fieldDemons.forgive?.(); });
-            await standAt(page, c.x + 6 * 32, c.y);
-            await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'z19' && f.foe.ready).length), { timeout: 30000 }).toBeGreaterThan(0);
-            await page.waitForTimeout(400);
-            const hp = await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now);
-            await page.evaluate((c) => {
-                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
-                window.__cross = { deepest: 0, bang: false, words: null, barring: false, fighting: 0 };
-                window.__crossRec = () => {
-                    const me = gs.localPlayer.sprite, r = window.__cross, z = fd.foes.filter(f => f.family === 'z19' && f.hp > 0);
-                    r.deepest = Math.max(r.deepest, (c.x - me.x) / 32);
-                    for (const f of z) {
-                        const h = fd.heeds.on(f);
-                        r.bang ||= h.bang;
-                        r.words ||= h.words;
-                        r.barring ||= !!f.barring;
-                    }
-                    r.fighting = Math.max(r.fighting, z.filter(f => !['post', 'home'].includes(f.state)).length);
-                };
-                gs.events.on('postupdate', window.__crossRec);
-            }, c);
-            await page.keyboard.down('ArrowLeft');
-            await page.waitForTimeout(6000);
-            await page.keyboard.up('ArrowLeft');
-            const r = await page.evaluate(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'); gs.events.off('postupdate', window.__crossRec); return window.__cross; });
-            const at = `crossing at ${c.x},${c.y}: ${JSON.stringify(r)}`;
-            expect(r.bang, `a "!" as he sees you, ${at}`).toBe(true);
-            expect(r.barring, `he stops you, ${at}`).toBe(true);
-            expect(r.words, at).toBe('Halt!');
-            expect(r.deepest, `no further than a step or two over, ${at}`).toBeLessThan(4);
-            expect(r.fighting, `no blow, ${at}`).toBe(0);
-            expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(hp);
-            // (back out, so the next crossing starts afresh)
-            await standAt(page, c.x + 12 * 32, c.y);
-            await page.waitForTimeout(2500);
-        }
-    });
-
-    test("past them Stonebridge's heath is open, no foe on it; the woods about the road are kept: every post by the plan's units for the zone it guards, the trees of the road's zones by the nearest forest's elves (the user's: not the south's elves); the Twin Rivers' red mages throw Wesnoth's own fireball", async ({ page }) => {
+    test("past them Stonebridge's heath is open, peopled as any zone is; the woods about the road are kept: every post by the plan's units for the zone it guards, the trees of the road's zones by the nearest forest's elves (the user's: not the south's elves); the Twin Rivers' red mages throw Wesnoth's own fireball", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
         const posts = await page.evaluate(async () => {
@@ -2902,8 +2769,8 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         expect(of(24)).toEqual(['noblelord']);
         expect(of(21)).toEqual(['redmage']);
         expect(posts.filter(p => [19, 20, 25].includes(p.zone) && !p.woods), 'no guard on the road zones\' open ground').toEqual([]);
-        const heath = await page.evaluate(async () => { const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld; return PACKS.filter(p => !p.guard && ow.zoneAt(...p.at)?.id === 25).length; });
-        expect(heath, "no foe on Stonebridge's heath").toBe(0);
+        const heath = await page.evaluate(async () => { const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld; return PACKS.filter(p => !p.guard && !p.lair && ow.zoneAt(...p.at)?.id === 25).length; });
+        expect(heath, "Stonebridge Heath's own outlaws (docs/zones/loop.md: a zone like any other)").toBe(16);
         // A red mage's fireball, Wesnoth's own, untinted
         const mage = posts.find(p => p.kind === 'redmage');
         await standAt(page, mage.at[0], mage.at[1] + 120);
@@ -2918,5 +2785,90 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
             return { kind: s?.kind, anim: s?.sprite.anims?.currentAnim?.key, tint: s?.sprite.tintTopLeft };
         });
         expect(shot).toEqual({ kind: 'fireball', anim: 'spell-fx-fireball', tint: 0xffffff });
+    });
+});
+
+// The zone loop (docs/zones/loop.md; the user's, November 2026: too many rules per zone, a mess to manage; one loop,
+// the same for every zone, the foes' ways their own): a zone is open, its packs come for you, two at a time
+test.describe("The zone loop, the same for every zone", () => {
+    for (const fam of ['z35', 'z19']) {
+        test(`${fam}: stood in it far from every pack, its packs come for you, never more than two at once (the user's: they had to go looking for foes in the Meadowlands, and below Riverhold)`, async ({ page }) => {
+            test.setTimeout(150000);
+            await enterWorld(page, '/', fam);
+            await hunting(page);
+            await keepUp(page);
+            await page.evaluate((fam) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+                for (const z of ['z35', 'z28', 'z20']) if (z !== fam) gs.flags[`cleared-${z}`] = true;
+                // (never struck: this is about their coming, not the fight)
+                window.__mend = setInterval(() => { const ui = gs.scene.get('UIScene'); ui.hp.now = ui.hp.max; gs.fieldDemons.you.guard = 1e9; }, 100);
+            }, fam);
+            // Open ground in the zone more than 13 tiles from every pack (past any foe's sight), 26 at most from one
+            const spot = await page.evaluate((fam) => import('/src/battle/FieldDemons.js').then(({ PACKS }) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ow = gs.overworld;
+                const packs = PACKS.filter(p => p.family === fam && !p.lair), id = Number(fam.slice(1));
+                let best = null;
+                for (const p of packs) for (let r = 14; r <= 24 && !best; r += 2) for (let a = 0; a < Math.PI * 2 && !best; a += 0.2) {
+                    const x = p.at[0] + Math.cos(a) * r * 32, y = p.at[1] + Math.sin(a) * r * 32;
+                    const near = Math.min(...packs.map(o => Math.hypot(o.at[0] - x, o.at[1] - y)));
+                    if (near > 13 * 32 && fd._open(x, y) && ow.zoneAt(x, y)?.id === id && !ow.forest?.depthAt?.(x, y)) best = { x, y, near };
+                }
+                return best;
+            }), fam);
+            expect(spot, 'a spot far from every pack').not.toBe(null);
+            await standAt(page, spot.x, spot.y);
+            const after = () => page.evaluate((fam) => {
+                const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
+                return [...new Set(fd.foes.filter(f => f.family === fam && f.hp > 0 && !f.spec.boss && !['post', 'home'].includes(f.state)).map(f => f.pack))];
+            }, fam);
+            await expect.poll(() => after().then(a => a.length), { timeout: 40000 }).toBeGreaterThan(0);
+            let most = 0;
+            for (let t = 0; t < 30; t++) {
+                most = Math.max(most, (await after()).length);
+                await page.waitForTimeout(500);
+            }
+            expect(most, 'packs after you at once').toBeLessThanOrEqual(2);
+            // (and they get to you: the nearest within a few tiles)
+            const near = () => page.evaluate((fam) => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+                const mine = gs.fieldDemons.foes.filter(f => f.family === fam && f.hp > 0).map(f => ({ kind: f.kind, state: f.state, hunts: !!f.hunts, d: Math.round(Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23)) }));
+                return { d: Math.min(...mine.map(f => f.d)), after: mine.filter(f => !['post', 'home'].includes(f.state)) };
+            }, fam);
+            let got = await near();
+            for (let t = 0; t < 40 && got.d >= 4 * 32; t++) { await page.waitForTimeout(1000); got = await near(); }
+            expect(got.d, JSON.stringify(got)).toBeLessThan(4 * 32);
+            await page.evaluate(() => clearInterval(window.__mend));
+        });
+    }
+
+    test("Stonebridge's heath is open (the user's: it was blocked; open, its foes too strong, like every other zone): walked over the Meadowlands' bridge with its boss standing, nothing stops you, and the heath's own outlaws are there", async ({ page }) => {
+        test.setTimeout(150000);
+        await enterWorld(page, '/', 'z19');
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.fieldDemons.only = (fam) => fam === 'z19' || fam === 'z25';
+            for (const z of ['z35', 'z28', 'z20']) gs.flags[`cleared-${z}`] = true;
+        });
+        await keepUp(page);
+        await page.evaluate(() => { window.__mend = setInterval(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'); ui.hp.now = ui.hp.max; gs.fieldDemons.you.guard = 1e9; }, 50); });
+        const { lair } = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url))).z19;
+        await standAt(page, lair[0] - 200, lair[1]);
+        const out = await page.evaluate(() => new Promise(done => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
+            const t0 = Date.now();
+            const tick = setInterval(() => {
+                const me = gs.localPlayer.sprite, x = me.x, y = me.y + 23, [tx, ty] = [4400, 8696], d = Math.hypot(tx - x, ty - y) || 1;
+                ui.bottomControls.stick = { dx: (tx - x) / d, dy: (ty - y) / d };
+                const over = x < 4720 && gs.overworld.zoneAt(x, y)?.id === 25;      // (off the bridge, at Stonebridge's gate: its prompt holds you there)
+                if (over || Date.now() - t0 > 60000) {
+                    clearInterval(tick);
+                    ui.bottomControls.stick = null;
+                    done({ over, at: [Math.round(x), Math.round(y)] });
+                }
+            }, 50);
+        }));
+        expect(out.over, `over the bridge onto the heath: ${JSON.stringify(out)}`).toBe(true);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'z25').length), { timeout: 30000 }).toBeGreaterThan(0);
+        await page.evaluate(() => clearInterval(window.__mend));
     });
 });

@@ -470,6 +470,46 @@ FOES = {
             'attack-s': seq('masked_fighter-axe', [5, 1, 2, 3, 4, 5], [25, 75, 150, 50, 50, 50]),
             'defend-s': hit(['masked_fighter', 'masked_fighter-axedefend']),
         }},
+    # Stonebridge Heath (zone 25, docs/WORLD.md): cutpurses working the heath road out of Stonebridge, Wesnoth's
+    # outlaws (data/core/units/humans/Outlaw_*.cfg) and the Delinquent from Secrets of the Ancients (data/campaigns/
+    # Secrets_of_the_Ancients/units/Delinquent.cfg: her club, not her sling), each its own drab as the Point's are;
+    # none walks (they hop), the Bandit leads, his morning star
+    'delinquent': {
+        'name': 'Delinquent', 'race': 'human', 'hp': 16, 'damage': 4, 'folder': 'wesnoth-delinquent', 'cloth': 'leather',
+        'anims': {
+            'stand-s': [('delinquent', 1000)],
+            'attack-s': seq('delinquent-attack-', range(1, 10), 100),
+            'defend-s': hit(['delinquent-defend-1', 'delinquent-defend-2']),
+        }},
+    'thief': {
+        'name': 'Thief', 'race': 'human', 'hp': 24, 'damage': 4, 'folder': 'wesnoth-thief', 'cloth': 'gray',
+        'anims': {
+            'stand-s': [('thief', 1000)],
+            # the moneybag pulled out, tossed, tossed again and put away
+            'breeze-s': seq('thief-idle-', range(1, 8), [100] * 4 + [200, 150, 500])
+                        + seq('thief-idle-', [8, 9, 10, 11, 12, 11, 10, 9, 8], 100)
+                        + seq('thief-idle-', [7, 8, 9, 10, 11, 12, 11, 10, 9, 8], [300] + [100] * 9)
+                        + seq('thief-idle-', range(7, 0, -1), [500, 150, 200] + [100] * 4),
+            'attack-s': [('thief', 50), ('thief-attack', 200), ('thief', 50)],
+            'defend-s': hit(['thief', 'thief-defend']),
+            'die-s': seq('thief-die-', range(1, 8), 100),
+        }},
+    'thug': {
+        'name': 'Thug', 'race': 'human', 'hp': 32, 'damage': 5, 'folder': 'wesnoth-thug', 'cloth': 'brown',
+        'anims': {
+            'stand-s': [('thug', 1000)],
+            'breeze-s': seq('thug-idle-', [1, 2, 3, 4, 5, 4, 5, 4, 5, 2, 1], [100] * 3 + [400, 300, 400, 300, 600] + [100] * 3),
+            'attack-s': seq('thug-melee-', range(1, 9), 100),
+            'defend-s': hit(['thug-defend-1', 'thug-defend-2']),
+        }},
+    'bandit': {
+        'name': 'Bandit', 'race': 'human', 'hp': 50, 'damage': 8, 'folder': 'wesnoth-bandit', 'cloth': 'black',
+        'anims': {
+            'stand-s': [('bandit', 1000)],
+            'breeze-s': seq('bandit-idle-', [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1], 200),
+            'attack-s': seq('bandit-melee-', range(1, 9), 100),
+            'defend-s': hit(['bandit-defend-1', 'bandit-defend-2']),
+        }},
 }
 
 # Wesnoth's team colour: these magenta shades, darkest to lightest (data/core/team-colors)

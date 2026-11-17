@@ -84,37 +84,10 @@ test.describe('The road to Stonebridge', () => {
         await standAt(page, city.target.x - 40, city.target.y + 150);
         await expect.poll(() => road(page)).toMatchObject({ id: 'road-stonebridge', arrow: false });
         await standAt(page, city.target.x, city.target.y + 100);
-        await expect.poll(() => road(page)).toMatchObject({ id: 'fernwick', trail: 0, arrow: false, field: false });
+        // (then on, as every zone is: its heath's Bandit to fell; docs/zones/loop.md)
+        await expect.poll(() => road(page)).toMatchObject({ id: 'road-z25', zone: 25, onFoot: true });
         expect(await page.evaluate(() => window.__ALKEMA_ACCOUNT.current.data.quests.done)).toContain('road-stonebridge');
-    });
-
-    test("the zone's packs ahead of you on the way come for you from further off than they'd see you, not those you've passed (the user's: in your way, pursuing and blocking)", async ({ page }) => {
-        test.setTimeout(120000);
-        await enterWorld(page);
-        await page.evaluate(() => {
-            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), q = gs.scene.get('UIScene').quests;
-            gs.fieldDemons.only = (fam) => fam === 'z35';
-            q.index = 2; q.done.add('wren'); q._render();
-        });
-        // Up the river road into the Point, eleven tiles from its first pack: twice as far as it sees you, and it's in your way
-        const FIRST = { x: 6328, y: 12904 };
-        await standAt(page, 6160, 12600);
-        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite.body.moves = false; });
-        const state = () => page.evaluate((at) => {
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            const mine = fd.foes.filter(f => Math.hypot(f.post.x - at.x, f.post.y - at.y) < 64);
-            return { made: mine.length > 0 && mine.every(f => f.foe.ready), after: mine.filter(f => f.state !== 'post' && f.state !== 'home').length,
-                hunted: fd.hunting ? fd.hunting.size : 0 };
-        }, FIRST);
-        await expect.poll(state, { timeout: 30000 }).toMatchObject({ made: true });
-        await expect.poll(async () => (await state()).after, { timeout: 15000 }).toBeGreaterThan(0);
-        // On past it: it's behind you, out of your way, and the next one on is in it
-        const hunted = () => page.evaluate(() => import('/src/battle/FieldDemons.js').then(({ PACKS }) => {
-            const fd = window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons;
-            return [...(fd.hunting || [])].map(k => PACKS[k].at.join(','));
-        }));
-        await standAt(page, FIRST.x, FIRST.y + 32 * 6);
-        await expect.poll(hunted).toContain('6328,13160');
-        expect(await hunted()).not.toContain(`${FIRST.x},${FIRST.y}`);
+        await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').setFlag('cleared-z25'));
+        await expect.poll(() => road(page)).toMatchObject({ id: 'fernwick', trail: 0, arrow: false, field: false });
     });
 });

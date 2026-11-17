@@ -21,7 +21,7 @@
 
 import { UNIT } from './Demons.js';
 import { Orc } from './FieldOrcs.js';
-import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, HOLDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
+import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -31,7 +31,7 @@ import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { Heeds } from './Heeds.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, GOLD_SHARE, packEssence, strengthFor, barred, cleared } from './zones.js';
+import { ZONES, GOLD_SHARE, packEssence, strengthFor, cleared, REGROW_MS } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -50,7 +50,16 @@ const TIER_END = 2.5;           // the last pack, by Dunmere, is this much tough
 const TILE = 32;
 const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user's)
 const GUARD_SEES = 7.5 * TILE;  // ...a wood's guard within this: their posts half as far apart again as they were (the user's, November 2026: fewer along the edge), so they see as much further
-const HUNT = 12 * TILE;         // a pack in your way on the road's quest sees you this far off (RoadGuide), and keeps after you as far
+// The zone loop (docs/zones/loop.md, the same for every zone; the user's, November 2026: they had to go looking for
+// foes, and wanted packs pursuing them, in the way of where they're going, not all at once): in a zone you haven't
+// cleared its packs come for you wherever you are in it, HUNTERS packs at most after you at a time, the nearest within
+// HUNT_FROM first, the next HUNT_LULL_MS after one's beaten; one far off (past HUNT_SIGHT) comes at HUNT_PACE at least
+const HUNTERS = 2;
+const HUNT_FROM = 28 * TILE;
+const HUNT_LULL_MS = 2500;
+const HUNT_LOOK_MS = 500;
+const HUNT_SIGHT = 9 * TILE;
+const HUNT_PACE = 150;
 const LEASH = 10 * TILE;        // and gives up once you're this far from it, however far from home it's come (the user's: a leash on its post was a line to stand behind and shoot it from; at five a corner lost the bear)
 const LOOK_MS = [1000, 2000];   // which it sees only now and then, as it chases (the user's: once a second or two is enough)
 const NEAR = 28 * TILE;         // the demons (and their sheet) come when you're this close to any post
@@ -116,32 +125,9 @@ const BAR_WORDS = {
     noblelord: 'A Noble Lord blocks your way: "The Westmarch is the lords\' war camp, no place for the unproven. Turn back."',
     maskedfighter: 'A Masked Fighter blocks your way, axe raised: "The Cliffs are the clan\'s. Turn back."',
 };
-// A zone barred to you (zones.js `barred`: the one before it not cleared), its nearest foe within LOCK_REACH comes to
-// the way in and bars you as a guard does (the user's: always the same for an uncleared zone); deeper, or struck, the
-// zone fights
-const LOCK_REACH = 16 * TILE;
-// ...coming to meet you as you come within LOCK_SEE of its zone, a "!" over it, to stand at the edge before you (the
-// user's, November 2026: they walked over into the Meadowlands unstopped, its nearest foe far off and slow, there only
-// once they were well in), at no less than LOCK_PACE: a heavy foot's own pace never got there in time
-const LOCK_SEE = 5 * TILE;
-const LOCK_PACE = 150;
 // ...and what each says in the bubble over its head as it stops you, short (Heeds.js: the whole warning's in the notice)
 const SHOUT = 'No further!';
-const SHOUTS = { marksman: 'One more step...', maskedfighter: 'Turn back!', z28: 'Turn back!', z20: 'Go back!', z19: 'Halt!' };
-const LOCK_WORDS = {
-    z28: 'One of the Duke\'s men blocks the road: "None pass to Stonebridge who haven\'t beaten the Goblin Rouser at the Saltmere Point. Turn back."',
-    z20: 'An ogre blocks the way over the bridge: "Valley not for little ones. Beat the Duke\'s knight first. Go back."',
-    z19: 'One of Grimhold\'s foot blocks your way: "The Meadowlands are the army\'s. None pass who haven\'t beaten the Ancient Ogre. Turn back."',
-};
-// A zone's edge onto the next (Bands.js `HOLDS`), its boss not yet felled: you within HOLD_NEAR of it, its nearest foe
-// within LOCK_REACH, not after you, comes and stands in your way and warns you off, as a guard does (the user's,
-// November 2026: they walked from the Riverlands into the Meadowlands, and over the bridge into Stonebridge, with no
-// one warning them or in their way)
-const HOLD_NEAR = 5 * TILE;
-const HOLD_WORDS = {
-    z20: 'An ogre stands in your way: "Old One says nobody goes to the meadows. Beat Old One first. Go back."',
-    z19: 'One of Grimhold\'s foot bars your way: "None cross to Stonebridge while the Master of Foot stands. Turn back."',
-};
+const SHOUTS = { marksman: 'One more step...', maskedfighter: 'Turn back!' };
 const STALL_MS = 1000;          // a side-on foe getting nowhere toward your side this long...
 const CORNERED_MS = 3000;       // ...comes straight on this long
 const ROUTE_CELL = 16, ROUTE_REACH = 16 * TILE;       // with rock between, it finds a way round on a grid this fine, this far about
@@ -213,10 +199,9 @@ export class FieldDemons {
     constructor(scene) {
         this.scene = scene;
         this.foes = [];           // { foe: Demon, kind, spec, pack, tier, post, hp, maxHp, damage, state, t, cd, stun, and what spells leave on it }
-        this.dared = new Set();   // barred zones you've struck a foe of: they fight, as a struck guard's do (till you fall or go into a place)
-        this.slain = new Set();   // places whose demon is down (for good, this visit to the game; a zone's that regrow, a while)
+        this.slain = new Set();   // places whose demon is down (this visit to the game; once every pack of its zone has fallen once, a while: `_regrow`)
         this.fell = new Set();    // places whose demon has been felled once (a zone's boss comes once every one has)
-        this.fellAt = new Map();  // a pack => when its last fell (a zone's that regrow: ZONES' `regrow`)
+        this.fellAt = new Map();  // a pack => when its last fell (`_regrow`)
         this.order = new Map();   // a climb's pack => the step up it it was given, as you took it on (this visit)
         this.combo = 0;           // kills in a row, each within COMBO_MS of the last
         this._lastKill = -Infinity;
@@ -225,8 +210,9 @@ export class FieldDemons {
         this._up = new Set();      // the bands (FAMILIES) come or coming: you're near their stretch of coast
         this._coming = new Set();  // those whose sheets are loading
         this._near = new Set();
-        this.hunting = null;      // packs in your way on the road's quest (RoadGuide): they see you from HUNT, and come
+        this._huntFree = -Infinity;     // when fewer than HUNTERS packs were last after you (the next comes HUNT_LULL_MS on)
         this.only = null;         // (the tests' switch, as weatherOverride: which bands may come, family => bool; null, every one)
+        this.hunt = true;         // (and whether a zone's packs hunt you, `_hunt`: off for tests about something else)
         this._freeze = 0;
         this._mpT = 0;
         this.MELEE_REACH = REACH + LUNGE + 10;
@@ -294,7 +280,7 @@ export class FieldDemons {
         this._bossCall(feet);
         this._regrow(feet);
         this._hold();
-        this._holdEdge(feet);
+        this._hunt(feet);
         if (this._freeze > 0) {             // hit-stop: everything holds for a moment
             this._freeze -= delta;
             for (const f of this.foes) f.foe.place?.();        // (a shadow kept under one knocked back meanwhile)
@@ -348,7 +334,6 @@ export class FieldDemons {
         // Out of a foe's zone, you're out of its reach: it doesn't follow you over (the user's)
         const yours = this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id ?? null;
         if (yours !== null && yours !== this._entry?.zone) this._entry = { zone: yours, x: feet.x, y: feet.y };       // (where you crossed into it: a guard's ground is reckoned from there)
-        const brink = out ? null : this._brinkOf(feet, yours, delta);
         for (const f of this.foes) {
             if (f.ring && (f.state !== 'windup' || f.hp <= 0)) this._unslam(f);       // (a slam put off: its mark goes)
             if (f.lane && ((f.state !== 'windup' && f.state !== 'charge') || f.hp <= 0)) this._unlane(f);      // (a charge put off, or ridden)
@@ -357,8 +342,7 @@ export class FieldDemons {
             // (and one barring you keeps you in sight a step over its zone's edge: where two guards' zones meet in the
             // trees, each put you back over into the other's and they took turns, flashing; the user saw it)
             const gone = yours !== null && this._arena?.boss !== f && !this._mine(f, feet.x, feet.y, !(f.guard && this.provoked), false)
-                && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE)
-                && !(brink?.has(f.zone) && !f.guard && !f.spec.boss && this._locked(f.family));      // (you coming up to a zone barred to you: it comes to meet you)
+                && !(f.barring && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < 2 * TILE);
             this._think(f, delta, dt, out || gone || this.you.hidden > 0 ? null : feet, out, gone);
             f.foe.tick?.(delta);
             f.foe.setDepthAt();
@@ -439,7 +423,7 @@ export class FieldDemons {
         // (the zone it keeps to, its pack's post's: a pack on a border was split, and one struck from over it went
         // home and was mended at once; none known, it goes where it likes)
         const zone = this.scene.overworld?.zoneAt?.(...PACKS[p.pack].at)?.id ?? null;
-        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, aggro: PACKS[p.pack].aggro, openLand: !PACKS[p.pack].guard && !this._beyond(...PACKS[p.pack].at), state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
+        return { foe, kind: p.kind, family: fam, spec, pack: p.pack, tier: p.tier, step, post: at, i: p.i, role: p.role, hp, maxHp: hp, damage, zone, woods: !!PACKS[p.pack].woods, guard: !!PACKS[p.pack].guard, openLand: !PACKS[p.pack].guard && !this._beyond(...PACKS[p.pack].at), state: 'post', t: 0, cd: 0, stun: 0, steady: 0 };
     }
 
     /** A band goes (you've left its stretch of coast), and its sheets; its slain stay down. */
@@ -478,7 +462,6 @@ export class FieldDemons {
         this.scene.scene.get('UIScene')?.bossBar?.hide();
         this.boss = null;
         this.provoked = false;      // (gone into a place: the guards forget you)
-        this.dared.clear();
         this.heeds.clear();
         for (const fam of [...this._up]) this._dismiss(fam);
         if (this._freeze > 0) this.scene.anims.resumeAll();        // (a hit-stop never outlives them)
@@ -571,7 +554,6 @@ export class FieldDemons {
         if (f.state === 'post' || f.state === 'home') this._roused(f);
         // (a guard struck, they're all after you now: no more warnings, the road no refuge from their shots; the user's)
         if (f.guard) this.provoked = true;
-        if (this._locked(f.family)) this.dared.add(f.family);      // (a barred zone struck: it fights, all of it)
         audio.play('hit_blade', { volume: 0.8 });
         fx.impact('metal', foe.x, foe.y - 22, foe.y);
         this._pop(foe.x, foe.y - foe.tall, short(damage), colour, words ? 24 : 20);
@@ -631,26 +613,6 @@ export class FieldDemons {
         // The first pack up a climb beaten: what comes next wants upgrading for (the tutorial, the first time)
         if (ZONES[f.family]?.climb && !f.step && PLACES.filter(p => p.pack === f.pack).every(p => this.slain.has(p.i)))
             this.scene.scene.get('UIScene')?.tutorUpgrade?.('Well fought! The foes further on are stronger. Spend the essence they left you on upgrades.');
-    }
-
-    /** The nearest point of a zone's edge onto the next (Bands.js `HOLDS`) to you, and how far (`d`, px). */
-    _edge(fam, you) {
-        let near = { x: you.x, y: you.y, d: Infinity };
-        for (const [x, y] of HOLDS[fam] ?? []) {
-            const d = Math.hypot(x - you.x, y - you.y);
-            if (d < near.d) near = { x, y, d };
-        }
-        return near;
-    }
-
-    /** A zone's edge onto the next held against you: you near it, and its boss not yet felled (zones.js `cleared`). */
-    _holding(fam, you) {
-        return !!HOLDS[fam] && this._edge(fam, you).d <= HOLD_NEAR && !cleared(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength());
-    }
-
-    /** A zone barred to you (zones.js `barred`), its foes warning you off and in your way, not yet struck. */
-    _locked(fam) {
-        return !this.dared.has(fam) && barred(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength());
     }
 
     /** How strong you are (attack times hit points), as a climb weighs it. */
@@ -735,38 +697,17 @@ export class FieldDemons {
                 f.outT = 0;
                 return this._bar(f, you, d, dt, delta);
             }
-            f.holding = !!you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._holding(f.family, you);
-            if (f.holding) {
-                // (only the nearest of its zone's not after you: the rest stay home)
-                const rival = this.foes.some(o => o !== f && o.hp > 0 && o.family === f.family && !o.guard && !o.spec.boss && (o.state === 'post' || o.state === 'home')
-                    && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (o.barring ? BAR_HANDOFF : f.barring ? -BAR_HANDOFF : 0));
-                if (!rival) return this._bar(f, you, d, dt, delta, HOLD_WORDS[f.family]);
-                f.holding = false;
-            }
-            const locked = you && !f.guard && !f.spec.boss && d <= LOCK_REACH && this._locked(f.family);
-            if (locked && this._shallow(f, you)) {
-                // (only the nearest of its zone's comes: the rest stay home; one barring keeps on till another's well nearer)
-                const rival = this.foes.some(o => o !== f && o.hp > 0 && o.zone === f.zone && !o.guard && !o.spec.boss && (o.state === 'post' || o.state === 'home')
-                    && Math.hypot(o.foe.x - you.x, o.foe.y - you.y) < d + (o.barring ? BAR_HANDOFF : f.barring ? -BAR_HANDOFF : 0));
-                // (the wood's its guards' to bar: two barring you at once shoved you past the elf)
-                // (you not over its edge yet, it comes to it before you, a "!" over it, its words kept till you press on at it)
-                if (!rival && !(this.scene.overworld?.forest?.depthAt(you.x, you.y) > 0)) return this._bar(f, you, d, dt, delta, LOCK_WORDS[f.family], this._deep(f, you) === 0);
-                f.barring = false;
-                return this._home(f, dt, fromPost, delta);
-            }
-            // (on past it, deeper than it warns: it fights you, and its pack; it had come all that way)
-            const pressed = locked && f.barring;
             f.barring = false;
-            const hunts = !f.guard && !!this.hunting?.has(f.pack);
-            if ((pressed || d <= (f.guard ? GUARD_SEES : hunts ? HUNT : f.aggro || AGGRO)) && !((f.calm -= delta) > 0)) {
+            if (d <= (f.guard ? GUARD_SEES : AGGRO) && !((f.calm -= delta) > 0)) {
                 if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
-                this._rouse(f.pack, hunts);
+                this._rouse(f.pack);
             } else return this._home(f, dt, fromPost, delta);
         }
         // Now and then, chasing, it looks how far off you've got
         if ((f.lookT = (f.lookT ?? 0) - delta) <= 0) {
             f.lookT = LOOK_MS[0] + Math.random() * (LOOK_MS[1] - LOOK_MS[0]);
-            f.lost = d > Math.max(f.hunts ? HUNT + 2 * TILE : LEASH, (f.spec.keep || 0) + 80) && this._arena?.boss !== f;     // (a caster's own distance kept is no getting away; nor is a boss's ring)
+            // (nor is one hunting you: it keeps after you while you're in its zone, `gone` above)
+            f.lost = !f.hunts && d > Math.max(LEASH, (f.spec.keep || 0) + 80) && this._arena?.boss !== f;     // (a caster's own distance kept is no getting away; nor is a boss's ring)
         }
         if (!you || f.lost) {
             f.lost = false;
@@ -1110,27 +1051,6 @@ export class FieldDemons {
         return this.scene.overworld?.zoneAt?.(you.x, you.y)?.id === f.zone ? 1 : 0;      // (a step ahead of you over its edge)
     }
 
-    /**
-     * The zones barred to you within LOCK_SEE of you, you not in them (their foes come to meet you at the edge), looked
-     * at every GLANCE_MS: a Set of zone ids, or null.
-     */
-    _brinkOf(feet, yours, delta) {
-        if ((this._brinkT = (this._brinkT || 0) - delta) > 0) return this._brink;
-        this._brinkT = GLANCE_MS / 2;
-        const zones = new Set(this.foes.filter(f => f.hp > 0 && f.zone !== null && f.zone !== yours && !f.guard && !f.spec.boss && this._locked(f.family)).map(f => f.zone));
-        const ow = this.scene.overworld, r = LOCK_SEE / TILE, seen = new Set();
-        if (zones.size && ow?.zoneAt) {
-            for (let dy = -r; dy <= r; dy++) {
-                for (let dx = -r; dx <= r; dx++) {
-                    if (dx * dx + dy * dy > r * r) continue;
-                    const id = ow.zoneAt(feet.x + dx * TILE, feet.y + dy * TILE)?.id;
-                    if (zones.has(id)) seen.add(id);
-                }
-            }
-        }
-        return (this._brink = seen.size ? seen : null);
-    }
-
     /** Are you only at the edge of a guard's ground, where it warns before it fights? */
     _shallow(f, you) {
         return this._deep(f, you) <= BAR_DEEP;
@@ -1181,7 +1101,7 @@ export class FieldDemons {
         const [wx, wy] = inWay ? [f.across.x, f.across.y] : [tx, ty], w = Math.hypot(wx - foe.x, wy - foe.y);
         // (facing you side-on, turning only once you're well round it: straight above or below, it flipped to and fro)
         const left = Math.abs(rx) > BAR_TURN ? rx > 0 : foe.left ?? rx > 0, facing = { x: foe.x + (left ? -TILE : TILE), y: foe.y };
-        const rush = f.guard ? BAR_RUSH : Math.max(BAR_RUSH, LOCK_PACE / f.spec.speed);     // (a barred zone's foe, coming to meet you)
+        const rush = BAR_RUSH;
         if ((inWay ? w > 1 : g > 3) && (pressing || d > BAR)) this._step(f, (wx - foe.x) / w, (wy - foe.y) / w, dt, Math.min(rush, w / (f.spec.speed * dt || 1)), facing);
         else {
             this._step(f, 0, 0, dt, 1, you);
@@ -1264,7 +1184,9 @@ export class FieldDemons {
     _step(f, dx, dy, dt, pace = 1, facing = null) {
         const foe = f.foe, s = foe.sprite;
         foe.walking = !!(dx || dy);
-        const v = f.spec.speed * pace * (f.slow > 0 ? SLOWED : 1) * dt;
+        // (one hunting you, far off, comes quickly till it's in sight: docs/zones/loop.md)
+        const me = f.hunts && this._you(), far = me && Math.hypot(me.x - s.x, me.y - s.y) > HUNT_SIGHT;
+        const v = (far ? Math.max(f.spec.speed * pace, HUNT_PACE) : f.spec.speed * pace) * (f.slow > 0 ? SLOWED : 1) * dt;
         const x0 = s.x, y0 = s.y, x = s.x + dx * v, y = s.y + dy * v;
         // (pushed into rock, or over its zone's edge: it walks out)
         const may = this._walk(f);
@@ -1414,7 +1336,6 @@ export class FieldDemons {
     forgive() {
         this.fallen = false;
         this.provoked = false;
-        this.dared.clear();
         // (felled in a boss's ring: he's gone, mended, and comes to you again next time you're in his zone)
         const boss = this._arena?.boss;
         if (boss) {
@@ -1436,10 +1357,7 @@ export class FieldDemons {
         const s = who.sprite, d = Math.hypot(s.x - from.x, s.y + FEET - from.y) || 1;
         const x = s.x + (s.x - from.x) / d * px, y = s.y + (s.y + FEET - from.y) / d * px;
         const f = this.foes.find(f => f.foe === who);       // (a foe kept out of the woods isn't knocked into them)
-        // (nor you over a zone's edge: a charge's knock put you over the line its foes hold, where they don't follow,
-        // and on into Stonebridge past the Master of Foot; field.spec.js "the Meadowlands, walked through")
-        const zones = this.scene.overworld?.zoneAt, over = !f && zones && zones.call(this.scene.overworld, x, y + FEET)?.id !== zones.call(this.scene.overworld, s.x, s.y + FEET)?.id;
-        if (this._open(x, y + FEET) && !over && !(f?.openLand && this._beyond(x, y + FEET))) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
+        if (this._open(x, y + FEET) && !(f?.openLand && this._beyond(x, y + FEET))) this.scene.tweens.add({ targets: s, x, y, duration: 90, ease: 'Quad.easeOut' });
     }
 
     /** Can't be stood on (water, or anything else in the way). */
@@ -1464,7 +1382,7 @@ export class FieldDemons {
         return !z || z.id === f.zone;
     }
 
-    /** Land you can't go into yet (zonegen.py `open_land`; the zones barred to you aside): the woods the elves keep. */
+    /** Land you can't go into yet (zonegen.py `open_land`): the woods the elves keep. */
     _beyond(x, y) {
         return !!this.scene.overworld?.zones?.closed(Math.floor(x / TILE), Math.floor(y / TILE));
     }
@@ -1903,32 +1821,6 @@ export class FieldDemons {
         }
     }
 
-    /**
-     * A zone's edge onto the next (Bands.js `HOLDS`) held, its boss not felled: you don't step over it, whoever's about
-     * (the user's, November 2026: they walked over the bridge into Stonebridge, its soldiers all behind them chasing and
-     * the one holding it far off; field.spec.js "the Meadowlands, walked through as the user did"). Near it, a step over
-     * puts you back where you stood, and its soldiers' words say why.
-     */
-    _holdEdge(feet) {
-        const me = this.scene.localPlayer?.sprite, ow = this.scene.overworld;
-        if (!me || this.fallen || !ow?.zoneAt) return;
-        const here = ow.zoneAt(feet.x, feet.y)?.id;
-        for (const fam of Object.keys(HOLDS)) {
-            if (this._edge(fam, feet).d > HOLD_NEAR || cleared(FAMILIES[fam]?.climb || fam, this.scene.flags, this._strength())) continue;
-            const id = Number(fam.slice(1)), last = this._edgeLast?.[fam];
-            if (here === id) (this._edgeLast ??= {})[fam] = { x: feet.x, y: feet.y };
-            else if (last && Math.hypot(last.x - feet.x, last.y - feet.y) < 2 * TILE) {
-                me.setPosition(last.x, last.y - FEET);
-                me.body?.reset(me.x, me.y);
-                const now = this.scene.time.now;
-                if (!(now - this._barSaid < BAR_SAY_MS)) {
-                    this.say(HOLD_WORDS[fam], 4500);
-                    this._barSaid = now;
-                }
-            }
-        }
-    }
-
     /** Somewhere well off `feet` in his fighting ground, open, as far as BOSS_IN allows, nearest the way to his own spot `p`. */
     _offView(p, feet) {
         const pack = PACKS[p.pack], [hx, hy] = pack.at, toward = Math.atan2(hy - feet.y, hx - feet.x);
@@ -1955,7 +1847,7 @@ export class FieldDemons {
     _bossFalls(f) {
         this._arenaDown(true);
         const first = !this.scene.flags?.[`cleared-${f.family}`];
-        this.scene.setFlag?.(`cleared-${f.family}`);       // (the zone after it is open to you: zones.js `barred`)
+        this.scene.setFlag?.(`cleared-${f.family}`);       // (zones.js `cleared`: its packs hunt you no more, and the road's quest moves on)
         const ui = this.scene.scene.get('UIScene');
         if (first) ui?.upgrades?.offerFor(f.family);         // (a blessing to choose, once his fight's over: UIScene, Blessings.js)
         ui?.bossBar?.hide(true);
@@ -2140,19 +2032,19 @@ export class FieldDemons {
     }
 
     /**
-     * A zone's packs that regrow (ZONES' `regrow`): a pack felled comes back that long after, you away from it (out of
-     * sight of its post), on the step it was given, to be fought again for what it pays (the user's, November 2026:
-     * grind a little for the boss). Looked at once a second.
+     * A zone's packs come back (docs/zones/loop.md): once every one of them has fallen once, a pack felled comes back
+     * REGROW_MS after, you away from it (out of sight of its post), on the step it was given, to be fought again for
+     * what it pays (the user's, November 2026: grind a little for the boss); till then what you beat stays beaten (the
+     * user's: back to the healer between fights loses nothing). Looked at once a second.
      */
     _regrow(feet) {
         const now = this.scene.time.now;
         if (now - (this._regrowT ?? -Infinity) < 1000 || this._arena) return;      // (none in a boss's fight: his ground's the whole clearing, its packs' places in it)
         this._regrowT = now;
         for (const fam of this._up) {
-            const z = ZONES[FAMILIES[fam].climb || fam];
-            if (!z?.regrow || this._coming.has(fam)) continue;
+            if (!ZONES[fam] || this._coming.has(fam) || !this._allFell(fam)) continue;
             PACKS.forEach((pack, k) => {
-                if (pack.family !== fam || pack.lair || pack.guard || !this.fellAt.has(k) || now - this.fellAt.get(k) < z.regrow) return;
+                if (pack.family !== fam || pack.lair || pack.guard || !this.fellAt.has(k) || now - this.fellAt.get(k) < REGROW_MS) return;
                 const places = PLACES.filter(p => p.pack === k);
                 if (!places.every(p => this.slain.has(p.i)) || Math.hypot(pack.at[0] - feet.x, pack.at[1] - feet.y) < REGROW_AWAY) return;
                 this.fellAt.delete(k);
@@ -2164,6 +2056,38 @@ export class FieldDemons {
                 }
             });
         }
+    }
+
+    /** Has every pack of a zone (its boss aside) fallen once? */
+    _allFell(fam) {
+        return PLACES.every(p => p.family !== fam || p.lair || this.fell.has(p.i));
+    }
+
+    /**
+     * The zone loop's hunt (docs/zones/loop.md): in a zone you haven't cleared, its packs come for you wherever you are
+     * in it, HUNTERS at most after you at once, the nearest standing first, the next HUNT_LULL_MS after there was room
+     * (the user's, November 2026: no going looking for foes, packs pursuing you and in your way, not all at once).
+     * None in a boss's fight. Looked at every HUNT_LOOK_MS.
+     */
+    _hunt(feet) {
+        const now = this.scene.time.now;
+        if (now - (this._huntT ?? -Infinity) < HUNT_LOOK_MS) return;
+        this._huntT = now;
+        const fam = `z${this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id}`;
+        if (!this.hunt || this._arena || this.fallen || this.you.hidden > 0 || !ZONES[fam] || !this._up.has(fam) || cleared(fam, this.scene.flags)) return;
+        const after = new Set(this.foes.filter(f => f.hp > 0 && !f.guard && !f.spec.boss && f.state !== 'post' && f.state !== 'home' && f.state !== 'dead').map(f => f.pack));
+        if (after.size >= HUNTERS) return void (this._huntFree = now);
+        if (now - this._huntFree < HUNT_LULL_MS) return;
+        let best = null, near = HUNT_FROM;
+        for (const f of this.foes) {
+            if (f.family !== fam || f.hp <= 0 || f.spec.boss || f.guard || after.has(f.pack) || (f.state !== 'post' && f.state !== 'home') || f.calm > 0) continue;
+            const d = Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y);
+            if (d < near) [best, near] = [f, d];
+        }
+        if (!best) return;
+        if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
+        this._rouse(best.pack, true);
+        this._huntFree = now;
     }
 
     /** The ground he'll strike, marked red as he raises his weapon: deeper as the blow comes. */

@@ -134,6 +134,23 @@ export const BAND_KINDS = {
         slam: { every: 3, windup: 1150, radius: 92, hurt: BOSS_HEAVY },
         rally: { at: 0.6, call: ['heavyinfantry', 'shocktrooper', 'heavyinfantry'], words: 'sounds the advance! His foot come.' },
         fury: { at: 0.3, again: 2, quicker: 0.7, words: 'is in a fury!' } },
+    // Stonebridge Heath (zone 25): cutpurses working the heath road out of Stonebridge (docs/WORLD.md's list and no more:
+    // Secrets of the Ancients' Delinquent and Wesnoth's outlaws), drab as the Point's. The delinquent darts in with her
+    // club; the thief is quick and slight, in and out; the thug a heavy blow, his club brought down on a spot marked red
+    // (`slam`)
+    delinquent: melee(0, { speed: 80, reach: 36, windup: 420, recover: 640, lunge: 20, race: 'human' }),
+    thief: melee(1, { speed: 94, reach: 36, windup: 360, recover: 560, lunge: 26, race: 'human' }),
+    thug: { ...DEMON_KINDS.brute, speed: 64, reach: 46, windup: 640, recover: 900, anim: 'attack', race: 'human', level: 1,
+        slam: { every: 3, windup: 900, radius: 58, hurt: HEAVY } },
+    // (its leader, a boss: Wesnoth's Bandit, the heath's master cutpurse, his morning star: every third blow brought
+    // round about him, the ground marked red; off you, a rush down a lane marked red; at half his health he whistles
+    // and his cutpurses come; at a quarter a fury)
+    bandit: { ...DEMON_KINDS.brute, speed: 78, reach: 56, windup: 700, recover: 900, anim: 'attack', race: 'human', level: 2,
+        boss: true, scale: 1.5, label: 'Bandit', title: 'Master of the Heath Road', chest: true, might: 2,
+        slam: { every: 3, windup: 1050, radius: 80, hurt: BOSS_HEAVY },
+        charge: { every: 4800, from: 100, length: 300, windup: 1000, speed: 420, width: 40, hurt: BOSS_HEAVY, recover: 1500 },
+        rally: { at: 0.5, call: ['thief', 'thug', 'delinquent'], words: 'whistles! His cutpurses come.' },
+        fury: { at: 0.25, again: 2, quicker: 0.75, words: 'is in a fury!' } },
 };
 // (`might`: a boss that many times the health and blow of one made for his step; the road's two, twice: the user's,
 // November 2026, felled each in a couple of blows, no grinding)
@@ -232,17 +249,29 @@ const MEADOWLANDS_BANDS = [
     ['ironmauler', 'ironmauler', 'ironmauler', 'shocktrooper'],
     ['ironmauler', 'ironmauler', 'ironmauler', 'shocktrooper', 'shocktrooper', 'heavyinfantry'],
 ];
-// (each comes for you from further off than the Point's: they stand in your way on, and the user had to hunt for them)
-const ROAD_AGGRO = 7 * 32;
-// Each zone's edge onto the next (road.json `edge`: the Riverlands' onto the Meadowlands, the Meadowlands' at
-// Stonebridge's bridge), held by its foes till its boss is felled (FieldDemons `_holding`; the user's, November 2026:
-// they crossed into the Meadowlands, and over the bridge into Stonebridge, with no one warning them or in their way)
-export const HOLDS = {};
-for (const [zone, bands, boss] of [['z20', RIVERLANDS_BANDS, 'ancientogre'], ['z19', MEADOWLANDS_BANDS, 'masterinfantryman']]) {
+const HEATH_BANDS = [
+    ['delinquent', 'delinquent'],
+    ['delinquent', 'delinquent', 'delinquent'],
+    ['thief', 'delinquent'],
+    ['thief', 'delinquent', 'delinquent'],
+    ['thug', 'delinquent'],
+    ['thief', 'thief', 'delinquent'],
+    ['thug', 'thief', 'delinquent'],
+    ['thief', 'thief', 'thief'],
+    ['thug', 'thug', 'delinquent'],
+    ['thug', 'thief', 'thief', 'delinquent'],
+    ['thief', 'thief', 'thief', 'delinquent', 'delinquent'],
+    ['thug', 'thug', 'thief'],
+    ['thug', 'thug', 'thief', 'thief'],
+    ['thug', 'thug', 'thug', 'thief'],
+    ['thug', 'thug', 'thief', 'thief', 'thief'],
+    ['thug', 'thug', 'thug', 'thief', 'thief'],
+];
+// Every road zone alike (docs/zones/loop.md): its packs where zonegen.py puts them, its boss at its way on
+for (const [zone, bands, boss] of [['z20', RIVERLANDS_BANDS, 'ancientogre'], ['z19', MEADOWLANDS_BANDS, 'masterinfantryman'], ['z25', HEATH_BANDS, 'bandit']]) {
     const road = ROAD[zone];
-    HOLDS[zone] = road.edge;
     BANDS[zone] = [
-        ...road.packs.map((p, k) => ({ at: p.at, band: bands[k], aggro: ROAD_AGGRO })),
+        ...road.packs.map((p, k) => ({ at: p.at, band: bands[k] })),
         { at: road.lair, band: [boss], step: BOSS_STEP[zone], lair: true, arena: road.arena, openOnly: true },
     ];
 }

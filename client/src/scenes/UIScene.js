@@ -188,16 +188,14 @@ export class UIScene extends Scene {
             this._tutoring?.();
             this._tutoring = null;
             gs?.setFlag?.('tut-upgrade');
-            this._tutorTab = null;
             this.bottomControls.point(null);
             this.gear.tutor = false;
             if (this.gear.mode === 'stats') this.gear.render();
             this.notice('Stronger! Back to the road north.', 3600);
         });
         this.notice(text, 6000);
-        // (the banner over the pad up, the arrow's on it, UpgradeBanner; short of essence for it, on the Upgrade tab)
-        this._tutorTab = () => this.bottomControls.point(this.upgradeBanner.visible ? null : 'stats');
-        this._tutorTab();
+        // (the arrow's the banner's over the pad, UpgradeBanner, once there's essence for it: never one on the Upgrade
+        // tab, the user's, November 2026: it sent them to the menu early in the game)
         this.gear.tutor = true;
         if (this.gear.mode === 'stats') this.gear.render();
         return true;
@@ -471,7 +469,6 @@ export class UIScene extends Scene {
         this._calmT = fight?.engaged || !clear ? 0 : this._calmT + delta;
         if (this.upgrades?.offer && !this.blessings.visible && this._calmT >= CALM_MS) this.blessings.show();
         this.upgradeBanner.update(clear && !this.blessings.visible);
-        if (this._tutorTab && this.bottomControls.pointing !== (this.upgradeBanner.visible ? null : 'stats')) this._tutorTab();
         this.topBar.setBars(this.hp?.now ?? 1, this.hp?.max ?? 1, this.mp?.now ?? 0, this.mp?.max ?? 0);
         const dayNight = this.scene.get('GameScene')?.dayNight;
         if (dayNight && this.goldenHour) this.goldenHour.setAlpha(1 - dayNight.dark);
