@@ -1584,6 +1584,37 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.provoked)).toBe(false);
     });
 
+    test("a guard not after you is never struck by your swing or your spell (the user's: a new mage cast a fireball as the tutorial asked, it flew at the elves, and they all came and killed them): your buttons do the world's own, by her post and as she bars you, and the wood stays at peace", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page, '/', 'all');
+        await keepUp(page);
+        // (the guards alone: by that wood the Market Fields' riders stand, to be fought)
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (family) => family.startsWith('guards'); });
+        await page.waitForFunction(() => window.__PHASER_GAME.scene.getScene('UIScene').spellbook, null, { timeout: 20000 });
+        await page.evaluate(() => {
+            const ui = window.__PHASER_GAME.scene.getScene('UIScene');
+            ui.spellbook = new ui.spellbook.constructor({ spells: ui.inventory.catalogue.spells, heroClass: 'mage', saved: false });
+            ui.spellbook.equip('fireball');
+        });
+        const spot = await roadside(page);
+        const press = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
+            ui.mp.now = ui.mp.max = 1e6;
+            ui.bottomControls.startCooldown(0);
+            return { cast: fd.castEquipped(), swing: fd.attack(), targets: fd.standing.length, provoked: !!fd.provoked };
+        });
+        // On the road, her post in sight
+        await standAt(page, spot.road.x, spot.road.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g?.ready), { timeout: 30000 }).toBe(true);
+        expect(await press(), 'by her post').toEqual({ cast: false, swing: false, targets: 0, provoked: false });
+        // Where the wood darkens, she stands before you barring the way: still no target
+        await standAt(page, spot.dim.x, spot.dim.y);
+        await expect.poll(() => guard(page, spot.at).then(g => g.barring && g.off < 64), { timeout: 10000 }).toBe(true);
+        expect(await press(), 'as she bars you').toEqual({ cast: false, swing: false, targets: 0, provoked: false });
+        await page.waitForTimeout(1500);
+        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.provoked), 'nothing struck her').toBeFalsy();
+    });
+
     test("dashing into the wood between two posts, a guard is there before you (the user's: they ran between them, past, to the wood's middle; harder now, not impossible)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');

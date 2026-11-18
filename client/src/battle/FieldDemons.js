@@ -255,7 +255,10 @@ export class FieldDemons {
         if (!me) return [];
         // (a boss fight is him and his alone, the user's: an elf by his ground, even on it, isn't to be struck by mistake)
         const fight = this._arena?.boss.family;
-        return this.foes.filter(f => f.hp > 0 && (!fight || f.family === fight) && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
+        // (nor a guard not after you, at her post or barring your way: a new mage cast the tutorial's fireball, it flew at
+        // the elves, and they all came and killed them, the user's)
+        const peace = f => f.guard && !this.provoked && (f.state === 'post' || f.state === 'home');
+        return this.foes.filter(f => f.hp > 0 && (!fight || f.family === fight) && !peace(f) && Math.hypot(f.foe.x - me.x, f.foe.y - me.y) <= SIGHT);
     }
 
     /** Sheets on their way? */
