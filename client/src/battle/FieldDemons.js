@@ -31,7 +31,7 @@ import { Ship } from '../world/Ship.js';
 import { audio } from '../audio/audio.js';
 import { Heeds } from './Heeds.js';
 import { short } from '../upgrades/Upgrades.js';
-import { ZONES, GOLD_SHARE, packEssence, strengthFor, cleared, REGROW_MS } from './zones.js';
+import { ZONES, ORDER, GOLD_SHARE, packEssence, strengthFor, cleared, REGROW_MS } from './zones.js';
 export { ZONES, packEssence, strengthFor };         // (how hard each zone is: zones.js)
 
 const FEET = Ship.BELOW_HERO;
@@ -52,10 +52,9 @@ const AGGRO = 5 * TILE;         // it comes for you within five tiles (the user'
 const GUARD_SEES = 7.5 * TILE;  // ...a wood's guard within this: their posts half as far apart again as they were (the user's, November 2026: fewer along the edge), so they see as much further
 // The zone loop (docs/zones/loop.md, the same for every zone; the user's, November 2026: they had to go looking for
 // foes, and wanted packs pursuing them, in the way of where they're going, not all at once): in a zone you haven't
-// cleared its packs come for you wherever you are in it, HUNTERS packs at most after you at a time, the nearest within
-// HUNT_FROM first, the next HUNT_LULL_MS after one's beaten; one far off (past HUNT_SIGHT) comes at HUNT_PACE at least
+// cleared its packs come for you wherever you are in it, HUNTERS packs at most after you at a time, the nearest
+// first wherever it is in the zone (it was within 28 tiles, and the user still went looking in the Meadowlands), the next HUNT_LULL_MS after one's beaten; one far off (past HUNT_SIGHT) comes at HUNT_PACE at least
 const HUNTERS = 2;
-const HUNT_FROM = 28 * TILE;
 const HUNT_LULL_MS = 2500;
 const HUNT_LOOK_MS = 500;
 const HUNT_SIGHT = 9 * TILE;
@@ -124,6 +123,11 @@ const BAR_WORDS = {
     redmage: 'A Red Mage blocks your way: "The Twin Rivers are the College\'s. Go back before I singe you."',
     noblelord: 'A Noble Lord blocks your way: "The Westmarch is the lords\' war camp, no place for the unproven. Turn back."',
     maskedfighter: 'A Masked Fighter blocks your way, axe raised: "The Cliffs are the clan\'s. Turn back."',
+    // (the wardens: what to beat first, said)
+    fencerwarden: 'A Fencer blocks your way: "The Market Fields are no place for the unproven. Fell the Goblin Rouser on the Point first. Turn back."',
+    ogrewarden: 'A Great Ogre blocks the bridge: "Little one not beat the knight. Go back. Beat Sir Aldous, then come."',
+    maulerwarden: 'An Iron Mauler blocks your way: "Grimhold\'s camp. Not while the Ancient Ogre stands, wanderer. Turn back."',
+    thugwarden: 'A Thug blocks your way: "The heath\'s ours. Beat the Master Infantryman first, if you can. Turn back."',
 };
 // ...and what each says in the bubble over its head as it stops you, short (Heeds.js: the whole warning's in the notice)
 const SHOUT = 'No further!';
@@ -149,6 +153,7 @@ const FAMILIES = Object.fromEntries(Object.keys(BANDS).map(zone => [zone, {
     make: (scene, x, y, kind, spec) => new Orc(scene, x, y, sheetOf(kind), spec.label),
     sheet: sheetOf,
     climb: climbOf(zone),
+    until: BANDS[zone][0]?.until,       // (a zone's wardens: there till the zone before it is cleared)
 }]));
 const AROUND = [[0, 0], [-36, -18], [36, -18], [-30, 30], [30, 30], [0, -44]];    // where a pack's members stand about its spot
 
@@ -273,8 +278,10 @@ export class FieldDemons {
             return this.release();
         }
         // Each band comes as you near its stretch of coast, and goes as you leave it
-        this._near = new Set(Object.keys(FAMILIES).filter(fam => (!this.only || this.only(fam)) && PACKS.some(({ at: [x, y], family, near, far }) =>
-            family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? far ?? FAR : near ?? NEAR))));
+        const here = `z${this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id}`;
+        this._near = new Set(Object.keys(FAMILIES).filter(fam => (!this.only || this.only(fam)) && !(FAMILIES[fam].until && cleared(FAMILIES[fam].until, this.scene.flags))
+            && ((fam === here && this._hunted(fam)) || PACKS.some(({ at: [x, y], family, near, far }) =>
+            family === fam && Math.hypot(x - feet.x, y - feet.y) < (this._up.has(fam) ? far ?? FAR : near ?? NEAR)))));
         // (and stays while one of it is after you, however far from its posts it's followed you)
         for (const f of this.foes) if (f.hp > 0 && f.state !== 'post' && f.state !== 'home' && Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y) < SIGHT && (!this.only || this.only(f.family))) this._near.add(f.family);
         if (!this._near.size) return this.release();
@@ -2077,11 +2084,11 @@ export class FieldDemons {
         if (now - (this._huntT ?? -Infinity) < HUNT_LOOK_MS) return;
         this._huntT = now;
         const fam = `z${this.scene.overworld?.zoneAt?.(feet.x, feet.y)?.id}`;
-        if (!this.hunt || this._arena || this.fallen || this.you.hidden > 0 || !ZONES[fam] || !this._up.has(fam) || cleared(fam, this.scene.flags)) return;
+        if (!this._hunted(fam) || this._arena || this.fallen || this.you.hidden > 0 || !this._up.has(fam)) return;
         const after = new Set(this.foes.filter(f => f.hp > 0 && !f.guard && !f.spec.boss && f.state !== 'post' && f.state !== 'home' && f.state !== 'dead').map(f => f.pack));
         if (after.size >= HUNTERS) return void (this._huntFree = now);
         if (now - this._huntFree < HUNT_LULL_MS) return;
-        let best = null, near = HUNT_FROM;
+        let best = null, near = Infinity;
         for (const f of this.foes) {
             if (f.family !== fam || f.hp <= 0 || f.spec.boss || f.guard || after.has(f.pack) || (f.state !== 'post' && f.state !== 'home') || f.calm > 0) continue;
             const d = Math.hypot(f.foe.x - feet.x, f.foe.y - feet.y);
@@ -2091,6 +2098,15 @@ export class FieldDemons {
         if (!this.engaged) audio.play('foe_orc', { volume: 0.6 });
         this._rouse(best.pack, true);
         this._huntFree = now;
+    }
+
+    /**
+     * Do a zone's packs hunt you in it? One in the loop (`ORDER`), not cleared, the zone before it cleared (till then its
+     * wardens keep you out, and the land behind them is no hunting ground), and the hunt on.
+     */
+    _hunted(fam) {
+        const k = ORDER.indexOf(fam), flags = this.scene.flags;
+        return this.hunt && k >= 0 && !cleared(fam, flags) && (k === 0 || cleared(ORDER[k - 1], flags));
     }
 
     /** The ground he'll strike, marked red as he raises his weapon: deeper as the blow comes. */

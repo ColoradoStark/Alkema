@@ -11,7 +11,8 @@ import GUARDS from './guards.json';
 import HEART from './heart.json';
 import MARKET from './market.json';
 import ROAD from './road.json';
-import { BOSS_STEP } from './zones.js';
+import WARDENS from './wardens.json';
+import { BOSS_STEP, ORDER, EDGE } from './zones.js';
 
 // A unit's Wesnoth level: how many of its zone's hero's blows it takes, and how much of their hit points its blow
 const LEVEL_HITS = [2.5, 4, 7, 12, 20, 32];
@@ -102,6 +103,13 @@ export const BAND_KINDS = {
     noblelord: shooter(2, { speed: 140, race: 'human' }),
     maskedfighter: melee(2, { speed: 140, reach: 40, windup: 520, recover: 760, lunge: 22, race: 'dwarf' }),
     marksman: shooter(2, { speed: 140, race: 'elf', ...ELF }),
+    // The wardens (docs/zones/loop.md; the user's, November 2026: run past a zone's foes to the bridge, and one far too
+    // strong comes up, warns you off, and pushing on, kills you): each zone's at its way in, of its own people, a third
+    // bigger and as quick as a guard, there till the zone before it is cleared (`ZONE_WARDENS`, below)
+    fencerwarden: melee(2, { sheet: 'fencer', speed: 140, reach: 36, windup: 380, recover: 560, lunge: 24, race: 'human', scale: 1.3 }),
+    ogrewarden: melee(3, { sheet: 'greatogre', speed: 140, reach: 54, windup: 700, recover: 950, lunge: 18, race: 'ogre', poise: true, scale: 1.3 }),
+    maulerwarden: melee(3, { sheet: 'ironmauler', speed: 140, reach: 54, windup: 700, recover: 950, lunge: 18, race: 'human', poise: true, scale: 1.3 }),
+    thugwarden: melee(2, { sheet: 'thug', speed: 140, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'human', poise: true, scale: 1.3 }),
     // The road on to Stonebridge (the user's, November 2026: zones 20 and 19, in Grimhold's kingdom, other foes, two
     // boss fights and a lot of levelling up). The Riverlands (zone 20), the wild valley between the rivers: ogres, a
     // blow that doesn't stagger them (`poise`): Young Ogre, Ogre, Great Ogre (docs/WORLD.md's list and no more, the
@@ -277,14 +285,14 @@ for (const [zone, bands, boss] of [['z20', RIVERLANDS_BANDS, 'ancientogre'], ['z
 }
 
 // The guards: where tools/zonegen.py says (guards.json: one within a few tiles of every way out of the first area),
-// one at each (one each: a pair at all 33 posts was 66 bodies held from the start, on a weak phone), made far up the Point's climb (`GUARD_STEP`: ten packs past its last, as the wardens were), and keeping to
+// one at each (one each: a pair at all 33 posts was 66 bodies held from the start, on a weak phone), made on the world's edge's climb (zones.js `EDGE`: far past the last zone's boss, the user's, November 2026: up the Point's they were beaten by Sir Aldous), and keeping to
 // the trees where they stand in them by the road (`woods`: on the road you're out of their reach)
 // They come in groups of neighbours down the road (`GUARD_GROUP` posts each, `guards-0`, `guards-1`...), each made
 // only while you're near it, as a zone's band is: all at once, the start had every one of them about it.
 // Each is the plan's for the zone it guards (docs/WORLD.md; the user's, November 2026: every border by the plan's
 // units), `of` in guards.json: the zone it stands in, or for one in the trees of an opened zone the nearest of the
 // plan's forest zones (tools/zonegen.py `FORESTS`): `ZONE_GUARDS`, above
-export const GUARD_STEP = 16;
+export const GUARD_STEP = 0;
 const GUARD_GROUP = 5;
 export const ZONE_GUARDS = { 33: 'shamanguard', 34: 'druidguard', 27: 'sorceress', 26: 'enchantressguard', 13: 'marksman',
     22: 'whitemage', 21: 'redmage', 24: 'noblelord', 11: 'maskedfighter' };
@@ -296,7 +304,7 @@ export const guardOf = (g) => ZONE_GUARDS[g.of];
 // Past the guards, the wood's heart (the user's, November 2026: slip past them, and its middle's packs kill you; a
 // chest at its heart for the quick): where zonegen.py says (heart.json), each pack its own band, made only within
 // `HEART_NEAR` (there are dozens: the zone's usual reach would make a hundred at once), deeper ones stronger
-export const HEART_STEP = GUARD_STEP + 2;
+export const HEART_STEP = GUARD_STEP + 1;
 export const { chest: HEART_CHEST } = HEART;
 const HEART_NEAR = 10 * 32, HEART_FAR = 13 * 32;     // (just past the screen's edge: at 12, thirty bodies about the chest)
 const HEART_BANDS = [['shaman', 'shaman', 'druid'], ['druid', 'shaman', 'shaman'], ['sorceress', 'shaman', 'druid'],
@@ -304,11 +312,17 @@ const HEART_BANDS = [['shaman', 'shaman', 'druid'], ['druid', 'shaman', 'shaman'
 const HEART_RING = [['sylph', 'enchantress', 'shyde'], ['enchantress', 'shyde', 'druid'], ['shyde', 'enchantress', 'druid']];
 HEART.packs.forEach((p, i) => {
     const band = p.ring ? HEART_RING[i % HEART_RING.length] : HEART_BANDS[i % HEART_BANDS.length];
-    BANDS[`heart-${i}`] = [{ at: p.at, band, woods: true, step: HEART_STEP + (p.ring ? 2 : 0), near: HEART_NEAR, far: HEART_FAR }];
+    BANDS[`heart-${i}`] = [{ at: p.at, band, woods: true, step: HEART_STEP + (p.ring ? 1 : 0), near: HEART_NEAR, far: HEART_FAR }];
 });
 
-/** The climb a band's foes are made on (ZONES in zones.js): a zone's own, the guards' and the wood's heart's the Point's. */
-export const climbOf = (family) => (family.startsWith('guards') || family.startsWith('heart') ? 'z35' : family);
+// Each zone's wardens (above): where tools/zonegen.py says (wardens.json: one within a few tiles of every crossing onto
+// its open ground from the zones before it), each there till the zone before it in the loop is cleared (`until`)
+export const ZONE_WARDENS = { z28: 'fencerwarden', z20: 'ogrewarden', z19: 'maulerwarden', z25: 'thugwarden' };
+for (const [zone, posts] of Object.entries(WARDENS))
+    BANDS[`warden-${zone}`] = posts.map(at => ({ at, band: [ZONE_WARDENS[zone]], step: 0, guard: true, until: ORDER[ORDER.indexOf(zone) - 1] }));
+
+/** The climb a band's foes are made on (ZONES in zones.js): a zone's own; the guards', the wood's heart's and the wardens' the world's edge's. */
+export const climbOf = (family) => (/^(guards|heart|warden)/.test(family) ? EDGE : family);
 
 /** The sheet a kind wears: its own, or another's (`sheet`: a boss grown from a unit of his band). */
 export const sheetOf = (kind) => BAND_KINDS[kind]?.sheet || kind;

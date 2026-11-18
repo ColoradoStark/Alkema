@@ -59,6 +59,17 @@ export const BOSS_STEP = { z35: 6, z28: 16, z20: 18, z19: 20, z25: 18 };
 for (const [was, is] of [['z28', 'z20'], ['z20', 'z19'], ['z19', 'z25']]) ZONES[is] = onFrom(ZONES[was], BOSS_STEP[was] + 1);
 
 /**
+ * The world's edge (docs/zones/loop.md): the guards round the land not built yet, the wood's heart past them, and each
+ * zone's warden at its way in till the zone before is cleared, all made on this climb, `EDGE_PAST` packs past the last
+ * zone's boss in the loop's order, so however far you've come you've no shot against them (the user's, November 2026:
+ * made up the Point's climb, by Sir Aldous they beat the elves and their blows hardly moved the hit points). It moves on
+ * as the loop grows.
+ */
+export const EDGE = 'edge';
+const EDGE_PAST = 8;
+ZONES[EDGE] = onFrom(ZONES[ORDER.at(-1)], BOSS_STEP[ORDER.at(-1)] + EDGE_PAST);
+
+/**
  * A zone you've cleared: its boss felled (the flag `cleared-<zone>` kept with your hero). Only that (the user's,
  * November 2026: a hero as strong as he's made for counted too, and they walked past the Meadowlands' boss).
  */

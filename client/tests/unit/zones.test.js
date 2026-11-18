@@ -3,7 +3,7 @@
 // class, about ten buys up the whole road (the user's: sixty in a couple of waves, then seventeen, were too many), and
 // spent to the last doesn't put the weakest hero a pack ahead; no new hero skips a pack's upgrades for long.
 import { describe, test, expect } from 'vitest';
-import { ZONES, ORDER, packEssence, strengthFor, tooStrong, BOSS_STEP, cleared, comeToFor } from '../../src/battle/zones.js';
+import { ZONES, ORDER, packEssence, strengthFor, tooStrong, BOSS_STEP, cleared, comeToFor, EDGE } from '../../src/battle/zones.js';
 import MARKET from '../../src/battle/market.json';
 import { Upgrades } from '../../src/upgrades/Upgrades.js';
 import { account } from '../../src/account/account.js';
@@ -134,34 +134,35 @@ describe('The Market Fields, the next zone north of Riverhold', () => {
     });
 });
 
-describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (19), after the Market Fields', () => {
-    const ROAD = [['z35', 7], ['z28', 14], ['z20', 16], ['z19', 18], ['z25', 16]];      // each zone and its packs (field.spec.js checks them)
-    /** A new hero up the whole road: each zone's packs in turn, then rounds of its top two till they're as strong as its boss, then him. */
-    function walk(a, h) {
-        const { u, inventory, strength } = fresh(a, h);
-        const short = [], rounds = {}, feel = [];
-        for (const [zone, packs] of ROAD) {
-            for (let step = 0; step < packs; step++) {
-                if (zone !== 'z35' && strength() < FAIR * strengthFor(zone, step)) short.push(`${a}/${h} short for ${zone} pack ${step + 1} (${(strength() / strengthFor(zone, step)).toFixed(2)})`);
-                const s = u.apply(BASE(a, h)), Z = ZONES[zone];
-                // (your blows to fell one, and its blows to fell you, against what its zone's made for)
-                feel.push({ at: `${a}/${h} ${zone} pack ${step + 1}`, fell: Z.attack * Z.climb.hp ** step / s.attack, fall: s.hp.max / (Z.hp * Z.climb.hurt ** step), zone });
-                inventory.essence += packEssence(zone, step);
-                while (u.buy(u.current.id).ok);
-            }
-            let n = 0;
-            while (zone !== 'z35' && strength() < strengthFor(zone, BOSS_STEP[zone]) && n < 10) {
-                inventory.essence += packEssence(zone, packs - 1) + packEssence(zone, packs - 2);
-                while (u.buy(u.current.id).ok);
-                n++;
-            }
-            rounds[zone] = n;
-            inventory.essence += packEssence(zone, BOSS_STEP[zone]);       // (its boss)
+const ROAD = [['z35', 7], ['z28', 14], ['z20', 16], ['z19', 18], ['z25', 16]];      // each zone and its packs (field.spec.js checks them)
+/** A new hero up the whole road: each zone's packs in turn, then rounds of its top two till they're as strong as its boss, then him. */
+function walk(a, h) {
+    const { u, inventory, strength } = fresh(a, h);
+    const short = [], rounds = {}, feel = [];
+    for (const [zone, packs] of ROAD) {
+        for (let step = 0; step < packs; step++) {
+            if (zone !== 'z35' && strength() < FAIR * strengthFor(zone, step)) short.push(`${a}/${h} short for ${zone} pack ${step + 1} (${(strength() / strengthFor(zone, step)).toFixed(2)})`);
+            const s = u.apply(BASE(a, h)), Z = ZONES[zone];
+            // (your blows to fell one, and its blows to fell you, against what its zone's made for)
+            feel.push({ at: `${a}/${h} ${zone} pack ${step + 1}`, fell: Z.attack * Z.climb.hp ** step / s.attack, fall: s.hp.max / (Z.hp * Z.climb.hurt ** step), zone, spell: s.spell / s.attack });
+            inventory.essence += packEssence(zone, step);
             while (u.buy(u.current.id).ok);
         }
-        return { short, rounds, feel };
+        let n = 0;
+        while (zone !== 'z35' && strength() < strengthFor(zone, BOSS_STEP[zone]) && n < 10) {
+            inventory.essence += packEssence(zone, packs - 1) + packEssence(zone, packs - 2);
+            while (u.buy(u.current.id).ok);
+            n++;
+        }
+        rounds[zone] = n;
+        inventory.essence += packEssence(zone, BOSS_STEP[zone]);       // (its boss)
+        while (u.buy(u.current.id).ok);
     }
+    return { short, rounds, feel, strength: strength() };
+}
 
+
+describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (19), after the Market Fields', () => {
     test("every zone in the loop's order takes up where the one before's boss leaves off, so the next is too strong till you've grown (docs/zones/loop.md: nothing bars a zone but its foes)", () => {
         expect(ORDER).toEqual(['z35', 'z28', 'z20', 'z19', 'z25']);
         for (let k = 1; k < ORDER.length; k++) {
@@ -193,6 +194,23 @@ describe('The road on to Stonebridge: the Riverlands (20) and the Meadowlands (1
             expect(Math.min(...n), `${zone}: its boss a wall`).toBeGreaterThanOrEqual(1);
             expect(Math.max(...n), `${zone}: a little grinding, not a lot`).toBeLessThanOrEqual(4);
         }
+    });
+});
+
+describe("Spells keep step with your blow (the user's, November 2026: Frost Lance felled the Ancient Ogre and the Master Infantryman in one)", () => {
+    test("all the way up the road, your spell power stays within a few times what it was beside your attack: Focus leans to it, never runs away with it", () => {
+        const off = [];
+        for (const [a, h] of HEROES) for (const f of walk(a, h).feel) if (f.spell > 3.5) off.push(`${f.at}: spell power x${f.spell.toFixed(1)} your attack`);
+        expect(off).toEqual([]);
+    });
+});
+
+describe("The world's edge: the guards round the land not built yet and the wood's heart (the user's, November 2026: by Sir Aldous they beat the elves, whose blows hardly moved their hit points; they're to be far too strong, no shot against them)", () => {
+    test("made far past the last zone's boss, so a hero who's cleared every zone in the loop is nowhere near them", () => {
+        const last = ORDER.at(-1), hero = Math.max(...HEROES.map(([a, h]) => walk(a, h).strength));
+        expect(hero).toBeGreaterThanOrEqual(strengthFor(last, BOSS_STEP[last]) * 0.5);
+        expect(strengthFor(EDGE, 0) / hero, 'the edge against the strongest hero at the end of the road').toBeGreaterThan(1e4);
+        expect(strengthFor(EDGE, 0) / strengthFor(last, BOSS_STEP[last])).toBeGreaterThan(1e4);
     });
 });
 

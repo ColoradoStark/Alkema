@@ -41,7 +41,7 @@ export const OWN = [MIGHT, VIGOUR, FOCUS];
 const GIVES = {
     might: { attack: 0.6, spell: 0.6, hp: 0.4 },
     vigour: { attack: 0.4, spell: 0.4, hp: 0.6 },
-    focus: { attack: 0.5, spell: 1, hp: 0.5 },
+    focus: { attack: 0.5, spell: 0.6, hp: 0.5 },       // (spell 1 ran away with it: Frost Lance felled the road's bosses in one, the user's, November 2026)
     goddess: { attack: 0.5, spell: 0.5, hp: 0.5 },
 };
 

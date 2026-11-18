@@ -52,7 +52,7 @@ describe('Upgrades', () => {
         prices.slice(0, 30).forEach((p, i) => expect(p).toBe(Math.ceil(20 * 1.4 ** i)));
     });
 
-    test('every level makes you 3.4 times as strong (attack times hit points), each its own way: Strength of Arm mostly attack, Vigour mostly hit points, Focus spell power, a goddess all alike', () => {
+    test('every level makes you 3.4 times as strong (attack times hit points), each its own way: Strength of Arm mostly attack, Vigour mostly hit points, Focus leaning to spell power, a goddess all alike', () => {
         const { u } = hero();
         const strength = (s) => s.attack * s.hp.max;
         const step = (id) => {
@@ -70,7 +70,7 @@ describe('Upgrades', () => {
         expect(vig.hp).toBeGreaterThan(vig.attack);
         u.levels.vigour = MAX;
         const foc = step('focus');
-        expect(foc.spell).toBeCloseTo(3.4, 0);
+        expect(foc.spell).toBeGreaterThan(foc.attack);       // (leaning to spells, not running away with them: zones.test.js "Spells keep step")
         u.levels.focus = MAX;
         const her = step('goddess-brigid');
         expect(her.attack).toBeCloseTo(her.hp, 1);

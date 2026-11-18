@@ -1550,15 +1550,16 @@ test.describe("The first area is blocked off (the user's: the story beyond isn't
     test("struck, the guards stay hostile: the one you hit keeps after you, shooting from the trees as you stand on the road, and the others fight you too rather than warn you off, till you fall or go into a place (the user's: it fired back once and calmed down)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page, '/', 'all');
-        // (her shots are far up the climb: hit points enough for a few)
-        await page.evaluate(() => {
-            const ui = window.__PHASER_GAME.scene.getScene('UIScene'), stats = ui.inventory.stats;
-            Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: 1e15 }, configurable: true, writable: true });
-            ui.hp.max = ui.hp.now = 1e15;
-        });
         const spot = await roadside(page);
         await standAt(page, spot.dim.x, spot.dim.y);
         await expect.poll(() => guard(page, spot.at).then(g => g?.barring), { timeout: 30000 }).toBe(true);
+        // (her shots are the world's edge's, far past any hero: hit points enough for a few dozen)
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), stats = ui.inventory.stats;
+            const most = 40 * Math.max(...gs.fieldDemons.foes.filter(f => f.guard).map(f => f.damage));
+            Object.defineProperty(stats, 'hp', { value: { ...stats.hp, max: most }, configurable: true, writable: true });
+            ui.hp.max = ui.hp.now = most;
+        });
         // You strike her
         await page.evaluate(({ x, y }) => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, me = gs.localPlayer.sprite;
@@ -1819,7 +1820,7 @@ test.describe("The wood's heart (the user's: past the guards a death run, its pa
             let shot = null;
             const launch = fd._launch.bind(fd);
             fd._launch = (...args) => { launch(...args); const s = fd.shots[fd.shots.length - 1]; shot ??= { kind: s.kind, flying: s.sprite.anims?.currentAnim?.key ?? s.sprite.frame.name }; };
-            for (const kind of [...new Set(fd.foes.filter(f => f.foe.ready).map(f => f.kind))]) {
+            for (const kind of [...new Set(fd.foes.filter(f => f.foe.ready && !f.family.startsWith('warden')).map(f => f.kind))]) {      // (the elves: a zone's warden by the wood isn't one)
                 shot = null;
                 for (const o of fd.foes) { o.stun = 1e9; o.damage = 0; }          // (any come since held too: a guard's band summoned meanwhile shot)
                 const f = fd.foes.find(o => o.kind === kind && o.foe.ready);
@@ -2208,7 +2209,7 @@ test.describe("The Market Fields, the next zone north of Riverhold (the user's, 
         // (no guard on its open ground: those in it keep to its wood, the elves' still, the user's)
         const guards = await page.evaluate(async () => {
             const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
-            return PACKS.filter(p => p.guard && ow.zoneAt(...p.at)?.id === 28).map(p => p.woods);
+            return PACKS.filter(p => p.guard && !p.until && ow.zoneAt(...p.at)?.id === 28).map(p => p.woods);     // (its wardens, `until`, hold its way in till the Point's cleared: "a zone's wardens keep you out")
         });
         expect(guards.length).toBeGreaterThan(0);
         expect(guards.every(Boolean)).toBe(true);
@@ -2786,7 +2787,7 @@ test.describe("The road on to Stonebridge: the Riverlands and the Meadowlands (t
         await enterWorld(page, '/', 'all');
         const posts = await page.evaluate(async () => {
             const { PACKS } = await import('/src/battle/FieldDemons.js'), ow = window.__PHASER_GAME.scene.getScene('GameScene').overworld;
-            return PACKS.filter(p => p.guard).map(p => ({ zone: ow.zoneAt(...p.at)?.id, kind: p.band[0], at: p.at, woods: p.woods }));
+            return PACKS.filter(p => p.guard && !p.until).map(p => ({ zone: ow.zoneAt(...p.at)?.id, kind: p.band[0], at: p.at, woods: p.woods }));     // (the guards: a zone's wardens, `until`, aren't)
         });
         const of = (zone) => [...new Set(posts.filter(p => p.zone === zone).map(p => p.kind))];
         // (every post the plan's for the zone it guards, docs/WORLD.md: the user's, every border by the plan's units)
@@ -2872,34 +2873,88 @@ test.describe("The zone loop, the same for every zone", () => {
         });
     }
 
-    test("Stonebridge's heath is open (the user's: it was blocked; open, its foes too strong, like every other zone): walked over the Meadowlands' bridge with its boss standing, nothing stops you, and the heath's own outlaws are there", async ({ page }) => {
+    test("a zone's last pack comes for you from wherever it stands in it, however far (the user's, November 2026: they still went looking for foes in the Meadowlands before its boss came)", async ({ page }) => {
         test.setTimeout(150000);
+        await enterWorld(page, '/', 'z19');
+        await hunting(page);
+        await keepUp(page);
+        const road = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url))).z19;
+        const [sx, sy] = road.way[0];
+        // (every pack beaten but the one furthest from the way in)
+        const far = await page.evaluate(([sx, sy]) => import('/src/battle/FieldDemons.js').then(({ PACKS, PLACES }) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            for (const z of ['z35', 'z28', 'z20']) gs.flags[`cleared-${z}`] = true;
+            const packs = PACKS.map((p, i) => ({ ...p, i })).filter(p => p.family === 'z19' && !p.lair);
+            const last = packs.sort((a, b) => Math.hypot(b.at[0] - sx, b.at[1] - sy) - Math.hypot(a.at[0] - sx, a.at[1] - sy))[0];
+            for (const p of PLACES) if (p.family === 'z19' && p.pack !== last.i) { fd.slain.add(p.i); fd.fell.add(p.i); }
+            window.__mend = setInterval(() => { const ui = gs.scene.get('UIScene'); ui.hp.now = ui.hp.max; fd.you.guard = 1e9; }, 100);
+            return Math.round(Math.hypot(last.at[0] - sx, last.at[1] - sy) / 32);
+        }), [sx, sy]);
+        expect(far, 'tiles off').toBeGreaterThan(30);
+        await standAt(page, sx, sy);
+        const d = () => page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            return Math.min(Infinity, ...gs.fieldDemons.foes.filter(f => f.family === 'z19' && f.hp > 0).map(f => Math.hypot(f.foe.x - me.x, f.foe.y - me.y - 23)));
+        });
+        await expect.poll(d, { timeout: 60000, intervals: [1000] }).toBeLessThan(4 * 32);
+        await page.evaluate(() => clearInterval(window.__mend));
+    });
+
+    test("a zone's wardens keep you out till the zone before is cleared (the user's, November 2026: past the Meadowlands' foes they ran over the bridge into Stonebridge; a foe far too strong should come up, warn you off, and pushing on, kill you): over Stonebridge's bridge with the Master Infantryman standing, a Thug far too strong bars your way, says who to beat first and, pushed past, fights; and once he's felled, nothing stops you", async ({ page }) => {
+        test.setTimeout(180000);
         await enterWorld(page, '/', 'z19');
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene');
-            gs.fieldDemons.only = (fam) => fam === 'z19' || fam === 'z25';
+            gs.fieldDemons.only = (fam) => fam === 'warden-z25';
             for (const z of ['z35', 'z28', 'z20']) gs.flags[`cleared-${z}`] = true;
         });
         await keepUp(page);
-        await page.evaluate(() => { window.__mend = setInterval(() => { const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'); ui.hp.now = ui.hp.max; gs.fieldDemons.you.guard = 1e9; }, 50); });
         const { lair } = JSON.parse(readFileSync(new URL('../../src/battle/road.json', import.meta.url))).z19;
         await standAt(page, lair[0] - 200, lair[1]);
-        const out = await page.evaluate(() => new Promise(done => {
+        const walk = (ms) => page.evaluate((ms) => new Promise(done => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene');
             const t0 = Date.now();
+            let deepest = 0;
             const tick = setInterval(() => {
                 const me = gs.localPlayer.sprite, x = me.x, y = me.y + 23, [tx, ty] = [4400, 8696], d = Math.hypot(tx - x, ty - y) || 1;
                 ui.bottomControls.stick = { dx: (tx - x) / d, dy: (ty - y) / d };
-                const over = x < 4720 && gs.overworld.zoneAt(x, y)?.id === 25;      // (off the bridge, at Stonebridge's gate: its prompt holds you there)
-                if (over || Date.now() - t0 > 60000) {
+                const over = x < 4720 && gs.overworld.zoneAt(x, y)?.id === 25;      // (off the bridge, at Stonebridge's gate)
+                const w = gs.fieldDemons.foes.find(f => f.family === 'warden-z25' && f.barring);
+                if (w) deepest = Math.max(deepest, 1);
+                if (over || Date.now() - t0 > ms) {
                     clearInterval(tick);
                     ui.bottomControls.stick = null;
-                    done({ over, at: [Math.round(x), Math.round(y)] });
+                    done({ over, barred: deepest > 0, at: [Math.round(x), Math.round(y)], words: ui._notice?.text ?? '' });
                 }
             }, 50);
-        }));
-        expect(out.over, `over the bridge onto the heath: ${JSON.stringify(out)}`).toBe(true);
-        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'z25').length), { timeout: 30000 }).toBeGreaterThan(0);
-        await page.evaluate(() => clearInterval(window.__mend));
+        }), ms);
+        // The Master Infantryman standing: the warden comes and bars the way, and you don't get over
+        const held = await walk(20000);
+        expect(held.over, JSON.stringify(held)).toBe(false);
+        expect(held.barred).toBe(true);
+        expect(held.words).toMatch(/Thug.*Master Infantryman/);
+        const w = await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), f = gs.fieldDemons.foes.find(f => f.family === 'warden-z25');
+            return { kind: f.kind, hits: f.damage / ui.hp.max, guard: f.guard };
+        });
+        expect(w.kind).toBe('thugwarden');
+        expect(w.hits, 'a blow far more than your hit points').toBeGreaterThan(1);
+        // Pushed past (deeper than where it warns), it fights
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons;
+            const f = fd.foes.find(f => f.family === 'warden-z25');
+            fd._strikeFoe(f, 1, { x: f.foe.x, y: f.foe.y });
+        });
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.find(f => f.family === 'warden-z25')?.state), { timeout: 10000 }).toMatch(/chase|windup|recover/);
+        // Felled, the Master Infantryman: no warden, and you walk on over
+        await page.evaluate(() => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene');
+            gs.fieldDemons.forgive();
+            gs.flags['cleared-z19'] = true;
+        });
+        await standAt(page, lair[0] - 200, lair[1]);
+        await expect.poll(() => page.evaluate(() => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.family === 'warden-z25').length), { timeout: 10000 }).toBe(0);
+        const on = await walk(60000);
+        expect(on.over, JSON.stringify(on)).toBe(true);
     });
 });

@@ -3,6 +3,7 @@
 // your place). Everything a place loads is let go when you leave it, other
 // players' sheets go with them, and no one place holds more than BUDGET_MB.
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 // Decoded size of the pictures one place holds at once, on top of what the game holds everywhere
 // (about 100 MB). Measured October 2026, with character sheets kept packed: Riverhold's streets
@@ -317,6 +318,35 @@ test.describe('Memory', () => {
             expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
         });
     }
+
+    test("the Meadowlands' wardens (docs/zones/loop.md: at the way into a zone till the one before is cleared): every one along its border, in its iron maulers' sheet, under budget, and let go when you leave", async ({ page }) => {
+        test.setTimeout(120000);
+        await enterWorld(page);
+        await keepUp(page);
+        await page.evaluate(() => { window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.only = (family) => family === 'warden-z19'; });
+        const go = (x, y) => page.evaluate(([x, y]) => {
+            const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
+            me.setPosition(x, y);
+            me.body.reset(x, y);
+        }, [x, y]);
+        await go(10960, 10192);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 10000 });
+        const base = await settled(page);
+        const posts = JSON.parse(readFileSync(new URL('../../src/battle/wardens.json', import.meta.url))).z19;
+        const [x, y] = posts[Math.floor(posts.length / 2)];
+        await go(x + 120, y);
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, posts.length, { timeout: 60000 });
+        const held = await settled(page);
+        const have = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
+        await go(10960, 10192);
+        await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
+        const after = await settled(page);
+        console.log("the Meadowlands' wardens", +(held.mb - base.mb).toFixed(2), 'MB', have.join(' '));
+        expect(have).toEqual(['foe-ironmauler']);
+        expect(held.mb - base.mb).toBeLessThan(BUDGET_MB);
+        expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
+        expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);
+    });
 
     test("the first area's guards: a stretch of the road's, its elvish shamans (the plan's), under budget, and let go when you leave it", async ({ page }) => {
         test.setTimeout(120000);
