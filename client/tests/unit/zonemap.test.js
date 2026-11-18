@@ -10,7 +10,7 @@ const WORLD = JSON.parse(readFileSync(new URL('../../assets/world/overworld.json
 const START = { x: WORLD.spawn.x * 32 + 16, y: WORLD.spawn.y * 32 + 16 };       // below Riverhold's gate (worldgen's START)
 // (the bands' packs, read from Bands.js's source: the module itself wants a browser's loader)
 const bands = readFileSync(new URL('../../src/battle/Bands.js', import.meta.url), 'utf8');
-const ZONE_PACKS = [...bands.slice(bands.indexOf('z35: ['), bands.indexOf('],\n};'))
+const ZONE_PACKS = [...bands.slice(bands.indexOf('z35: ['), bands.indexOf('],\n};', bands.indexOf('z35: [')))
     .matchAll(/at: \[(\d+), (\d+)\]/g)].map(m => [Number(m[1]), Number(m[2])]);
 
 describe('Zones', () => {

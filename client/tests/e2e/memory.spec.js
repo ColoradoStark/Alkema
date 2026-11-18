@@ -319,7 +319,7 @@ test.describe('Memory', () => {
         });
     }
 
-    test("the Meadowlands' wardens (docs/zones/loop.md: at the way into a zone till the one before is cleared): every one along its border, in its iron maulers' sheet, under budget, and let go when you leave", async ({ page }) => {
+    test("the Meadowlands' wardens (docs/zones/loop.md: at the way into a zone till the one before is cleared): a group of its own foes along its border, in their own sheets, under budget, and let go when you leave", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await keepUp(page);
@@ -335,14 +335,14 @@ test.describe('Memory', () => {
         const posts = JSON.parse(readFileSync(new URL('../../src/battle/wardens.json', import.meta.url))).z19;
         const [x, y] = posts[Math.floor(posts.length / 2)];
         await go(x + 120, y);
-        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, posts.length, { timeout: 60000 });
+        await page.waitForFunction((n) => window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.filter(f => f.foe.ready).length === n, posts.length * 3, { timeout: 60000 });
         const held = await settled(page);
         const have = await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-')).sort());
         await go(10960, 10192);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene').fieldDemons.foes.length, null, { timeout: 15000 });
         const after = await settled(page);
         console.log("the Meadowlands' wardens", +(held.mb - base.mb).toFixed(2), 'MB', have.join(' '));
-        expect(have).toEqual(['foe-ironmauler']);
+        expect(have).toEqual(['foe-heavyinfantry', 'foe-ironmauler', 'foe-shocktrooper']);
         expect(held.mb - base.mb).toBeLessThan(BUDGET_MB);
         expect(after.mb - base.mb).toBeLessThan(SLACK_MB);
         expect(await page.evaluate(() => window.__PHASER_GAME.textures.getTextureKeys().filter(k => k.startsWith('foe-') || k === 'spell-fx'))).toEqual([]);

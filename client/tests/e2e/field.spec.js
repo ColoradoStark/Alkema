@@ -2900,7 +2900,7 @@ test.describe("The zone loop, the same for every zone", () => {
         await page.evaluate(() => clearInterval(window.__mend));
     });
 
-    test("a zone's wardens keep you out till the zone before is cleared (the user's, November 2026: past the Meadowlands' foes they ran over the bridge into Stonebridge; a foe far too strong should come up, warn you off, and pushing on, kill you): over Stonebridge's bridge with the Master Infantryman standing, a Thug far too strong bars your way, says who to beat first and, pushed past, fights; and once he's felled, nothing stops you", async ({ page }) => {
+    test("a zone's wardens keep you out till the zone before is cleared (the user's, November 2026: past the Meadowlands' foes they ran over the bridge into Stonebridge; a foe far too strong should come up, warn you off, and pushing on, kill you): over Stonebridge's bridge with the Master Infantryman standing, the heath's own (the user's: the region's foes, no boss), far too strong, bar your way, say who to beat first and, pushed past, fight; and once he's felled, nothing stops you", async ({ page }) => {
         test.setTimeout(180000);
         await enterWorld(page, '/', 'z19');
         await page.evaluate(() => {
@@ -2932,12 +2932,13 @@ test.describe("The zone loop, the same for every zone", () => {
         const held = await walk(20000);
         expect(held.over, JSON.stringify(held)).toBe(false);
         expect(held.barred).toBe(true);
-        expect(held.words).toMatch(/Thug.*Master Infantryman/);
+        expect(held.words).toMatch(/^An? (Delinquent|Thief|Thug) .*Master Infantryman/);
         const w = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = gs.scene.get('UIScene'), f = gs.fieldDemons.foes.find(f => f.family === 'warden-z25');
-            return { kind: f.kind, hits: f.damage / ui.hp.max, guard: f.guard };
+            return { kinds: [...new Set(gs.fieldDemons.foes.filter(f => f.family === 'warden-z25').map(f => f.kind))].sort(), hits: f.damage / ui.hp.max, scale: f.spec.scale ?? 1, boss: !!f.spec.boss };
         });
-        expect(w.kind).toBe('thugwarden');
+        expect(w.kinds, "the heath's own, one of each").toEqual(['delinquentwarden', 'thiefwarden', 'thugwarden']);
+        expect(w, 'no boss, their own size').toMatchObject({ scale: 1, boss: false });
         expect(w.hits, 'a blow far more than your hit points').toBeGreaterThan(1);
         // Pushed past (deeper than where it warns), it fights
         await page.evaluate(() => {

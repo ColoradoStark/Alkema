@@ -103,13 +103,6 @@ export const BAND_KINDS = {
     noblelord: shooter(2, { speed: 140, race: 'human' }),
     maskedfighter: melee(2, { speed: 140, reach: 40, windup: 520, recover: 760, lunge: 22, race: 'dwarf' }),
     marksman: shooter(2, { speed: 140, race: 'elf', ...ELF }),
-    // The wardens (docs/zones/loop.md; the user's, November 2026: run past a zone's foes to the bridge, and one far too
-    // strong comes up, warns you off, and pushing on, kills you): each zone's at its way in, of its own people, a third
-    // bigger and as quick as a guard, there till the zone before it is cleared (`ZONE_WARDENS`, below)
-    fencerwarden: melee(2, { sheet: 'fencer', speed: 140, reach: 36, windup: 380, recover: 560, lunge: 24, race: 'human', scale: 1.3 }),
-    ogrewarden: melee(3, { sheet: 'greatogre', speed: 140, reach: 54, windup: 700, recover: 950, lunge: 18, race: 'ogre', poise: true, scale: 1.3 }),
-    maulerwarden: melee(3, { sheet: 'ironmauler', speed: 140, reach: 54, windup: 700, recover: 950, lunge: 18, race: 'human', poise: true, scale: 1.3 }),
-    thugwarden: melee(2, { sheet: 'thug', speed: 140, reach: 44, windup: 560, recover: 800, lunge: 20, race: 'human', poise: true, scale: 1.3 }),
     // The road on to Stonebridge (the user's, November 2026: zones 20 and 19, in Grimhold's kingdom, other foes, two
     // boss fights and a lot of levelling up). The Riverlands (zone 20), the wild valley between the rivers: ogres, a
     // blow that doesn't stagger them (`poise`): Young Ogre, Ogre, Great Ogre (docs/WORLD.md's list and no more, the
@@ -160,6 +153,32 @@ export const BAND_KINDS = {
         rally: { at: 0.5, call: ['thief', 'thug', 'delinquent'], words: 'whistles! His cutpurses come.' },
         fury: { at: 0.25, again: 2, quicker: 0.75, words: 'is in a fury!' } },
 };
+
+// The wardens (docs/zones/loop.md; the user's, November 2026: run past a zone's foes to the bridge, and foes far too
+// strong come up, warn you off, and pushing on, kill you; the region's own foes, no boss, everywhere): at each zone's
+// way in a group of its own people, one of each of its kinds, as they are but as quick as a guard (`wardenOf`), there
+// till the zone before it is cleared; each with its zone's warning, saying who to beat first (`WARDEN_WORDS`)
+export const ZONE_WARDENS = {
+    z28: ['fencer', 'horseman', 'cavalryman'],
+    z20: ['youngogre', 'ogre', 'greatogre'],
+    z19: ['heavyinfantry', 'shocktrooper', 'ironmauler'],
+    z25: ['delinquent', 'thief', 'thug'],
+};
+const WARDEN_NAMES = { fencer: 'A Fencer', horseman: 'A Horseman', cavalryman: 'A Cavalryman', youngogre: 'A Young Ogre', ogre: 'An Ogre',
+    greatogre: 'A Great Ogre', heavyinfantry: 'A Heavy Infantryman', shocktrooper: 'A Shock Trooper', ironmauler: 'An Iron Mauler',
+    delinquent: 'A Delinquent', thief: 'A Thief', thug: 'A Thug' };
+const WARDEN_SAY = {
+    z28: 'blocks your way: "The Market Fields are no place for the unproven. Fell the Goblin Rouser on the Point first. Turn back."',
+    z20: 'blocks the way: "Little one not beat the knight. Go back. Beat Sir Aldous, then come."',
+    z19: 'blocks your way: "Grimhold\'s camp. Not while the Ancient Ogre stands, wanderer. Turn back."',
+    z25: 'blocks your way: "The heath\'s ours. Beat the Master Infantryman first, if you can. Turn back."',
+};
+export const wardenOf = (kind) => `${kind}warden`;
+export const WARDEN_WORDS = {};
+for (const [zone, kinds] of Object.entries(ZONE_WARDENS)) for (const kind of kinds) {
+    BAND_KINDS[wardenOf(kind)] = { ...BAND_KINDS[kind], sheet: BAND_KINDS[kind].sheet || kind, speed: 140 };
+    WARDEN_WORDS[wardenOf(kind)] = `${WARDEN_NAMES[kind]} ${WARDEN_SAY[zone]}`;
+}
 // (`might`: a boss that many times the health and blow of one made for his step; the road's two, twice: the user's,
 // November 2026, felled each in a couple of blows, no grinding)
 export const BAND_HITS = Object.fromEntries(Object.entries(BAND_KINDS).map(([k, s]) => [k, s.boss ? BOSS_HITS * (s.might || 1) : LEVEL_HITS[s.level]]));
@@ -315,11 +334,10 @@ HEART.packs.forEach((p, i) => {
     BANDS[`heart-${i}`] = [{ at: p.at, band, woods: true, step: HEART_STEP + (p.ring ? 1 : 0), near: HEART_NEAR, far: HEART_FAR }];
 });
 
-// Each zone's wardens (above): where tools/zonegen.py says (wardens.json: one within a few tiles of every crossing onto
-// its open ground from the zones before it), each there till the zone before it in the loop is cleared (`until`)
-export const ZONE_WARDENS = { z28: 'fencerwarden', z20: 'ogrewarden', z19: 'maulerwarden', z25: 'thugwarden' };
+// Each zone's wardens (above): where tools/zonegen.py says (wardens.json: a group within a few tiles of every crossing
+// onto its open ground from the zones before it), each there till the zone before it in the loop is cleared (`until`)
 for (const [zone, posts] of Object.entries(WARDENS))
-    BANDS[`warden-${zone}`] = posts.map(at => ({ at, band: [ZONE_WARDENS[zone]], step: 0, guard: true, until: ORDER[ORDER.indexOf(zone) - 1] }));
+    BANDS[`warden-${zone}`] = posts.map(at => ({ at, band: ZONE_WARDENS[zone].map(wardenOf), step: 0, guard: true, until: ORDER[ORDER.indexOf(zone) - 1] }));
 
 /** The climb a band's foes are made on (ZONES in zones.js): a zone's own; the guards', the wood's heart's and the wardens' the world's edge's. */
 export const climbOf = (family) => (/^(guards|heart|warden)/.test(family) ? EDGE : family);

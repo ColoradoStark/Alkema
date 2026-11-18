@@ -21,7 +21,7 @@
 
 import { UNIT } from './Demons.js';
 import { Orc } from './FieldOrcs.js';
-import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
+import { BAND_KINDS, BAND_HITS, BAND_HURTS, BAND_PAY, BANDS, WARDEN_WORDS, loadBand, forgetBand, climbOf, sheetOf } from './Bands.js';
 import { rollLoot } from './Chests.js';
 import { ACTION_SPELLS, SPELL_COLOURS } from './ActionSpells.js';
 import { FX, FX_DEPTH, forgetFx, loadSpellFx, spellParticles } from './SpellFx.js';
@@ -123,11 +123,7 @@ const BAR_WORDS = {
     redmage: 'A Red Mage blocks your way: "The Twin Rivers are the College\'s. Go back before I singe you."',
     noblelord: 'A Noble Lord blocks your way: "The Westmarch is the lords\' war camp, no place for the unproven. Turn back."',
     maskedfighter: 'A Masked Fighter blocks your way, axe raised: "The Cliffs are the clan\'s. Turn back."',
-    // (the wardens: what to beat first, said)
-    fencerwarden: 'A Fencer blocks your way: "The Market Fields are no place for the unproven. Fell the Goblin Rouser on the Point first. Turn back."',
-    ogrewarden: 'A Great Ogre blocks the bridge: "Little one not beat the knight. Go back. Beat Sir Aldous, then come."',
-    maulerwarden: 'An Iron Mauler blocks your way: "Grimhold\'s camp. Not while the Ancient Ogre stands, wanderer. Turn back."',
-    thugwarden: 'A Thug blocks your way: "The heath\'s ours. Beat the Master Infantryman first, if you can. Turn back."',
+    ...WARDEN_WORDS,        // (each zone's wardens: who to beat first)
 };
 // ...and what each says in the bubble over its head as it stops you, short (Heeds.js: the whole warning's in the notice)
 const SHOUT = 'No further!';
