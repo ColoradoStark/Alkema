@@ -351,3 +351,35 @@ test.describe('Spells in a fight', () => {
         expect(r.slowed).toBeLessThan(r.quick * 0.5);
     });
 });
+
+// A spell pressed mid-swing waits for the swing to end; the swing can fell the last foe in sight first, and the spell
+// then went off at no one and threw, the game frozen for good (the user's, November 2026: a mage's Fireball, Combo x10)
+test('a spell kept from mid-swing, with no foe left when it goes, does nothing and freezes nothing', async ({ page }) => {
+    test.setTimeout(150000);
+    await enterWorld(page);
+    await fight(page);
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    for (const cls of ['warrior', 'mage', 'cleric', 'ranger', 'thief']) {
+        const ids = await page.evaluate(cls => {
+            const all = window.__PHASER_GAME.scene.getScene('UIScene').inventory.catalogue.spells;
+            return (all.classes || all)[cls].filter(s => s.kind).map(s => s.id);
+        }, cls);
+        for (const id of ids) {
+            await asClass(page, cls, id);
+            const left = await page.evaluate(() => new Promise(resolve => {
+                const gs = window.__PHASER_GAME.scene.getScene('GameScene'), fd = gs.fieldDemons, ui = gs.scene.get('UIScene');
+                const book = ui.spellbook, spell = book.spell(book.equipped), at = book.at(book.equipped) || spell.ranks?.[0];
+                const mp = ui.mp.now;
+                Object.defineProperty(fd, 'standing', { get: () => [], configurable: true });     // (the swing felled the last)
+                fd._queuedSpell = { spell, at };
+                setTimeout(() => {
+                    delete fd.standing;
+                    resolve({ queued: !!fd._queuedSpell, mp: ui.mp.now - mp });
+                }, 900);
+            }));
+            expect(left.queued, `${cls} ${id}`).toBe(false);
+        }
+    }
+    expect(errors).toEqual([]);
+});

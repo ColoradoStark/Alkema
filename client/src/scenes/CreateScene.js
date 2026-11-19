@@ -301,8 +301,9 @@ export class CreateScene extends Scene {
         this._setSummoning(true);
 
         let res = null;
+        const req = this.state.previewRequest(), ahead = this._takeAhead(req);
         try {
-            res = await this.network.request('preview-character', this.state.previewRequest());
+            res = (ahead && await ahead.promise) || await this.network.request('preview-character', req);
         } catch {
             res = null;
         }
@@ -355,21 +356,82 @@ export class CreateScene extends Scene {
         this._showCharacter(res.character, { identityChanged });
     }
 
-    /** Roll the next dice result in the background so Randomize is instant. */
+    /**
+     * Roll the next dice result in the background so Randomize is instant, then make this hero in the other body, so
+     * switching is too (the user's, November 2026: a male hero switched to female took so long they thought it broken:
+     * the server's second, the sheet's download, and behind the dice's roll if tapped while it was made). One at a
+     * time, so with the tap's own the server never has more than two of a player's to make.
+     */
     async _startPrefetch() {
         if (this._prefetching || this._joining) return;
-        if (this._prefetch && this._previewCount - this._prefetch.count < MAX_PREFETCH_AGE) return;
         this._prefetching = true;
         try {
-            const res = await this.network.request('preview-character', this.state.diceRequest());
-            if (res?.ok && this.scene.isActive()) {
-                // Warm the texture cache so the swap needs no download.
-                const c = res.character;
-                await loadCharacterSpritesheet(this, c.spriteUrl, `sprite_${c.id}`).catch(() => {});
-                this._prefetch = { res, count: this._previewCount };
+            // (whatever's still wanted once the last is made: the hero may have changed, or the roll been taken, meanwhile)
+            while (!this._joining && this.scene.isActive()) {
+                if (!this._prefetch || this._previewCount - this._prefetch.count >= MAX_PREFETCH_AGE) {
+                    const res = await this.network.request('preview-character', this.state.diceRequest());
+                    if (!res?.ok || !this.scene.isActive()) break;
+                    // Warm the texture cache so the swap needs no download.
+                    const c = res.character;
+                    await loadCharacterSpritesheet(this, c.spriteUrl, `sprite_${c.id}`).catch(() => {});
+                    this._prefetch = { res, count: this._previewCount };
+                } else if (this._aheadKey() && this._ahead?.key !== this._aheadKey()) await this._lookAhead();
+                else break;
             }
         } catch { /* prefetch is best-effort */ }
         this._prefetching = false;
+    }
+
+    /** What switching body would ask for now (null: nothing to switch to). */
+    _aheadRequest() {
+        if (!this.state?.character || this.state.rolling) return null;
+        const now = this.state.current('body_type'), other = this.state.options.body_types.find(b => b.id !== now)?.id;
+        return other ? this.state.requestAfter(s => s.pickBodyType(other)) : null;
+    }
+
+    _aheadKey() {
+        const req = this._aheadRequest();
+        return req ? JSON.stringify(req) : null;
+    }
+
+    /** This hero in the other body, made and its sheet loaded ahead of the tap. */
+    async _lookAhead() {
+        const key = this._aheadKey();
+        if (!key || this._ahead?.key === key) return;
+        this._dropAhead();
+        const ahead = { key, count: this._previewCount };
+        ahead.promise = this.network.request('preview-character', JSON.parse(key)).then(async res => {
+            if (!res?.ok) return null;
+            const c = res.character;
+            await loadCharacterSpritesheet(this, c.spriteUrl, `sprite_${c.id}`).catch(() => {});
+            if (!this.scene.isActive() || this._ahead !== ahead && !ahead.taken) this._forgetSheet(c.id);     // (let go: left behind)
+            return res;
+        }).catch(() => null);
+        this._ahead = ahead;
+        await ahead.promise;
+    }
+
+    /** The look made ahead for this request, if it's the one (and the server still has it). */
+    _takeAhead(req) {
+        const ahead = this._ahead;
+        if (!ahead || ahead.key !== JSON.stringify(req) || this._previewCount - ahead.count >= MAX_PREFETCH_AGE) return null;
+        ahead.taken = true;
+        this._ahead = null;
+        return ahead;
+    }
+
+    /** A look made ahead that won't be shown: its sheet let go (now, or as it lands). */
+    _dropAhead() {
+        const ahead = this._ahead;
+        this._ahead = null;
+        ahead?.promise.then(res => res && this._forgetSheet(res.character.id));
+    }
+
+    _forgetSheet(id) {
+        if (this.figure?.characterData?.id === id || this._shown?.characterData?.id === id) return;
+        for (const key of this.textures.getTextureKeys()) {
+            if (key === `sprite_${id}` || key.startsWith(`sprite_${id}_os_`)) this.textures.remove(key);
+        }
     }
 
     async _suggestName() {

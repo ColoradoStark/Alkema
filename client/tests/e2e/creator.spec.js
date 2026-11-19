@@ -140,6 +140,33 @@ test.describe('Character creator', () => {
         expect(visibleHeroes).toBe(1);
     });
 
+    // (the user's, November 2026: they made a hero, switched from male to female, and it took so long they thought it
+    // was broken: the other body is made ahead, so the switch shows at once, nothing asked of the server)
+    test('switching body shows the hero in it at once, made ahead', async ({ page }) => {
+        test.setTimeout(90000);
+        await page.goto('/');
+        const before = await waitForPreview(page);
+        await page.waitForFunction(() => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene');
+            return !s._prefetching && s._ahead;
+        }, null, { timeout: 45000 });
+        const r = await page.evaluate(() => new Promise(resolve => {
+            const s = window.__PHASER_GAME.scene.getScene('CreateScene'), asked = [];
+            const request = s.network.request.bind(s.network);
+            s.network.request = (event, data, ...a) => { asked.push([event, data?.body_type]); return request(event, data, ...a); };
+            const body = s.state.current('body_type') === 'male' ? 'female' : 'male', shown = s._shown, t0 = performance.now();
+            s.panel.sexTiles.find(t => t.textContent.toLowerCase().trim() === body).click();
+            const look = () => s._shown !== shown && s._shown.visible
+                ? resolve({ body, now: s._shown.characterData.body_type, ms: performance.now() - t0, asked: asked.filter(([e, b]) => e === 'preview-character' && b === body).length })
+                : setTimeout(look, 10);
+            look();
+        }));
+        expect(r.now).toBe(r.body);
+        expect(r.now).not.toBe(before.character.body_type);
+        expect(r.asked).toBe(0);
+        expect(r.ms).toBeLessThan(300);
+    });
+
     test('a preview that arrives after Play is ignored', async ({ page }) => {
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));

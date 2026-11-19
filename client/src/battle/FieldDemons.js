@@ -67,6 +67,7 @@ const REACH = 40, LUNGE = 26, SHOT_REACH = 220;     // a blow's reach (feet to f
 const AIM = Math.cos(Math.PI * 0.4);    // what's within 72 degrees of the way you face is "ahead"
 const SWING_HIT_MS = 170;       // from a swing starting to its landing
 const ARROW_SPEED = 320, BOLT_SPEED = 180;
+const FOE_ARROW = ARROW_SPEED * 0.7;     // a foe's arrow at you, 30% slower than yours (the user's, November 2026: hard to dodge)
 const SPELL_SWELL = 1.4;        // how much bigger a melee spell swings
 const SPELL_SHAKE = [150, 0.006];     // a starter spell, cast by you: a light shake (ms, intensity)
 const SIGHT = 12 * TILE;        // what a spell or a shot can go at: the demons this near you
@@ -369,7 +370,11 @@ export class FieldDemons {
         if (this._queuedSpell) {
             const { spell, at } = this._queuedSpell;
             this._queuedSpell = null;
-            this._castNow(this.you, spell, at, true);
+            // (the swing it waited on can have felled the last foe in sight: gone off at no one, it threw and froze the
+            // game for good, the user's; it goes only if it still can, else its magic comes back)
+            const ui = this.scene.scene.get('UIScene');
+            if (ACTION_SPELLS[spell.kind]?.can?.call(this, this.you, spell, at) == null) this._castNow(this.you, spell, at, true);
+            else if (ui?.mp) ui.mp.now = Math.min(ui.mp.max, ui.mp.now + (at.mp || 0));
         } else if (this._queued) {
             this._queued = false;
             this._swing(this.you, true);
@@ -1522,7 +1527,7 @@ export class FieldDemons {
     /** Something flying: an arrow, or fire (yours, or a warlock's). It goes the way it was aimed, to its range. */
     _launch(from, to, kind, side, damage, { scale = 1, trail = null, reach = SHOT_REACH + 80, speed = null, onHit = null, tint = null, home = null } = {}) {
         const a = Math.atan2(to.y - from.y, to.x - from.x);
-        speed ??= kind === 'arrow' ? ARROW_SPEED : BOLT_SPEED;
+        speed ??= kind === 'arrow' ? (side === 'foe' ? FOE_ARROW : ARROW_SPEED) : BOLT_SPEED;
         let sprite, glow = null;
         if (kind === 'arrow' && this.scene.textures.exists('arrow-projectile')) {
             sprite = this.scene.add.sprite(from.x, from.y, 'arrow-projectile', 3 * 13 + 5).setRotation(a);

@@ -598,8 +598,9 @@ export class GameScene extends Scene {
     }
 
     /**
-     * Fallen out on the world: you come to where you set out, with a hit point, and they forget you; fallen on the road
-     * past the Market Fields, on the bridge by Highmarket, mended (`comeToFor`).
+     * Fallen out on the world: you come to where you set out, and they forget you; fallen on the road past the Market
+     * Fields, on the bridge by Highmarket (`comeToFor`). Mended, wherever you fell (the user's, November 2026).
+     * Only falling mends you so: hit points still don't come back on their own.
      */
     comeTo() {
         const near = comeToFor(this.zone?.id);
@@ -609,7 +610,7 @@ export class GameScene extends Scene {
         const away = () => this.town || this._changingRoom;
         const there = () => {
             const hp = this.scene.get('UIScene')?.hp;
-            if (hp) hp.now = Math.max(1, hp.now);
+            if (hp) hp.now = hp.max;
             this.fieldDemons.forgive();
             this._fallenInField = false;
         };
@@ -627,7 +628,7 @@ export class GameScene extends Scene {
             me.stopAnimation?.();
             this.cameras.main.centerOn(at.x, at.y);
             const hp = this.scene.get('UIScene')?.hp;
-            if (hp) hp.now = near?.mend ? hp.max : Math.max(1, hp.now);       // (a hit point: the rest at a healer, the user's)
+            if (hp) hp.now = hp.max;
             this.fieldDemons.forgive();
             this._fallenInField = false;
             this._sendMove(0, 0);

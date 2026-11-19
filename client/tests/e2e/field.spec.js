@@ -850,7 +850,7 @@ test.describe('Foes that close in keep their heads', () => {
 });
 
 test.describe('Falling out on the world', () => {
-    test("you come to where heroes start with a hit point, and none come back on their own: the healer's for that (the user's)", async ({ page }) => {
+    test("you come to where heroes start at full health (the user's, November 2026: everywhere), and none come back on their own: the healer's for that (the user's)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await standAt(page, POINT.x, POINT.y);
@@ -861,7 +861,7 @@ test.describe('Falling out on the world', () => {
         });
         expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(0);
         await page.waitForFunction(() => !window.__PHASER_GAME.scene.getScene('GameScene')._fallenInField, null, { timeout: 10000 });
-        expect(await page.evaluate(() => window.__PHASER_GAME.scene.getScene('UIScene').hp.now)).toBe(1);
+        expect(await page.evaluate(() => { const hp = window.__PHASER_GAME.scene.getScene('UIScene').hp; return hp.now === hp.max; })).toBe(true);
         // (where heroes start: below Riverhold)
         const at = await page.evaluate(() => { const me = window.__PHASER_GAME.scene.getScene('GameScene').localPlayer.sprite; return { x: me.x, y: me.y }; });
         expect(Math.hypot(at.x - START.x, at.y - START.y)).toBeLessThan(96);
@@ -869,6 +869,7 @@ test.describe('Falling out on the world', () => {
         await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), ui = window.__PHASER_GAME.scene.getScene('UIScene');
             gs.fieldDemons.release();
+            ui.hp.now = 1;
             ui.mp.max = Math.max(ui.mp.max, 10);       // (a warrior may have none to come back)
             ui.mp.now = 0;
             ui._mpBack = 5000;
@@ -879,7 +880,7 @@ test.describe('Falling out on the world', () => {
         expect(bars.mp, JSON.stringify(bars)).toBeGreaterThan(0);
     });
 
-    test("fallen as you go into a place, you're there, standing, with a hit point (the user's: they went into Dunmere as a blow felled them, and were nowhere: put back at the world's start inside the castle's map)", async ({ page }) => {
+    test("fallen as you go into a place, you're there, standing, at full health (the user's: they went into Dunmere as a blow felled them, and were nowhere: put back at the world's start inside the castle's map)", async ({ page }) => {
         test.setTimeout(120000);
         await enterWorld(page);
         await standAt(page, POINT.x, POINT.y);
@@ -893,9 +894,9 @@ test.describe('Falling out on the world', () => {
         const r = await page.evaluate(() => {
             const gs = window.__PHASER_GAME.scene.getScene('GameScene'), me = gs.localPlayer.sprite;
             return { town: !!gs.town, on: !!gs.town && me.x > 0 && me.y > 0 && me.x < gs.town.width && me.y < gs.town.height,
-                visible: me.visible, fallen: !!gs._fallenInField, hp: gs.scene.get('UIScene').hp.now };
+                visible: me.visible, fallen: !!gs._fallenInField, full: gs.scene.get('UIScene').hp.now === gs.scene.get('UIScene').hp.max };
         });
-        expect(r).toEqual({ town: true, on: true, visible: true, fallen: false, hp: 1 });
+        expect(r).toEqual({ town: true, on: true, visible: true, fallen: false, full: true });
     });
 
     test("those you've slain stay down: into a place and out again (the user's, to try: the castle's healer between fights), or off and back", async ({ page }) => {

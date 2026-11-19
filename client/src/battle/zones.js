@@ -85,14 +85,14 @@ export function cleared(fam, flags) {
 export const REGROW_MS = 90000;
 
 /**
- * Where you come to, fallen in a zone (`GameScene.comeTo`): past the Market Fields, on the bridge by Highmarket, and
- * mended there (the user's, November 2026: put all the way back at Riverhold from the ogres, and with no healer near
- * the bridge, coming to with a hit point would have sent you back there anyway); null elsewhere, where you set out.
+ * Where you come to, fallen in a zone (`GameScene.comeTo`, mended wherever you fell): past the Market Fields, on the
+ * bridge by Highmarket (the user's, November 2026: put all the way back at Riverhold from the ogres); null elsewhere,
+ * where you set out.
  */
 const COME_TO = { 20: MARKET.bridge, 19: MARKET.bridge, 25: MARKET.bridge };
 export function comeToFor(zoneId) {
     const at = COME_TO[zoneId];
-    return at ? { x: at[0], y: at[1], mend: true } : null;
+    return at ? { x: at[0], y: at[1] } : null;
 }
 
 /** A felled foe's gold, a share of its essence (what pays a healer, shops, chests). */

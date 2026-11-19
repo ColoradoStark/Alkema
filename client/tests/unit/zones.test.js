@@ -216,7 +216,7 @@ describe("The world's edge: the guards round the land not built yet and the wood
 
 describe('Where you come to', () => {
     test("fallen on the road past the Market Fields, you come to on the bridge by Highmarket, mended (the user's, November 2026: put all the way back at Riverhold, and no healer near the bridge)", () => {
-        for (const zone of [20, 19, 25]) expect(comeToFor(zone)).toEqual({ x: MARKET.bridge[0], y: MARKET.bridge[1], mend: true });
+        for (const zone of [20, 19, 25]) expect(comeToFor(zone)).toEqual({ x: MARKET.bridge[0], y: MARKET.bridge[1] });
     });
     test('fallen anywhere else, where you set out, as before', () => {
         for (const zone of [35, 33, 28, null]) expect(comeToFor(zone)).toBe(null);

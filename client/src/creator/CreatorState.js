@@ -85,6 +85,17 @@ export class CreatorState {
         return req;
     }
 
+    /** The request a change would make, the state left as it is (made ahead of the tap). */
+    requestAfter(change) {
+        const picked = { ...this.picked }, look = { ...this.look }, rolling = this.rolling;
+        change(this);
+        const req = this.previewRequest();
+        Object.assign(this.picked, picked);
+        Object.assign(this.look, look);
+        this.rolling = rolling;
+        return req;
+    }
+
     /** The dice asks for nothing: everything is rolled. */
     diceRequest() {
         return {};
